@@ -1,0 +1,44 @@
+import type { Generated, Insertable, Selectable, Updateable } from "kysely";
+
+export interface WeightMeasurementEventData {
+  type: "weight_measurement";
+  weight: number;
+}
+
+export interface WaterIntakeEventData {
+  type: "water_intake";
+  amount: number;
+}
+
+export interface LitterboxUseEventData {
+  type: "litterbox_use";
+  elimination_type: "urination" | "defecation" | "no_elimination" | "unknown";
+  elimination_weight: number;
+  duration: number;
+  debug: unknown;
+}
+
+export interface FoodIntakeEventData {
+  type: "food_intake";
+  food_type: "dry" | "wet" | "treat" | "unknown";
+  amount: number;
+}
+
+export type EventTable = {
+  id: Generated<number>;
+  // TODO: Migrate type to root once kysely gets discriminated union support
+  //       https://github.com/kysely-org/kysely/issues/577
+  // type: string;
+  pet_id: number;
+  device_id: number | null;
+  timestamp: Date;
+  data:
+    | WeightMeasurementEventData
+    | WaterIntakeEventData
+    | LitterboxUseEventData
+    | FoodIntakeEventData;
+};
+
+export type Event = Selectable<EventTable>;
+export type NewEvent = Insertable<EventTable>;
+export type EventUpdate = Updateable<EventTable>;

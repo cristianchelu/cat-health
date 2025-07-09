@@ -1,0 +1,20 @@
+{
+  "name": "pet-health",
+  "version": "0.0.1",
+  "description": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Cristian Chelu",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@fastify/type-provider-json-schema-to-ts": "^5.0.0",
+    "kysely-plugin-serialize": "^0.8.2"
+  }
+}
