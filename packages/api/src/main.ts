@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import { type TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
+import cors from "@fastify/cors";
 
 import { migrateToLatest } from "./database/migrate.ts";
 
@@ -9,6 +10,10 @@ import eventRoutes from "./routes/events.ts";
 const fastify = Fastify({
   logger: true,
 }).withTypeProvider<TypeBoxTypeProvider>();
+
+await fastify.register(cors, {
+  origin: "http://localhost:5173",
+});
 
 fastify.register(petRoutes, { prefix: "/pets" });
 fastify.register(eventRoutes, { prefix: "/events" });
