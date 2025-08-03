@@ -5,7 +5,7 @@
   "main": "main.ts",
   "type": "module",
   "scripts": {
-    "start": "node --experimental-strip-types src/main.ts",
+    "start": "node --watch --experimental-strip-types src/main.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "node --experimental-strip-types src/database/migrate.ts"
   },

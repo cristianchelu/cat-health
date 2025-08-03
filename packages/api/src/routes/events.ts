@@ -33,8 +33,23 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
       },
     },
     async () => {
-      const events = await db.selectFrom("event").selectAll().execute();
-      return events;
+      return await db.selectFrom("event").selectAll().execute();
+    }
+  );
+
+  fastify.get(
+    "/:petId",
+    {
+      schema: {
+        params: Type.Object({ petId: Type.Number() }),
+        response: {
+          "200": GetEventsSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { petId } = request.params;
+      return await db.selectFrom("event").selectAll().where("pet_id", "=", petId).execute();
     }
   );
 
@@ -63,6 +78,28 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
         .executeTakeFirstOrThrow();
 
       return result;
+    }
+  );
+
+  fastify.delete(
+    "/:eventId",
+    {
+      schema: {
+        params: Type.Object({ eventId: Type.Number() }),
+        response: {
+          "200": Type.Object({ success: Type.Boolean() }),
+        },
+      },
+    },
+    async (request) => {
+      const { eventId } = request.params;
+      
+      await db
+        .deleteFrom("event")
+        .where("id", "=", eventId)
+        .executeTakeFirstOrThrow();
+
+      return { success: true };
     }
   );
 }

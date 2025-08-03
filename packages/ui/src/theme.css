@@ -1,0 +1,68 @@
+:root {
+  /* Colors */
+  --color-primary: #4f46e5;
+  --color-primary-dark: #3730a3;
+  --color-primary-light: #e0e7ff;
+  --color-primary-lighter: #c7d2fe;
+  --color-primary-lightest: #a5b4fc;
+  
+  --color-background: #f7f7fa;
+  --color-white: #fff;
+  --color-text: #222;
+  --color-text-light: #444;
+  --color-text-muted: #64748b;
+  --color-text-subtle: #a1a1aa;
+  --color-error: #dc2626;
+  --color-surface: #f3f4f6;
+
+  /* Border Radius */
+  --radius-sm: 0.4rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.7rem;
+  --radius-xl: 1.2rem;
+
+  /* Spacing */
+  --space-xs: 0.3rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.7rem;
+  --space-lg: 1rem;
+  --space-xl: 1.2rem;
+  --space-2xl: 1.5rem;
+  --space-3xl: 2rem;
+  --space-4xl: 2.5rem;
+
+  /* Font Sizes */
+  --text-sm: 0.85rem;
+  --text-base: 1rem;
+  --text-lg: 1.1rem;
+  --text-xl: 1.2rem;
+  --text-2xl: 1.4rem;
+  --text-3xl: 1.5rem;
+  --text-4xl: 2rem;
+  --text-5xl: 2.2rem;
+
+  /* Font Weights */
+  --font-normal: 400;
+  --font-medium: 600;
+  --font-bold: 700;
+  --font-black: 800;
+  --font-extra-black: 900;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 4px 0 rgba(79, 70, 229, 0.04);
+  --shadow-md: 0 2px 8px 0 rgba(79, 70, 229, 0.04);
+  --shadow-lg: 0 8px 32px 0 rgba(79, 70, 229, 0.10);
+
+  /* Borders */
+  --border-thin: 1.5px solid var(--color-primary-light);
+  --border-medium: 2px solid var(--color-primary-light);
+
+  /* Gradients */
+  --gradient-background: linear-gradient(135deg, var(--color-background) 0%, var(--color-primary-light) 100%);
+  --gradient-surface: linear-gradient(135deg, var(--color-white) 0%, var(--color-primary-light) 100%);
+  --gradient-button: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-lightest) 100%);
+
+  /* Layout */
+  --max-width-content: 900px;
+  --sidebar-width: 260px;
+}

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from 'react-router';
 import { getPets } from '@/api/pets';
+import './pet-list.css';
 
 export type Pet = {
   id: number;
@@ -15,23 +16,26 @@ export default function PetList() {
     queryFn: getPets,
   });
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error loading pets.</div>;
-  if (!Array.isArray(data)) return <div>No pets found.</div>;
+  if (isLoading) return <div className="pet-list"><div className="loading">Loading...</div></div>;
+  if (error) return <div className="pet-list"><div className="error">Error loading pets.</div></div>;
+  if (!Array.isArray(data)) return <div className="pet-list"><div className="empty">No pets found.</div></div>;
 
   return (
-    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-      {data?.map((pet) => (
-        <Card key={pet.id}>
-          <CardHeader>
-            <CardTitle>{pet.name}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div>Breed: {pet.breed}</div>
-            <div>Birth Date: {pet.birth_date}</div>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="pet-list">
+      <h2 className="title">Pet List</h2>
+      <div className="grid">
+        {data?.map((pet) => (
+          <Link key={pet.id} to={`/pets/${pet.id}`} className="card-link">
+            <div className="card">
+              <div className="card-title">{pet.name}</div>
+              <div className="card-content">
+                <div><b>Breed:</b> {pet.breed}</div>
+                <div><b>Birth Date:</b> {pet.birth_date}</div>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

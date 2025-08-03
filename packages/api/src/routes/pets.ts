@@ -49,4 +49,21 @@ export default function petRoutes(fastify: FastifyTypeBox): void {
       return result;
     }
   );
+  fastify.get(
+    "/:id",
+    {
+      schema: {
+        params: Type.Object({ id: Type.Number() }),
+        response: {
+          "200": GetPetSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params as { id: number };
+      const pet = await db.selectFrom("pet").selectAll().where("id", "=", id).executeTakeFirst();
+      if (!pet) throw new Error("Pet not found");
+      return pet;
+    }
+  );
 }
