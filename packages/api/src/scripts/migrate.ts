@@ -1,6 +1,7 @@
 import { InfluxDB } from "@influxdata/influxdb-client";
 import type { NewEvent } from "../database/types/EventTable.ts";
 import { db } from "../database/index.ts";
+import { sql } from "kysely";
 import fs from "fs";
 
 interface RawMeasurement {
@@ -394,6 +395,22 @@ async function queryTaredWeightData(
   });
 }
 
+async function checkExistingEvents(
+  startDate: Date,
+  endDate: Date
+): Promise<Set<string>> {
+  const existingEvents = await db
+    .selectFrom("event")
+    .select(["timestamp"])
+    .where("timestamp", ">=", startDate)
+    .where("timestamp", "<=", endDate)
+    .where(sql`json_extract(data, '$.type')`, "=", "litterbox_use")
+    .execute();
+
+  // Create a set of timestamp strings for O(1) lookup
+  return new Set(existingEvents.map(e => e.timestamp.toISOString()));
+}
+
 async function migrateEvents(
   startDate: Date,
   endDate: Date,
@@ -404,6 +421,11 @@ async function migrateEvents(
   console.log(
     `Migrating litterbox events from ${startDate.toISOString()} to ${endDate.toISOString()}`
   );
+
+  // Check for existing events in this time range
+  console.log("Checking for existing events in database...");
+  const existingEventTimestamps = await checkExistingEvents(startDate, endDate);
+  console.log(`Found ${existingEventTimestamps.size} existing litterbox events in time range`);
 
   // Initialize connections
   const influx = new InfluxDB({ url: influxUrl, token: influxToken });
@@ -425,8 +447,16 @@ async function migrateEvents(
     console.log(`Found ${sessions.length} litterbox sessions`);
 
     const events: NewEvent[] = [];
+    let skippedCount = 0;
 
     for (const session of sessions) {
+      // Skip if this event timestamp already exists
+      if (existingEventTimestamps.has(session.startTime.toISOString())) {
+        skippedCount++;
+        console.log(`Skipping existing event at ${session.startTime.toISOString()}`);
+        continue;
+      }
+
       const [rawMeasurements, taredMeasurements] = await Promise.all([
         queryRawWeightData(influx, bucket, session.startTime, session.endTime),
         queryTaredWeightData(
@@ -490,13 +520,19 @@ async function migrateEvents(
     }
 
     // Batch insert events
-    console.log(`Inserting ${events.length} events into database`);
+    console.log(`\n=== Migration Summary ===`);
+    console.log(`Sessions found in InfluxDB: ${sessions.length}`);
+    console.log(`Events skipped (already exist): ${skippedCount}`);
+    console.log(`New events to insert: ${events.length}`);
+    
     // First write to JSON file for debugging
     fs.writeFileSync("litterbox_events.json", JSON.stringify(events, null, 2));
     if (events.length === 0) {
-      console.log("No events to insert, skipping database write.");
+      console.log("No new events to insert, skipping database write.");
       return;
     }
+    
+    console.log(`Inserting ${events.length} new events into database...`);
     await db.insertInto("event").values(events).execute();
 
     console.log("Migration completed successfully");
