@@ -5,6 +5,7 @@ import { getPet, getPetEvents, addEvent, deleteEvent } from '@/api/pets';
 import type { Event } from '@/api/pets';
 import DebugEventForm from '@/components/DebugEventForm';
 import './pet-detail.css';
+import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
 
 export default function PetDetail() {
   const { id } = useParams<{ id: string }>();
@@ -15,14 +16,14 @@ export default function PetDetail() {
   const isValidId = !isNaN(petId) && petId > 0;
 
   const handleAddEvent = async (eventData: unknown) => {
-    await addEvent({ pet_id: petId, data: eventData, device_id: null });
+    await addEvent({ pet_id: petId, data: eventData as Record<string, unknown>, device_id: null });
     await queryClient.invalidateQueries({ queryKey: ['petEvents', petId] });
   };
 
   const handleDeleteEvent = async (eventId: number) => {
-    if (!confirm('Are you sure you want to delete this event?')) {
-      return;
-    }
+    // if (!confirm('Are you sure you want to delete this event?')) {
+    //   return;
+    // }
 
     setDeletingEventIds(prev => new Set(prev).add(eventId));
     
@@ -105,26 +106,50 @@ export default function PetDetail() {
           <div key={type} className="event-group">
             <div className="event-group-title">{type}</div>
             <ul className="event-list">
-              {events.map(event => (
-                <li key={event.id} className="event-item">
-                  <div className="event-header">
-                    <div className="event-timestamp">
-                      <b>Timestamp:</b> {new Date(event.timestamp).toLocaleString()}
+              {events.map(event => {
+                // Check if this is a litterbox event
+                if (event.data && typeof event.data === 'object' && 
+                    'type' in event.data && event.data.type === 'litterbox_use') {
+                  const litterboxData = event.data as {
+                    type: "litterbox_use";
+                    elimination_type: "urination" | "defecation" | "no_elimination" | "unknown";
+                    elimination_weight: number;
+                    duration: number;
+                  };
+                  return (
+                    <LitterboxEventItem
+                      key={event.id}
+                      timestamp={event.timestamp}
+                      data={litterboxData}
+                      raw_data={event.raw_data}
+                      onDelete={() => handleDeleteEvent(event.id)}
+                      isDeleting={deletingEventIds.has(event.id)}
+                    />
+                  );
+                }
+                
+                // Fallback for other event types
+                return (
+                  <li key={event.id} className="event-item">
+                    <div className="event-header">
+                      <div className="event-timestamp">
+                        <b>Timestamp:</b> {new Date(event.timestamp).toLocaleString()}
+                      </div>
+                      <button
+                        className="event-delete-btn"
+                        onClick={() => handleDeleteEvent(event.id)}
+                        disabled={deletingEventIds.has(event.id)}
+                        title="Delete event"
+                      >
+                        {deletingEventIds.has(event.id) ? '...' : '×'}
+                      </button>
                     </div>
-                    <button
-                      className="event-delete-btn"
-                      onClick={() => handleDeleteEvent(event.id)}
-                      disabled={deletingEventIds.has(event.id)}
-                      title="Delete event"
-                    >
-                      {deletingEventIds.has(event.id) ? '...' : '×'}
-                    </button>
-                  </div>
-                  <pre className="event-data">
-                    {JSON.stringify(event.data, null, 2)}
-                  </pre>
-                </li>
-              ))}
+                    <pre className="event-data">
+                      {JSON.stringify(event.data, null, 2)}
+                    </pre>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}

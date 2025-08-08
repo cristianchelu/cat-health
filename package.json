@@ -12,6 +12,7 @@
     "packages/ui"
   ],
   "devDependencies": {
+    "@influxdata/influxdb-client": "^1.35.0",
     "typescript": "^5.7.3"
   },
   "dependencies": {

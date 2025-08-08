@@ -4,10 +4,11 @@ import { type FastifyTypeBox } from "../types.ts";
 
 const GetEventSchema = Type.Object({
   id: Type.Number(),
-  pet_id: Type.Number(),
+  pet_id: Type.Union([Type.Number(), Type.Null()]),
   device_id: Type.Union([Type.Null(), Type.Number()]),
   timestamp: Type.Any(), // TODO: Type.Date(),
   data: Type.Any(), // TODO: Type
+  raw_data: Type.Union([Type.Null(), Type.Array(Type.Number())]),
 });
 export type GetEventDTO = Static<typeof GetEventSchema>;
 
@@ -15,9 +16,10 @@ const GetEventsSchema = Type.Array(GetEventSchema);
 export type GetEventsDTO = Static<typeof GetEventsSchema>;
 
 const PostEventSchema = Type.Composite([
-  Type.Omit(GetEventSchema, ["id", "timestamp"]),
+  Type.Omit(GetEventSchema, ["id", "timestamp", "raw_data"]),
   Type.Object({
     timestamp: Type.Optional(Type.String()),
+    raw_data: Type.Optional(Type.Union([Type.Null(), Type.Array(Type.Number())])),
   }),
 ]);
 export type PostEventDTO = Static<typeof PostEventSchema>;
@@ -33,7 +35,11 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
       },
     },
     async () => {
-      return await db.selectFrom("event").selectAll().execute();
+      const events = await db.selectFrom("event").selectAll().execute();
+      return events.map(event => ({
+        ...event,
+        raw_data: event.raw_data ? Array.from(event.raw_data) : null
+      }));
     }
   );
 
@@ -49,7 +55,11 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
     },
     async (request) => {
       const { petId } = request.params;
-      return await db.selectFrom("event").selectAll().where("pet_id", "=", petId).execute();
+      const events = await db.selectFrom("event").selectAll().where("pet_id", "=", petId).execute();
+      return events.map(event => ({
+        ...event,
+        raw_data: event.raw_data ? Array.from(event.raw_data) : null
+      }));
     }
   );
 
@@ -64,7 +74,7 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
       },
     },
     async (request) => {
-      const { pet_id, device_id, timestamp, data } = request.body;
+      const { pet_id, device_id, timestamp, data, raw_data } = request.body;
 
       const result = await db
         .insertInto("event")
@@ -73,11 +83,15 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
           device_id,
           timestamp: timestamp ? new Date(timestamp) : new Date(),
           data,
+          raw_data: raw_data ? Buffer.from(raw_data) : null,
         })
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      return result;
+      return {
+        ...result,
+        raw_data: result.raw_data ? Array.from(result.raw_data) : null
+      };
     }
   );
 

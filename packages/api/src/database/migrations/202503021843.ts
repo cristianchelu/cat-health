@@ -8,7 +8,6 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn("birth_date", "text", (col) => col.notNull())
     .execute();
 
-  // DEBUG ONLY
   await db
     .insertInto("pet")
     .values({
@@ -42,6 +41,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn("device_id", "integer", (col) => col.references("device.id"))
     .addColumn("timestamp", "integer", (col) => col.notNull())
     .addColumn("data", "jsonb", (col) => col.notNull())
+    .addColumn("raw_data", "blob")
     .execute();
 }
 

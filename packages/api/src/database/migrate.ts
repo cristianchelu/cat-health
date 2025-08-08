@@ -37,3 +37,8 @@ export async function migrateToLatest() {
     process.exit(1);
   }
 }
+
+// Run migration if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  migrateToLatest();
+}

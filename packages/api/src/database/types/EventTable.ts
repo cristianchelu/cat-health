@@ -15,7 +15,6 @@ export interface LitterboxUseEventData {
   elimination_type: "urination" | "defecation" | "no_elimination" | "unknown";
   elimination_weight: number;
   duration: number;
-  debug: unknown;
 }
 
 export interface FoodIntakeEventData {
@@ -29,7 +28,7 @@ export type EventTable = {
   // TODO: Migrate type to root once kysely gets discriminated union support
   //       https://github.com/kysely-org/kysely/issues/577
   // type: string;
-  pet_id: number;
+  pet_id: number | null;
   device_id: number | null;
   timestamp: Date;
   data:
@@ -37,6 +36,7 @@ export type EventTable = {
     | WaterIntakeEventData
     | LitterboxUseEventData
     | FoodIntakeEventData;
+  raw_data: Buffer | null;
 };
 
 export type Event = Selectable<EventTable>;

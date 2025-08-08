@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node --watch --experimental-strip-types src/main.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "migrate": "node --experimental-strip-types src/database/migrate.ts"
+    "migrate": "node --experimental-strip-types src/database/migrate.ts",
+    "litterbox-migrate": "node --experimental-strip-types src/scripts/migrate.ts",
+    "reset-db": "rm -f data/database.sqlite && npm run migrate"
   },
   "author": "Cristian Chelu",
   "license": "MIT",

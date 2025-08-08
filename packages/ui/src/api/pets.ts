@@ -28,6 +28,7 @@ export type Event = {
   device_id: number | null;
   timestamp: string;
   data: Record<string, unknown>;
+  raw_data: number[] | null;
 };
 
 export async function getPetEvents(petId: number): Promise<Event[]> {
