@@ -6,6 +6,7 @@ import { migrateToLatest } from "./database/migrate.ts";
 
 import petRoutes from "./routes/pets.ts";
 import eventRoutes from "./routes/events.ts";
+import deviceRoutes from "./routes/devices.ts";
 
 const fastify = Fastify({
   logger: true,
@@ -18,6 +19,7 @@ await fastify.register(cors, {
 
 fastify.register(petRoutes, { prefix: "/pets" });
 fastify.register(eventRoutes, { prefix: "/events" });
+fastify.register(deviceRoutes, { prefix: "/devices" });
 
 const start = async () => {
   try {

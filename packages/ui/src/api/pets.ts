@@ -33,7 +33,7 @@ export type Event = {
 };
 
 export async function getPetEvents(petId: number): Promise<Event[]> {
-  const { data } = await apiClient.get(`/events/${petId}`);
+  const { data } = await apiClient.get('/events', { params: { pet_id: petId } });
   return data;
 }
 

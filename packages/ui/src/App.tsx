@@ -13,6 +13,7 @@ function App() {
           <Link to="/" className="logo">Cat Health</Link>
           <nav className="nav">
             <Link to="/" className="nav-link">Pet List</Link>
+            <Link to="/devices" className="nav-link">Device List</Link>
           </nav>
           <div className="copyright">&copy; {new Date().getFullYear()} Cat Health</div>
         </aside>

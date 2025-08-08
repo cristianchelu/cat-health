@@ -36,33 +36,29 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
     "/",
     {
       schema: {
-        response: {
-          "200": GetEventsSchema,
-        },
-      },
-    },
-    async () => {
-      const events = await db.selectFrom("event").selectAll().execute();
-      return events.map(event => ({
-        ...event,
-        raw_data: event.raw_data ? Array.from(event.raw_data) : null
-      }));
-    }
-  );
-
-  fastify.get(
-    "/:petId",
-    {
-      schema: {
-        params: Type.Object({ petId: Type.Number() }),
+        querystring: Type.Object({
+          pet_id: Type.Optional(Type.Number()),
+          device_id: Type.Optional(Type.Number()),
+        }),
         response: {
           "200": GetEventsSchema,
         },
       },
     },
     async (request) => {
-      const { petId } = request.params;
-      const events = await db.selectFrom("event").selectAll().where("pet_id", "=", petId).execute();
+      const { pet_id, device_id } = request.query;
+      
+      let query = db.selectFrom("event").selectAll();
+      
+      if (pet_id !== undefined) {
+        query = query.where("pet_id", "=", pet_id);
+      }
+      
+      if (device_id !== undefined) {
+        query = query.where("device_id", "=", device_id);
+      }
+      
+      const events = await query.execute();
       return events.map(event => ({
         ...event,
         raw_data: event.raw_data ? Array.from(event.raw_data) : null

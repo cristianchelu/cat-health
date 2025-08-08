@@ -507,7 +507,7 @@ async function migrateEvents(
 
       events.push({
         pet_id: petId,
-        device_id: null,
+        device_id: 1, // Use the seeded "Main Litter Box" device
         timestamp: session.startTime,
         data: {
           type: "litterbox_use",

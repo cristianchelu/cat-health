@@ -32,6 +32,14 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn("type", "text", (col) => col.notNull())
     .execute();
 
+  await db
+    .insertInto("device")
+    .values({
+      name: "Main Litter Box",
+      type: "litterbox",
+    })
+    .execute();
+
   await db.schema
     .createTable("event")
     .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
