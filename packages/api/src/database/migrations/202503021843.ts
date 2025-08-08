@@ -42,6 +42,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn("timestamp", "integer", (col) => col.notNull())
     .addColumn("data", "jsonb", (col) => col.notNull())
     .addColumn("raw_data", "blob")
+    .addColumn("human_verified", "boolean", (col) => col.notNull().defaultTo(false))
     .execute();
 }
 

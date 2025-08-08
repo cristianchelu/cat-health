@@ -29,6 +29,7 @@ export type Event = {
   timestamp: string;
   data: Record<string, unknown>;
   raw_data: number[] | null;
+  human_verified: boolean;
 };
 
 export async function getPetEvents(petId: number): Promise<Event[]> {
@@ -38,5 +39,15 @@ export async function getPetEvents(petId: number): Promise<Event[]> {
 
 export async function deleteEvent(eventId: number): Promise<{ success: boolean }> {
   const { data } = await apiClient.delete(`/events/${eventId}`);
+  return data;
+}
+
+export type UpdateEventInput = {
+  data?: Record<string, unknown>;
+  human_verified?: boolean;
+};
+
+export async function updateEvent(eventId: number, input: UpdateEventInput): Promise<Event> {
+  const { data } = await apiClient.patch(`/events/${eventId}`, input);
   return data;
 }

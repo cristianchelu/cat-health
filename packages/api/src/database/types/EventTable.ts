@@ -37,6 +37,7 @@ export type EventTable = {
     | LitterboxUseEventData
     | FoodIntakeEventData;
   raw_data: Buffer | null;
+  human_verified: Generated<boolean>;
 };
 
 export type Event = Selectable<EventTable>;

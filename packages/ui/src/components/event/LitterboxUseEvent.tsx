@@ -12,7 +12,7 @@ import {
 import { useState, type JSX } from 'react';
 import type { TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { FaTint, FaPoop, FaBan, FaQuestion, FaClock, FaWeight, FaCalendarAlt } from 'react-icons/fa';
+import { FaTint, FaPoop, FaBan, FaQuestion, FaClock, FaWeight, FaCalendarAlt, FaCheck } from 'react-icons/fa';
 
 ChartJS.register(
   CategoryScale,
@@ -32,10 +32,13 @@ interface LitterboxUseEventData {
 }
 
 interface LitterboxEventItemProps {
+  id: number;
   timestamp: string;
   data: LitterboxUseEventData;
   raw_data: number[] | null;
+  human_verified: boolean;
   onDelete: () => void;
+  onUpdate: (id: number, data: LitterboxUseEventData, human_verified: boolean) => Promise<void>;
   isDeleting: boolean;
 }
 
@@ -151,9 +154,10 @@ function formatEliminationType(type: string): { icon: JSX.Element; label: string
   }
 }
 
-export default function LitterboxEventItem({ timestamp, data, raw_data, onDelete, isDeleting }: LitterboxEventItemProps) {
+export default function LitterboxEventItem({ id, timestamp, data, raw_data, human_verified, onDelete, onUpdate, isDeleting }: LitterboxEventItemProps) {
   const { timestamps, weights, context } = parseRawBuffer(raw_data || []);
   const [showChart, setShowChart] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const chartData = {
     labels: timestamps.map(t => (t / 1000).toFixed(1)),
@@ -215,6 +219,20 @@ export default function LitterboxEventItem({ timestamp, data, raw_data, onDelete
     },
   };
 
+  const handleEliminationTypeChange = async (newType: "urination" | "defecation" | "no_elimination" | "unknown") => {
+    if (isUpdating) return;
+    
+    setIsUpdating(true);
+    try {
+      const updatedData = { ...data, elimination_type: newType };
+      await onUpdate(id, updatedData, true); // Mark as human verified when manually changed
+    } catch (error) {
+      console.error('Failed to update event:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const elim = formatEliminationType(data.elimination_type);
   return (
     <li className="litterbox-event-item" style={{ borderBottom: '1px solid #eee', padding: '0.5em 0' }}>
@@ -237,7 +255,29 @@ export default function LitterboxEventItem({ timestamp, data, raw_data, onDelete
       <div className="litterbox-event-details" style={{ marginTop: 6 }}>
         <div className="event-stats" style={{ display: 'flex', alignItems: 'center', gap: 18, fontSize: 15, color: '#444', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-            <span title={elim.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>{elim.icon} {elim.label}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {elim.icon}
+              <select 
+                value={data.elimination_type}
+                onChange={(e) => handleEliminationTypeChange(e.target.value as any)}
+                disabled={isUpdating}
+                style={{ 
+                  border: 'none',
+                  background: 'none',
+                  fontSize: '15px',
+                  color: '#444',
+                  cursor: isUpdating ? 'wait' : 'pointer'
+                }}
+              >
+                <option value="urination">Urination</option>
+                <option value="defecation">Defecation</option>
+                <option value="no_elimination">No elimination</option>
+                <option value="unknown">Unknown</option>
+              </select>
+              {human_verified && (
+                <FaCheck title="Human verified" style={{ color: '#4CAF50', fontSize: '12px' }} />
+              )}
+            </div>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FaClock /> {formatDuration(data.duration)}</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FaWeight /> {data.elimination_weight.toFixed(1)}g</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FaWeight /> {raw_data?.length || 0} samples</span>

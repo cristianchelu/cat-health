@@ -13,7 +13,7 @@ const fastify = Fastify({
 
 await fastify.register(cors, {
   origin: "http://localhost:5173",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 });
 
 fastify.register(petRoutes, { prefix: "/pets" });

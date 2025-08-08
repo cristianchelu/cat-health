@@ -9,6 +9,7 @@ const GetEventSchema = Type.Object({
   timestamp: Type.Any(), // TODO: Type.Date(),
   data: Type.Any(), // TODO: Type
   raw_data: Type.Union([Type.Null(), Type.Array(Type.Number())]),
+  human_verified: Type.Boolean(),
 });
 export type GetEventDTO = Static<typeof GetEventSchema>;
 
@@ -23,6 +24,12 @@ const PostEventSchema = Type.Composite([
   }),
 ]);
 export type PostEventDTO = Static<typeof PostEventSchema>;
+
+const PatchEventSchema = Type.Object({
+  data: Type.Optional(Type.Any()),
+  human_verified: Type.Optional(Type.Boolean()),
+});
+export type PatchEventDTO = Static<typeof PatchEventSchema>;
 
 export default function eventRoutes(fastify: FastifyTypeBox): void {
   fastify.get(
@@ -85,6 +92,35 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
           data,
           raw_data: raw_data ? Buffer.from(raw_data) : null,
         })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      return {
+        ...result,
+        raw_data: result.raw_data ? Array.from(result.raw_data) : null
+      };
+    }
+  );
+
+  fastify.patch(
+    "/:eventId",
+    {
+      schema: {
+        params: Type.Object({ eventId: Type.Number() }),
+        body: PatchEventSchema,
+        response: {
+          "200": GetEventSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { eventId } = request.params;
+      const updateData = request.body;
+
+      const result = await db
+        .updateTable("event")
+        .set(updateData)
+        .where("id", "=", eventId)
         .returningAll()
         .executeTakeFirstOrThrow();
 

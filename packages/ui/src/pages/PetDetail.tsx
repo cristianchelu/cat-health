@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { useState } from 'react';
-import { getPet, getPetEvents, addEvent, deleteEvent } from '@/api/pets';
+import { getPet, getPetEvents, addEvent, deleteEvent, updateEvent } from '@/api/pets';
 import type { Event } from '@/api/pets';
 import DebugEventForm from '@/components/DebugEventForm';
 import './pet-detail.css';
@@ -38,6 +38,16 @@ export default function PetDetail() {
         newSet.delete(eventId);
         return newSet;
       });
+    }
+  };
+
+  const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean) => {
+    try {
+      await updateEvent(eventId, { data, human_verified });
+      await queryClient.invalidateQueries({ queryKey: ['petEvents', petId] });
+    } catch (error) {
+      console.error('Failed to update event:', error);
+      throw error; // Re-throw so the component can handle the error
     }
   };
 
@@ -119,10 +129,13 @@ export default function PetDetail() {
                   return (
                     <LitterboxEventItem
                       key={event.id}
+                      id={event.id}
                       timestamp={event.timestamp}
                       data={litterboxData}
                       raw_data={event.raw_data}
+                      human_verified={event.human_verified}
                       onDelete={() => handleDeleteEvent(event.id)}
+                      onUpdate={handleUpdateEvent}
                       isDeleting={deletingEventIds.has(event.id)}
                     />
                   );
