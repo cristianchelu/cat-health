@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { useState } from 'react';
-import { getPet, getPetEvents, addEvent, deleteEvent, updateEvent } from '@/api/pets';
+import { getPet, getPetEvents, addEvent, deleteEvent, updateEvent, getPets } from '@/api/pets';
 import type { Event } from '@/api/pets';
 import DebugEventForm from '@/components/DebugEventForm';
 import './pet-detail.css';
 import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
+import LitterboxMaintenanceEventItem from '@/components/event/LitterboxMaintenanceEvent';
 
 export default function PetDetail() {
   const { id } = useParams<{ id: string }>();
@@ -41,14 +42,22 @@ export default function PetDetail() {
     }
   };
 
-  const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean) => {
+  const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean, pet_id?: number | null) => {
     try {
-      await updateEvent(eventId, { data, human_verified });
+      await updateEvent(eventId, { data, human_verified, pet_id });
       await queryClient.invalidateQueries({ queryKey: ['petEvents', petId] });
     } catch (error) {
       console.error('Failed to update event:', error);
       throw error; // Re-throw so the component can handle the error
     }
+  };
+
+  const handleUpdateLitterboxEvent = async (eventId: number, data: { type: "litterbox_use"; elimination_type: string; elimination_weight: number; duration: number }, human_verified: boolean, pet_id?: number | null) => {
+    return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified, pet_id);
+  };
+
+  const handleUpdateMaintenanceEvent = async (eventId: number, data: { type: "litterbox_maintenance"; maintenance_type: string; litter_amount?: number; notes?: string }, human_verified: boolean) => {
+    return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified);
   };
 
   const { data: pet, isLoading: petLoading, error: petError } = useQuery({
@@ -62,12 +71,17 @@ export default function PetDetail() {
     queryFn: () => getPetEvents(petId),
     enabled: isValidId,
   });
+
+  const { data: pets, isLoading: petsLoading } = useQuery({
+    queryKey: ['pets'],
+    queryFn: getPets,
+  });
   
   if (!isValidId) {
     return <div className="pet-detail pet-detail--error">Invalid pet ID.</div>;
   }
 
-  if (petLoading || eventsLoading) {
+  if (petLoading || eventsLoading || petsLoading) {
     return <div className="pet-detail pet-detail--loading">Loading...</div>;
   }
   
@@ -130,12 +144,39 @@ export default function PetDetail() {
                     <LitterboxEventItem
                       key={event.id}
                       id={event.id}
+                      pet_id={event.pet_id}
                       timestamp={event.timestamp}
                       data={litterboxData}
                       raw_data={event.raw_data}
                       human_verified={event.human_verified}
+                      pets={pets || []}
                       onDelete={() => handleDeleteEvent(event.id)}
-                      onUpdate={handleUpdateEvent}
+                      onUpdate={handleUpdateLitterboxEvent}
+                      isDeleting={deletingEventIds.has(event.id)}
+                    />
+                  );
+                }
+                
+                // Check if this is a maintenance event
+                if (event.data && typeof event.data === 'object' && 
+                    'type' in event.data && event.data.type === 'litterbox_maintenance') {
+                  const maintenanceData = event.data as {
+                    type: "litterbox_maintenance";
+                    maintenance_type: "scoop" | "deep_clean" | "litter_change" | "litter_addition";
+                    litter_amount?: number;
+                    notes?: string;
+                  };
+                  return (
+                    <LitterboxMaintenanceEventItem
+                      key={event.id}
+                      id={event.id}
+                      pet_id={event.pet_id}
+                      timestamp={event.timestamp}
+                      data={maintenanceData}
+                      raw_data={event.raw_data}
+                      human_verified={event.human_verified}
+                      onDelete={() => handleDeleteEvent(event.id)}
+                      onUpdate={handleUpdateMaintenanceEvent}
                       isDeleting={deletingEventIds.has(event.id)}
                     />
                   );

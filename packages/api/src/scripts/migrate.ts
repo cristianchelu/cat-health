@@ -404,7 +404,7 @@ async function checkExistingEvents(
     .select(["timestamp"])
     .where("timestamp", ">=", startDate)
     .where("timestamp", "<=", endDate)
-    .where(sql`json_extract(data, '$.type')`, "=", "litterbox_use")
+    .where(sql`json_extract(data, '$.type')`, "in", ["litterbox_use", "litterbox_maintenance"])
     .execute();
 
   // Create a set of timestamp strings for O(1) lookup
@@ -425,7 +425,7 @@ async function migrateEvents(
   // Check for existing events in this time range
   console.log("Checking for existing events in database...");
   const existingEventTimestamps = await checkExistingEvents(startDate, endDate);
-  console.log(`Found ${existingEventTimestamps.size} existing litterbox events in time range`);
+  console.log(`Found ${existingEventTimestamps.size} existing litterbox events (use + maintenance) in time range`);
 
   // Initialize connections
   const influx = new InfluxDB({ url: influxUrl, token: influxToken });
@@ -492,12 +492,9 @@ async function migrateEvents(
         `Tare offset: ${tareOffset}g, final tared weight: ${finalTared}g`
       );
 
-      // Determine which cat
-      const petId = determinePetId(measurements, catWeights);
-
       // Calculate basic metrics
       const duration = session.endTime.getTime() - session.startTime.getTime(); // ms
-      const eliminationWeight = finalTared; // Will calculate in future pass
+      const eliminationWeight = finalTared;
 
       // Query context data for this event
       const contextData = await queryContextData(influx, bucket, session.startTime);
@@ -505,35 +502,67 @@ async function migrateEvents(
       // Encode raw data with context (our tared weights vs HA tared weights)
       const rawData = encodeRawData(session.startTime, measurements, contextData || undefined);
 
-      events.push({
-        pet_id: petId,
-        device_id: 1, // Use the seeded "Main Litter Box" device
-        timestamp: session.startTime,
-        data: {
-          type: "litterbox_use",
-          elimination_type: "unknown",
-          elimination_weight: Math.round(eliminationWeight),
-          duration,
-        },
-        raw_data: rawData,
-      });
+      // Check if this is a maintenance event based on significantly negative elimination weight
+      const MAINTENANCE_THRESHOLD = -20; // More than 20g weight decrease indicates maintenance
+
+      if (eliminationWeight < MAINTENANCE_THRESHOLD) {
+        // This is a maintenance event (waste removal/scooping)
+        console.log(`Detected maintenance event at ${session.startTime.toISOString()}: ${eliminationWeight}g`);
+        
+        let maintenanceType: "scoop" | "deep_clean" = "scoop";
+        
+        events.push({
+          pet_id: null, // Maintenance events are not assigned to specific pets
+          device_id: 1,
+          timestamp: session.startTime,
+          data: {
+            type: "litterbox_maintenance",
+            maintenance_type: maintenanceType,
+          },
+          raw_data: rawData,
+          human_verified: false,
+        });
+      } else {
+        // This is a regular litterbox use event
+        // Determine which cat based on weight measurements
+        const petId = determinePetId(measurements, catWeights);
+        
+        events.push({
+          pet_id: petId,
+          device_id: 1, // Use the seeded "Main Litter Box" device
+          timestamp: session.startTime,
+          data: {
+            type: "litterbox_use",
+            elimination_type: "unknown",
+            elimination_weight: Math.round(Math.max(0, eliminationWeight)), // Ensure non-negative
+            duration,
+          },
+          raw_data: rawData,
+          human_verified: false,
+        });
+      }
     }
 
     // Batch insert events
+    const useEvents = events.filter(e => (e.data as any).type === "litterbox_use");
+    const maintenanceEvents = events.filter(e => (e.data as any).type === "litterbox_maintenance");
+    
     console.log(`\n=== Migration Summary ===`);
     console.log(`Sessions found in InfluxDB: ${sessions.length}`);
     console.log(`Events skipped (already exist): ${skippedCount}`);
-    console.log(`New events to insert: ${events.length}`);
+    console.log(`New litterbox use events: ${useEvents.length}`);
+    console.log(`New maintenance events detected: ${maintenanceEvents.length}`);
+    console.log(`Total events to insert: ${events.length}`);
     
     // First write to JSON file for debugging
     fs.writeFileSync("litterbox_events.json", JSON.stringify(events, null, 2));
     if (events.length === 0) {
       console.log("No new events to insert, skipping database write.");
-      return;
+    } else {
+      console.log(`Inserting ${events.length} new events into database...`);
+      await db.insertInto("event").values(events).execute();
     }
     
-    console.log(`Inserting ${events.length} new events into database...`);
-    await db.insertInto("event").values(events).execute();
 
     console.log("Migration completed successfully");
   } catch (error) {

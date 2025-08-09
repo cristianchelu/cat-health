@@ -23,6 +23,12 @@ export interface FoodIntakeEventData {
   amount: number;
 }
 
+export interface LitterboxMaintenanceEventData {
+  type: "litterbox_maintenance";
+  maintenance_type: "scoop" | "deep_clean" | "litter_change" | "litter_addition";
+  litter_amount?: number; // in grams, for litter_change/litter_addition
+}
+
 export type EventTable = {
   id: Generated<number>;
   // TODO: Migrate type to root once kysely gets discriminated union support
@@ -35,9 +41,10 @@ export type EventTable = {
     | WeightMeasurementEventData
     | WaterIntakeEventData
     | LitterboxUseEventData
-    | FoodIntakeEventData;
+    | FoodIntakeEventData
+    | LitterboxMaintenanceEventData;
   raw_data: Buffer | null;
-  human_verified: Generated<boolean>;
+  human_verified: boolean;
 };
 
 export type Event = Selectable<EventTable>;

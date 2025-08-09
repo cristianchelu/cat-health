@@ -2,9 +2,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { useState } from 'react';
 import { getDevice, getDeviceEvents } from '@/api/devices';
-import { deleteEvent, updateEvent, getPets } from '@/api/pets';
+import { deleteEvent, updateEvent, getPets} from '@/api/pets';
 import type { Event } from '@/api/devices';
 import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
+import LitterboxMaintenanceEventItem from '@/components/event/LitterboxMaintenanceEvent';
 
 import './device-detail.css';
 
@@ -46,7 +47,7 @@ export default function DeviceDetail() {
     }
   };
 
-  const handleUpdateEvent = async (eventId: number, data: any, human_verified: boolean, pet_id?: number | null) => {
+  const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean, pet_id?: number | null) => {
     try {
       await updateEvent(eventId, { data, human_verified, pet_id });
       await queryClient.invalidateQueries({ queryKey: ['deviceEvents', deviceId] });
@@ -56,13 +57,21 @@ export default function DeviceDetail() {
     }
   };
 
+  const handleUpdateLitterboxEvent = async (eventId: number, data: { type: "litterbox_use"; elimination_type: string; elimination_weight: number; duration: number }, human_verified: boolean, pet_id?: number | null) => {
+    return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified, pet_id);
+  };
+
+  const handleUpdateMaintenanceEvent = async (eventId: number, data: { type: "litterbox_maintenance"; maintenance_type: string; litter_amount?: number; notes?: string }, human_verified: boolean) => {
+    return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified);
+  };
+
   const { data: device, isLoading: deviceLoading, error: deviceError } = useQuery({
     queryKey: ['device', deviceId],
     queryFn: () => getDevice(deviceId),
     enabled: isValidId,
   });
 
-  const { data: events, isLoading: eventsLoading, error: eventsError } = useQuery({
+  const { data: events = [], isLoading: eventsLoading, error: eventsError } = useQuery({
     queryKey: ['deviceEvents', deviceId],
     queryFn: () => getDeviceEvents(deviceId),
     enabled: isValidId,
@@ -88,23 +97,7 @@ export default function DeviceDetail() {
   if (!device) {
     return <div className="device-detail device-detail--empty">Device not found.</div>;
   }
-
-  const groupEventsByType = (events: Event[]): Record<string, Event[]> => {
-    return events.reduce((groups, event) => {
-      const data = event.data as { type?: string } | null;
-      const type = data && typeof data === 'object' && data.type ? data.type : 'Other';
-      
-      if (!groups[type]) {
-        groups[type] = [];
-      }
-      groups[type].push(event);
-      
-      return groups;
-    }, {} as Record<string, Event[]>);
-  };
   
-  const eventsByType = groupEventsByType(events || []);
-
   return (
     <div className="device-detail">
       <div className="card">
@@ -113,66 +106,87 @@ export default function DeviceDetail() {
           <div><b>Type:</b> {getDeviceTypeLabel(device.type)}</div>
         </div>
       </div>
-
       <div>
         <div className="events-title">Events</div>
-        {Object.entries(eventsByType).length === 0 && (
+        {events.length === 0 && (
           <div className="empty">No events found for this device.</div>
         )}
-        {Object.entries(eventsByType).map(([type, events]) => (
-          <div key={type} className="event-group">
-            <div className="event-group-title">{type}</div>
-            <ul className="event-list">
-              {events.map(event => {
-                if (event.data && typeof event.data === 'object' && 
-                    'type' in event.data && event.data.type === 'litterbox_use') {
-                  const litterboxData = event.data as {
-                    type: "litterbox_use";
-                    elimination_type: "urination" | "defecation" | "no_elimination" | "unknown";
-                    elimination_weight: number;
-                    duration: number;
-                  };
-                  return (
-                    <LitterboxEventItem
-                      key={event.id}
-                      id={event.id}
-                      pet_id={event.pet_id}
-                      timestamp={event.timestamp}
-                      data={litterboxData}
-                      raw_data={event.raw_data}
-                      human_verified={event.human_verified}
-                      pets={pets || []}
-                      onDelete={() => handleDeleteEvent(event.id)}
-                      onUpdate={handleUpdateEvent}
-                      isDeleting={deletingEventIds.has(event.id)}
-                    />
-                  );
-                }
-                
+        <div className="event-group">
+          <ul className="event-list">
+            {events.sort((a,b)=>new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map(event => {
+              if (event.data && typeof event.data === 'object' && 
+                  'type' in event.data && event.data.type === 'litterbox_use') {
+                const litterboxData = event.data as {
+                  type: "litterbox_use";
+                  elimination_type: "urination" | "defecation" | "no_elimination" | "unknown";
+                  elimination_weight: number;
+                  duration: number;
+                };
                 return (
-                  <li key={event.id} className="event-item">
-                    <div className="event-header">
-                      <div className="event-timestamp">
-                        <b>Timestamp:</b> {new Date(event.timestamp).toLocaleString()}
-                      </div>
-                      <button
-                        className="event-delete-btn"
-                        onClick={() => handleDeleteEvent(event.id)}
-                        disabled={deletingEventIds.has(event.id)}
-                        title="Delete event"
-                      >
-                        {deletingEventIds.has(event.id) ? '...' : '×'}
-                      </button>
-                    </div>
-                    <pre className="event-data">
-                      {JSON.stringify(event.data, null, 2)}
-                    </pre>
-                  </li>
+                  <LitterboxEventItem
+                    key={event.id}
+                    id={event.id}
+                    pet_id={event.pet_id}
+                    timestamp={event.timestamp}
+                    data={litterboxData}
+                    raw_data={event.raw_data}
+                    human_verified={event.human_verified}
+                    pets={pets || []}
+                    onDelete={() => handleDeleteEvent(event.id)}
+                    onUpdate={handleUpdateLitterboxEvent}
+                    isDeleting={deletingEventIds.has(event.id)}
+                  />
                 );
-              })}
-            </ul>
-          </div>
-        ))}
+              }
+
+              // Check if this is a maintenance event
+              if (event.data && typeof event.data === 'object' && 
+                  'type' in event.data && event.data.type === 'litterbox_maintenance') {
+                const maintenanceData = event.data as {
+                  type: "litterbox_maintenance";
+                  maintenance_type: "scoop" | "deep_clean" | "litter_change" | "litter_addition";
+                  litter_amount?: number;
+                  notes?: string;
+                };
+                return (
+                  <LitterboxMaintenanceEventItem
+                    key={event.id}
+                    id={event.id}
+                    pet_id={event.pet_id}
+                    timestamp={event.timestamp}
+                    data={maintenanceData}
+                    raw_data={event.raw_data}
+                    human_verified={event.human_verified}
+                    onDelete={() => handleDeleteEvent(event.id)}
+                    onUpdate={handleUpdateMaintenanceEvent}
+                    isDeleting={deletingEventIds.has(event.id)}
+                  />
+                );
+              }
+              
+              return (
+                <li key={event.id} className="event-item">
+                  <div className="event-header">
+                    <div className="event-timestamp">
+                      <b>Timestamp:</b> {new Date(event.timestamp).toLocaleString()}
+                    </div>
+                    <button
+                      className="event-delete-btn"
+                      onClick={() => handleDeleteEvent(event.id)}
+                      disabled={deletingEventIds.has(event.id)}
+                      title="Delete event"
+                    >
+                      {deletingEventIds.has(event.id) ? '...' : '×'}
+                    </button>
+                  </div>
+                  <pre className="event-data">
+                    {JSON.stringify(event.data, null, 2)}
+                  </pre>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </div>
     </div>
   );

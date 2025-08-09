@@ -1,5 +1,5 @@
 export type AddEventInput = {
-  pet_id: number;
+  pet_id?: number | null;
   device_id?: number | null;
   timestamp?: string;
   data: Record<string, unknown>;
