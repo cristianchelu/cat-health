@@ -554,8 +554,6 @@ async function migrateEvents(
     console.log(`New maintenance events detected: ${maintenanceEvents.length}`);
     console.log(`Total events to insert: ${events.length}`);
     
-    // First write to JSON file for debugging
-    fs.writeFileSync("litterbox_events.json", JSON.stringify(events, null, 2));
     if (events.length === 0) {
       console.log("No new events to insert, skipping database write.");
     } else {
@@ -563,7 +561,6 @@ async function migrateEvents(
       await db.insertInto("event").values(events).execute();
     }
     
-
     console.log("Migration completed successfully");
   } catch (error) {
     console.error("Migration failed:", error);
@@ -573,13 +570,11 @@ async function migrateEvents(
 }
 
 const startDate = new Date("2025-08-08T00:00:00Z");
-const endDate = new Date("2025-08-08T23:59:59Z");
+const endDate = new Date("2025-08-09T23:59:59Z");
 const influxUrl = "http://192.168.100.52:8086";
 const influxToken = process.env.INFLUX_TOKEN || "";
 const bucket = "homeassistant";
 const batchDays = 10;
-
-// migrateEvents(startDate, endDate, influxUrl, influxToken, bucket);
 
 // Process in batches
 const start = new Date(startDate);

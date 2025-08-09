@@ -3,10 +3,10 @@ import { useParams } from 'react-router';
 import { useState } from 'react';
 import { getPet, getPetEvents, addEvent, deleteEvent, updateEvent, getPets } from '@/api/pets';
 import type { Event } from '@/api/pets';
-import DebugEventForm from '@/components/DebugEventForm';
-import './pet-detail.css';
 import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
 import LitterboxMaintenanceEventItem from '@/components/event/LitterboxMaintenanceEvent';
+
+import './pet-detail.css';
 
 export default function PetDetail() {
   const { id } = useParams<{ id: string }>();
@@ -56,7 +56,7 @@ export default function PetDetail() {
     return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified, pet_id);
   };
 
-  const handleUpdateMaintenanceEvent = async (eventId: number, data: { type: "litterbox_maintenance"; maintenance_type: string; litter_amount?: number; notes?: string }, human_verified: boolean) => {
+  const handleUpdateMaintenanceEvent = async (eventId: number, data: { type: "litterbox_maintenance"; maintenance_type: string; litter_amount?: number }, human_verified: boolean) => {
     return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified);
   };
 
@@ -118,9 +118,6 @@ export default function PetDetail() {
           <div><b>Birth Date:</b> {pet.birth_date}</div>
         </div>
       </div>
-
-      <DebugEventForm onSubmit={handleAddEvent} />
-
       <div>
         <div className="events-title">Events</div>
         {Object.entries(eventsByType).length === 0 && (
@@ -164,7 +161,6 @@ export default function PetDetail() {
                     type: "litterbox_maintenance";
                     maintenance_type: "scoop" | "deep_clean" | "litter_change" | "litter_addition";
                     litter_amount?: number;
-                    notes?: string;
                   };
                   return (
                     <LitterboxMaintenanceEventItem

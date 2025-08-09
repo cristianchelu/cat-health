@@ -12,7 +12,7 @@ import {
 import { useState, type JSX } from 'react';
 import type { TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { FaTint, FaPoop, FaBan, FaQuestion, FaClock, FaWeight, FaCalendarAlt, FaCheck } from 'react-icons/fa';
+import { FaTint, FaPoop, FaBan, FaQuestion, FaClock, FaCalendarAlt, FaGift, FaCheck } from 'react-icons/fa';
 
 ChartJS.register(
   CategoryScale,
@@ -234,7 +234,7 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
     setIsUpdating(true);
     try {
       const updatedData = { ...data, elimination_type: newType };
-      await onUpdate(id, updatedData, true); // Mark as human verified when manually changed
+      await onUpdate(id, updatedData, true, pet_id); // Mark as human verified when manually changed
     } catch (error) {
       console.error('Failed to update event:', error);
     } finally {
@@ -301,9 +301,6 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
                 <option value="no_elimination">No elimination</option>
                 <option value="unknown">Unknown</option>
               </select>
-              {human_verified && (
-                <FaCheck title="Human verified" style={{ color: '#4CAF50', fontSize: '12px' }} />
-              )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <span>Cat:</span>
@@ -315,9 +312,8 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
                   border: 'none',
                   background: 'none',
                   fontSize: '15px',
-                  color: human_verified ? '#4CAF50' : (pet_id ? '#444' : '#888'),
+                  color: pet_id ? '#444' : '#888',
                   cursor: isUpdating ? 'wait' : 'pointer',
-                  fontWeight: human_verified ? 'bold' : 'normal'
                 }}
               >
                 <option value="">Unknown</option>
@@ -327,8 +323,10 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
               </select>
             </div>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FaClock /> {formatDuration(data.duration)}</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FaWeight /> {data.elimination_weight.toFixed(1)}g</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FaWeight /> {raw_data?.length || 0} samples</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FaGift /> {data.elimination_weight.toFixed(0)}g</span>
+            {human_verified && (
+              <FaCheck title="Human verified" style={{ color: '#4CAF50', fontSize: '12px' }} />
+            )}
           </div>
           {weights.length > 0 && (
             <button

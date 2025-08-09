@@ -61,7 +61,7 @@ export default function DeviceDetail() {
     return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified, pet_id);
   };
 
-  const handleUpdateMaintenanceEvent = async (eventId: number, data: { type: "litterbox_maintenance"; maintenance_type: string; litter_amount?: number; notes?: string }, human_verified: boolean) => {
+  const handleUpdateMaintenanceEvent = async (eventId: number, data: { type: "litterbox_maintenance"; maintenance_type: string; litter_amount?: number; }, human_verified: boolean) => {
     return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified);
   };
 
@@ -97,7 +97,7 @@ export default function DeviceDetail() {
   if (!device) {
     return <div className="device-detail device-detail--empty">Device not found.</div>;
   }
-  
+
   return (
     <div className="device-detail">
       <div className="card">
@@ -146,7 +146,6 @@ export default function DeviceDetail() {
                   type: "litterbox_maintenance";
                   maintenance_type: "scoop" | "deep_clean" | "litter_change" | "litter_addition";
                   litter_amount?: number;
-                  notes?: string;
                 };
                 return (
                   <LitterboxMaintenanceEventItem

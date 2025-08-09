@@ -11,7 +11,7 @@ import {
 import { useState, type JSX } from 'react';
 import type { TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { FaBroom, FaTrash, FaPlusCircle, FaExchangeAlt, FaCalendarAlt, FaCheck } from 'react-icons/fa';
+import { FaBroom, FaTrash, FaPlusCircle, FaExchangeAlt, FaCalendarAlt, FaCheck, FaClock, FaWeight } from 'react-icons/fa';
 
 ChartJS.register(
   CategoryScale,
@@ -27,7 +27,6 @@ interface LitterboxMaintenanceEventData {
   type: "litterbox_maintenance";
   maintenance_type: "scoop" | "deep_clean" | "litter_change" | "litter_addition";
   litter_amount?: number;
-  notes?: string;
 }
 
 interface LitterboxMaintenanceEventItemProps {
@@ -260,9 +259,6 @@ export default function LitterboxMaintenanceEventItem({
     <li className="maintenance-event-item" style={{ 
       borderBottom: '1px solid #eee', 
       padding: '0.5em 0',
-      borderLeft: `4px solid ${maintenance.color}`,
-      paddingLeft: '12px',
-      marginLeft: '8px'
     }}>
       <div className="event-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div className="event-timestamp" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -300,8 +296,6 @@ export default function LitterboxMaintenanceEventItem({
                 border: 'none',
                 background: 'none',
                 fontSize: '15px',
-                color: maintenance.color,
-                fontWeight: 'bold',
                 cursor: isUpdating ? 'wait' : 'pointer'
               }}
             >
@@ -310,11 +304,11 @@ export default function LitterboxMaintenanceEventItem({
               <option value="litter_change">Litter Change</option>
               <option value="litter_addition">Add Litter</option>
             </select>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FaWeight /> {data.litter_amount?.toFixed(1)}g</span>
             {human_verified && (
               <FaCheck title="Human verified" style={{ color: '#4CAF50', fontSize: '12px' }} />
             )}
           </div>
-
           {/* Weight sparkline chart */}
           {weights.length > 0 && (
             <button
