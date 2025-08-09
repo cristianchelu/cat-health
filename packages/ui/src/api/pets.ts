@@ -43,6 +43,7 @@ export async function deleteEvent(eventId: number): Promise<{ success: boolean }
 }
 
 export type UpdateEventInput = {
+  pet_id?: number | null;
   data?: Record<string, unknown>;
   human_verified?: boolean;
 };

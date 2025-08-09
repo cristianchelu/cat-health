@@ -20,12 +20,15 @@ const PostEventSchema = Type.Composite([
   Type.Omit(GetEventSchema, ["id", "timestamp", "raw_data"]),
   Type.Object({
     timestamp: Type.Optional(Type.String()),
-    raw_data: Type.Optional(Type.Union([Type.Null(), Type.Array(Type.Number())])),
+    raw_data: Type.Optional(
+      Type.Union([Type.Null(), Type.Array(Type.Number())])
+    ),
   }),
 ]);
 export type PostEventDTO = Static<typeof PostEventSchema>;
 
 const PatchEventSchema = Type.Object({
+  pet_id: Type.Union([Type.Number(), Type.Null()]),
   data: Type.Optional(Type.Any()),
   human_verified: Type.Optional(Type.Boolean()),
 });
@@ -47,21 +50,21 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
     },
     async (request) => {
       const { pet_id, device_id } = request.query;
-      
+
       let query = db.selectFrom("event").selectAll();
-      
+
       if (pet_id !== undefined) {
         query = query.where("pet_id", "=", pet_id);
       }
-      
+
       if (device_id !== undefined) {
         query = query.where("device_id", "=", device_id);
       }
-      
+
       const events = await query.execute();
-      return events.map(event => ({
+      return events.map((event) => ({
         ...event,
-        raw_data: event.raw_data ? Array.from(event.raw_data) : null
+        raw_data: event.raw_data ? Array.from(event.raw_data) : null,
       }));
     }
   );
@@ -93,7 +96,7 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
 
       return {
         ...result,
-        raw_data: result.raw_data ? Array.from(result.raw_data) : null
+        raw_data: result.raw_data ? Array.from(result.raw_data) : null,
       };
     }
   );
@@ -111,18 +114,21 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
     },
     async (request) => {
       const { eventId } = request.params;
-      const updateData = request.body;
+      const { body } = request;
 
       const result = await db
         .updateTable("event")
-        .set(updateData)
+        .set({
+          ...body,
+          pet_id: body.pet_id === 0 ? null : body.pet_id,
+        })
         .where("id", "=", eventId)
         .returningAll()
         .executeTakeFirstOrThrow();
 
       return {
         ...result,
-        raw_data: result.raw_data ? Array.from(result.raw_data) : null
+        raw_data: result.raw_data ? Array.from(result.raw_data) : null,
       };
     }
   );
@@ -139,7 +145,7 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
     },
     async (request) => {
       const { eventId } = request.params;
-      
+
       await db
         .deleteFrom("event")
         .where("id", "=", eventId)

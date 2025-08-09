@@ -265,7 +265,7 @@ async function queryInfluxForEvents(
           } else if (event.value === 0 && currentStart !== null) {
             // Activity ended
             const duration = event.timestamp.getTime() - currentStart.getTime();
-            if (duration > 30000) {
+            if (duration > 10000) {
               sessions.push({
                 startTime: currentStart,
                 endTime: event.timestamp,

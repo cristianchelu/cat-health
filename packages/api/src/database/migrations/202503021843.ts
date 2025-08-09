@@ -44,7 +44,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .createTable("event")
     .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
     .addColumn("pet_id", "integer", (col) =>
-      col.references("pet.id").onDelete("cascade").notNull()
+      col.references("pet.id").onDelete("cascade")
     )
     .addColumn("device_id", "integer", (col) => col.references("device.id"))
     .addColumn("timestamp", "integer", (col) => col.notNull())

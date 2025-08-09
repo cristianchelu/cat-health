@@ -2,10 +2,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { useState } from 'react';
 import { getDevice, getDeviceEvents } from '@/api/devices';
-import { deleteEvent, updateEvent } from '@/api/pets';
+import { deleteEvent, updateEvent, getPets } from '@/api/pets';
 import type { Event } from '@/api/devices';
-import './device-detail.css';
 import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
+
+import './device-detail.css';
 
 const getDeviceTypeLabel = (type: "litterbox" | "feeder" | "fountain") => {
   switch (type) {
@@ -45,9 +46,9 @@ export default function DeviceDetail() {
     }
   };
 
-  const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean) => {
+  const handleUpdateEvent = async (eventId: number, data: any, human_verified: boolean, pet_id?: number | null) => {
     try {
-      await updateEvent(eventId, { data, human_verified });
+      await updateEvent(eventId, { data, human_verified, pet_id });
       await queryClient.invalidateQueries({ queryKey: ['deviceEvents', deviceId] });
     } catch (error) {
       console.error('Failed to update event:', error);
@@ -66,12 +67,17 @@ export default function DeviceDetail() {
     queryFn: () => getDeviceEvents(deviceId),
     enabled: isValidId,
   });
+
+  const { data: pets, isLoading: petsLoading } = useQuery({
+    queryKey: ['pets'],
+    queryFn: getPets,
+  });
   
   if (!isValidId) {
     return <div className="device-detail device-detail--error">Invalid device ID.</div>;
   }
 
-  if (deviceLoading || eventsLoading) {
+  if (deviceLoading || eventsLoading || petsLoading) {
     return <div className="device-detail device-detail--loading">Loading...</div>;
   }
   
@@ -130,10 +136,12 @@ export default function DeviceDetail() {
                     <LitterboxEventItem
                       key={event.id}
                       id={event.id}
+                      pet_id={event.pet_id}
                       timestamp={event.timestamp}
                       data={litterboxData}
                       raw_data={event.raw_data}
                       human_verified={event.human_verified}
+                      pets={pets || []}
                       onDelete={() => handleDeleteEvent(event.id)}
                       onUpdate={handleUpdateEvent}
                       isDeleting={deletingEventIds.has(event.id)}

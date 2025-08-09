@@ -31,14 +31,23 @@ interface LitterboxUseEventData {
   duration: number;
 }
 
+interface Pet {
+  id: number;
+  name: string;
+  breed: string;
+  birth_date: string;
+}
+
 interface LitterboxEventItemProps {
   id: number;
+  pet_id: number | null;
   timestamp: string;
   data: LitterboxUseEventData;
   raw_data: number[] | null;
   human_verified: boolean;
+  pets: Pet[];
   onDelete: () => void;
-  onUpdate: (id: number, data: LitterboxUseEventData, human_verified: boolean) => Promise<void>;
+  onUpdate: (id: number, data: LitterboxUseEventData, human_verified: boolean, pet_id?: number | null) => Promise<void>;
   isDeleting: boolean;
 }
 
@@ -154,7 +163,7 @@ function formatEliminationType(type: string): { icon: JSX.Element; label: string
   }
 }
 
-export default function LitterboxEventItem({ id, timestamp, data, raw_data, human_verified, onDelete, onUpdate, isDeleting }: LitterboxEventItemProps) {
+export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_data, human_verified, pets, onDelete, onUpdate, isDeleting }: LitterboxEventItemProps) {
   const { timestamps, weights, context } = parseRawBuffer(raw_data || []);
   const [showChart, setShowChart] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -233,6 +242,24 @@ export default function LitterboxEventItem({ id, timestamp, data, raw_data, huma
     }
   };
 
+  const handlePetAssignmentChange = async (newPetId: string) => {
+    if (isUpdating) return;
+    
+    setIsUpdating(true);
+    try {
+      let petId: number | null = null;
+      if (newPetId && newPetId !== '') {
+        const parsed = parseInt(newPetId, 10);
+        petId = isNaN(parsed) ? null : parsed;
+      }
+      await onUpdate(id, data, true, petId); // Mark as human verified when manually changed
+    } catch (error) {
+      console.error('Failed to update pet assignment:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const elim = formatEliminationType(data.elimination_type);
   return (
     <li className="litterbox-event-item" style={{ borderBottom: '1px solid #eee', padding: '0.5em 0' }}>
@@ -277,6 +304,27 @@ export default function LitterboxEventItem({ id, timestamp, data, raw_data, huma
               {human_verified && (
                 <FaCheck title="Human verified" style={{ color: '#4CAF50', fontSize: '12px' }} />
               )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span>Cat:</span>
+              <select 
+                value={pet_id || ''}
+                onChange={(e) => handlePetAssignmentChange(e.target.value)}
+                disabled={isUpdating}
+                style={{ 
+                  border: 'none',
+                  background: 'none',
+                  fontSize: '15px',
+                  color: human_verified ? '#4CAF50' : (pet_id ? '#444' : '#888'),
+                  cursor: isUpdating ? 'wait' : 'pointer',
+                  fontWeight: human_verified ? 'bold' : 'normal'
+                }}
+              >
+                <option value="">Unknown</option>
+                {pets.map(pet => (
+                  <option key={pet.id} value={pet.id}>{pet.name}</option>
+                ))}
+              </select>
             </div>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FaClock /> {formatDuration(data.duration)}</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FaWeight /> {data.elimination_weight.toFixed(1)}g</span>
