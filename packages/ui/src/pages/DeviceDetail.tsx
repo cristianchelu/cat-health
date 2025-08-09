@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { useState } from 'react';
-import { getDevice, getDeviceEvents } from '@/api/devices';
+import { getDevice, getDeviceEvents, type Event } from '@/api/devices';
 import { deleteEvent, updateEvent, getPets} from '@/api/pets';
-import type { Event } from '@/api/devices';
 import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
 import LitterboxMaintenanceEventItem from '@/components/event/LitterboxMaintenanceEvent';
+import DateNavigation from '@/components/ui/DateNavigation';
+import { dateToTimeRange } from '@/lib/utils';
 
 import './device-detail.css';
 
@@ -27,6 +28,12 @@ export default function DeviceDetail() {
   const queryClient = useQueryClient();
   const [deletingEventIds, setDeletingEventIds] = useState<Set<number>>(new Set());
   
+  // Initialize current date to today
+  const [currentDate, setCurrentDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+  });
+  
   const deviceId = id ? Number(id) : NaN;
   const isValidId = !isNaN(deviceId) && deviceId > 0;
 
@@ -35,7 +42,7 @@ export default function DeviceDetail() {
     
     try {
       await deleteEvent(eventId);
-      await queryClient.invalidateQueries({ queryKey: ['deviceEvents', deviceId] });
+      await queryClient.invalidateQueries({ queryKey: ['deviceEvents', deviceId, currentDate] });
     } catch (error) {
       console.error('Failed to delete event:', error);
     } finally {
@@ -50,7 +57,7 @@ export default function DeviceDetail() {
   const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean, pet_id?: number | null) => {
     try {
       await updateEvent(eventId, { data, human_verified, pet_id });
-      await queryClient.invalidateQueries({ queryKey: ['deviceEvents', deviceId] });
+      await queryClient.invalidateQueries({ queryKey: ['deviceEvents', deviceId, currentDate] });
     } catch (error) {
       console.error('Failed to update event:', error);
       throw error;
@@ -71,9 +78,12 @@ export default function DeviceDetail() {
     enabled: isValidId,
   });
 
-  const { data: events = [], isLoading: eventsLoading, error: eventsError } = useQuery({
-    queryKey: ['deviceEvents', deviceId],
-    queryFn: () => getDeviceEvents(deviceId),
+  const { data: eventsData = { events: [], total: 0, hasMore: false, limit: 0, offset: 0 }, isLoading: eventsLoading, error: eventsError } = useQuery({
+    queryKey: ['deviceEvents', deviceId, currentDate],
+    queryFn: () => {
+      const { startTime, endTime } = dateToTimeRange(currentDate);
+      return getDeviceEvents(deviceId, startTime, endTime);
+    },
     enabled: isValidId,
   });
 
@@ -98,6 +108,9 @@ export default function DeviceDetail() {
     return <div className="device-detail device-detail--empty">Device not found.</div>;
   }
 
+  const events = eventsData.events;
+  const hasEvents = events.length > 0;
+
   return (
     <div className="device-detail">
       <div className="card">
@@ -108,12 +121,18 @@ export default function DeviceDetail() {
       </div>
       <div>
         <div className="events-title">Events</div>
+        <DateNavigation 
+          currentDate={currentDate}
+          onDateChange={setCurrentDate}
+          hasEvents={hasEvents}
+        />
+        
         {events.length === 0 && (
-          <div className="empty">No events found for this device.</div>
+          <div className="empty">No events found for this date.</div>
         )}
         <div className="event-group">
           <ul className="event-list">
-            {events.sort((a,b)=>new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map(event => {
+            {events.sort((a: Event, b: Event) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((event: Event) => {
               if (event.data && typeof event.data === 'object' && 
                   'type' in event.data && event.data.type === 'litterbox_use') {
                 const litterboxData = event.data as {

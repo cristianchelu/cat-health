@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { useState } from 'react';
-import { getPet, getPetEvents, addEvent, deleteEvent, updateEvent, getPets } from '@/api/pets';
+import { getPet, getPetEvents, deleteEvent, updateEvent, getPets } from '@/api/pets';
 import type { Event } from '@/api/pets';
 import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
 import LitterboxMaintenanceEventItem from '@/components/event/LitterboxMaintenanceEvent';
+import DateNavigation from '@/components/ui/DateNavigation';
+import { dateToTimeRange } from '@/lib/utils';
 
 import './pet-detail.css';
 
@@ -13,13 +15,14 @@ export default function PetDetail() {
   const queryClient = useQueryClient();
   const [deletingEventIds, setDeletingEventIds] = useState<Set<number>>(new Set());
   
+  // Initialize current date to today
+  const [currentDate, setCurrentDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+  });
+  
   const petId = id ? Number(id) : NaN;
   const isValidId = !isNaN(petId) && petId > 0;
-
-  const handleAddEvent = async (eventData: unknown) => {
-    await addEvent({ pet_id: petId, data: eventData as Record<string, unknown>, device_id: null });
-    await queryClient.invalidateQueries({ queryKey: ['petEvents', petId] });
-  };
 
   const handleDeleteEvent = async (eventId: number) => {
     // if (!confirm('Are you sure you want to delete this event?')) {
@@ -30,7 +33,7 @@ export default function PetDetail() {
     
     try {
       await deleteEvent(eventId);
-      await queryClient.invalidateQueries({ queryKey: ['petEvents', petId] });
+      await queryClient.invalidateQueries({ queryKey: ['petEvents', petId, currentDate] });
     } catch (error) {
       console.error('Failed to delete event:', error);
     } finally {
@@ -45,7 +48,7 @@ export default function PetDetail() {
   const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean, pet_id?: number | null) => {
     try {
       await updateEvent(eventId, { data, human_verified, pet_id });
-      await queryClient.invalidateQueries({ queryKey: ['petEvents', petId] });
+      await queryClient.invalidateQueries({ queryKey: ['petEvents', petId, currentDate] });
     } catch (error) {
       console.error('Failed to update event:', error);
       throw error; // Re-throw so the component can handle the error
@@ -66,9 +69,12 @@ export default function PetDetail() {
     enabled: isValidId,
   });
 
-  const { data: events, isLoading: eventsLoading, error: eventsError } = useQuery({
-    queryKey: ['petEvents', petId],
-    queryFn: () => getPetEvents(petId),
+  const { data: eventsData, isLoading: eventsLoading, error: eventsError } = useQuery({
+    queryKey: ['petEvents', petId, currentDate],
+    queryFn: () => {
+      const { startTime, endTime } = dateToTimeRange(currentDate);
+      return getPetEvents(petId, startTime, endTime);
+    },
     enabled: isValidId,
   });
 
@@ -107,7 +113,9 @@ export default function PetDetail() {
     }, {} as Record<string, Event[]>);
   };
   
-  const eventsByType = groupEventsByType(events || []);
+  const events = eventsData?.events || [];
+  const eventsByType = groupEventsByType(events);
+  const hasEvents = events.length > 0;
 
   return (
     <div className="pet-detail">
@@ -118,10 +126,17 @@ export default function PetDetail() {
           <div><b>Birth Date:</b> {pet.birth_date}</div>
         </div>
       </div>
+      
       <div>
         <div className="events-title">Events</div>
+        <DateNavigation 
+          currentDate={currentDate}
+          onDateChange={setCurrentDate}
+          hasEvents={hasEvents}
+        />
+        
         {Object.entries(eventsByType).length === 0 && (
-          <div className="empty">No events found for this pet.</div>
+          <div className="empty">No events found for this date.</div>
         )}
         {Object.entries(eventsByType).map(([type, events]) => (
           <div key={type} className="event-group">

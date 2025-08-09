@@ -36,7 +36,22 @@ export type Event = {
   human_verified: boolean;
 };
 
-export async function getDeviceEvents(deviceId: number): Promise<Event[]> {
-  const { data } = await apiClient.get('/events', { params: { device_id: deviceId } });
+export type PaginatedEvents = {
+  events: Event[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+};
+
+export async function getDeviceEvents(deviceId: number, startTime?: string, endTime?: string): Promise<PaginatedEvents> {
+  const params: Record<string, unknown> = { device_id: deviceId };
+  if (startTime) {
+    params.startTime = startTime;
+  }
+  if (endTime) {
+    params.endTime = endTime;
+  }
+  const { data } = await apiClient.get('/events', { params });
   return data;
 }

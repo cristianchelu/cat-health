@@ -350,9 +350,6 @@ export default function LitterboxMaintenanceEventItem({
                   {context.totalVisits !== null && (
                     <div>Visits since scoop: <strong>{context.totalVisits}</strong></div>
                   )}
-                  {context.deepCleanTimer !== null && (
-                    <div>Days since deep clean: <strong>{context.deepCleanTimer}</strong>d</div>
-                  )}
                 </div>
               </div>
             )}

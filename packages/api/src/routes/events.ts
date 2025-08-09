@@ -42,30 +42,74 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
         querystring: Type.Object({
           pet_id: Type.Optional(Type.Number()),
           device_id: Type.Optional(Type.Number()),
+          startTime: Type.Optional(Type.String({ format: 'date-time' })), // ISO 8601 format
+          endTime: Type.Optional(Type.String({ format: 'date-time' })), // ISO 8601 format
+          limit: Type.Optional(Type.Number({ minimum: 1, maximum: 1000 })),
+          offset: Type.Optional(Type.Number({ minimum: 0 })),
         }),
         response: {
-          "200": GetEventsSchema,
+          "200": Type.Object({
+            events: GetEventsSchema,
+            total: Type.Number(),
+            limit: Type.Number(),
+            offset: Type.Number(),
+            hasMore: Type.Boolean(),
+          }),
         },
       },
     },
     async (request) => {
-      const { pet_id, device_id } = request.query;
+      const { pet_id, device_id, startTime, endTime, limit = 100, offset = 0 } = request.query;
 
       let query = db.selectFrom("event").selectAll();
+      let countQuery = db.selectFrom("event").select(db.fn.count<number>('id').as('count'));
 
       if (pet_id !== undefined) {
         query = query.where("pet_id", "=", pet_id);
+        countQuery = countQuery.where("pet_id", "=", pet_id);
       }
 
       if (device_id !== undefined) {
         query = query.where("device_id", "=", device_id);
+        countQuery = countQuery.where("device_id", "=", device_id);
       }
 
-      const events = await query.execute();
-      return events.map((event) => ({
-        ...event,
-        raw_data: event.raw_data ? Array.from(event.raw_data) : null,
-      }));
+      if (startTime !== undefined) {
+        const start = new Date(startTime);
+        query = query.where("timestamp", ">=", start);
+        countQuery = countQuery.where("timestamp", ">=", start);
+      }
+
+      if (endTime !== undefined) {
+        const end = new Date(endTime);
+        query = query.where("timestamp", "<=", end);
+        countQuery = countQuery.where("timestamp", "<=", end);
+      }
+
+      // Order by timestamp descending (newest first)
+      query = query.orderBy("timestamp", "desc");
+
+      // Apply pagination
+      query = query.limit(limit).offset(offset);
+
+      const [events, countResult] = await Promise.all([
+        query.execute(),
+        countQuery.executeTakeFirst()
+      ]);
+
+      const total = countResult?.count || 0;
+      const hasMore = offset + events.length < total;
+
+      return {
+        events: events.map((event) => ({
+          ...event,
+          raw_data: event.raw_data ? Array.from(event.raw_data) : null,
+        })),
+        total,
+        limit,
+        offset,
+        hasMore,
+      };
     }
   );
 
@@ -90,6 +134,7 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
           timestamp: timestamp ? new Date(timestamp) : new Date(),
           data,
           raw_data: raw_data ? Buffer.from(raw_data) : null,
+          human_verified: false, // Default to false for new events
         })
         .returningAll()
         .executeTakeFirstOrThrow();

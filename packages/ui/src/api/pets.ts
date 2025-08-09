@@ -32,8 +32,23 @@ export type Event = {
   human_verified: boolean;
 };
 
-export async function getPetEvents(petId: number): Promise<Event[]> {
-  const { data } = await apiClient.get('/events', { params: { pet_id: petId } });
+export type PaginatedEvents = {
+  events: Event[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+};
+
+export async function getPetEvents(petId: number, startTime?: string, endTime?: string): Promise<PaginatedEvents> {
+  const params: Record<string, unknown> = { pet_id: petId };
+  if (startTime) {
+    params.startTime = startTime;
+  }
+  if (endTime) {
+    params.endTime = endTime;
+  }
+  const { data } = await apiClient.get('/events', { params });
   return data;
 }
 
