@@ -5,6 +5,7 @@ import { getDevice, getDeviceEvents, type Event } from '@/api/devices';
 import { deleteEvent, updateEvent, getPets} from '@/api/pets';
 import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
 import LitterboxMaintenanceEventItem from '@/components/event/LitterboxMaintenanceEvent';
+import WeightMeasurementEventItem from '@/components/event/WeightMeasurementEvent';
 import DateNavigation from '@/components/ui/DateNavigation';
 import { dateToTimeRange } from '@/lib/utils';
 
@@ -70,6 +71,10 @@ export default function DeviceDetail() {
 
   const handleUpdateMaintenanceEvent = async (eventId: number, data: { type: "litterbox_maintenance"; maintenance_type: string; litter_amount?: number; }, human_verified: boolean) => {
     return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified);
+  };
+
+  const handleUpdateWeightEvent = async (eventId: number, data: { type: "weight_measurement"; weight: number }, human_verified: boolean, pet_id?: number | null) => {
+    return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified, pet_id);
   };
 
   const { data: device, isLoading: deviceLoading, error: deviceError } = useQuery({
@@ -177,6 +182,30 @@ export default function DeviceDetail() {
                     human_verified={event.human_verified}
                     onDelete={() => handleDeleteEvent(event.id)}
                     onUpdate={handleUpdateMaintenanceEvent}
+                    isDeleting={deletingEventIds.has(event.id)}
+                  />
+                );
+              }
+              
+              // Check if this is a weight measurement event
+              if (event.data && typeof event.data === 'object' && 
+                  'type' in event.data && event.data.type === 'weight_measurement') {
+                const weightData = event.data as {
+                  type: "weight_measurement";
+                  weight: number;
+                };
+                return (
+                  <WeightMeasurementEventItem
+                    key={event.id}
+                    id={event.id}
+                    pet_id={event.pet_id}
+                    timestamp={event.timestamp}
+                    data={weightData}
+                    raw_data={event.raw_data}
+                    human_verified={event.human_verified}
+                    pets={pets || []}
+                    onDelete={() => handleDeleteEvent(event.id)}
+                    onUpdate={handleUpdateWeightEvent}
                     isDeleting={deletingEventIds.has(event.id)}
                   />
                 );

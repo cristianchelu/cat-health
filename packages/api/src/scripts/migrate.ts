@@ -569,7 +569,7 @@ async function migrateEvents(
   }
 }
 
-const startDate = new Date("2025-08-08T00:00:00Z");
+const startDate = new Date("2025-08-01T00:00:00Z");
 const endDate = new Date("2025-08-09T23:59:59Z");
 const influxUrl = "http://192.168.100.52:8086";
 const influxToken = process.env.INFLUX_TOKEN || "";
@@ -577,6 +577,117 @@ const bucket = "homeassistant";
 const batchDays = 10;
 
 // Process in batches
+async function migrateWeightMeasurements(
+  startDate: Date,
+  endDate: Date,
+  influxUrl: string,
+  influxToken: string,
+  bucket: string
+) {
+  console.log(
+    `Migrating weight measurements from ${startDate.toISOString()} to ${endDate.toISOString()}`
+  );
+
+  // Check for existing weight events in this time range
+  console.log("Checking for existing weight events in database...");
+  const existingWeightEvents = await db
+    .selectFrom("event")
+    .select(["timestamp", "pet_id"])
+    .where("timestamp", ">=", startDate)
+    .where("timestamp", "<=", endDate)
+    .where(sql`json_extract(data, '$.type')`, "=", "weight_measurement")
+    .execute();
+
+  const existingWeightTimestamps = new Set(
+    existingWeightEvents.map(e => `${e.timestamp.toISOString()}-${e.pet_id}`)
+  );
+  console.log(`Found ${existingWeightEvents.length} existing weight measurements in time range`);
+
+  const influx = new InfluxDB({ url: influxUrl, token: influxToken });
+
+  // Pet mappings based on sensor names
+  const petSensorMappings = {
+    "Litterbox Jazz Weight": 1, // Jazz pet_id
+    "Litterbox Luna Weight": 2, // Luna pet_id
+  };
+
+  try {
+    const events: NewEvent[] = [];
+    let skippedCount = 0;
+
+    for (const [sensorName, petId] of Object.entries(petSensorMappings)) {
+      console.log(`\nProcessing ${sensorName} for pet ${petId}...`);
+      
+      const queryApi = influx.getQueryApi(ORG);
+      
+      // Query all individual weight measurements - data is already pre-processed and validated
+      const weightQuery = `
+        from(bucket: "${bucket}")
+          |> range(start: ${startDate.toISOString()}, stop: ${endDate.toISOString()})
+          |> filter(fn: (r) => r["friendly_name"] == "${sensorName}")
+          |> filter(fn: (r) => r["_field"] == "value")
+          |> sort(columns: ["_time"])
+          |> yield(name: "individual_weights")
+      `;
+
+      const measurements: Array<{ timestamp: Date; weight: number }> = [];
+
+      await new Promise<void>((resolve, reject) => {
+        queryApi.queryRows(weightQuery, {
+          next: (row, tableMeta) => {
+            const obj = tableMeta.toObject(row);
+            measurements.push({
+              timestamp: new Date(obj._time),
+              weight: obj._value * 1000, // Convert kg to grams
+            });
+          },
+          error: reject,
+          complete: () => resolve(),
+        });
+      });
+
+      console.log(`Found ${measurements.length} individual weight measurements for ${sensorName}`);
+
+      // Create weight measurement events
+      for (const measurement of measurements) {
+        const timestampKey = `${measurement.timestamp.toISOString()}-${petId}`;
+        
+        if (existingWeightTimestamps.has(timestampKey)) {
+          skippedCount++;
+          continue;
+        }
+
+        events.push({
+          pet_id: petId,
+          device_id: 1, // Main Litter Box device
+          timestamp: measurement.timestamp,
+          data: {
+            type: "weight_measurement",
+            weight: Math.round(measurement.weight),
+          },
+          raw_data: null, // No raw data for weight measurements
+          human_verified: false,
+        });
+      }
+    }
+
+    console.log(`\n=== Weight Migration Summary ===`);
+    console.log(`Weight events skipped (already exist): ${skippedCount}`);
+    console.log(`New individual weight measurement events: ${events.length}`);
+    
+    if (events.length === 0) {
+      console.log("No new weight events to insert, skipping database write.");
+    } else {
+      console.log(`Inserting ${events.length} new weight measurement events into database...`);
+      await db.insertInto("event").values(events).execute();
+    }
+    
+    console.log("Weight migration completed successfully");
+  } catch (error) {
+    console.error("Weight migration failed:", error);
+  }
+}
+
 const start = new Date(startDate);
 while (start < endDate) {
   const batchEnd = new Date(
@@ -589,7 +700,12 @@ while (start < endDate) {
   console.log(
     `\n=== Processing batch: ${start.toISOString()} to ${batchEnd.toISOString()} ===`
   );
-  await migrateEvents(start, batchEnd, influxUrl, influxToken, bucket);
+  
+  // Run both migrations in parallel
+  await Promise.all([
+    migrateEvents(start, batchEnd, influxUrl, influxToken, bucket),
+    migrateWeightMeasurements(start, batchEnd, influxUrl, influxToken, bucket)
+  ]);
 
   start.setTime(batchEnd.getTime());
 }
