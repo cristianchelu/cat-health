@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { FaWeight, FaCalendarAlt, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { getPetWeightTrends } from '@/api/pets';
+import './pet-summary-card.css';
 
 interface Pet {
   id: number;
@@ -123,99 +124,72 @@ export default function PetSummaryCard({ pet }: PetSummaryCardProps) {
   const weightStats = getWeightStats();
 
   return (
-    <div className="card">
-      <div className="card-title">{pet.name}</div>
-      <div className="card-content">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+    <div className="pet-card">
+      <div className="pet-card-header">{pet.name}</div>
+      <div className="pet-card-content">
+        <div className="pet-info-grid">
           <div>
-            <div style={{ fontSize: 14, color: '#666' }}>Breed</div>
-            <div style={{ fontWeight: 'bold' }}>{pet.breed}</div>
+            <div className="pet-info-label">Breed</div>
+            <div className="pet-info-value">{pet.breed}</div>
           </div>
           <div>
-            <div style={{ fontSize: 14, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div className="pet-info-label">
               <FaCalendarAlt />
               Age
             </div>
-            <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div className="pet-info-value">
               {calculateAge(pet.birth_date)} years
-              {isYoungCat && <span style={{ fontSize: 12, color: '#4CAF50', fontWeight: 'normal' }}>• Growing</span>}
+              {isYoungCat && <span className="pet-growth-tag">• Growing</span>}
             </div>
           </div>
         </div>
 
         {weightStats.currentWeight && (
-          <div style={{ 
-            borderTop: '1px solid #eee', 
-            paddingTop: 16,
-            display: 'grid', 
-            gridTemplateColumns: '1fr 1fr', 
-            gap: 16 
-          }}>
-            <div>
-              <div style={{ fontSize: 14, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <FaWeight />
-                Current Weight
+          <div className="pet-weight-section">
+            <div className="weight-grid">
+              <div>
+                <div className="weight-label">
+                  <FaWeight />
+                  Current Weight
+                </div>
+                <div className="weight-value">
+                  {(weightStats.currentWeight / 1000).toFixed(2)} kg
+                </div>
               </div>
-              <div style={{ fontWeight: 'bold', fontSize: 16 }}>
-                {(weightStats.currentWeight / 1000).toFixed(2)} kg
-              </div>
-            </div>
-            <div>
-              <div style={{ 
-                fontSize: 14, 
-                color: '#666', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 4,
-                marginBottom: 4 
-              }}>
-                {weightStats.trend === 'up' && <FaArrowUp style={{ color: '#4CAF50' }} />}
-                {weightStats.trend === 'down' && <FaArrowDown style={{ color: '#f44336' }} />}
-                Weight Change
-              </div>
-              <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-                {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
-                  <button
-                    key={period}
-                    onClick={() => setSelectedPeriod(period)}
-                    style={{
-                      padding: '2px 6px',
-                      fontSize: 10,
-                      border: '1px solid #ddd',
-                      borderRadius: 3,
-                      backgroundColor: selectedPeriod === period ? '#4CAF50' : 'white',
-                      color: selectedPeriod === period ? 'white' : '#666',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    {periodLabels[period]}
-                  </button>
-                ))}
-              </div>
-              <div style={{ 
-                fontWeight: 'bold', 
-                fontSize: 16,
-                color: weightStats.weightChange && weightStats.weightChange > 0 
-                  ? '#4CAF50' 
-                  : weightStats.weightChange && weightStats.weightChange < 0 
-                  ? '#f44336' 
-                  : '#666'
-              }}>
-                {weightStats.weightChange && weightStats.weightChange > 0 ? '+' : ''}
-                {weightStats.weightChange ? (weightStats.weightChange / 1000).toFixed(2) : '0.00'} kg
+              <div>
+                <div className="weight-label">
+                  {weightStats.trend === 'up' && <FaArrowUp className="weight-change-positive" />}
+                  {weightStats.trend === 'down' && <FaArrowDown className="weight-change-negative" />}
+                  Weight Change
+                </div>
+                <div className="period-buttons">
+                  {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => setSelectedPeriod(period)}
+                      className={`period-button ${selectedPeriod === period ? 'period-button-active' : ''}`}
+                    >
+                      {periodLabels[period]}
+                    </button>
+                  ))}
+                </div>
+                <div className={`weight-value ${
+                  weightStats.weightChange && weightStats.weightChange > 0 
+                    ? 'weight-change-positive' 
+                    : weightStats.weightChange && weightStats.weightChange < 0 
+                    ? 'weight-change-negative' 
+                    : ''
+                }`}>
+                  {weightStats.weightChange && weightStats.weightChange > 0 ? '+' : ''}
+                  {weightStats.weightChange ? (weightStats.weightChange / 1000).toFixed(2) : '0.00'} kg
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {weightStats.measurementCount > 0 && (
-          <div style={{ 
-            marginTop: 12, 
-            fontSize: 12, 
-            color: '#888',
-            textAlign: 'center'
-          }}>
+          <div className="weight-stats-footer">
             {weightStats.measurementCount} weight measurements in last {selectedPeriod === 'week' ? '7 days' : selectedPeriod === 'month' ? '30 days' : '365 days'}
           </div>
         )}

@@ -1,4 +1,5 @@
 import { FaChevronLeft, FaChevronRight, FaCalendarAlt } from 'react-icons/fa';
+import './date-navigation.css';
 
 interface DateNavigationProps {
   currentDate: string; // YYYY-MM-DD format
@@ -64,63 +65,33 @@ export default function DateNavigation({ currentDate, onDateChange, hasEvents = 
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: '12px', 
-      padding: '16px 0',
-      borderBottom: '1px solid #eee',
-      marginBottom: '16px'
-    }}>
+    <div className="date-navigation">
       <button
         onClick={handlePrevious}
-        style={{
-          padding: '8px 12px',
-          border: '1px solid #ddd',
-          borderRadius: '4px',
-          background: '#fff',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px'
-        }}
+        className="date-nav-button"
         title="Previous day"
       >
         <FaChevronLeft />
-        Previous
+        <span>Previous</span>
       </button>
 
-      <div style={{ 
-        flex: 1, 
-        textAlign: 'center',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px'
-      }}>
-        <FaCalendarAlt style={{ color: '#666' }} />
-        <span style={{ fontSize: '16px', fontWeight: '500' }}>
+      <div className="date-display">
+        <FaCalendarAlt />
+        <span className="date-text">
           {formatDateForDisplay(currentDate)}
         </span>
         {!hasEvents && (
-          <span style={{ fontSize: '14px', color: '#888', fontStyle: 'italic' }}>
+          <span className="date-no-events">
             (No events)
           </span>
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: '8px' }}>
+      <div className="date-navigation-actions">
         {!isToday(currentDate) && (
           <button
             onClick={handleToday}
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #007acc',
-              borderRadius: '4px',
-              background: '#007acc',
-              color: 'white',
-              cursor: 'pointer'
-            }}
+            className="today-button"
             title="Go to today"
           >
             Today
@@ -130,20 +101,10 @@ export default function DateNavigation({ currentDate, onDateChange, hasEvents = 
         <button
           onClick={handleNext}
           disabled={isFuture(getNextDay(currentDate))}
-          style={{
-            padding: '8px 12px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            background: isFuture(getNextDay(currentDate)) ? '#f5f5f5' : '#fff',
-            cursor: isFuture(getNextDay(currentDate)) ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            opacity: isFuture(getNextDay(currentDate)) ? 0.5 : 1
-          }}
+          className="date-nav-button"
           title="Next day"
         >
-          Next
+          <span>Next</span>
           <FaChevronRight />
         </button>
       </div>
@@ -153,12 +114,7 @@ export default function DateNavigation({ currentDate, onDateChange, hasEvents = 
         value={currentDate}
         onChange={handleDateInputChange}
         max={getTodayString()}
-        style={{
-          padding: '8px',
-          border: '1px solid #ddd',
-          borderRadius: '4px',
-          background: '#fff'
-        }}
+        className="date-selector"
         title="Select date"
       />
     </div>

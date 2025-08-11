@@ -1,56 +1,52 @@
-.pet-list {
+/* Pet list specific styles */
+.section-header {
+  margin-bottom: var(--space-xl);
+}
+
+.section-header h1 {
+  margin-bottom: var(--space-xs);
+}
+
+.section-header p {
+  color: var(--color-text-light);
+  margin-top: 0;
+}
+
+.card-link {
+  text-decoration: none;
+  color: inherit;
+  transition: all var(--transition-fast);
+  display: block;
+}
+
+.card-link:hover {
+  text-decoration: none;
+}
+
+.card-link:hover .card {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.card-link:hover .view-details {
+  color: var(--color-primary-dark);
+}
+
+.pet-details {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4xl);
-  padding: var(--space-3xl) 0;
+  gap: var(--space-xs);
+}
 
-  .title {
-    font-size: var(--text-5xl);
-    font-weight: var(--font-black);
-    color: var(--color-primary);
-    text-align: center;
-    margin-bottom: var(--space-3xl);
-  }
+.pet-details p {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-light);
+}
 
-  .grid {
-    display: grid;
-    gap: var(--space-4xl);
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  }
-
-  .card-link {
-    text-decoration: none;
-    color: inherit;
-    transition: transform 0.15s, box-shadow 0.15s;
-    &:hover {
-      transform: translateY(-4px) scale(1.03);
-      box-shadow: var(--shadow-lg);
-    }
-  }
-
-  .card {
-    background: var(--color-white);
-    border-radius: var(--radius-xl);
-    border: var(--border-medium);
-    box-shadow: var(--shadow-md);
-    padding: var(--space-3xl) var(--space-2xl);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xl);
-  }
-
-  .card-title {
-    font-size: var(--text-2xl);
-    font-weight: var(--font-bold);
-    color: var(--color-primary-dark);
-    margin-bottom: var(--space-sm);
-  }
-
-  .card-content {
-    font-size: var(--text-lg);
-    color: var(--color-text-light);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-  }
+.view-details {
+  font-size: var(--text-sm);
+  color: var(--color-primary);
+  font-weight: var(--font-medium);
+  transition: color var(--transition-fast);
 }

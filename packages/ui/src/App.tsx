@@ -2,29 +2,38 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Outlet, Link } from 'react-router';
 import './app.css';
+import '@/components/ui/layout.css';
 
 function App() {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="app">
-        <aside className="sidebar">
-          <Link to="/" className="logo">Cat Health</Link>
-          <nav className="nav">
-            <Link to="/" className="nav-link">Pet List</Link>
-            <Link to="/devices" className="nav-link">Device List</Link>
+      <div className="app-layout">
+        <header className="app-header">
+          <div className="logo">
+            <Link to="/">Pet Health Dashboard</Link>
+          </div>
+          <nav className="main-nav">
+            <Link to="/" className="nav-link">Pets</Link>
+            <Link to="/devices" className="nav-link">Devices</Link>
           </nav>
-          <div className="copyright">&copy; {new Date().getFullYear()} Cat Health</div>
-        </aside>
-        <main className="main">
-          <header className="header">
-            <h1 className="title">Cat Health Dashboard</h1>
-          </header>
-          <div className="content">
+          <div className="user-menu">
+            <button className="button button-ghost">Settings</button>
+          </div>
+        </header>
+        
+        <main className="app-main">
+          <div className="container">
             <Outlet />
           </div>
         </main>
+        
+        <footer className="app-footer">
+          <div className="container">
+            <p className="copyright">&copy; {new Date().getFullYear()} Pet Health Dashboard</p>
+          </div>
+        </footer>
       </div>
     </QueryClientProvider>
   );

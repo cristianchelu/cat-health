@@ -112,13 +112,14 @@ export default function PetDetail() {
     <div className="pet-detail">
       <PetSummaryCard pet={pet} />
       
-      <div className="card">
-        <div className="card-content">
-          <WeightTrendChart petId={pet.id} petName={pet.name} petBirthDate={pet.birth_date} />
-        </div>
-      </div>
+      <WeightTrendChart 
+        petId={pet.id} 
+        petName={pet.name} 
+        petBirthDate={pet.birth_date} 
+        className="weight-chart"
+      />
       
-      <div>
+      <div className="events-section">
         <div className="events-title">Events</div>
         <DateNavigation 
           currentDate={currentDate}

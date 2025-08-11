@@ -1,0 +1,199 @@
+/* Dashboard component styles */
+
+.dashboard {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+/* Dashboard header with quick stats */
+.dashboard-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+/* Stat card styling */
+.stat-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: var(--border-thin);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-title {
+  font-size: var(--text-sm);
+  color: var(--color-text-light);
+  margin: 0;
+}
+
+.stat-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.stat-trend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  font-size: var(--text-xs);
+}
+
+.trend-up {
+  color: var(--color-success);
+}
+
+.trend-down {
+  color: var(--color-error);
+}
+
+.trend-neutral {
+  color: var(--color-text-muted);
+}
+
+/* Chart card styling */
+.chart-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: var(--border-thin);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.chart-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.chart-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.chart-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.chart-container {
+  min-height: 250px;
+  width: 100%;
+}
+
+/* Dashboard layout variations */
+.dashboard-2col {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-lg);
+}
+
+@media (max-width: 1024px) {
+  .dashboard-2col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Activity feed styling */
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.activity-item {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-highlight);
+  border-left: 3px solid var(--color-primary);
+}
+
+.activity-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-primary-lightest);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  margin: 0;
+  margin-bottom: var(--space-2xs);
+}
+
+.activity-meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* Pet health indicators */
+.health-indicators {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-md);
+}
+
+.health-indicator {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  text-align: center;
+  border: var(--border-thin);
+}
+
+.indicator-value {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  margin: 0;
+  margin-bottom: var(--space-2xs);
+}
+
+.indicator-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-light);
+  margin: 0;
+}
+
+.indicator-normal {
+  color: var(--color-success);
+}
+
+.indicator-warning {
+  color: var(--color-warning);
+}
+
+.indicator-danger {
+  color: var(--color-error);
+}

@@ -13,6 +13,7 @@ import { Line } from 'react-chartjs-2';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { getPetWeightTrends } from '@/api/pets';
+import '@/components/ui/dashboard.css';
 
 ChartJS.register(
   CategoryScale,
@@ -32,13 +33,15 @@ interface WeightTrendChartProps {
   petName: string;
   petBirthDate: string;
   height?: number;
+  className?: string;
 }
 
 export default function WeightTrendChart({ 
   petId, 
   petName, 
   petBirthDate,
-  height = 200 
+  height = 250,
+  className
 }: WeightTrendChartProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
 
@@ -293,55 +296,44 @@ export default function WeightTrendChart({
   };
 
   return (
-    <div>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: 12,
-        fontSize: 14,
-        color: '#666'
-      }}>
+    <div className={`chart-card ${className || ''}`}>
+      <div className="chart-header">
         <div>
-          <strong>Weight Trend - {periodLabels[selectedPeriod]}</strong>
+          <h3 className="chart-title">Weight Trend - {periodLabels[selectedPeriod]}</h3>
           {isYoungCat && (
-            <div style={{ fontSize: 12, color: '#888', fontWeight: 'normal' }}>
+            <div className="form-helper">
               Growing kitten • {getAgeDescription(currentAgeInMonths, Math.floor((new Date().getTime() - new Date(petBirthDate).getTime()) / (1000 * 60 * 60 * 24)))}
             </div>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="chart-actions">
           {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
             <button
               key={period}
               onClick={() => setSelectedPeriod(period)}
-              style={{
-                padding: '4px 8px',
-                fontSize: 12,
-                border: '1px solid #ddd',
-                borderRadius: 4,
-                backgroundColor: selectedPeriod === period ? '#4CAF50' : 'white',
-                color: selectedPeriod === period ? 'white' : '#666',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
+              className={`button button-sm ${selectedPeriod === period ? 'button-primary' : 'button-outline'}`}
             >
               {periodLabels[period]}
             </button>
           ))}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 16, fontSize: 14, color: '#666', marginBottom: 12 }}>
-        <span>
-          Latest: <strong>{latestWeight?.toFixed(2)} kg</strong>
-        </span>
-        <span style={{ 
-          color: weightChange > 0 ? '#4CAF50' : weightChange < 0 ? '#f44336' : '#666' 
-        }}>
-          Change: <strong>{weightChange > 0 ? '+' : ''}{weightChange.toFixed(2)} kg</strong>
-        </span>
+      
+      <div className="health-indicators">
+        <div className="health-indicator">
+          <p className="indicator-value">{latestWeight?.toFixed(2)} kg</p>
+          <p className="indicator-label">Latest Weight</p>
+        </div>
+        
+        <div className="health-indicator">
+          <p className={`indicator-value ${weightChange > 0 ? 'indicator-normal' : weightChange < 0 ? 'indicator-warning' : ''}`}>
+            {weightChange > 0 ? '+' : ''}{weightChange.toFixed(2)} kg
+          </p>
+          <p className="indicator-label">Change</p>
+        </div>
       </div>
-      <div style={{ height }}>
+      
+      <div className="chart-container" style={{ height }}>
         <Line data={data} options={options} />
       </div>
     </div>
