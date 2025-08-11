@@ -1,5 +1,6 @@
 import { type Static, Type } from "@sinclair/typebox";
 import { db } from "../database/index.ts";
+import { sql } from "kysely";
 import { type FastifyTypeBox } from "../types.ts";
 
 const GetEventSchema = Type.Object({
@@ -34,7 +35,63 @@ const PatchEventSchema = Type.Object({
 });
 export type PatchEventDTO = Static<typeof PatchEventSchema>;
 
+const WeightTrendSchema = Type.Object({
+  date: Type.String(),
+  weight: Type.Number(),
+  timestamp: Type.String(),
+});
+
+const WeightTrendsSchema = Type.Array(WeightTrendSchema);
+export type WeightTrendDTO = Static<typeof WeightTrendSchema>;
+export type WeightTrendsDTO = Static<typeof WeightTrendsSchema>;
+
 export default function eventRoutes(fastify: FastifyTypeBox): void {
+  fastify.get(
+    "/weight-trends/:petId",
+    {
+      schema: {
+        params: Type.Object({ petId: Type.Number() }),
+        querystring: Type.Object({
+          days: Type.Optional(Type.Number({ minimum: 1 })),
+        }),
+        response: {
+          "200": WeightTrendsSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { petId } = request.params;
+      const { days = 30 } = request.query;
+
+      let query = db
+        .selectFrom("event")
+        .selectAll()
+        .where("pet_id", "=", petId)
+        .where(sql`json_extract(data, '$.type')`, "=", "weight_measurement")
+        .orderBy("timestamp", "asc");
+
+      // Only apply date filter if days is reasonable (not "all time")
+      if (days < 9999) {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+        query = query.where("timestamp", ">=", startDate);
+      }
+
+      const weightEvents = await query.execute();
+
+      const trends: WeightTrendDTO[] = weightEvents.map((event) => {
+        const data = event.data as { type: string; weight: number };
+        return {
+          date: event.timestamp.toISOString().split('T')[0],
+          weight: data.weight,
+          timestamp: event.timestamp.toISOString(),
+        };
+      });
+
+      return trends;
+    }
+  );
+
   fastify.get(
     "/",
     {

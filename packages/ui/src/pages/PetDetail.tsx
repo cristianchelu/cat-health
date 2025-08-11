@@ -7,6 +7,8 @@ import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
 import LitterboxMaintenanceEventItem from '@/components/event/LitterboxMaintenanceEvent';
 import WeightMeasurementEventItem from '@/components/event/WeightMeasurementEvent';
 import DateNavigation from '@/components/ui/DateNavigation';
+import PetSummaryCard from '@/components/ui/PetSummaryCard';
+import WeightTrendChart from '@/components/ui/WeightTrendChart';
 import { dateToTimeRange } from '@/lib/utils';
 
 import './pet-detail.css';
@@ -124,11 +126,11 @@ export default function PetDetail() {
 
   return (
     <div className="pet-detail">
+      <PetSummaryCard pet={pet} />
+      
       <div className="card">
-        <div className="card-title">{pet.name}</div>
         <div className="card-content">
-          <div><b>Breed:</b> {pet.breed}</div>
-          <div><b>Birth Date:</b> {pet.birth_date}</div>
+          <WeightTrendChart petId={pet.id} petName={pet.name} petBirthDate={pet.birth_date} />
         </div>
       </div>
       

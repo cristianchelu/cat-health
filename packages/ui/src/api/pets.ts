@@ -67,3 +67,16 @@ export async function updateEvent(eventId: number, input: UpdateEventInput): Pro
   const { data } = await apiClient.patch(`/events/${eventId}`, input);
   return data;
 }
+
+export type WeightTrend = {
+  date: string;
+  weight: number;
+  timestamp: string;
+};
+
+export async function getPetWeightTrends(petId: number, days: number = 30): Promise<WeightTrend[]> {
+  const { data } = await apiClient.get(`/events/weight-trends/${petId}`, { 
+    params: { days } 
+  });
+  return data;
+}
