@@ -49,6 +49,44 @@
   color: var(--color-primary-dark);
 }
 
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-lg);
+  border-bottom: 2px solid var(--color-border-light);
+}
+
+.tab-button {
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  background: transparent;
+  color: var(--color-text-light);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  position: relative;
+  top: 2px;
+}
+
+.tab-button:hover {
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.tab-button.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.tab-button:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .event-list {
   display: grid;
   gap: var(--space-md);
