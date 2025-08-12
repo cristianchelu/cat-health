@@ -1,14 +1,14 @@
+import * as React from "react";
 import { useQuery } from '@tanstack/react-query';
 import { getPetEvents } from '@/api/pets';
-import { useState } from 'react';
+import { cn } from "@/lib/utils";
 import './litterbox-visits-chart.css';
 import '@/components/ui/button.css';
 
 type TimePeriod = 'week' | 'month' | 'quarter' | 'all';
 
-interface LitterboxVisitsChartProps {
+interface LitterboxVisitsChartProps extends React.ComponentProps<"div"> {
   petId: number;
-  className?: string;
 }
 
 interface DayEvents {
@@ -46,223 +46,233 @@ function getLastNDays(days: number): string[] {
   return dates;
 }
 
-export default function LitterboxVisitsChart({ petId, className = '' }: LitterboxVisitsChartProps) {
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
-  const maxEventsPerDay = 6; // Reduced from 12 to 6 (typical is 0-5 events)
-
-  // Calculate days based on selected period
-  const getDaysForPeriod = (period: TimePeriod): number => {
-    switch (period) {
-      case 'week': return 7;
-      case 'month': return 30;
-      case 'quarter': return 90;
-      case 'all': return 365; // Limit to 1 year for performance
-      default: return 30;
-    }
-  };
-
-  const daysToShow = getDaysForPeriod(selectedPeriod);
-
-  const periodLabels = {
-    week: 'This Week',
-    month: 'This Month',
-    quarter: 'Last 3 Months',
-    all: 'This Year'
-  };
-
-  // Get date range for the last N days
-  const dates = getLastNDays(daysToShow);
-  const startDate = dates[0];
-  const endDate = dates[dates.length - 1];
-
-  // Fetch events for the date range
-  const { data: eventsData, isLoading, error } = useQuery({
-    queryKey: ['petEventsRange', petId, selectedPeriod, daysToShow],
-    queryFn: async () => {
-      const startTime = startDate + 'T00:00:00.000Z';
-      const endTime = endDate + 'T23:59:59.999Z';
-      return getPetEvents(petId, startTime, endTime);
-    },
-    enabled: !!petId,
-  });
-
-  if (isLoading) {
-    return (
-      <div className={`litterbox-visits-chart ${className}`}>
-        <div className="chart-header">
-          <div>
-            <h3 className="chart-title">Litterbox Visits - {periodLabels[selectedPeriod]}</h3>
-          </div>
-          <div className="chart-actions">
-            {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
-              <button
-                key={period}
-                onClick={() => setSelectedPeriod(period)}
-                className={`button button-sm ${selectedPeriod === period ? 'button-primary' : 'button-outline'}`}
-              >
-                {periodLabels[period]}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="chart-loading">Loading visits chart...</div>
-      </div>
-    );
+// Calculate days based on selected period
+function getDaysForPeriod(period: TimePeriod): number {
+  switch (period) {
+    case 'week': return 7;
+    case 'month': return 30;
+    case 'quarter': return 90;
+    case 'all': return 365; // Limit to 1 year for performance
+    default: return 30;
   }
+}
 
-  if (error) {
-    return (
-      <div className={`litterbox-visits-chart ${className}`}>
-        <div className="chart-header">
-          <div>
-            <h3 className="chart-title">Litterbox Visits - {periodLabels[selectedPeriod]}</h3>
-          </div>
-          <div className="chart-actions">
-            {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
-              <button
-                key={period}
-                onClick={() => setSelectedPeriod(period)}
-                className={`button button-sm ${selectedPeriod === period ? 'button-primary' : 'button-outline'}`}
-              >
-                {periodLabels[period]}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="chart-error">Error loading visits chart</div>
-      </div>
-    );
-  }
+const periodLabels: Record<TimePeriod, string> = {
+  week: 'This Week',
+  month: 'This Month',
+  quarter: 'Last 3 Months',
+  all: 'This Year'
+};
 
-  // Group events by day and filter only litterbox events
-  const eventsByDay: { [date: string]: DayEvents } = {};
-  dates.forEach(date => {
-    eventsByDay[date] = { date, events: [] };
-  });
+const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsChartProps>(
+  ({ petId, className, ...props }, ref) => {
+    const [selectedPeriod, setSelectedPeriod] = React.useState<TimePeriod>('month');
 
-  if (eventsData?.events) {
-    eventsData.events.forEach(event => {
-      const eventDate = event.timestamp.split('T')[0];
-      if (eventsByDay[eventDate] && 
-          event.data && 
-          typeof event.data === 'object' && 
-          'type' in event.data && 
-          event.data.type === 'litterbox_use') {
-        
-        const litterboxData = event.data as {
-          type: 'litterbox_use';
-          elimination_type: 'urination' | 'defecation' | 'no_elimination' | 'unknown';
-        };
+    const daysToShow = getDaysForPeriod(selectedPeriod);
 
-        eventsByDay[eventDate].events.push({
-          id: event.id,
-          timestamp: event.timestamp,
-          eliminationType: litterboxData.elimination_type,
-        });
-      }
+    // Get date range for the last N days
+    const dates = getLastNDays(daysToShow);
+    const startDate = dates[0];
+    const endDate = dates[dates.length - 1];
+
+    // Fetch events for the date range
+    const { data: eventsData, isLoading, error } = useQuery({
+      queryKey: ['petEventsRange', petId, selectedPeriod, daysToShow],
+      queryFn: async () => {
+        const startTime = startDate + 'T00:00:00.000Z';
+        const endTime = endDate + 'T23:59:59.999Z';
+        return getPetEvents(petId, startTime, endTime);
+      },
+      enabled: !!petId,
     });
-  }
 
-  // Sort events within each day by timestamp (earliest first, so they stack from bottom)
-  Object.values(eventsByDay).forEach(day => {
-    day.events.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-  });
+    if (isLoading) {
+      return (
+        <div
+          className={cn("litterbox-visits-chart", className)}
+          ref={ref}
+          {...props}
+        >
+          <div className="chart-header">
+            <div>
+              <h3 className="chart-title">Litterbox Visits - {periodLabels[selectedPeriod]}</h3>
+            </div>
+            <div className="chart-actions">
+              {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setSelectedPeriod(period)}
+                  className={`button button-sm ${selectedPeriod === period ? 'button-primary' : 'button-outline'}`}
+                >
+                  {periodLabels[period]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="chart-loading">Loading visits chart...</div>
+        </div>
+      );
+    }
 
-  // Check if there are any events to display
-  const totalEvents = Object.values(eventsByDay).reduce((sum, day) => sum + day.events.length, 0);
+    if (error) {
+      return (
+        <div
+          className={cn("litterbox-visits-chart", className)}
+          ref={ref}
+          {...props}
+        >
+          <div className="chart-header">
+            <div>
+              <h3 className="chart-title">Litterbox Visits - {periodLabels[selectedPeriod]}</h3>
+            </div>
+            <div className="chart-actions">
+              {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setSelectedPeriod(period)}
+                  className={`button button-sm ${selectedPeriod === period ? 'button-primary' : 'button-outline'}`}
+                >
+                  {periodLabels[period]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="chart-error">Error loading visits chart</div>
+        </div>
+      );
+    }
 
-  return (
-    <div className={`litterbox-visits-chart ${className}`}>
-      <div className="chart-header">
-        <div>
-          <h3 className="chart-title">Litterbox Visits - {periodLabels[selectedPeriod]}</h3>
+    // Group events by day and filter only litterbox events
+    const eventsByDay: { [date: string]: DayEvents } = {};
+    dates.forEach(date => {
+      eventsByDay[date] = { date, events: [] };
+    });
+
+    if (eventsData?.events) {
+      eventsData.events.forEach(event => {
+        const eventDate = event.timestamp.split('T')[0];
+        if (eventsByDay[eventDate] && 
+            event.data && 
+            typeof event.data === 'object' && 
+            'type' in event.data && 
+            event.data.type === 'litterbox_use') {
+          
+          const litterboxData = event.data as {
+            type: 'litterbox_use';
+            elimination_type: 'urination' | 'defecation' | 'no_elimination' | 'unknown';
+          };
+
+          eventsByDay[eventDate].events.push({
+            id: event.id,
+            timestamp: event.timestamp,
+            eliminationType: litterboxData.elimination_type,
+          });
+        }
+      });
+    }
+
+    // Sort events within each day by timestamp (earliest first, so they stack from bottom)
+    Object.values(eventsByDay).forEach(day => {
+      day.events.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    });
+
+    // Check if there are any events to display
+    const totalEvents = Object.values(eventsByDay).reduce((sum, day) => sum + day.events.length, 0);
+
+    return (
+      <div
+        className={cn("litterbox-visits-chart", className)}
+        ref={ref}
+        {...props}
+      >
+        <div className="chart-header">
+          <div>
+            <h3 className="chart-title">Litterbox Visits - {periodLabels[selectedPeriod]}</h3>
+          </div>
+          <div className="chart-actions">
+            {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
+              <button
+                key={period}
+                onClick={() => setSelectedPeriod(period)}
+                className={`button button-sm ${selectedPeriod === period ? 'button-primary' : 'button-outline'}`}
+              >
+                {periodLabels[period]}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="chart-actions">
-          {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
-            <button
-              key={period}
-              onClick={() => setSelectedPeriod(period)}
-              className={`button button-sm ${selectedPeriod === period ? 'button-primary' : 'button-outline'}`}
-            >
-              {periodLabels[period]}
-            </button>
-          ))}
+        <div className="chart-legend">
+          <div className="legend-item">
+            <div className="legend-dot" style={{ backgroundColor: getEliminationColor('urination') }}></div>
+            <span>Urination</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-dot" style={{ backgroundColor: getEliminationColor('defecation') }}></div>
+            <span>Defecation</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-dot" style={{ backgroundColor: getEliminationColor('no_elimination') }}></div>
+            <span>No elimination</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-dot" style={{ backgroundColor: getEliminationColor('unknown') }}></div>
+            <span>Unknown</span>
+          </div>
         </div>
-      </div>
-      <div className="chart-legend">
-        <div className="legend-item">
-          <div className="legend-dot" style={{ backgroundColor: getEliminationColor('urination') }}></div>
-          <span>Urination</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-dot" style={{ backgroundColor: getEliminationColor('defecation') }}></div>
-          <span>Defecation</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-dot" style={{ backgroundColor: getEliminationColor('no_elimination') }}></div>
-          <span>No elimination</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-dot" style={{ backgroundColor: getEliminationColor('unknown') }}></div>
-          <span>Unknown</span>
-        </div>
-      </div>
-      
-      {totalEvents === 0 ? (
-        <div className="chart-empty">No litterbox visits recorded in the {periodLabels[selectedPeriod].toLowerCase()}.</div>
-      ) : (
-        <div className="chart-container">
-        <div className="chart-grid">
-          {dates.map(date => {
-            const dayData = eventsByDay[date];
-            const dayLabel = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric' 
-            });
-            const visitCount = dayData.events.length;
-            
-            return (
-              <div key={date} className="day-column">
-                <div className="day-label">
-                  <div className="day-date">{dayLabel}</div>
-                  <div className={`visit-count ${visitCount === 0 ? 'zero-visits' : ''}`}>
-                    {visitCount}
+        
+        {totalEvents === 0 ? (
+          <div className="chart-empty">No litterbox visits recorded in the {periodLabels[selectedPeriod].toLowerCase()}.</div>
+        ) : (
+          <div className="chart-container">
+          <div className="chart-grid">
+            {dates.map(date => {
+              const dayData = eventsByDay[date];
+              const dayLabel = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric' 
+              });
+              const visitCount = dayData.events.length;
+              
+              return (
+                <div key={date} className="day-column">
+                  <div className="day-label">
+                    <div className="day-date">{dayLabel}</div>
+                    <div className={`visit-count ${visitCount === 0 ? 'zero-visits' : ''}`}>
+                      {visitCount}
+                    </div>
+                  </div>
+                  <div 
+                    className="events-column"
+                    title={visitCount > 0 ? 
+                      `${visitCount} visit${visitCount > 1 ? 's' : ''} on ${dayLabel}` : 
+                      `No visits on ${dayLabel}`
+                    }
+                  >
+                    {dayData.events.map((event) => (
+                      <div
+                        key={`${date}-${event.id}`}
+                        className="event-slot has-event"
+                      >
+                        <div
+                          className="event-dot"
+                          style={{ backgroundColor: getEliminationColor(event.eliminationType) }}
+                          title={`${event.eliminationType} at ${new Date(event.timestamp).toLocaleTimeString()}`}
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div 
-                  className="events-column"
-                  title={visitCount > 0 ? 
-                    `${visitCount} visit${visitCount > 1 ? 's' : ''} on ${dayLabel}` : 
-                    `No visits on ${dayLabel}`
-                  }
-                >
-                  {/* Create slots for events, filling from bottom up */}
-                  {Array.from({ length: maxEventsPerDay }, (_, index) => {
-                    const eventIndex = index;
-                    const event = dayData.events[eventIndex];
-                    
-                    return (
-                      <div
-                        key={`${date}-${index}`}
-                        className={`event-slot ${event ? 'has-event' : ''}`}
-                      >
-                        {event && (
-                          <div
-                            className="event-dot"
-                            style={{ backgroundColor: getEliminationColor(event.eliminationType) }}
-                            title={`${event.eliminationType} at ${new Date(event.timestamp).toLocaleTimeString()}`}
-                          />
-                        )}
-                      </div>
-                    );
-                  }).reverse()} {/* Reverse to stack from bottom */}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        </div>
-      )}
-    </div>
-  );
-}
+              );
+            })}
+          </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+LitterboxVisitsChart.displayName = "LitterboxVisitsChart";
+
+export { type LitterboxVisitsChartProps };
+export default LitterboxVisitsChart;

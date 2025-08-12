@@ -50,6 +50,9 @@ return <div className='my-component'><a className='some-class'/></div>;
     &:disabled {
       /* Pseudo-selector styles */
     }
+    @media (max-width: 768px) {
+      /* Responsive styles close by the affected class */
+    }
   }
 }
 ```
@@ -76,8 +79,8 @@ const ComponentName = React.forwardRef<HTMLDivElement, ComponentNameProps>(
       <div
         className={cn(
           "component-name",
-          variant && `component-name-${variant}`,
-          size && `component-name-${size}`,
+          variant,
+          size,
           className
         )}
         ref={ref}
@@ -91,10 +94,13 @@ const ComponentName = React.forwardRef<HTMLDivElement, ComponentNameProps>(
 
 ComponentName.displayName = "ComponentName";
 
-export { ComponentName, type ComponentNameProps };
+export { type ComponentNameProps };
+export default ComponentName;
 ```
 
 - Define utility functions outside the component whenever they don't depend on props or state.
+- Avoid typecasting unless absolutely necessary.
+- Avoid `any` unless absolutely necessary.
 
 #### Utility Functions
 - Use `cn()` from `@/lib/utils` for conditional class names
@@ -110,6 +116,8 @@ export { ComponentName, type ComponentNameProps };
 - Derive db types using Kysely
 - Define interfaces and types in `src/types/` and reuse them when possible.
 - Always search for existing types before creating new ones.
+- Avoid typecasting unless absolutely necessary.
+- Avoid `any` unless absolutely necessary.
 
 #### Route Structure
 ```typescript
@@ -190,6 +198,8 @@ npm run build                   # Build for production
 npm run lint                    # Run ESLint
 npm run preview                 # Preview production build
 ```
+
+- Always assume Both the UI and API are running in the background when you want to run things.
 
 ## File Naming Conventions
 
