@@ -1,4 +1,5 @@
 
+import * as React from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,10 +10,12 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { useState, type JSX } from 'react';
 import type { TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { FaTint, FaPoop, FaBan, FaQuestion, FaClock, FaCalendarAlt, FaGift, FaCheck } from 'react-icons/fa';
+
+import { cn } from "@/lib/utils";
+import "./LitterboxUseEvent.css";
 
 ChartJS.register(
   CategoryScale,
@@ -148,7 +151,7 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
-function formatEliminationType(type: string): { icon: JSX.Element; label: string } {
+function formatEliminationType(type: string): { icon: React.JSX.Element; label: string } {
   switch (type) {
     case 'urination':
       return { icon: <FaTint title="Urination" color={"#FFD700"} />, label: 'Urination' };
@@ -165,8 +168,8 @@ function formatEliminationType(type: string): { icon: JSX.Element; label: string
 
 export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_data, human_verified, pets, onDelete, onUpdate, isDeleting }: LitterboxEventItemProps) {
   const { timestamps, weights, context } = parseRawBuffer(raw_data || []);
-  const [showChart, setShowChart] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [showChart, setShowChart] = React.useState(false);
+  const [isUpdating, setIsUpdating] = React.useState(false);
 
   const chartData = {
     labels: timestamps.map(t => (t / 1000).toFixed(1)),
@@ -262,39 +265,32 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
 
   const elim = formatEliminationType(data.elimination_type);
   return (
-    <li className="litterbox-event-item" style={{ borderBottom: '1px solid #eee', padding: '0.5em 0' }}>
-      <div className="event-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div className="event-timestamp" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <FaCalendarAlt style={{ marginRight: 4 }} />
+    <li className="litterbox-event-item">
+      <div className="event-header">
+        <div className="event-timestamp">
+          <FaCalendarAlt />
           <b>{new Date(timestamp).toLocaleString()}</b>
         </div>
         <button
-          className="event-delete-btn"
+          className={cn("event-delete-btn", { disabled: isDeleting })}
           onClick={onDelete}
           disabled={isDeleting}
           title="Delete event"
-          style={{ fontSize: 18, background: 'none', border: 'none', cursor: 'pointer', color: '#888' }}
         >
           {isDeleting ? '...' : '×'}
         </button>
       </div>
 
-      <div className="litterbox-event-details" style={{ marginTop: 6 }}>
-        <div className="event-stats" style={{ display: 'flex', alignItems: 'center', gap: 18, fontSize: 15, color: '#444', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div className="litterbox-event-details">
+        <div className="event-stats">
+          <div className="event-stats-main">
+            <div className="event-stat-item">
               {elim.icon}
               <select 
                 value={data.elimination_type}
-                onChange={(e) => handleEliminationTypeChange(e.target.value as any)}
+                onChange={(e) => handleEliminationTypeChange(e.target.value as "urination" | "defecation" | "no_elimination" | "unknown")}
                 disabled={isUpdating}
-                style={{ 
-                  border: 'none',
-                  background: 'none',
-                  fontSize: '15px',
-                  color: '#444',
-                  cursor: isUpdating ? 'wait' : 'pointer'
-                }}
+                className="event-elimination-select"
               >
                 <option value="urination">Urination</option>
                 <option value="defecation">Defecation</option>
@@ -302,19 +298,13 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
                 <option value="unknown">Unknown</option>
               </select>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div className="event-stat-item">
               <span>Cat:</span>
               <select 
                 value={pet_id || ''}
                 onChange={(e) => handlePetAssignmentChange(e.target.value)}
                 disabled={isUpdating}
-                style={{ 
-                  border: 'none',
-                  background: 'none',
-                  fontSize: '15px',
-                  color: pet_id ? '#444' : '#888',
-                  cursor: isUpdating ? 'wait' : 'pointer',
-                }}
+                className={cn("event-pet-select", pet_id ? "assigned" : "unknown")}
               >
                 <option value="">Unknown</option>
                 {pets.map(pet => (
@@ -322,17 +312,16 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
                 ))}
               </select>
             </div>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FaClock /> {formatDuration(data.duration)}</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FaGift /> {data.elimination_weight.toFixed(0)}g</span>
+            <span className="event-stat-item"><FaClock /> {formatDuration(data.duration)}</span>
+            <span className="event-stat-item"><FaGift /> {data.elimination_weight.toFixed(0)}g</span>
             {human_verified && (
-              <FaCheck title="Human verified" style={{ color: '#4CAF50', fontSize: '12px' }} />
+              <FaCheck title="Human verified" className="verification-icon" />
             )}
           </div>
           {weights.length > 0 && (
             <button
-              className="weight-chart"
-              style={{ display: 'flex', alignItems: 'center', height: 28, width: 80, minWidth: 60, marginLeft: 8, justifySelf: 'flex-end', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-              onClick={() => setShowChart(s => !s)}
+              className="weight-chart-button"
+              onClick={() => setShowChart((prev: boolean) => !prev)}
               title={showChart ? 'Hide chart' : 'Expand chart'}
             >
               <Line data={chartData} options={chartOptions} height={28} width={80} />
@@ -340,39 +329,32 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
           )}
         </div>
         {weights.length > 0 && showChart && (
-          <div style={{ marginTop: 8 }}>
+          <div className="expanded-chart-container">
             {/* Context data display */}
             {(context.wasteWeight !== null || context.litterRemaining !== null || 
               context.daysSinceLitterReplaced !== null || context.hoursSinceLastScoop !== null) && (
-              <div style={{ 
-                padding: '12px 0',
-                borderRadius: '4px', 
-                marginBottom: '8px',
-                fontSize: '14px',
-                color: '#555'
-              }}>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '4px' }}>
+              <div className="context-data">
+                <div className="context-data-grid">
                   {context.wasteWeight !== null && (
-                    <div>Existing waste: <strong>{context.wasteWeight}</strong>g</div>
+                    <div className="context-data-item">Existing waste: <strong>{context.wasteWeight}</strong>g</div>
                   )}
                   {context.litterRemaining !== null && (
-                    <div>Litter: <strong>{(context.litterRemaining / 1000).toFixed(1)}</strong>kg</div>
+                    <div className="context-data-item">Litter: <strong>{(context.litterRemaining / 1000).toFixed(1)}</strong>kg</div>
                   )}
                   {context.daysSinceLitterReplaced !== null && (
-                    <div>Litter age: <strong>{context.daysSinceLitterReplaced}</strong>d</div>
+                    <div className="context-data-item">Litter age: <strong>{context.daysSinceLitterReplaced}</strong>d</div>
                   )}
                   {context.hoursSinceLastScoop !== null && (
-                    <div>Last scoop: <strong>{context.hoursSinceLastScoop}</strong>h</div>
+                    <div className="context-data-item">Last scoop: <strong>{context.hoursSinceLastScoop}</strong>h</div>
                   )}
                   {context.totalVisits !== null && (
-                    <div>Visits since scoop: <strong>{context.totalVisits}</strong></div>
+                    <div className="context-data-item">Visits since scoop: <strong>{context.totalVisits}</strong></div>
                   )}
                 </div>
               </div>
             )}
             {/* Weight chart */}
-            <div style={{ height: 200 }}>
+            <div className="weight-chart-expanded">
               <Line data={chartData} options={expandedChartOptions} />
             </div>
           </div>
