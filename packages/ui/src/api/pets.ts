@@ -40,13 +40,16 @@ export type PaginatedEvents = {
   hasMore: boolean;
 };
 
-export async function getPetEvents(petId: number, startTime?: string, endTime?: string): Promise<PaginatedEvents> {
+export async function getPetEvents(petId: number, startTime?: string, endTime?: string, limit?: number): Promise<PaginatedEvents> {
   const params: Record<string, unknown> = { pet_id: petId };
   if (startTime) {
     params.startTime = startTime;
   }
   if (endTime) {
     params.endTime = endTime;
+  }
+  if (limit) {
+    params.limit = limit;
   }
   const { data } = await apiClient.get('/events', { params });
   return data;

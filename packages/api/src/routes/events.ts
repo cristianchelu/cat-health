@@ -101,7 +101,7 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
           device_id: Type.Optional(Type.Number()),
           startTime: Type.Optional(Type.String({ format: 'date-time' })), // ISO 8601 format
           endTime: Type.Optional(Type.String({ format: 'date-time' })), // ISO 8601 format
-          limit: Type.Optional(Type.Number({ minimum: 1, maximum: 1000 })),
+          limit: Type.Optional(Type.Number({ minimum: 1, maximum: 5000 })),
           offset: Type.Optional(Type.Number({ minimum: 0 })),
         }),
         response: {

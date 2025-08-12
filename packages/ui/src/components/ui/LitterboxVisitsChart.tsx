@@ -70,18 +70,26 @@ const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsCha
 
     const daysToShow = getDaysForPeriod(selectedPeriod);
 
-    // Get date range for the last N days
+    // Get date range for the last N days (for display)
     const dates = getLastNDays(daysToShow);
-    const startDate = dates[0];
-    const endDate = dates[dates.length - 1];
+    
+    // Calculate API fetch range - start from N days ago until now
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - daysToShow); // Remove the +1
+    const endDate = new Date();
+    
+    const apiStartTime = startDate.toISOString().split('T')[0] + 'T00:00:00.000Z';
+    const apiEndTime = endDate.toISOString().split('T')[0] + 'T23:59:59.999Z';
+
+    // Calculate appropriate limit based on time period
+    // Assume max 10 events per day for safety
+    const apiLimit = Math.max(100, daysToShow * 10);
 
     // Fetch events for the date range
     const { data: eventsData, isLoading, error } = useQuery({
       queryKey: ['petEventsRange', petId, selectedPeriod, daysToShow],
       queryFn: async () => {
-        const startTime = startDate + 'T00:00:00.000Z';
-        const endTime = endDate + 'T23:59:59.999Z';
-        return getPetEvents(petId, startTime, endTime);
+        return getPetEvents(petId, apiStartTime, apiEndTime, apiLimit);
       },
       enabled: !!petId,
     });
