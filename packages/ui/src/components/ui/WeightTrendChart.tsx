@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { getPetWeightTrends } from '@/api/pets';
 import '@/components/ui/dashboard.css';
+import '@/components/ui/button.css';
 
 ChartJS.register(
   CategoryScale,
