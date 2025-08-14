@@ -2,6 +2,7 @@ import * as React from "react";
 import { useState, useRef, useEffect } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, BarElement } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
+import { FaTint, FaPoop, FaQuestion, FaClock, FaCalendarAlt, FaCheck, FaWeight } from 'react-icons/fa';
 import './LitterboxAnalyzer.css';
 
 // Register Chart.js components
@@ -28,6 +29,18 @@ interface EventData {
 // Helper to safely get event data properties
 const getEventDataProp = (data: Record<string, unknown>, key: string): unknown => {
   return data[key];
+};
+
+// Helper to get elimination type icon
+const getEliminationIcon = (eliminationType: string) => {
+  switch (eliminationType) {
+    case 'urination':
+      return <FaTint className="elimination-icon urination" />;
+    case 'defecation':
+      return <FaPoop className="elimination-icon defecation" />;
+    default:
+      return <FaQuestion className="elimination-icon unknown" />;
+  }
 };
 
 // Binary data decoder
@@ -95,134 +108,430 @@ const decodeRawData = (rawDataArray: number[]): DecodedData => {
   };
 };
 
-// Phase detection
-const detectPhases = (weights: number[]): PhaseData => {
-  const n = weights.length;
+interface StateTransition {
+  from: string;
+  to: string;
+  index: number;
+  timestamp: number;
+}
+
+interface StateResult {
+  state: string;
+  catWeight: number;
+  events: {
+    entries: number;
+    exits: number;
+    hesitations: number;
+  };
+}
+
+interface StateTimelineEntry {
+  index: number;
+  weight: number;
+  state: string;
+  catWeight: number;
+  events: {
+    entries: number;
+    exits: number;
+    hesitations: number;
+  };
+}
+
+interface PhaseDetectionResult {
+  phases: PhaseData;
+  catWeight: number;
+  events: {
+    entries: number;
+    exits: number;
+    hesitations: number;
+  };
+  stateTimeline: StateTimelineEntry[];
+}
+
+// State machine for cat weight tracking
+class LitterboxStateTracker {
+  private states = {
+    EMPTY: 'empty',
+    ENTERING: 'entering', 
+    OCCUPIED: 'occupied',
+    EXITING: 'exiting',
+    HESITATING: 'hesitating',
+    SHORT_EXIT: 'short_exit',  // New state for temporary exits
+    ENDED: 'ended'              // New state for session end
+  };
   
-  // Find baseline from the end when cat has left
-  const lastTenth = weights.slice(Math.floor(9*n/10));
-  const baselineWeight = Math.min(...lastTenth);
+  private currentState: string;
+  private baselineWeight: number;
+  private catWeight: number;
+  private runningMax: number;
+  private stableWeightBuffer: number[]; // Small circular buffer
+  private bufferSize: number; // Only 2 seconds at 10Hz
   
-  // Find step in when weight STABILIZES
-  let stepInIndex = 0;
+  // Session management
+  private sessionActive: boolean;
+  private shortExitCounter: number;
+  private maxShortExitDuration: number;  // 5 seconds at 10Hz
+  private maxSessionDuration: number;  // 120 seconds at 10Hz
+  private sessionStartSample: number;
+  private currentSample: number;
   
-  // Find the cat weight by looking for stable maximum
-  let catWeight = 0;
-  const windowSize = 20; // 2 seconds at 10Hz
+  // Event counters (within session)
+  private entries: number;
+  private exits: number;
+  private hesitations: number;
+  private shortExits: number;  // New counter
   
-  // Look for stable weight in first half of data
-  for (let i = windowSize; i < Math.floor(n/2); i++) {
-    const window = weights.slice(i - windowSize, i);
-    const mean = window.reduce((s, w) => s + w, 0) / window.length;
-    const variance = window.reduce((s, w) => s + Math.pow(w - mean, 2), 0) / window.length;
+  // Weight tracking for best stable weight
+  private longestStableOccupancy: { duration: number; weight: number };
+  private currentOccupancyStart: number;
+  
+  // Phase tracking
+  private phaseTransitions: StateTransition[];
+  private currentPhaseStart: number;
+  
+  // Thresholds
+  private entryThreshold: number; // Min weight increase to detect entry
+  private exitThreshold: number;    // Fraction of cat weight to detect exit
+  private hesitationThreshold: number; // Fraction for hesitation detection
+  private stabilityWindow: number;   // Samples to confirm state change
+  
+  constructor() {
+    this.currentState = this.states.EMPTY;
+    this.baselineWeight = 0;
+    this.catWeight = 0;
+    this.runningMax = 0;
+    this.stableWeightBuffer = [];
+    this.bufferSize = 20;
     
-    // If variance is low (stable) and weight is high (cat present)
-    if (variance < 10000 && mean > baselineWeight + 2000) {
-      catWeight = Math.max(catWeight, mean);
-    }
+    // Session management
+    this.sessionActive = false;
+    this.shortExitCounter = 0;
+    this.maxShortExitDuration = 50;  // 5 seconds at 10Hz
+    this.maxSessionDuration = 1200;  // 120 seconds at 10Hz
+    this.sessionStartSample = 0;
+    this.currentSample = 0;
+    
+    // Event counters (within session)
+    this.entries = 0;
+    this.exits = 0;
+    this.hesitations = 0;
+    this.shortExits = 0;  // New counter
+    
+    // Weight tracking for best stable weight
+    this.longestStableOccupancy = { duration: 0, weight: 0 };
+    this.currentOccupancyStart = 0;
+    
+    this.phaseTransitions = [];
+    this.currentPhaseStart = 0;
+    
+    this.entryThreshold = 2000;
+    this.exitThreshold = 0.3;
+    this.hesitationThreshold = 0.7;
+    this.stabilityWindow = 10;
   }
   
-  // Find when weight first stabilizes near cat weight
-  const stabilizationThreshold = catWeight * 0.9;
-  const varianceThreshold = 50000;
-  
-  for (let i = 10; i < Math.floor(n/3); i++) {
-    if (i + windowSize >= n) break;
+  processSample(weight: number, index: number): StateResult {
+    this.currentSample = index;
     
-    const window = weights.slice(i, i + windowSize);
-    const mean = window.reduce((s, w) => s + w, 0) / window.length;
-    const variance = window.reduce((s, w) => s + Math.pow(w - mean, 2), 0) / window.length;
-    
-    if (mean > stabilizationThreshold && variance < varianceThreshold) {
-      stepInIndex = i;
-      break;
+    // Check for session timeout
+    if (this.sessionActive && 
+        (this.currentSample - this.sessionStartSample) > this.maxSessionDuration) {
+      return this.endSession();
     }
-  }
-  
-  // Fallback if no stabilization found
-  if (stepInIndex === 0) {
-    const fallbackThreshold = baselineWeight + (catWeight - baselineWeight) * 0.5;
-    for (let i = 1; i < Math.floor(n/4); i++) {
-      if (weights[i] > fallbackThreshold) {
-        stepInIndex = i;
+    
+    // Update running statistics
+    this.updateRunningStats(weight);
+    
+    // State transitions
+    switch(this.currentState) {
+      case this.states.EMPTY:
+        if (weight > this.baselineWeight + this.entryThreshold) {
+          this.startSession();
+          this.transitionTo(this.states.ENTERING, index);
+          this.entries++;
+        }
         break;
+        
+      case this.states.ENTERING:
+        if (this.isStable() && weight > this.runningMax * 0.95) {
+          this.updateCatWeight();
+          this.currentOccupancyStart = this.currentSample;
+          this.transitionTo(this.states.OCCUPIED, index);
+        } else if (weight < this.baselineWeight + this.entryThreshold * 0.5) {
+          this.hesitations++;
+          this.transitionTo(this.states.EMPTY, index);
+          // If we never made it to OCCUPIED, end the session
+          if (!this.catWeight) {
+            return this.endSession();
+          }
+        }
+        break;
+        
+      case this.states.OCCUPIED:
+        // Track duration of stable occupancy
+        if (this.isStable()) {
+          const duration = this.currentSample - this.currentOccupancyStart;
+          const stableWeight = this.getStableWeight();
+          if (duration > this.longestStableOccupancy.duration) {
+            this.longestStableOccupancy = { duration, weight: stableWeight };
+            this.catWeight = stableWeight;  // Update cat weight with best stable reading
+          }
+        }
+        
+        if (weight < this.catWeight * this.exitThreshold) {
+          this.shortExitCounter = 0;  // Reset counter when starting potential exit
+          this.transitionTo(this.states.SHORT_EXIT, index);
+        } else if (weight < this.catWeight * this.hesitationThreshold) {
+          this.transitionTo(this.states.HESITATING, index);
+        }
+        break;
+        
+      case this.states.HESITATING:
+        if (weight > this.catWeight * 0.9) {
+          this.transitionTo(this.states.OCCUPIED, index);
+        } else if (weight < this.catWeight * this.exitThreshold) {
+          this.shortExitCounter = 0;
+          this.transitionTo(this.states.SHORT_EXIT, index);
+        }
+        break;
+        
+      case this.states.SHORT_EXIT:
+        this.shortExitCounter++;
+        
+        if (weight > this.catWeight * this.hesitationThreshold) {
+          // Cat came back quickly - it was just a short exit (covering behavior)
+          this.shortExits++;
+          this.currentOccupancyStart = this.currentSample;  // Reset occupancy timer
+          this.transitionTo(this.states.OCCUPIED, index);
+        } else if (this.shortExitCounter > this.maxShortExitDuration) {
+          // Been gone too long - this is a real exit
+          this.exits++;
+          return this.endSession();
+        }
+        // Otherwise, stay in SHORT_EXIT state and keep counting
+        break;
+        
+      case this.states.EXITING:
+        // Deprecated - using SHORT_EXIT instead
+        break;
+        
+      case this.states.ENDED:
+        // Session is over, ignore further samples until reset
+        return this.getSessionSummary();
+    }
+    
+    return {
+      state: this.currentState,
+      catWeight: this.catWeight,
+      events: {
+        entries: this.entries,
+        exits: this.exits,
+        hesitations: this.hesitations
       }
+    };
+  }
+  
+  private startSession(): void {
+    this.sessionActive = true;
+    this.sessionStartSample = this.currentSample;
+    this.entries = 0;
+    this.exits = 0;
+    this.hesitations = 0;
+    this.shortExits = 0;
+    this.longestStableOccupancy = { duration: 0, weight: 0 };
+  }
+  
+  private endSession(): StateResult {
+    this.sessionActive = false;
+    this.transitionTo(this.states.ENDED, this.currentSample);
+    
+    // Use the weight from the longest stable occupancy period
+    if (this.longestStableOccupancy.weight > 0) {
+      this.catWeight = this.longestStableOccupancy.weight;
+    }
+    
+    return this.getSessionSummary();
+  }
+  
+  private getSessionSummary(): StateResult {
+    return {
+      state: this.states.ENDED,
+      catWeight: this.catWeight,
+      events: {
+        entries: this.entries,
+        exits: this.exits,
+        hesitations: this.hesitations
+      }
+    };
+  }
+  
+  private updateCatWeight(): void {
+    this.catWeight = Math.max(this.catWeight, this.getStableWeight());
+  }
+  
+  private updateRunningStats(weight: number): void {
+    // Initialize baseline from first few samples
+    if (this.baselineWeight === 0 && this.stableWeightBuffer.length > 5) {
+      this.baselineWeight = Math.min(...this.stableWeightBuffer);
+    }
+    
+    // Maintain small circular buffer for efficiency
+    if (this.stableWeightBuffer.length >= this.bufferSize) {
+      this.stableWeightBuffer.shift();
+    }
+    this.stableWeightBuffer.push(weight);
+    
+    // Update running maximum with decay (to handle drift)
+    this.runningMax = Math.max(this.runningMax * 0.9999, weight);
+  }
+  
+  private isStable(): boolean {
+    if (this.stableWeightBuffer.length < this.stabilityWindow) return false;
+    
+    const recent = this.stableWeightBuffer.slice(-this.stabilityWindow);
+    const mean = recent.reduce((s, w) => s + w, 0) / recent.length;
+    const maxDev = Math.max(...recent.map(w => Math.abs(w - mean)));
+    
+    return maxDev < 100; // Simple stability check
+  }
+  
+  private getStableWeight(): number {
+    const recent = this.stableWeightBuffer.slice(-this.stabilityWindow);
+    return recent.reduce((s, w) => s + w, 0) / recent.length;
+  }
+  
+  private transitionTo(newState: string, index: number): void {
+    if (this.currentState !== newState) {
+      this.phaseTransitions.push({
+        from: this.currentState,
+        to: newState,
+        index: index,
+        timestamp: this.currentPhaseStart
+      });
+      this.currentState = newState;
+      this.currentPhaseStart = index;
     }
   }
   
-  // Find step out
-  let stepOutIndex = n - 1;
-  const dropThreshold = catWeight * 0.85;
-  
-  for (let i = Math.floor(2*n/3); i < n - 10; i++) {
-    if (weights[i] < dropThreshold) {
-      stepOutIndex = i;
-      break;
-    }
+  getCatWeight(): number {
+    return this.catWeight;
   }
   
-  // Detect elimination period
-  const searchStart = stepInIndex;
-  const searchEnd = stepOutIndex;
-  const vibrationThreshold = 30;
+  getEvents(): { entries: number; exits: number; hesitations: number } {
+    return {
+      entries: this.entries,
+      exits: this.exits,
+      hesitations: this.hesitations
+    };
+  }
+  
+  reset(): void {
+    // Call this to start processing a new event
+    this.currentState = this.states.EMPTY;
+    this.sessionActive = false;
+    this.catWeight = 0;
+    this.runningMax = 0;
+    this.stableWeightBuffer = [];
+    this.currentSample = 0;
+    this.phaseTransitions = [];
+    this.currentPhaseStart = 0;
+  }
+}
+
+const extractPhasesFromStates = (stateTimeline: StateTimelineEntry[]): PhaseData => {
+  // Find key phase boundaries from state transitions
+  const entry = 0;
+  let stepIn = -1;
   let eliminationStart = -1;
   let eliminationEnd = -1;
-  let inStable = false;
-  let stableStart = -1;
-  let maxStable = 0;
-  let maxStableStart = -1;
-  let maxStableEnd = -1;
+  let stepOut = -1;
+  const exit = stateTimeline.length - 1;
   
-  for (let i = searchStart; i < searchEnd - 4; i++) {
-    const prevWindow = weights.slice(i - 6, i);
-    const sortedPrev = prevWindow.slice().sort((a, b) => a - b);
-    const q90Prev = sortedPrev[Math.floor(0.9 * (sortedPrev.length - 1))];
-    const delta = Math.abs(weights[i] - q90Prev);
-    
-    if (delta < vibrationThreshold) {
-      if (!inStable) {
-        inStable = true;
-        stableStart = i;
-      }
-    } else {
-      if (inStable) {
-        const stableLen = i - stableStart;
-        if (stableLen > maxStable) {
-          maxStable = stableLen;
-          maxStableStart = stableStart;
-          maxStableEnd = i;
-        }
-        inStable = false;
-      }
+  // Find first entry (transition to ENTERING or OCCUPIED)
+  for (let i = 0; i < stateTimeline.length; i++) {
+    const state = stateTimeline[i].state;
+    if (state === 'entering' || state === 'occupied') {
+      stepIn = i;
+      break;
     }
   }
   
-  if (inStable) {
-    const stableLen = searchEnd - stableStart;
-    if (stableLen > maxStable) {
-      maxStable = stableLen;
-      maxStableStart = stableStart;
-      maxStableEnd = searchEnd;
+  // Find when cat becomes stably occupied (elimination period start)
+  for (let i = stepIn; i < stateTimeline.length; i++) {
+    if (stateTimeline[i].state === 'occupied') {
+      eliminationStart = i;
+      break;
     }
   }
   
-  if (maxStable > 0) {
-    eliminationStart = maxStableStart;
-    eliminationEnd = maxStableEnd;
-  } else {
-    eliminationStart = searchStart;
-    eliminationEnd = searchStart + 5;
+  // Find end of stable occupation (start of exit behavior)
+  // Look for transitions to hesitating, short_exit, exiting, or ended
+  for (let i = eliminationStart; i < stateTimeline.length; i++) {
+    const state = stateTimeline[i].state;
+    if (state === 'hesitating' || state === 'short_exit' || state === 'exiting' || state === 'ended') {
+      eliminationEnd = i;
+      break;
+    }
   }
-
+  
+  // Find final exit (transition to ended state or end of timeline)
+  for (let i = eliminationEnd; i < stateTimeline.length; i++) {
+    const state = stateTimeline[i].state;
+    if (state === 'ended') {
+      stepOut = i;
+      break;
+    }
+  }
+  
+  // Fallback values if phases not found
+  if (stepIn === -1) stepIn = Math.floor(stateTimeline.length * 0.1);
+  if (eliminationStart === -1) eliminationStart = Math.floor(stateTimeline.length * 0.3);
+  if (eliminationEnd === -1) eliminationEnd = Math.floor(stateTimeline.length * 0.7);
+  if (stepOut === -1) stepOut = Math.floor(stateTimeline.length * 0.9);
+  
   return {
-    entry: 0,
-    stepIn: stepInIndex,
-    eliminationStart: eliminationStart,
-    eliminationEnd: eliminationEnd,
-    stepOut: stepOutIndex,
-    exit: n - 1
+    entry,
+    stepIn,
+    eliminationStart,
+    eliminationEnd,
+    stepOut,
+    exit
   };
 };
+
+const detectPhasesWithEvents = (weights: number[]): PhaseDetectionResult => {
+  const tracker = new LitterboxStateTracker();
+  tracker.reset(); // Ensure clean state for new analysis
+  const stateTimeline: StateTimelineEntry[] = [];
+  
+  // Process each sample
+  for (let i = 0; i < weights.length; i++) {
+    const result = tracker.processSample(weights[i], i);
+    stateTimeline.push({
+      index: i,
+      weight: weights[i],
+      ...result
+    });
+  }
+  
+  // Extract phases from state timeline
+  const phases = extractPhasesFromStates(stateTimeline);
+  
+  return {
+    phases,
+    catWeight: tracker.getCatWeight(),
+    events: tracker.getEvents(),
+    stateTimeline // For visualization
+  };
+};
+
+// Legacy phase detection (kept for backward compatibility if needed)
+/*
+const detectPhases = (weights: number[]): PhaseData => {
+  const result = detectPhasesWithEvents(weights);
+  return result.phases;
+};
+*/
 
 // Helper functions for feature extraction
 const calculateFilteredVariance = (signal: number[], outlierPercentile = 95): number => {
@@ -284,9 +593,10 @@ const countPeaks = (signal: number[], prominence = 20): number => {
   return peaks;
 };
 
-// Calculate features
+// Calculate features with state machine approach
 const extractFeatures = (weights: number[], sampleRate = 10): Features => {
-  const phases = detectPhases(weights);
+  const result = detectPhasesWithEvents(weights);
+  const phases = result.phases;
   const timeStep = 1 / sampleRate;
   
   const features: Features = {
@@ -432,6 +742,108 @@ const LitterboxAnalyzer = React.forwardRef<HTMLDivElement, LitterboxAnalyzerProp
     const phases = features.phases;
     const eliminationType = String(getEventDataProp(selectedEvent?.data || {}, 'elimination_type') || 'unknown');
 
+    // Get state timeline for annotations
+    const result = detectPhasesWithEvents(weights);
+    const stateTimeline = result.stateTimeline;
+    
+    // Create state region annotations
+    const stateAnnotations: Record<string, {
+      type: string;
+      xMin: string;
+      xMax: string;
+      backgroundColor: string;
+      borderColor: string;
+      borderWidth: number;
+      label: {
+        enabled: boolean;
+        content: string;
+        position: string;
+        font: { size: number };
+        color: string;
+      };
+    }> = {};
+    
+    // Group consecutive states into regions
+    let currentState = '';
+    let stateStart = 0;
+    let annotationIndex = 0;
+    
+    for (let i = 0; i < stateTimeline.length; i++) {
+      const state = stateTimeline[i].state;
+      
+      if (state !== currentState) {
+        // End previous state region
+        if (currentState && i > stateStart) {
+          const stateColors: Record<string, { bg: string; border: string }> = {
+            'empty': { bg: 'rgba(158, 158, 158, 0.1)', border: 'rgba(158, 158, 158, 0.3)' },
+            'entering': { bg: 'rgba(25, 118, 210, 0.1)', border: 'rgba(25, 118, 210, 0.3)' },
+            'occupied': { bg: 'rgba(76, 175, 80, 0.1)', border: 'rgba(76, 175, 80, 0.3)' },
+            'hesitating': { bg: 'rgba(255, 152, 0, 0.1)', border: 'rgba(255, 152, 0, 0.3)' },
+            'short_exit': { bg: 'rgba(156, 39, 176, 0.1)', border: 'rgba(156, 39, 176, 0.3)' },
+            'exiting': { bg: 'rgba(244, 67, 54, 0.1)', border: 'rgba(244, 67, 54, 0.3)' },
+            'ended': { bg: 'rgba(96, 125, 139, 0.1)', border: 'rgba(96, 125, 139, 0.3)' }
+          };
+          
+          const color = stateColors[currentState] || stateColors['empty'];
+          
+          stateAnnotations[`state_${annotationIndex}`] = {
+            type: 'box',
+            xMin: (stateStart / 10).toFixed(1),
+            xMax: ((i - 1) / 10).toFixed(1),
+            backgroundColor: color.bg,
+            borderColor: color.border,
+            borderWidth: 1,
+            label: {
+              enabled: true,
+              content: currentState.toUpperCase(),
+              position: 'center',
+              font: {
+                size: 10
+              },
+              color: color.border
+            }
+          };
+          annotationIndex++;
+        }
+        
+        currentState = state;
+        stateStart = i;
+      }
+    }
+    
+    // Handle the last state
+    if (currentState && stateTimeline.length > stateStart) {
+      const stateColors: Record<string, { bg: string; border: string }> = {
+        'empty': { bg: 'rgba(158, 158, 158, 0.1)', border: 'rgba(158, 158, 158, 0.3)' },
+        'entering': { bg: 'rgba(25, 118, 210, 0.1)', border: 'rgba(25, 118, 210, 0.3)' },
+        'occupied': { bg: 'rgba(76, 175, 80, 0.1)', border: 'rgba(76, 175, 80, 0.3)' },
+        'hesitating': { bg: 'rgba(255, 152, 0, 0.1)', border: 'rgba(255, 152, 0, 0.3)' },
+        'short_exit': { bg: 'rgba(156, 39, 176, 0.1)', border: 'rgba(156, 39, 176, 0.3)' },
+        'exiting': { bg: 'rgba(244, 67, 54, 0.1)', border: 'rgba(244, 67, 54, 0.3)' },
+        'ended': { bg: 'rgba(96, 125, 139, 0.1)', border: 'rgba(96, 125, 139, 0.3)' }
+      };
+      
+      const color = stateColors[currentState] || stateColors['empty'];
+      
+      stateAnnotations[`state_${annotationIndex}`] = {
+        type: 'box',
+        xMin: (stateStart / 10).toFixed(1),
+        xMax: ((stateTimeline.length - 1) / 10).toFixed(1),
+        backgroundColor: color.bg,
+        borderColor: color.border,
+        borderWidth: 1,
+        label: {
+          enabled: true,
+          content: currentState.toUpperCase(),
+          position: 'center',
+          font: {
+            size: 10
+          },
+          color: color.border
+        }
+      };
+    }
+
     weightChartInstance.current = new ChartJS(ctx, {
       type: 'line',
       data: {
@@ -445,6 +857,9 @@ const LitterboxAnalyzer = React.forwardRef<HTMLDivElement, LitterboxAnalyzerProp
             tension: 0.1,
             pointRadius: 0,
             pointHoverRadius: 4,
+            yAxisID: 'y',
+            fill: false,
+            order: 1
           }
         ]
       },
@@ -454,58 +869,61 @@ const LitterboxAnalyzer = React.forwardRef<HTMLDivElement, LitterboxAnalyzerProp
         plugins: {
           title: {
             display: true,
-            text: `Weight Over Time - ${String(getEventDataProp(selectedEvent?.data || {}, 'elimination_type') || 'Unknown')} Event`
+            text: `Weight Over Time - ${String(getEventDataProp(selectedEvent?.data || {}, 'elimination_type') || 'Unknown')} Event (Enhanced State Machine)`
           },
           annotation: {
             annotations: {
-              stepIn: {
-                type: 'line',
-                xMin: (phases.stepIn / 10).toFixed(1),
-                xMax: (phases.stepIn / 10).toFixed(1),
-                borderColor: '#1976d2',
-                borderWidth: 2,
-                label: {
-                  content: 'Step In',
-                  display: true,
-                  position: '75%'
-                }
-              },
-              eliminationStart: {
-                type: 'line',
-                xMin: (phases.eliminationStart / 10).toFixed(1),
-                xMax: (phases.eliminationStart / 10).toFixed(1),
-                borderColor: '#f57c00',
-                borderWidth: 2,
-                label: {
-                  content: 'Elimination Start',
-                  display: true,
-                  position: '35%'
-                }
-              },
-              eliminationEnd: {
-                type: 'line',
-                xMin: (phases.eliminationEnd / 10).toFixed(1),
-                xMax: (phases.eliminationEnd / 10).toFixed(1),
-                borderColor: '#7b1fa2',
-                borderWidth: 2,
-                label: {
-                  content: 'Elimination End',
-                  display: true,
-                  position: '55%'
-                }
-              },
-              stepOut: {
-                type: 'line',
-                xMin: (phases.stepOut / 10).toFixed(1),
-                xMax: (phases.stepOut / 10).toFixed(1),
-                borderColor: '#388e3c',
-                borderWidth: 2,
-                label: {
-                  content: 'Step Out',
-                  display: true,
-                  position: '75%'
-                }
-              }
+              // State regions (drawn first, behind everything)
+              ...stateAnnotations,
+              // Phase boundary lines (drawn on top)
+              // stepIn: {
+              //   type: 'line',
+              //   xMin: (phases.stepIn / 10).toFixed(1),
+              //   xMax: (phases.stepIn / 10).toFixed(1),
+              //   borderColor: '#1976d2',
+              //   borderWidth: 2,
+              //   label: {
+              //     content: 'Step In',
+              //     display: true,
+              //     position: '75%'
+              //   }
+              // },
+              // eliminationStart: {
+              //   type: 'line',
+              //   xMin: (phases.eliminationStart / 10).toFixed(1),
+              //   xMax: (phases.eliminationStart / 10).toFixed(1),
+              //   borderColor: '#f57c00',
+              //   borderWidth: 2,
+              //   label: {
+              //     content: 'Elimination Start',
+              //     display: true,
+              //     position: '35%'
+              //   }
+              // },
+              // eliminationEnd: {
+              //   type: 'line',
+              //   xMin: (phases.eliminationEnd / 10).toFixed(1),
+              //   xMax: (phases.eliminationEnd / 10).toFixed(1),
+              //   borderColor: '#7b1fa2',
+              //   borderWidth: 2,
+              //   label: {
+              //     content: 'Elimination End',
+              //     display: true,
+              //     position: '55%'
+              //   }
+              // },
+              // stepOut: {
+              //   type: 'line',
+              //   xMin: (phases.stepOut / 10).toFixed(1),
+              //   xMax: (phases.stepOut / 10).toFixed(1),
+              //   borderColor: '#388e3c',
+              //   borderWidth: 2,
+              //   label: {
+              //     content: 'Step Out',
+              //     display: true,
+              //     position: '75%'
+              //   }
+              // }
             }
           }
         },
@@ -517,6 +935,9 @@ const LitterboxAnalyzer = React.forwardRef<HTMLDivElement, LitterboxAnalyzerProp
             }
           },
           y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
             title: {
               display: true,
               text: 'Weight (g)'
@@ -636,23 +1057,49 @@ const LitterboxAnalyzer = React.forwardRef<HTMLDivElement, LitterboxAnalyzerProp
       )}
       {litterboxEvents.length > 0 && (
         <div className="event-selector">
-          <h3>📋 Select Event to Analyze ({litterboxEvents.length} available)</h3>
+          <h3>📋 Select Event to Analyze</h3>
           <div className="event-list">
-            {litterboxEvents.map((event) => (
-              <div
-                key={event.id}
-                className={`event-card ${selectedEvent?.id === event.id ? 'selected' : ''}`}
-                onClick={() => handleEventSelect(event)}
-              >
-                <div className="event-meta">
-                  {new Date(event.timestamp).toLocaleString()}
-                  {event.human_verified && <span className="verified-badge">✅ Verified</span>}
+            {litterboxEvents.map((event) => {
+              const eliminationType = String(getEventDataProp(event.data, 'elimination_type') || 'unknown');
+              const weight = getEventDataProp(event.data, 'elimination_weight');
+              const duration = getEventDataProp(event.data, 'duration');
+              
+              return (
+                <div
+                  key={event.id}
+                  className={`event-card ${selectedEvent?.id === event.id ? 'selected' : ''}`}
+                  onClick={() => handleEventSelect(event)}
+                >
+                  <div className="event-header">
+                    <div className="event-type-icon">
+                      {getEliminationIcon(eliminationType)}
+                    </div>
+                    <div className="event-details">
+                      <div className="event-time">
+                        <FaCalendarAlt className="time-icon" />
+                        {new Date(event.timestamp).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                      {event.human_verified && <FaCheck className="verified-icon" />}
+                    </div>
+                  </div>
+                  <div className="event-metrics">
+                    <span className="metric">
+                      <FaWeight className="metric-icon" />
+                      {String(weight || 'N/A')}g
+                    </span>
+                    <span className="metric">
+                      <FaClock className="metric-icon" />
+                      {typeof duration === 'number' ? `${(Number(duration) / 1000).toFixed(1)}s` : 'N/A'}
+                    </span>
+                  </div>
                 </div>
-                <div className="event-type">
-                  {String(getEventDataProp(event.data, 'elimination_type') || 'unknown')} - {String(getEventDataProp(event.data, 'elimination_weight') || 'N/A')}g - {typeof getEventDataProp(event.data, 'duration') === 'number' ? `${(Number(getEventDataProp(event.data, 'duration')) / 1000).toFixed(1)}s` : 'N/A'}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -665,39 +1112,74 @@ const LitterboxAnalyzer = React.forwardRef<HTMLDivElement, LitterboxAnalyzerProp
             <canvas ref={weightChartRef} />
           </div>
 
-          {/* Phase Markers */}
-          <div className="phase-markers">
-            <h3>Detected Phases ({String(getEventDataProp(selectedEvent.data, 'elimination_type') || 'unknown')} - {selectedEvent.human_verified ? '✅ Human Verified' : '⚠️ Unverified'}):</h3>
-            <span className="phase-marker phase-entry">Step In: {(analysisData.features.phases.stepIn/10).toFixed(1)}s</span>
-            <span className="phase-marker phase-elimination">Pre-elimination: {((analysisData.features.phases.eliminationStart-analysisData.features.phases.stepIn)/10).toFixed(1)}s</span>
-            <span className="phase-marker phase-elimination">Elimination: {((analysisData.features.phases.eliminationEnd-analysisData.features.phases.eliminationStart)/10).toFixed(1)}s</span>
-            <span className="phase-marker phase-covering">Covering: {((analysisData.features.phases.stepOut-analysisData.features.phases.eliminationEnd)/10).toFixed(1)}s</span>
-            <span className="phase-marker phase-exit">Step Out: {(analysisData.features.phases.stepOut/10).toFixed(1)}s</span>
+          {/* State Legend */}
+          <div className="state-legend">
+            <h4>State Machine Visualization:</h4>
+            <div className="legend-items">
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: 'rgba(158, 158, 158, 0.3)' }}></span>
+                <span>EMPTY - No cat present</span>
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: 'rgba(25, 118, 210, 0.3)' }}></span>
+                <span>ENTERING - Cat stepping on</span>
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: 'rgba(76, 175, 80, 0.3)' }}></span>
+                <span>OCCUPIED - Cat stable (elimination)</span>
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: 'rgba(255, 152, 0, 0.3)' }}></span>
+                <span>HESITATING - Cat showing uncertainty</span>
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: 'rgba(156, 39, 176, 0.3)' }}></span>
+                <span>SHORT_EXIT - Brief exit (covering behavior)</span>
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: 'rgba(244, 67, 54, 0.3)' }}></span>
+                <span>EXITING - Cat leaving</span>
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: 'rgba(96, 125, 139, 0.3)' }}></span>
+                <span>ENDED - Session completed</span>
+              </div>
+            </div>
           </div>
 
-          {/* Features Grid */}
-          <h2>🔍 Extracted Features</h2>
-          <div className="features-grid">
-            {[
-              { label: 'Total Duration', value: `${analysisData.features.totalDuration.toFixed(1)}s`, color: '#007AFF' },
-              { label: 'Pre-elimination Time', value: `${analysisData.features.preEliminationDuration.toFixed(1)}s`, color: '#1976d2' },
-              { label: 'Elimination Duration', value: `${analysisData.features.eliminationDuration.toFixed(1)}s`, color: '#f57c00' },
-              { label: 'Covering Duration', value: `${analysisData.features.coveringDuration.toFixed(1)}s`, color: '#7b1fa2' },
-              { label: 'Waste Weight', value: `${analysisData.features.wasteWeight.toFixed(1)}g`, color: '#d32f2f' },
-              { label: 'Elimination Rate', value: `${analysisData.features.eliminationRate.toFixed(2)}g/s`, color: '#388e3c' },
-              { label: 'Covering Variance', value: analysisData.features.coveringVariance.toFixed(0), color: '#ff5722' },
-              { label: 'Covering Fluctuations', value: String(analysisData.features.coveringFluctuations), color: '#9c27b0' },
-              { label: 'Covering Spectral Entropy', value: analysisData.features.coveringSpectralEntropy.toFixed(3), color: '#607d8b' },
-              { label: 'Pre-elimination Variance', value: analysisData.features.preEliminationVariance.toFixed(0), color: '#795548' },
-              { label: 'Max Weight', value: `${analysisData.features.maxWeight.toFixed(1)}g`, color: '#ff9800' },
-              { label: 'Weight Change', value: `${(analysisData.features.finalWeight - analysisData.features.initialWeight).toFixed(1)}g`, color: '#4caf50' }
-            ].map((feature, index) => (
-              <div key={index} className="feature-card" style={{ borderLeftColor: feature.color }}>
-                <div className="feature-value">{feature.value}</div>
-                <div className="feature-label">{feature.label}</div>
-              </div>
-            ))}
+          {/* Phase Markers */}
+          <div className="phase-markers">
+            <h4>Detected Phases ({String(getEventDataProp(selectedEvent.data, 'elimination_type') || 'unknown')} - {selectedEvent.human_verified ? '✅ Human Verified' : '⚠️ Unverified'}) - Enhanced Session Analysis:</h4>
+            <div className="phase-markers-grid">
+              <span className="phase-marker phase-entry">Step In: {(analysisData.features.phases.stepIn/10).toFixed(1)}s</span>
+              <span className="phase-marker phase-elimination">Pre: {((analysisData.features.phases.eliminationStart-analysisData.features.phases.stepIn)/10).toFixed(1)}s</span>
+              <span className="phase-marker phase-elimination">Elimination: {((analysisData.features.phases.eliminationEnd-analysisData.features.phases.eliminationStart)/10).toFixed(1)}s</span>
+              <span className="phase-marker phase-covering">Covering: {((analysisData.features.phases.stepOut-analysisData.features.phases.eliminationEnd)/10).toFixed(1)}s</span>
+              <span className="phase-marker phase-exit">Step Out: {(analysisData.features.phases.stepOut/10).toFixed(1)}s</span>
+            </div>
+            <div className="metrics-row">
+              <span className="metric">Total: <strong>{analysisData.features.totalDuration.toFixed(1)}s</strong></span>
+              <span className="metric">Waste: <strong>{analysisData.features.wasteWeight.toFixed(1)}g</strong></span>
+              <span className="metric">Rate: <strong>{analysisData.features.eliminationRate.toFixed(2)}g/s</strong></span>
+              <span className="metric">Covering Activity: <strong>{analysisData.features.coveringFluctuations} peaks</strong></span>
+              <span className="metric">Covering Variance: <strong>{analysisData.features.coveringVariance.toFixed(0)}</strong></span>
+              <span className="metric">Pre-Elim Variance: <strong>{analysisData.features.preEliminationVariance.toFixed(0)}</strong></span>
+              <span className="metric">Spectral Entropy: <strong>{analysisData.features.coveringSpectralEntropy.toFixed(3)}</strong></span>
+              {(() => {
+                const weights = analysisData.decodedData.measurements.map((m: { weight: number }) => m.weight);
+                const eventResult = detectPhasesWithEvents(weights);
+                return (
+                  <>
+                    <span className="metric">Entries: <strong>{eventResult.events.entries}</strong></span>
+                    <span className="metric">Exits: <strong>{eventResult.events.exits}</strong></span>
+                    <span className="metric">Hesitations: <strong>{eventResult.events.hesitations}</strong></span>
+                  </>
+                );
+              })()}
+            </div>
           </div>
+
+          {/* Features Summary */}
         </div>
       )}
     </div>
