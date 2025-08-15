@@ -5,14 +5,14 @@ import { getPet, getPetEvents, deleteEvent, updateEvent, getPets } from '@/api/p
 import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
 import LitterboxMaintenanceEventItem from '@/components/event/LitterboxMaintenanceEvent';
 import WeightMeasurementEventItem from '@/components/event/WeightMeasurementEvent';
-import DateNavigation from '@/components/ui/DateNavigation';
+import DateRangeNavigation from '@/components/ui/DateRangeNavigation';
 import PetSummaryCard from '@/components/ui/PetSummaryCard';
 import WeightTrendChart from '@/components/ui/WeightTrendChart';
 import LitterboxVisitsChart from '@/components/ui/LitterboxVisitsChart';
-import LitterboxAnalyzer from '@/components/analyzer/LitterboxAnalyzer';
-import { dateToTimeRange } from '@/lib/utils';
+import { dateRangeToTimeRange, createDateRange, type DateRange } from '@/lib/utils';
 
 import './pet-detail.css';
+import { LitterboxAnalyzer } from '@/components/analyzer';
 
 export default function PetDetail() {
   const { id } = useParams<{ id: string }>();
@@ -20,10 +20,11 @@ export default function PetDetail() {
   const [deletingEventIds, setDeletingEventIds] = useState<Set<number>>(new Set());
   const [activeTab, setActiveTab] = useState<'events' | 'analyzer'>('events');
   
-  // Initialize current date to today
-  const [currentDate, setCurrentDate] = useState(() => {
+  // Initialize current date range to today
+  const [currentDateRange, setCurrentDateRange] = useState<DateRange>(() => {
     const today = new Date();
-    return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+    return createDateRange(todayStr, 'day');
   });
   
   const petId = id ? Number(id) : NaN;
@@ -38,7 +39,7 @@ export default function PetDetail() {
     
     try {
       await deleteEvent(eventId);
-      await queryClient.invalidateQueries({ queryKey: ['petEvents', petId, currentDate] });
+      await queryClient.invalidateQueries({ queryKey: ['petEvents', petId, currentDateRange] });
     } catch (error) {
       console.error('Failed to delete event:', error);
     } finally {
@@ -53,7 +54,7 @@ export default function PetDetail() {
   const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean, pet_id?: number | null) => {
     try {
       await updateEvent(eventId, { data, human_verified, pet_id });
-      await queryClient.invalidateQueries({ queryKey: ['petEvents', petId, currentDate] });
+      await queryClient.invalidateQueries({ queryKey: ['petEvents', petId, currentDateRange] });
     } catch (error) {
       console.error('Failed to update event:', error);
       throw error; // Re-throw so the component can handle the error
@@ -79,9 +80,9 @@ export default function PetDetail() {
   });
 
   const { data: eventsData, isLoading: eventsLoading, error: eventsError } = useQuery({
-    queryKey: ['petEvents', petId, currentDate],
+    queryKey: ['petEvents', petId, currentDateRange],
     queryFn: () => {
-      const { startTime, endTime } = dateToTimeRange(currentDate);
+      const { startTime, endTime } = dateRangeToTimeRange(currentDateRange);
       return getPetEvents(petId, startTime, endTime);
     },
     enabled: isValidId,
@@ -130,8 +131,11 @@ export default function PetDetail() {
           🔬 Event Analyzer
         </button>
       </div>
-
-      {/* Tab Content */}
+      <DateRangeNavigation 
+        currentRange={currentDateRange}
+        onRangeChange={setCurrentDateRange}
+        hasEvents={hasEvents}
+      />
       {activeTab === 'events' && (
         <>
           <WeightTrendChart 
@@ -150,11 +154,6 @@ export default function PetDetail() {
           
           <div className="events-section">
             <div className="events-title">Events</div>
-            <DateNavigation 
-              currentDate={currentDate}
-              onDateChange={setCurrentDate}
-              hasEvents={hasEvents}
-            />
 
             {events.length === 0 && (
               <div className="empty">No events found for this date.</div>
