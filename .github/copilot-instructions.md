@@ -57,7 +57,8 @@ return <div className='my-component'><a className='some-class'/></div>;
 }
 ```
 
-**ALWAYS use CSS variables** from `packages/ui/src/theme.css` instead of hardcoding values
+**ALWAYS use CSS variables** from `packages/ui/src/theme.css` instead of hardcoding values.
+**ALWAYS use CSS nesting** with one single top-level classname that contains everything else.
 
 ### Component Architecture
 
@@ -266,3 +267,4 @@ The application uses a comprehensive design system defined in `theme.css` with:
 - **Z-index layering** for modals, dropdowns, tooltips
 
 Always reference these variables instead of hardcoding values to maintain design consistency and enable easy theming updates.
+
