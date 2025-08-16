@@ -1,7 +1,86 @@
 import type { PhaseData, PhaseDetectionResult, StateTimelineEntry } from '../types';
 import { LitterboxStateTracker } from './stateTracker';
 
-export const extractPhasesFromStates = (stateTimeline: StateTimelineEntry[]): PhaseData => {
+// Helper function to calculate rolling variance
+const calculateRollingVariance = (weights: number[], windowSize: number = 10): number[] => {
+  const variances: number[] = [];
+  
+  for (let i = 0; i < weights.length; i++) {
+    const start = Math.max(0, i - Math.floor(windowSize / 2));
+    const end = Math.min(weights.length, i + Math.floor(windowSize / 2) + 1);
+    const window = weights.slice(start, end);
+    
+    if (window.length < 2) {
+      variances.push(Infinity);
+      continue;
+    }
+    
+    const mean = window.reduce((sum, w) => sum + w, 0) / window.length;
+    const variance = window.reduce((sum, w) => sum + Math.pow(w - mean, 2), 0) / window.length;
+    variances.push(variance);
+  }
+  
+  return variances;
+};
+
+// Find the longest stable period during occupied state
+const findLongestStablePeriod = (stateTimeline: StateTimelineEntry[], weights: number[]): { start: number; end: number } => {
+  const varianceThreshold = 250;
+  const variances = calculateRollingVariance(weights);
+  
+  // Find all occupied periods
+  const occupiedPeriods: { start: number; end: number }[] = [];
+  let currentStart = -1;
+  
+  for (let i = 0; i < stateTimeline.length; i++) {
+    const isOccupied = stateTimeline[i].state === 'occupied';
+    
+    if (isOccupied && currentStart === -1) {
+      currentStart = i;
+    } else if (!isOccupied && currentStart !== -1) {
+      occupiedPeriods.push({ start: currentStart, end: i - 1 });
+      currentStart = -1;
+    }
+  }
+  
+  // Handle case where occupied state continues to the end
+  if (currentStart !== -1) {
+    occupiedPeriods.push({ start: currentStart, end: stateTimeline.length - 1 });
+  }
+  
+  // Find longest stable period within occupied periods
+  let longestStable = { start: -1, end: -1, duration: 0 };
+  
+  for (const period of occupiedPeriods) {
+    let stableStart = -1;
+    
+    for (let i = period.start; i <= period.end; i++) {
+      const isStable = variances[i] < varianceThreshold;
+      
+      if (isStable && stableStart === -1) {
+        stableStart = i;
+      } else if (!isStable && stableStart !== -1) {
+        const duration = i - stableStart;
+        if (duration > longestStable.duration) {
+          longestStable = { start: stableStart, end: i - 1, duration };
+        }
+        stableStart = -1;
+      }
+    }
+    
+    // Handle stable period that continues to end of occupied period
+    if (stableStart !== -1) {
+      const duration = period.end - stableStart + 1;
+      if (duration > longestStable.duration) {
+        longestStable = { start: stableStart, end: period.end, duration };
+      }
+    }
+  }
+  
+  return { start: longestStable.start, end: longestStable.end };
+};
+
+export const extractPhasesFromStates = (stateTimeline: StateTimelineEntry[], weights: number[]): PhaseData => {
   // Find key phase boundaries from state transitions
   const entry = 0;
   let stepIn = -1;
@@ -19,26 +98,15 @@ export const extractPhasesFromStates = (stateTimeline: StateTimelineEntry[]): Ph
     }
   }
   
-  // Find when cat becomes stably occupied (elimination period start)
-  for (let i = stepIn; i < stateTimeline.length; i++) {
-    if (stateTimeline[i].state === 'occupied') {
-      eliminationStart = i;
-      break;
-    }
-  }
-  
-  // Find end of stable occupation (start of exit behavior)
-  // Look for transitions to hesitating, short_exit, exiting, or ended
-  for (let i = eliminationStart; i < stateTimeline.length; i++) {
-    const state = stateTimeline[i].state;
-    if (state === 'hesitating' || state === 'short_exit' || state === 'exiting' || state === 'ended') {
-      eliminationEnd = i;
-      break;
-    }
+  // Find the longest stable period during occupied state for elimination detection
+  const stablePeriod = findLongestStablePeriod(stateTimeline, weights);
+  if (stablePeriod.start !== -1 && stablePeriod.end !== -1) {
+    eliminationStart = stablePeriod.start;
+    eliminationEnd = stablePeriod.end;
   }
   
   // Find final exit (transition to ended state or end of timeline)
-  for (let i = eliminationEnd; i < stateTimeline.length; i++) {
+  for (let i = Math.max(eliminationEnd, 0); i < stateTimeline.length; i++) {
     const state = stateTimeline[i].state;
     if (state === 'ended') {
       stepOut = i;
@@ -78,7 +146,7 @@ export const detectPhasesWithEvents = (weights: number[]): PhaseDetectionResult 
   }
   
   // Extract phases from state timeline
-  const phases = extractPhasesFromStates(stateTimeline);
+  const phases = extractPhasesFromStates(stateTimeline, weights);
   
   return {
     phases,
