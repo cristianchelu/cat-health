@@ -57,8 +57,8 @@ export class LitterboxStateTracker {
     // Session management
     this.sessionActive = false;
     this.shortExitCounter = 0;
-    this.maxShortExitDuration = 50;  // 5 seconds at 10Hz
-    this.maxSessionDuration = 1200;  // 120 seconds at 10Hz
+    this.maxShortExitDuration = 100;  // 10 seconds at 10Hz
+    this.maxSessionDuration = 6000;  // 10 minutes at 10Hz
     this.sessionStartSample = 0;
     this.currentSample = 0;
     
@@ -110,10 +110,10 @@ export class LitterboxStateTracker {
           this.transitionTo(this.states.OCCUPIED, index);
         } else if (weight < this.baselineWeight + this.entryThreshold * 0.5) {
           this.hesitations++;
-          this.transitionTo(this.states.EMPTY, index);
+          this.transitionTo(this.states.SHORT_EXIT, index);
           // If we never made it to OCCUPIED, end the session
           if (!this.catWeight) {
-            return this.endSession();
+            this.transitionTo(this.states.SHORT_EXIT, index)
           }
         }
         break;
