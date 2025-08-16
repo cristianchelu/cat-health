@@ -2,7 +2,6 @@ import { InfluxDB } from "@influxdata/influxdb-client";
 import type { NewEvent } from "../database/types/EventTable.ts";
 import { db } from "../database/index.ts";
 import { sql } from "kysely";
-import fs from "fs";
 
 interface RawMeasurement {
   timestamp: Date;
@@ -16,6 +15,11 @@ interface EventSession {
 }
 
 const ORG = "ead56babe1bae2a1";
+
+/** Maintenance threshold for significant weight decrease */
+const MAINTENANCE_THRESHOLD = -20;
+/** Tared ending weight below which an event is considered `no_elimination` */
+const NO_ELIMINATION_THRESHOLD = 10;
 
 // Binary encoding for raw data storage
 function encodeRawData(
@@ -502,9 +506,6 @@ async function migrateEvents(
       // Encode raw data with context (our tared weights vs HA tared weights)
       const rawData = encodeRawData(session.startTime, measurements, contextData || undefined);
 
-      // Check if this is a maintenance event based on significantly negative elimination weight
-      const MAINTENANCE_THRESHOLD = -20; // More than 20g weight decrease indicates maintenance
-
       if (eliminationWeight < MAINTENANCE_THRESHOLD) {
         // This is a maintenance event (waste removal/scooping)
         console.log(`Detected maintenance event at ${session.startTime.toISOString()}: ${eliminationWeight}g`);
@@ -527,13 +528,22 @@ async function migrateEvents(
         // Determine which cat based on weight measurements
         const petId = determinePetId(measurements, catWeights);
         
+        // Determine elimination type based on ending weight
+        let eliminationType: "urination" | "defecation" | "no_elimination" | "unknown";
+        if (eliminationWeight < NO_ELIMINATION_THRESHOLD) {
+          eliminationType = "no_elimination";
+          console.log(`Marking event at ${session.startTime.toISOString()} as no_elimination (weight: ${eliminationWeight}g)`);
+        } else {
+          eliminationType = "unknown";
+        }
+        
         events.push({
           pet_id: petId,
           device_id: 1, // Use the seeded "Main Litter Box" device
           timestamp: session.startTime,
           data: {
             type: "litterbox_use",
-            elimination_type: "unknown",
+            elimination_type: eliminationType,
             elimination_weight: Math.round(Math.max(0, eliminationWeight)), // Ensure non-negative
             duration,
           },
@@ -570,7 +580,7 @@ async function migrateEvents(
 }
 
 const startDate = new Date("2025-08-14T00:00:00Z");
-const endDate = new Date("2025-08-15T23:59:59Z");
+const endDate = new Date("2025-08-16T23:59:59Z");
 const influxUrl = "http://192.168.100.52:8086";
 const influxToken = process.env.INFLUX_TOKEN || "";
 const bucket = "homeassistant";
