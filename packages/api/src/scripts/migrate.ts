@@ -2,6 +2,17 @@ import { InfluxDB } from "@influxdata/influxdb-client";
 import type { NewEvent } from "../database/types/EventTable.ts";
 import { db } from "../database/index.ts";
 import { sql } from "kysely";
+import { spawn } from "child_process";
+import { promisify } from "util";
+import { access, constants, mkdir } from "fs";
+import path from "path";
+import { config } from "dotenv";
+
+// Load environment variables from .env file
+config();
+
+const accessAsync = promisify(access);
+const mkdirAsync = promisify(mkdir);
 
 interface RawMeasurement {
   timestamp: Date;
@@ -14,12 +25,124 @@ interface EventSession {
   measurements: RawMeasurement[];
 }
 
-const ORG = "ead56babe1bae2a1";
+const ORG = process.env.INFLUX_ORG || "ead56babe1bae2a1";
 
 /** Maintenance threshold for significant weight decrease */
-const MAINTENANCE_THRESHOLD = -20;
+const MAINTENANCE_THRESHOLD = parseInt(process.env.MAINTENANCE_THRESHOLD || "-20");
 /** Tared ending weight below which an event is considered `no_elimination` */
-const NO_ELIMINATION_THRESHOLD = 10;
+const NO_ELIMINATION_THRESHOLD = parseInt(process.env.NO_ELIMINATION_THRESHOLD || "10");
+
+/** Camera configuration - loaded from .env file */
+const CAMERA_IP = process.env.CAMERA_IP || "192.168.1.100";
+const RECORDINGS_DIR = path.resolve(import.meta.dirname, "../../data/recordings");
+const LITTERCAM_SCRIPT = path.resolve(import.meta.dirname, "./littercam.sh");
+
+/** Ensure recordings directory exists */
+async function ensureRecordingsDir(): Promise<void> {
+  try {
+    await accessAsync(RECORDINGS_DIR, constants.F_OK);
+  } catch {
+    console.log(`Creating recordings directory: ${RECORDINGS_DIR}`);
+    await mkdirAsync(RECORDINGS_DIR, { recursive: true });
+  }
+}
+
+/** Check if a video file already exists for this event */
+async function videoFileExists(timestamp: Date, eventType: 'use' | 'maintenance'): Promise<boolean> {
+  const filename = `event_${timestamp.toISOString().replace(/[:-]/g, '').replace('T', '_').split('.')[0]}_${eventType}.mp4`;
+  const filePath = path.join(RECORDINGS_DIR, filename);
+  
+  try {
+    await accessAsync(filePath, constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Download video for an event using the littercam.sh script */
+async function downloadEventVideo(
+  startTime: Date,
+  endTime: Date,
+  eventType: 'use' | 'maintenance'
+): Promise<void> {
+  // Check if video already exists
+  if (await videoFileExists(startTime, eventType)) {
+    console.log(`  Video already exists for event at ${startTime.toISOString()}, skipping download`);
+    return;
+  }
+
+  // Convert UTC timestamps to camera's local time (UTC+3)
+  const CAMERA_TIMEZONE_OFFSET_HOURS = parseInt(process.env.CAMERA_TIMEZONE_OFFSET_HOURS || "3");
+  const localStartTime = new Date(startTime.getTime() + CAMERA_TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000);
+  const localEndTime = new Date(endTime.getTime() + CAMERA_TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000);
+
+  // Format datetime strings for the script (YYYY-MM-DDTHH:MM:SS)
+  const startStr = localStartTime.toISOString().split('.')[0];
+  const endStr = localEndTime.toISOString().split('.')[0];
+  
+  // Generate output filename (use UTC time for consistency)
+  const filename = `event_${startTime.toISOString().replace(/[:-]/g, '').replace('T', '_').split('.')[0]}_${eventType}.mp4`;
+  const outputPath = path.join(RECORDINGS_DIR, filename);
+  
+  console.log(`  Downloading video: ${startStr} to ${endStr} (camera local time) -> ${filename}`);
+  
+  return new Promise((resolve, reject) => {
+    const process = spawn('bash', [
+      LITTERCAM_SCRIPT,
+      CAMERA_IP,
+      startStr,
+      endStr,
+      outputPath
+    ], {
+      cwd: path.dirname(LITTERCAM_SCRIPT),
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    process.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    process.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    process.on('close', (code) => {
+      if (code === 0) {
+        console.log(`  ✅ Video downloaded successfully: ${filename}`);
+        resolve();
+      } else {
+        // Check if the error is due to no files found (common case)
+        if (stdout.includes('No files found that overlap with the specified time range') || 
+            stdout.includes('No MP4 files found on camera')) {
+          console.log(`  ⚠️ No video files found for ${filename} - camera may not have been recording at that time`);
+        } else {
+          console.error(`  ❌ Video download failed for ${filename}: exit code ${code}`);
+          if (stdout) console.error(`  Script output: ${stdout.trim()}`);
+          if (stderr) console.error(`  Error output: ${stderr.trim()}`);
+        }
+        // Don't reject - continue with other events even if video download fails
+        resolve();
+      }
+    });
+
+    process.on('error', (error) => {
+      console.error(`  ❌ Failed to execute littercam.sh for ${filename}:`, error.message);
+      // Don't reject - continue with other events even if video download fails
+      resolve();
+    });
+
+    // Set a timeout for video downloads (5 minutes)
+    setTimeout(() => {
+      process.kill();
+      console.error(`  ⚠️ Video download timeout for ${filename}`);
+      resolve();
+    }, 5 * 60 * 1000);
+  });
+}
 
 // Binary encoding for raw data storage
 function encodeRawData(
@@ -434,11 +557,13 @@ async function migrateEvents(
   // Initialize connections
   const influx = new InfluxDB({ url: influxUrl, token: influxToken });
 
-  // Your cat weights in grams - update these values
-  const catWeights = {
-    1: 6600, // 6.6kg cat
-    2: 4300, // 4.3kg cat
-  };
+  // Your cat weights in grams - loaded from .env file
+  const catWeightsStr = process.env.CAT_WEIGHTS || "1:6600,2:4300";
+  const catWeights: Record<number, number> = {};
+  catWeightsStr.split(',').forEach(pair => {
+    const [petId, weight] = pair.split(':');
+    catWeights[parseInt(petId)] = parseInt(weight);
+  });
 
   try {
     // Get event sessions from InfluxDB
@@ -451,6 +576,7 @@ async function migrateEvents(
     console.log(`Found ${sessions.length} litterbox sessions`);
 
     const events: NewEvent[] = [];
+    const eventSessionMap: Map<string, EventSession> = new Map(); // Map event timestamp to session
     let skippedCount = 0;
 
     for (const session of sessions) {
@@ -512,6 +638,9 @@ async function migrateEvents(
         
         let maintenanceType: "scoop" | "deep_clean" = "scoop";
         
+        const eventTimestampKey = session.startTime.toISOString();
+        eventSessionMap.set(eventTimestampKey, session);
+        
         events.push({
           pet_id: null, // Maintenance events are not assigned to specific pets
           device_id: 1,
@@ -536,6 +665,9 @@ async function migrateEvents(
         } else {
           eliminationType = "unknown";
         }
+        
+        const eventTimestampKey = session.startTime.toISOString();
+        eventSessionMap.set(eventTimestampKey, session);
         
         events.push({
           pet_id: petId,
@@ -569,22 +701,108 @@ async function migrateEvents(
     } else {
       console.log(`Inserting ${events.length} new events into database...`);
       await db.insertInto("event").values(events).execute();
+      console.log("Events inserted successfully.");
+      
+      // Download videos for new events if camera IP is configured
+      if (CAMERA_IP && CAMERA_IP !== "192.168.1.100") { // Skip if using default placeholder IP
+        console.log(`\n=== Video Download Phase ===`);
+        console.log(`Downloading videos for ${events.length} events...`);
+        
+        // Ensure recordings directory exists
+        await ensureRecordingsDir();
+        
+        // Download videos sequentially to avoid overwhelming the camera
+        for (let i = 0; i < events.length; i++) {
+          const event = events[i];
+          const eventData = event.data as any;
+          const eventTimestampKey = event.timestamp.toISOString();
+          const session = eventSessionMap.get(eventTimestampKey);
+          
+          if (session) {
+            if (eventData.type === "litterbox_use") {
+              await downloadEventVideo(session.startTime, session.endTime, 'use');
+            } else if (eventData.type === "litterbox_maintenance") {
+              await downloadEventVideo(session.startTime, session.endTime, 'maintenance');
+            }
+          } else {
+            // Fallback to calculated end time if session not found
+            if (eventData.type === "litterbox_use") {
+              const duration = eventData.duration || 120000; // Default to 2 minutes if duration missing
+              const endTime = new Date(event.timestamp.getTime() + duration);
+              await downloadEventVideo(event.timestamp, endTime, 'use');
+            } else if (eventData.type === "litterbox_maintenance") {
+              // For maintenance events, use a fixed 3-minute duration
+              const endTime = new Date(event.timestamp.getTime() + 3 * 60 * 1000);
+              await downloadEventVideo(event.timestamp, endTime, 'maintenance');
+            }
+          }
+          
+          // Progress indicator
+          console.log(`  Progress: ${i + 1}/${events.length} videos processed`);
+        }
+        
+        console.log("✅ Video download phase completed.");
+      } else {
+        console.log("\n⚠️ Skipping video downloads - CAMERA_IP not configured or using default placeholder");
+      }
     }
     
     console.log("Migration completed successfully");
   } catch (error) {
     console.error("Migration failed:", error);
+    process.exit(1);
   } finally {
-    // await db.destroy();
+    // Close database connection
+    await db.destroy();
   }
 }
 
-const startDate = new Date("2025-08-14T00:00:00Z");
-const endDate = new Date("2025-08-17T23:59:59Z");
-const influxUrl = "http://192.168.100.52:8086";
+const startDate = new Date(process.env.MIGRATION_START_DATE || "2025-08-14T00:00:00Z");
+const endDate = new Date(process.env.MIGRATION_END_DATE || "2025-08-17T23:59:59Z");
+const influxUrl = process.env.INFLUX_URL || "http://192.168.100.52:8086";
 const influxToken = process.env.INFLUX_TOKEN || "";
-const bucket = "homeassistant";
-const batchDays = 10;
+const bucket = process.env.INFLUX_BUCKET || "homeassistant";
+const batchDays = parseInt(process.env.MIGRATION_BATCH_DAYS || "10");
+
+console.log("=== Litterbox Event Migration Script ===");
+console.log(`Migration period: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+console.log(`InfluxDB URL: ${influxUrl}`);
+console.log(`InfluxDB Bucket: ${bucket}`);
+console.log(`InfluxDB Org: ${ORG}`);
+console.log(`Batch size: ${batchDays} days`);
+console.log(`Camera IP: ${CAMERA_IP}`);
+console.log(`Maintenance threshold: ${MAINTENANCE_THRESHOLD}g`);
+console.log(`No elimination threshold: ${NO_ELIMINATION_THRESHOLD}g`);
+if (CAMERA_IP === "192.168.1.100") {
+  console.log("⚠️  Using default camera IP - video downloads will be skipped");
+  console.log("   Set CAMERA_IP in .env file to enable video downloads");
+}
+
+// Validate required environment variables
+if (!influxToken) {
+  console.error("❌ INFLUX_TOKEN environment variable is required");
+  console.error("   Please set INFLUX_TOKEN in the .env file");
+  process.exit(1);
+}
+
+// Validate date range
+if (startDate >= endDate) {
+  console.error("❌ Invalid date range: start date must be before end date");
+  process.exit(1);
+}
+
+// Validate thresholds
+if (MAINTENANCE_THRESHOLD >= 0) {
+  console.error("❌ MAINTENANCE_THRESHOLD should be negative (weight decrease)");
+  process.exit(1);
+}
+
+if (NO_ELIMINATION_THRESHOLD < 0) {
+  console.error("❌ NO_ELIMINATION_THRESHOLD should be positive");
+  process.exit(1);
+}
+
+console.log();
 
 // Process in batches
 async function migrateWeightMeasurements(
@@ -615,11 +833,13 @@ async function migrateWeightMeasurements(
 
   const influx = new InfluxDB({ url: influxUrl, token: influxToken });
 
-  // Pet mappings based on sensor names
-  const petSensorMappings = {
-    "Litterbox Jazz Weight": 1, // Jazz pet_id
-    "Litterbox Luna Weight": 2, // Luna pet_id
-  };
+  // Pet mappings based on sensor names - loaded from .env file
+  const petSensorMappingsStr = process.env.PET_SENSOR_MAPPINGS || "Litterbox Jazz Weight:1,Litterbox Luna Weight:2";
+  const petSensorMappings: Record<string, number> = {};
+  petSensorMappingsStr.split(',').forEach(pair => {
+    const [sensorName, petId] = pair.split(':');
+    petSensorMappings[sensorName.trim()] = parseInt(petId);
+  });
 
   try {
     const events: NewEvent[] = [];
@@ -698,24 +918,46 @@ async function migrateWeightMeasurements(
   }
 }
 
-const start = new Date(startDate);
-while (start < endDate) {
-  const batchEnd = new Date(
-    Math.min(
-      start.getTime() + batchDays * 24 * 60 * 60 * 1000,
-      endDate.getTime()
-    )
-  );
+// Main execution function
+async function main() {
+  const start = new Date(startDate);
+  while (start < endDate) {
+    const batchEnd = new Date(
+      Math.min(
+        start.getTime() + batchDays * 24 * 60 * 60 * 1000,
+        endDate.getTime()
+      )
+    );
 
-  console.log(
-    `\n=== Processing batch: ${start.toISOString()} to ${batchEnd.toISOString()} ===`
-  );
-  
-  // Run both migrations in parallel
-  await Promise.all([
-    migrateEvents(start, batchEnd, influxUrl, influxToken, bucket),
-    migrateWeightMeasurements(start, batchEnd, influxUrl, influxToken, bucket)
-  ]);
+    console.log(
+      `\n=== Processing batch: ${start.toISOString()} to ${batchEnd.toISOString()} ===`
+    );
+    
+    // Run both migrations in parallel
+    await Promise.all([
+      migrateEvents(start, batchEnd, influxUrl, influxToken, bucket),
+      migrateWeightMeasurements(start, batchEnd, influxUrl, influxToken, bucket)
+    ]);
 
-  start.setTime(batchEnd.getTime());
+    start.setTime(batchEnd.getTime());
+  }
+
+  console.log("\n🎉 All batches completed successfully!");
 }
+
+// Run the main function and handle errors
+main()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error("❌ Migration script failed:", error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    try {
+      await db.destroy();
+    } catch (error) {
+      console.error("Error closing database:", error);
+    }
+  });

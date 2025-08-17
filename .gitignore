@@ -2,3 +2,5 @@ node_modules
 dist
 packages/api/data
 .vscode
+.env
+packages/api/.env
