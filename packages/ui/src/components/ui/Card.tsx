@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import "./card.css"
+import "./Card.css"
 
 function Card({ className, variant = "default", ...props }: React.ComponentProps<"div"> & { variant?: "default" | "highlighted" | "primary" | "outline" }) {
   return (

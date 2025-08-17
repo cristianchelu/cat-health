@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import "./button.css"
+import "./Button.css"
 
 interface ButtonProps extends React.ComponentProps<"button"> {
   variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
@@ -12,13 +12,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", icon = false, children, ...props }, ref) => {
     return (
       <button
-        className={cn(
-          "button",
-          variant && `button-${variant}`,
-          size && `button-${size}`,
-          icon && "button-icon",
-          className
-        )}
+        className={cn("button", variant, size, icon, className)}
         ref={ref}
         {...props}
       >

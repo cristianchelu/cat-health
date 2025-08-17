@@ -9,7 +9,8 @@ import WeightMeasurementEventItem from '@/components/event/WeightMeasurementEven
 import DateNavigation from '@/components/ui/DateNavigation';
 import { dateToTimeRange } from '@/lib/utils';
 
-import './device-detail.css';
+import './DeviceDetail.css';
+import { Card, CardContent, CardTitle } from '@/components/ui/Card';
 
 const getDeviceTypeLabel = (type: "litterbox" | "feeder" | "fountain") => {
   switch (type) {
@@ -118,12 +119,12 @@ export default function DeviceDetail() {
 
   return (
     <div className="device-detail">
-      <div className="card">
-        <div className="card-title">{device.name}</div>
-        <div className="card-content">
+      <Card>
+        <CardTitle>{device.name}</CardTitle>
+        <CardContent>
           <div><b>Type:</b> {getDeviceTypeLabel(device.type)}</div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
       <div>
         <div className="events-title">Events</div>
         <DateNavigation 

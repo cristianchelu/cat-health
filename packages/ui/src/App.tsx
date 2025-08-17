@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Outlet, Link } from 'react-router';
+import { Button } from './components/ui/Button';
+
 import './app.css';
 import '@/components/ui/layout.css';
 
@@ -19,7 +21,7 @@ function App() {
             <Link to="/devices" className="nav-link">Devices</Link>
           </nav>
           <div className="user-menu">
-            <button className="button button-ghost">Settings</button>
+            <Button variant="ghost">Settings</Button>
           </div>
         </header>
         

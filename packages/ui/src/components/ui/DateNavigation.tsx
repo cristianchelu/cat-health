@@ -1,5 +1,6 @@
 import { FaChevronLeft, FaChevronRight, FaCalendarAlt } from 'react-icons/fa';
-import './date-navigation.css';
+
+import './DateNavigation.css';
 
 interface DateNavigationProps {
   currentDate: string; // YYYY-MM-DD format

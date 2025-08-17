@@ -7,7 +7,8 @@ import {
   getNextDateRange, 
   formatDateRangeForDisplay 
 } from '@/lib/utils';
-import './date-range-navigation.css';
+
+import './DateRangeNavigation.css';
 
 interface DateRangeNavigationProps {
   currentRange: DateRange;

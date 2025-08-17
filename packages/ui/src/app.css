@@ -1,7 +1,4 @@
-/* Import all component styles */
 @import './components/ui/layout.css';
-@import './components/ui/card.css';
-@import './components/ui/button.css';
 @import './components/ui/forms.css';
 @import './components/ui/dashboard.css';
 

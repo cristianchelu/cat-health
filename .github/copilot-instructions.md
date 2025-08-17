@@ -220,7 +220,7 @@ import { useQuery } from '@tanstack/react-query';
 
 // Internal imports with @ alias
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { PetCard } from '@/components/pet/PetCard';
 
 // CSS import last

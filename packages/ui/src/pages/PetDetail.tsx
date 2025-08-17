@@ -11,7 +11,7 @@ import WeightTrendChart from '@/components/ui/WeightTrendChart';
 import LitterboxVisitsChart from '@/components/ui/LitterboxVisitsChart';
 import { dateRangeToTimeRange, createDateRange, type DateRange } from '@/lib/utils';
 
-import './pet-detail.css';
+import './PetDetail.css';
 import { LitterboxAnalyzer } from '@/components/analyzer';
 
 export default function PetDetail() {

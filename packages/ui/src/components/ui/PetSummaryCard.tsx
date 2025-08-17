@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { FaWeight, FaCalendarAlt, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { getPetWeightTrends } from '@/api/pets';
-import './pet-summary-card.css';
+import './PetSummaryCard.css';
 
 interface Pet {
   id: number;

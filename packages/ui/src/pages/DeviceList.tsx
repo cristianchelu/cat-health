@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { getDevices } from '@/api/devices';
-import './device-list.css';
+import { Card, CardContent, CardTitle } from '@/components/ui/Card';
+
+import './DeviceList.css';
 
 export type Device = {
   id: number;
@@ -38,12 +40,12 @@ export default function DeviceList() {
       <div className="grid">
         {data?.map((device) => (
           <Link key={device.id} to={`/devices/${device.id}`} className="card-link">
-            <div className="card">
-              <div className="card-title">{device.name}</div>
-              <div className="card-content">
+            <Card>
+              <CardTitle>{device.name}</CardTitle>
+              <CardContent>
                 <div><b>Type:</b> {getDeviceTypeLabel(device.type)}</div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </Link>
         ))}
       </div>

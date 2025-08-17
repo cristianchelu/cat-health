@@ -2,8 +2,8 @@ import * as React from "react";
 import { useQuery } from '@tanstack/react-query';
 import { getPetEvents } from '@/api/pets';
 import { cn } from "@/lib/utils";
-import './litterbox-visits-chart.css';
-import '@/components/ui/button.css';
+
+import './LitterboxVisitsChart.css';
 
 type TimePeriod = 'week' | 'month' | 'quarter' | 'all';
 
