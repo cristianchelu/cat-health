@@ -12,9 +12,10 @@ import {
 } from 'chart.js';
 import type { TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { FaTint, FaPoop, FaBan, FaQuestion, FaClock, FaCalendarAlt, FaGift, FaCheck } from 'react-icons/fa';
+import { FaTint, FaPoop, FaBan, FaQuestion, FaClock, FaCalendarAlt, FaGift, FaCheck, FaCamera } from 'react-icons/fa';
 
 import { cn } from "@/lib/utils";
+import { getEventVideoUrl, isRecordingAvailable } from "@/api/recordings";
 import "./LitterboxUseEvent.css";
 
 ChartJS.register(
@@ -52,6 +53,7 @@ interface LitterboxEventItemProps {
   onDelete: () => void;
   onUpdate: (id: number, data: LitterboxUseEventData, human_verified: boolean, pet_id?: number | null) => Promise<void>;
   isDeleting: boolean;
+  hasVideo?: boolean;
 }
 
 interface ContextData {
@@ -166,10 +168,14 @@ function formatEliminationType(type: string): { icon: React.JSX.Element; label: 
   }
 }
 
-export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_data, human_verified, pets, onDelete, onUpdate, isDeleting }: LitterboxEventItemProps) {
+export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_data, human_verified, pets, onDelete, onUpdate, isDeleting, hasVideo = false }: LitterboxEventItemProps) {
   const { timestamps, weights, context } = parseRawBuffer(raw_data || []);
   const [showChart, setShowChart] = React.useState(false);
+  const [showVideo, setShowVideo] = React.useState(false);
   const [isUpdating, setIsUpdating] = React.useState(false);
+  
+  // Check if video is available for this event
+  const videoAvailable = hasVideo || isRecordingAvailable(timestamp);
 
   const chartData = {
     labels: timestamps.map(t => (t / 1000).toFixed(1)),
@@ -314,6 +320,15 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
             </div>
             <span className="event-stat-item"><FaClock /> {formatDuration(data.duration)}</span>
             <span className="event-stat-item"><FaGift /> {data.elimination_weight.toFixed(0)}g</span>
+            {videoAvailable && (
+              <button
+                className="video-toggle-button"
+                onClick={() => setShowVideo(prev => !prev)}
+                title={showVideo ? 'Hide video' : 'Show video'}
+              >
+                <FaCamera />
+              </button>
+            )}
             {human_verified && (
               <FaCheck title="Human verified" className="verification-icon" />
             )}
@@ -328,7 +343,7 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
             </button>
           )}
         </div>
-        {weights.length > 0 && showChart && (
+        {(weights.length > 0 && showChart) && (
           <div className="expanded-chart-container">
             {/* Context data display */}
             {(context.wasteWeight !== null || context.litterRemaining !== null || 
@@ -357,6 +372,22 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
             <div className="weight-chart-expanded">
               <Line data={chartData} options={expandedChartOptions} />
             </div>
+          </div>
+        )}
+        {videoAvailable && showVideo && (
+          <div className="video-container">
+            <video 
+              controls 
+              preload="metadata"
+              className="event-video"
+              onError={() => {
+                console.warn('Video failed to load for timestamp:', timestamp);
+                // Could show a "Video not available" message here
+              }}
+            >
+              <source src={getEventVideoUrl(timestamp)} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
           </div>
         )}
       </div>

@@ -1,6 +1,8 @@
 import Fastify from "fastify";
 import { type TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import cors from "@fastify/cors";
+import fastifyStatic from "@fastify/static";
+import path from "node:path";
 
 import { migrateToLatest } from "./database/migrate.ts";
 
@@ -15,6 +17,13 @@ const fastify = Fastify({
 await fastify.register(cors, {
   origin: "http://localhost:5173",
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+});
+
+// Serve video recordings statically
+const recordingsDir = path.resolve(import.meta.dirname, "../data/recordings");
+await fastify.register(fastifyStatic, {
+  root: recordingsDir,
+  prefix: "/recordings/",
 });
 
 fastify.register(petRoutes, { prefix: "/pets" });
