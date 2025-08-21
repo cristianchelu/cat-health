@@ -7,6 +7,7 @@ import { promisify } from "util";
 import { access, constants, mkdir } from "fs";
 import path from "path";
 import { config } from "dotenv";
+import assert from "node:assert";
 
 // Load environment variables from .env file
 config();
@@ -25,15 +26,28 @@ interface EventSession {
   measurements: RawMeasurement[];
 }
 
-const ORG = process.env.INFLUX_ORG || "ead56babe1bae2a1";
+assert(process.env.INFLUX_ORG, "INFLUX_ORG is required in .env");
+assert(process.env.INFLUX_URL, "INFLUX_URL is required in .env");
+assert(process.env.INFLUX_TOKEN, "INFLUX_TOKEN is required in .env");
+assert(process.env.INFLUX_BUCKET, "INFLUX_BUCKET is required in .env");
+assert(process.env.MIGRATION_BATCH_DAYS, "MIGRATION_BATCH_DAYS is required in .env");
+
+const env = {
+  migrationStartDate: process.env.MIGRATION_START_DATE,
+  migrationEndDate: process.env.MIGRATION_END_DATE,
+  migrationBatchDays: process.env.MIGRATION_BATCH_DAYS,
+  influxOrg: process.env.INFLUX_ORG,
+  influxUrl: process.env.INFLUX_URL,
+  influxToken: process.env.INFLUX_TOKEN,
+  influxBucket: process.env.INFLUX_BUCKET,
+  cameraIp: process.env.CAMERA_IP,
+} as const;
 
 /** Maintenance threshold for significant weight decrease */
 const MAINTENANCE_THRESHOLD = parseInt(process.env.MAINTENANCE_THRESHOLD || "-20");
 /** Tared ending weight below which an event is considered `no_elimination` */
 const NO_ELIMINATION_THRESHOLD = parseInt(process.env.NO_ELIMINATION_THRESHOLD || "10");
-
 /** Camera configuration - loaded from .env file */
-const CAMERA_IP = process.env.CAMERA_IP || "192.168.1.100";
 const RECORDINGS_DIR = path.resolve(import.meta.dirname, "../../data/recordings");
 const LITTERCAM_SCRIPT = path.resolve(import.meta.dirname, "./littercam.sh");
 
@@ -66,6 +80,10 @@ async function downloadEventVideo(
   endTime: Date,
   eventType: 'use' | 'maintenance'
 ): Promise<void> {
+  if (!env.cameraIp) {
+    console.error(`  ❌ CAMERA_IP is not set, skipping video download for event at ${startTime.toISOString()}`);
+    return;
+  }
   // Check if video already exists
   if (await videoFileExists(startTime, eventType)) {
     console.log(`  Video already exists for event at ${startTime.toISOString()}, skipping download`);
@@ -88,9 +106,13 @@ async function downloadEventVideo(
   console.log(`  Downloading video: ${startStr} to ${endStr} (camera local time) -> ${filename}`);
   
   return new Promise((resolve, reject) => {
-    const process = spawn('bash', [
+    if (!env.cameraIp) {
+      console.error(`  ❌ CAMERA_IP is not set, skipping video download for event at ${startTime.toISOString()}`);
+      return;
+    }
+    const child = spawn('bash', [
       LITTERCAM_SCRIPT,
-      CAMERA_IP,
+      env.cameraIp,
       startStr,
       endStr,
       outputPath
@@ -102,15 +124,15 @@ async function downloadEventVideo(
     let stdout = '';
     let stderr = '';
 
-    process.stdout.on('data', (data) => {
+    child.stdout.on('data', (data) => {
       stdout += data.toString();
     });
 
-    process.stderr.on('data', (data) => {
+    child.stderr.on('data', (data) => {
       stderr += data.toString();
     });
 
-    process.on('close', (code) => {
+    child.on('close', (code) => {
       if (code === 0) {
         console.log(`  ✅ Video downloaded successfully: ${filename}`);
         resolve();
@@ -129,7 +151,7 @@ async function downloadEventVideo(
       }
     });
 
-    process.on('error', (error) => {
+    child.on('error', (error) => {
       console.error(`  ❌ Failed to execute littercam.sh for ${filename}:`, error.message);
       // Don't reject - continue with other events even if video download fails
       resolve();
@@ -137,7 +159,7 @@ async function downloadEventVideo(
 
     // Set a timeout for video downloads (5 minutes)
     setTimeout(() => {
-      process.kill();
+      child.kill();
       console.error(`  ⚠️ Video download timeout for ${filename}`);
       resolve();
     }, 5 * 60 * 1000);
@@ -247,8 +269,8 @@ async function queryContextData(
   daysSinceLitterReplaced: number;
   hoursSinceLastScoop: number;
 } | null> {
-  const queryApi = influx.getQueryApi(ORG);
-  
+  const queryApi = influx.getQueryApi(env.influxOrg);
+
   // Query current context values
   const daysBefore7 = new Date(timestamp.getTime() - 7 * 24 * 60 * 60 * 1000);
   const contextQuery = `
@@ -353,7 +375,7 @@ async function queryInfluxForEvents(
   startDate: Date,
   endDate: Date
 ): Promise<EventSession[]> {
-  const queryApi = influx.getQueryApi(ORG);
+  const queryApi = influx.getQueryApi(env.influxOrg);
 
   // Get activity sensor state changes
   const activityQuery = `
@@ -430,7 +452,7 @@ async function queryRawWeightData(
   startTime: Date,
   endTime: Date
 ): Promise<RawMeasurement[]> {
-  const queryApi = influx.getQueryApi(ORG);
+  const queryApi = influx.getQueryApi(env.influxOrg);
 
   const weightQuery = `
     from(bucket: "${bucket}")
@@ -494,7 +516,7 @@ async function queryTaredWeightData(
   startTime: Date,
   endTime: Date
 ): Promise<RawMeasurement[]> {
-  const queryApi = influx.getQueryApi(ORG);
+  const queryApi = influx.getQueryApi(env.influxOrg);
 
   const taredQuery = `
     from(bucket: "${bucket}")
@@ -704,7 +726,7 @@ async function migrateEvents(
       console.log("Events inserted successfully.");
       
       // Download videos for new events if camera IP is configured
-      if (CAMERA_IP && CAMERA_IP !== "192.168.1.100") { // Skip if using default placeholder IP
+      if (env.cameraIp) { // Skip if using default placeholder IP
         console.log(`\n=== Video Download Phase ===`);
         console.log(`Downloading videos for ${events.length} events...`);
         
@@ -743,7 +765,7 @@ async function migrateEvents(
         
         console.log("✅ Video download phase completed.");
       } else {
-        console.log("\n⚠️ Skipping video downloads - CAMERA_IP not configured or using default placeholder");
+        console.log("\n⚠️ Skipping video downloads - CAMERA_IP not configured!");
       }
     }
     
@@ -757,38 +779,22 @@ async function migrateEvents(
   }
 }
 
-const startDate = new Date(process.env.MIGRATION_START_DATE || "2025-08-14T00:00:00Z");
-const endDate = new Date(process.env.MIGRATION_END_DATE || "2025-08-22T23:59:59Z");
-const influxUrl = process.env.INFLUX_URL || "http://192.168.100.52:8086";
-const influxToken = process.env.INFLUX_TOKEN || "";
-const bucket = process.env.INFLUX_BUCKET || "homeassistant";
-const batchDays = parseInt(process.env.MIGRATION_BATCH_DAYS || "10");
+const defaultStartDate = new Date().getTime() - 1 * 24 * 60 * 60 * 1000; // Default to 1 day ago
+const migrationStartDate = new Date(env.migrationStartDate || defaultStartDate);
+const migrationEndDate = new Date(env.migrationEndDate || Date.now());
 
 console.log("=== Litterbox Event Migration Script ===");
-console.log(`Migration period: ${startDate.toISOString()} to ${endDate.toISOString()}`);
-console.log(`InfluxDB URL: ${influxUrl}`);
-console.log(`InfluxDB Bucket: ${bucket}`);
-console.log(`InfluxDB Org: ${ORG}`);
-console.log(`Batch size: ${batchDays} days`);
-console.log(`Camera IP: ${CAMERA_IP}`);
+console.log(`Migration period: ${migrationStartDate.toISOString()} to ${migrationEndDate.toISOString()}`);
+console.log(`InfluxDB URL: ${env.influxUrl}`);
+console.log(`InfluxDB Bucket: ${env.influxBucket}`);
+console.log(`InfluxDB Org: ${env.influxOrg}`);
+console.log(`Batch size: ${env.migrationBatchDays} days`);
+console.log(`Camera IP: ${env.cameraIp}`);
 console.log(`Maintenance threshold: ${MAINTENANCE_THRESHOLD}g`);
 console.log(`No elimination threshold: ${NO_ELIMINATION_THRESHOLD}g`);
-if (CAMERA_IP === "192.168.1.100") {
+if (!env.cameraIp) {
   console.log("⚠️  Using default camera IP - video downloads will be skipped");
   console.log("   Set CAMERA_IP in .env file to enable video downloads");
-}
-
-// Validate required environment variables
-if (!influxToken) {
-  console.error("❌ INFLUX_TOKEN environment variable is required");
-  console.error("   Please set INFLUX_TOKEN in the .env file");
-  process.exit(1);
-}
-
-// Validate date range
-if (startDate >= endDate) {
-  console.error("❌ Invalid date range: start date must be before end date");
-  process.exit(1);
 }
 
 // Validate thresholds
@@ -848,7 +854,7 @@ async function migrateWeightMeasurements(
     for (const [sensorName, petId] of Object.entries(petSensorMappings)) {
       console.log(`\nProcessing ${sensorName} for pet ${petId}...`);
       
-      const queryApi = influx.getQueryApi(ORG);
+      const queryApi = influx.getQueryApi(env.influxOrg);
       
       // Query all individual weight measurements - data is already pre-processed and validated
       const weightQuery = `
@@ -920,12 +926,14 @@ async function migrateWeightMeasurements(
 
 // Main execution function
 async function main() {
-  const start = new Date(startDate);
-  while (start < endDate) {
+  const start = new Date(migrationStartDate);
+  const batchDays = parseInt(env.migrationBatchDays);
+
+  while (start < migrationEndDate) {
     const batchEnd = new Date(
       Math.min(
         start.getTime() + batchDays * 24 * 60 * 60 * 1000,
-        endDate.getTime()
+        migrationEndDate.getTime()
       )
     );
 
@@ -935,8 +943,8 @@ async function main() {
     
     // Run both migrations in parallel
     await Promise.all([
-      migrateEvents(start, batchEnd, influxUrl, influxToken, bucket),
-      migrateWeightMeasurements(start, batchEnd, influxUrl, influxToken, bucket)
+      migrateEvents(start, batchEnd, env.influxUrl, env.influxToken, env.influxBucket),
+      migrateWeightMeasurements(start, batchEnd, env.influxUrl, env.influxToken, env.influxBucket)
     ]);
 
     start.setTime(batchEnd.getTime());
