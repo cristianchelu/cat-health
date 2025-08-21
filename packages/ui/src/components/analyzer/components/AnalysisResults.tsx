@@ -1,8 +1,9 @@
 import * as React from "react";
 import WeightChart from './WeightChart';
-import StateLegend from './StateLegend';
 import PhaseMarkers from './PhaseMarkers';
 import type { EventData, Features, DecodedData } from '../types';
+
+import './AnalysisResults.css'
 
 interface AnalysisResultsProps {
   selectedEvent: EventData;
@@ -29,9 +30,6 @@ const AnalysisResults = React.forwardRef<HTMLDivElement, AnalysisResultsProps>(
           analysisData={analysisData}
           ref={weightChartRef}
         />
-
-        <StateLegend />
-
         <PhaseMarkers features={analysisData.features} />
       </div>
     );

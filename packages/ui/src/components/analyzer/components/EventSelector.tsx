@@ -1,19 +1,22 @@
 import * as React from "react";
 import type { EventData } from '../types';
 import EventCard from './EventCard';
+import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/Card";
+
+import './EventSelector.css'
 
 interface EventSelectorProps {
   events: EventData[];
   selectedEvent: EventData | null;
   onEventSelect: (event: EventData) => void;
-  hasAnalysis: boolean;
 }
 
 const EventSelector = React.forwardRef<HTMLDivElement, EventSelectorProps>(
-  ({ events, selectedEvent, onEventSelect, hasAnalysis }, ref) => {
+  ({ events, selectedEvent, onEventSelect }, ref) => {
     return (
-      <div 
-        className={`event-selector${hasAnalysis ? ' has-analysis' : ''}`}
+      <Card 
+        className={cn('event-selector')}
         ref={ref}
       >
         <h3>📋 Select Event to Analyze</h3>
@@ -27,7 +30,7 @@ const EventSelector = React.forwardRef<HTMLDivElement, EventSelectorProps>(
             />
           ))}
         </div>
-      </div>
+      </Card>
     );
   }
 );

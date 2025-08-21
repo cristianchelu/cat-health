@@ -753,7 +753,7 @@ async function migrateEvents(
     process.exit(1);
   } finally {
     // Close database connection
-    await db.destroy();
+    // await db.destroy();
   }
 }
 

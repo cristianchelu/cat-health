@@ -1,0 +1,27 @@
+.event-selector {
+  display: flex;
+  flex-direction: column;
+
+  @media (min-width: 1200px) {
+    position: sticky;
+    top: var(--space-lg);
+  }
+
+  h3 {
+    margin: 0 0 var(--space-md) 0;
+    color: var(--color-text);
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+  }
+
+  .event-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    flex: 1;
+    
+    @media (min-width: 1200px) {
+      overflow-y: auto;
+    }
+  }
+}

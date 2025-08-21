@@ -3,6 +3,8 @@ import { FaCalendarAlt, FaCheck, FaWeight, FaClock } from 'react-icons/fa';
 import type { EventData } from '../types';
 import { getEventDataProp, getEliminationIcon } from '../lib/utils';
 
+import './EventCard.css';
+
 interface EventCardProps {
   event: EventData;
   isSelected: boolean;

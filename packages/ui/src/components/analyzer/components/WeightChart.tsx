@@ -2,6 +2,9 @@ import * as React from "react";
 import { ChartJS } from '../lib/chartHelpers';
 import { detectPhasesWithEvents } from '../lib/phaseDetection';
 import type { EventData, Features, DecodedData } from '../types';
+import { cn } from "@/lib/utils";
+
+import "./WeightChart.css";
 
 interface WeightChartProps {
   selectedEvent: EventData;
@@ -249,7 +252,7 @@ const WeightChart = React.forwardRef<HTMLCanvasElement, WeightChartProps>(
     }, []);
 
     return (
-      <div className={`chart-container${className ? ` ${className}` : ''}`}>
+      <div className={cn("weight-chart", className)}>
         <canvas ref={ref} />
       </div>
     );

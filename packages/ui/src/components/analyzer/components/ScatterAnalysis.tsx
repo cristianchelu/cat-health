@@ -4,6 +4,9 @@ import type { ProcessedEventData, EventData } from '../types';
 import { featureDimensions, getFeatureValue } from '../lib/featureExtraction';
 import { getEliminationColor } from '../lib/utils';
 import { ChartJS } from '../lib/chartHelpers';
+import { Card } from "@/components/ui/Card";
+
+import './ScatterAnalysis.css'
 
 interface ScatterAnalysisProps {
   scatterData: ProcessedEventData[];
@@ -174,7 +177,7 @@ const ScatterAnalysis = React.forwardRef<HTMLDivElement, ScatterAnalysisProps>(
     }, [scatterXAxis, scatterYAxis, scatterData, filteredScatterData, onEventSelect, chartRef, chartInstance, xMin, xMax, yMin, yMax]);
 
     return (
-      <div className="scatter-analysis" ref={ref}>
+      <Card className="scatter-analysis" ref={ref}>
         <h2>🔍 Event Correlation Analysis</h2>
         
         {/* Axis Selection Controls */}
@@ -297,7 +300,7 @@ const ScatterAnalysis = React.forwardRef<HTMLDivElement, ScatterAnalysisProps>(
             <p className="filter-notice">⚠️ {scatterData.length - filteredScatterData.length} events filtered out</p>
           )}
         </div>
-      </div>
+      </Card>
     );
   }
 );

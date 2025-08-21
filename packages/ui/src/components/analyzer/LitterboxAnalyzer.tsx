@@ -6,6 +6,8 @@ import { useScatterData } from './hooks/useScatterData';
 import EventSelector from './components/EventSelector';
 import ScatterAnalysis from './components/ScatterAnalysis';
 import AnalysisResults from './components/AnalysisResults';
+import { cn } from "@/lib/utils";
+
 import './LitterboxAnalyzer.css';
 
 const LitterboxAnalyzer = React.forwardRef<HTMLDivElement, LitterboxAnalyzerProps>(
@@ -19,7 +21,7 @@ const LitterboxAnalyzer = React.forwardRef<HTMLDivElement, LitterboxAnalyzerProp
 
     return (
       <div 
-        className={`litterbox-analyzer${analysisData && selectedEvent ? ' has-analysis' : ''}${className ? ` ${className}` : ''}`}
+        className={cn('litterbox-analyzer', className)}
         ref={ref}
       >
         {error && (
@@ -33,7 +35,6 @@ const LitterboxAnalyzer = React.forwardRef<HTMLDivElement, LitterboxAnalyzerProp
             events={litterboxEvents}
             selectedEvent={selectedEvent}
             onEventSelect={analyzeEvent}
-            hasAnalysis={!!(analysisData && selectedEvent)}
           />
         )}
 

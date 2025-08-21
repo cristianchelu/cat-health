@@ -1,6 +1,8 @@
 import * as React from "react";
 import type { Features } from '../types';
 
+import './PhaseMarkers.css';
+
 interface PhaseMarkersProps {
   features: Features;
   className?: string;

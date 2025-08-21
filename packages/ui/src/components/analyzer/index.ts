@@ -6,7 +6,6 @@ export { default as EventSelector } from './components/EventSelector';
 export { default as EventCard } from './components/EventCard';
 export { default as ScatterAnalysis } from './components/ScatterAnalysis';
 export { default as WeightChart } from './components/WeightChart';
-export { default as StateLegend } from './components/StateLegend';
 export { default as PhaseMarkers } from './components/PhaseMarkers';
 export { default as AnalysisResults } from './components/AnalysisResults';
 
