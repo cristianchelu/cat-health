@@ -758,7 +758,7 @@ async function migrateEvents(
 }
 
 const startDate = new Date(process.env.MIGRATION_START_DATE || "2025-08-14T00:00:00Z");
-const endDate = new Date(process.env.MIGRATION_END_DATE || "2025-08-17T23:59:59Z");
+const endDate = new Date(process.env.MIGRATION_END_DATE || "2025-08-22T23:59:59Z");
 const influxUrl = process.env.INFLUX_URL || "http://192.168.100.52:8086";
 const influxToken = process.env.INFLUX_TOKEN || "";
 const bucket = process.env.INFLUX_BUCKET || "homeassistant";
