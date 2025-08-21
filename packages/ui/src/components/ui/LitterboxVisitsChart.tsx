@@ -16,17 +16,21 @@ interface DayEvents {
   events: Array<{
     id: number;
     timestamp: string;
-    eliminationType: 'urination' | 'defecation' | 'no_elimination' | 'unknown';
+    eliminationType: 'urination' | 'defecation' | 'both' | 'no_elimination' | 'unknown';
   }>;
 }
 
 // Get elimination type color
+// Returns a string for the CSS background property (color or gradient)
 function getEliminationColor(type: string): string {
   switch (type) {
     case 'urination':
       return '#FFD700'; // Gold for urination (matches LitterboxUseEvent)
     case 'defecation':
       return '#8B4513'; // Brown for defecation (matches LitterboxUseEvent)
+    case 'both':
+      // Diagonal split: gold (urination) and brown (defecation)
+      return 'linear-gradient(135deg, #FFD700 50%, #8B4513 50%)';
     case 'no_elimination':
       return '#808080'; // Gray for no elimination (matches LitterboxUseEvent)
     case 'unknown':
@@ -167,7 +171,7 @@ const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsCha
           
           const litterboxData = event.data as {
             type: 'litterbox_use';
-            elimination_type: 'urination' | 'defecation' | 'no_elimination' | 'unknown';
+            elimination_type: 'urination' | 'defecation' | 'both' | 'no_elimination' | 'unknown';
           };
 
           eventsByDay[eventDate].events.push({
@@ -211,19 +215,38 @@ const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsCha
         </div>
         <div className="chart-legend">
           <div className="legend-item">
-            <div className="legend-dot" style={{ backgroundColor: getEliminationColor('urination') }}></div>
+            <div
+              className="legend-dot"
+              style={{ background: getEliminationColor('urination') }}
+            ></div>
             <span>Urination</span>
           </div>
           <div className="legend-item">
-            <div className="legend-dot" style={{ backgroundColor: getEliminationColor('defecation') }}></div>
+            <div
+              className="legend-dot"
+              style={{ background: getEliminationColor('defecation') }}
+            ></div>
             <span>Defecation</span>
           </div>
+          <div className='legend-item'>
+            <div
+              className="legend-dot"
+              style={{ background: getEliminationColor('both') }}
+            ></div>
+            <span>Both</span>
+          </div>
           <div className="legend-item">
-            <div className="legend-dot" style={{ backgroundColor: getEliminationColor('no_elimination') }}></div>
+            <div
+              className="legend-dot"
+              style={{ background: getEliminationColor('no_elimination') }}
+            ></div>
             <span>No elimination</span>
           </div>
           <div className="legend-item">
-            <div className="legend-dot" style={{ backgroundColor: getEliminationColor('unknown') }}></div>
+            <div
+              className="legend-dot"
+              style={{ background: getEliminationColor('unknown') }}
+            ></div>
             <span>Unknown</span>
           </div>
         </div>
@@ -263,7 +286,7 @@ const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsCha
                       >
                         <div
                           className="event-dot"
-                          style={{ backgroundColor: getEliminationColor(event.eliminationType) }}
+                          style={{ background: getEliminationColor(event.eliminationType) }}
                           title={`${event.eliminationType} at ${new Date(event.timestamp).toLocaleTimeString()}`}
                         />
                       </div>

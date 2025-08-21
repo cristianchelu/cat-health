@@ -185,11 +185,11 @@
     }
   }
 
-    .event-dot {
+  .event-dot {
     width: var(--text-lg); /* Increased for better visibility */
     height: var(--text-lg); /* Increased for better visibility */
     border-radius: var(--radius-full);
-    border: 2px solid var(--color-white); /* Thicker border for better visibility */
+    border: 1px solid var(--color-white); /* Thicker border for better visibility */
     box-shadow: var(--shadow-md); /* Stronger shadow */
     cursor: pointer;
     transition: transform 0.2s ease;

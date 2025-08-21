@@ -680,7 +680,7 @@ async function migrateEvents(
         const petId = determinePetId(measurements, catWeights);
         
         // Determine elimination type based on ending weight
-        let eliminationType: "urination" | "defecation" | "no_elimination" | "unknown";
+        let eliminationType: "urination" | "defecation" | "both" | "no_elimination" | "unknown";
         if (eliminationWeight < NO_ELIMINATION_THRESHOLD) {
           eliminationType = "no_elimination";
           console.log(`Marking event at ${session.startTime.toISOString()} as no_elimination (weight: ${eliminationWeight}g)`);

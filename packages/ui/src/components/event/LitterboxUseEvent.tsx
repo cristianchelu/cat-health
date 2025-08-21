@@ -30,7 +30,7 @@ ChartJS.register(
 
 interface LitterboxUseEventData {
   type: "litterbox_use";
-  elimination_type: "urination" | "defecation" | "no_elimination" | "unknown";
+  elimination_type: "urination" | "defecation" | "both" | "no_elimination" | "unknown";
   elimination_weight: number;
   duration: number;
 }
@@ -159,6 +159,8 @@ function formatEliminationType(type: string): { icon: React.JSX.Element; label: 
       return { icon: <FaTint title="Urination" color={"#FFD700"} />, label: 'Urination' };
     case 'defecation':
       return { icon: <FaPoop title="Defecation" color={"#8B4513"} />, label: 'Defecation' };
+    case 'both':
+      return { icon: <FaGift title="Both urination and defecation" color={"#32CD32"} />, label: 'Both' };
     case 'no_elimination':
       return { icon: <FaBan title="No elimination" color={"#808080"} />, label: 'No elimination' };
     case 'unknown':
@@ -237,7 +239,7 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
     },
   };
 
-  const handleEliminationTypeChange = async (newType: "urination" | "defecation" | "no_elimination" | "unknown") => {
+  const handleEliminationTypeChange = async (newType: "urination" | "defecation" | "both" | "no_elimination" | "unknown") => {
     if (isUpdating) return;
     
     setIsUpdating(true);
@@ -294,12 +296,13 @@ export default function LitterboxEventItem({ id, pet_id, timestamp, data, raw_da
               {elim.icon}
               <select 
                 value={data.elimination_type}
-                onChange={(e) => handleEliminationTypeChange(e.target.value as "urination" | "defecation" | "no_elimination" | "unknown")}
+                onChange={(e) => handleEliminationTypeChange(e.target.value as "urination" | "defecation" | "both" | "no_elimination" | "unknown")}
                 disabled={isUpdating}
                 className="event-elimination-select"
               >
                 <option value="urination">Urination</option>
                 <option value="defecation">Defecation</option>
+                <option value="both">Both</option>
                 <option value="no_elimination">No elimination</option>
                 <option value="unknown">Unknown</option>
               </select>

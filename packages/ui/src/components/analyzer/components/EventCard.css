@@ -38,6 +38,10 @@
               color: var(--color-primary);
             }
 
+            &.both {
+              color: var(--color-success);
+            }
+
             &.defecation {
               color: var(--color-warning);
             }

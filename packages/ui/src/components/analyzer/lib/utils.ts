@@ -1,5 +1,5 @@
 import * as React from "react";
-import { FaTint, FaPoop, FaQuestion } from 'react-icons/fa';
+import { FaTint, FaPoop, FaQuestion, FaGift } from 'react-icons/fa';
 import type { EventData } from '../types';
 
 // Helper to safely get event data properties
@@ -14,6 +14,8 @@ export const getEliminationIcon = (eliminationType: string): React.ReactElement 
       return React.createElement(FaTint, { className: "elimination-icon urination" });
     case 'defecation':
       return React.createElement(FaPoop, { className: "elimination-icon defecation" });
+    case 'both':
+      return React.createElement(FaGift, { className: "elimination-icon both" });
     default:
       return React.createElement(FaQuestion, { className: "elimination-icon unknown" });
   }
@@ -26,6 +28,8 @@ export const getEliminationColor = (eliminationType: string) => {
       return { bg: 'rgba(255, 193, 7, 0.7)', border: 'rgb(255, 193, 7)' }; // Yellow
     case 'defecation':
       return { bg: 'rgba(121, 85, 72, 0.7)', border: 'rgb(121, 85, 72)' }; // Brown
+    case 'both':
+      return { bg: 'rgba(76, 175, 80, 0.7)', border: 'rgb(76, 175, 80)' }; // Green
     case 'unknown':
     default:
       return { bg: 'rgba(158, 158, 158, 0.7)', border: 'rgb(158, 158, 158)' }; // Gray

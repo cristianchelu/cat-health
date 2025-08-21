@@ -166,7 +166,7 @@ export default function PetDetail() {
                     'type' in event.data && event.data.type === 'litterbox_use') {
                   const litterboxData = event.data as {
                     type: "litterbox_use";
-                    elimination_type: "urination" | "defecation" | "no_elimination" | "unknown";
+                    elimination_type: "urination" | "defecation" | "both" | "no_elimination" | "unknown";
                     elimination_weight: number;
                     duration: number;
                   };

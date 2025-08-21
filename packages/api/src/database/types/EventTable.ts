@@ -12,7 +12,7 @@ export interface WaterIntakeEventData {
 
 export interface LitterboxUseEventData {
   type: "litterbox_use";
-  elimination_type: "urination" | "defecation" | "no_elimination" | "unknown";
+  elimination_type: "urination" | "defecation" | "both" | "no_elimination" | "unknown";
   elimination_weight: number;
   duration: number;
 }

@@ -66,7 +66,7 @@ const ScatterAnalysis = React.forwardRef<HTMLDivElement, ScatterAnalysisProps>(
         if (!ctx) return;
 
         // Group data by elimination type
-        const datasets = ['urination', 'defecation', 'unknown'].map(type => {
+        const datasets = ['urination', 'both', 'defecation', 'unknown'].map(type => {
           const typeData = filteredScatterData.filter(d => d.eliminationType === type);
           const color = getEliminationColor(type);
           
@@ -292,6 +292,7 @@ const ScatterAnalysis = React.forwardRef<HTMLDivElement, ScatterAnalysisProps>(
             <span className="stat">Filtered Events: <strong>{filteredScatterData.length}</strong></span>
             <span className="stat">Total Events: <strong>{scatterData.length}</strong></span>
             <span className="stat">Urination: <strong>{filteredScatterData.filter(d => d.eliminationType === 'urination').length}</strong></span>
+            <span className="stat">Both: <strong>{filteredScatterData.filter(d => d.eliminationType === 'both').length}</strong></span>
             <span className="stat">Defecation: <strong>{filteredScatterData.filter(d => d.eliminationType === 'defecation').length}</strong></span>
             <span className="stat">Unknown: <strong>{filteredScatterData.filter(d => d.eliminationType === 'unknown').length}</strong></span>
           </div>
