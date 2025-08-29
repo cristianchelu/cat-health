@@ -70,7 +70,7 @@ const periodLabels: Record<TimePeriod, string> = {
 
 const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsChartProps>(
   ({ petId, className, ...props }, ref) => {
-    const [selectedPeriod, setSelectedPeriod] = React.useState<TimePeriod>('month');
+    const [selectedPeriod, setSelectedPeriod] = React.useState<TimePeriod>('week');
 
     const daysToShow = getDaysForPeriod(selectedPeriod);
 

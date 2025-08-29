@@ -35,19 +35,19 @@
             font-size: var(--text-lg);
 
             &.urination {
-              color: var(--color-primary);
+              color: var(--color-litterbox-urination);
             }
 
             &.both {
-              color: var(--color-success);
+              color: var(--color-litterbox-both);
             }
 
             &.defecation {
-              color: var(--color-warning);
+              color: var(--color-litterbox-defecation);
             }
 
             &.unknown {
-              color: var(--color-text-muted);
+              color: var(--color-litterbox-unknown);
             }
           }
         }
@@ -57,6 +57,7 @@
           display: flex;
           align-items: center;
           justify-content: space-between;
+          gap: var(--space-sm);
 
           .event-time {
             display: flex;
@@ -64,6 +65,7 @@
             gap: var(--space-2xs);
             font-size: var(--text-xs);
             color: var(--color-text-light);
+            text-wrap: nowrap;
 
             .time-icon {
               font-size: var(--text-xs);

@@ -131,7 +131,7 @@ export const extractPhasesFromStates = (stateTimeline: StateTimelineEntry[], wei
 };
 
 export const detectPhasesWithEvents = (weights: number[]): PhaseDetectionResult => {
-  const tracker = new LitterboxStateTracker();
+  const tracker = new LitterboxStateTracker([6.6, 4.4]);
   tracker.reset(); // Ensure clean state for new analysis
   const stateTimeline: StateTimelineEntry[] = [];
   

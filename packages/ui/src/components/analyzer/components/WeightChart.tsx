@@ -17,13 +17,20 @@ interface WeightChartProps {
 
 // State color configuration
 const STATE_COLORS: Record<string, { bg: string; border: string }> = {
-  'empty': { bg: 'rgba(158, 158, 158, 0.1)', border: 'rgba(158, 158, 158, 0.3)' },
-  'entering': { bg: 'rgba(25, 118, 210, 0.1)', border: 'rgba(25, 118, 210, 0.3)' },
-  'occupied': { bg: 'rgba(76, 175, 80, 0.1)', border: 'rgba(76, 175, 80, 0.3)' },
-  'hesitating': { bg: 'rgba(255, 152, 0, 0.1)', border: 'rgba(255, 152, 0, 0.3)' },
-  'short_exit': { bg: 'rgba(156, 39, 176, 0.1)', border: 'rgba(156, 39, 176, 0.3)' },
-  'exiting': { bg: 'rgba(244, 67, 54, 0.1)', border: 'rgba(244, 67, 54, 0.3)' },
-  'ended': { bg: 'rgba(96, 125, 139, 0.1)', border: 'rgba(96, 125, 139, 0.3)' }
+  // 'empty': { bg: 'rgba(158, 158, 158, 0.1)', border: 'rgba(158, 158, 158, 0.3)' },
+  // 'entering': { bg: 'rgba(25, 118, 210, 0.1)', border: 'rgba(25, 118, 210, 0.3)' },
+  // 'occupied': { bg: 'rgba(76, 175, 80, 0.1)', border: 'rgba(76, 175, 80, 0.3)' },
+  // 'hesitating': { bg: 'rgba(255, 152, 0, 0.1)', border: 'rgba(255, 152, 0, 0.3)' },
+  // 'short_exit': { bg: 'rgba(156, 39, 176, 0.1)', border: 'rgba(156, 39, 176, 0.3)' },
+  // 'exiting': { bg: 'rgba(244, 67, 54, 0.1)', border: 'rgba(244, 67, 54, 0.3)' },
+  // 'ended': { bg: 'rgba(96, 125, 139, 0.1)', border: 'rgba(96, 125, 139, 0.3)' }
+  'empty': { bg: 'rgba(158, 158, 158, 0.1)', border: 'rgba(158, 158, 158, 0.5)' },
+  'entering': { bg: 'rgba(25, 118, 210, 0.1)', border: 'rgba(25, 118, 210, 0.5)' },
+  'occupied': { bg: 'rgba(76, 175, 80, 0.1)', border: 'rgba(76, 175, 80, 0.5)' },
+  'eliminating': { bg: 'rgba(255, 152, 0, 0.1)', border: 'rgba(255, 152, 0, 0.5)' },
+  'gap': { bg: 'rgba(156, 39, 176, 0.1)', border: 'rgba(156, 39, 176, 0.5)' },
+  // 'exiting': { bg: 'rgba(244, 67, 54, 0.1)', border: 'rgba(244, 67, 54, 0.5)' },
+  'ended': { bg: 'rgba(96, 125, 139, 0.1)', border: 'rgba(96, 125, 139, 0.5)' }
 };
 
 /**
@@ -214,10 +221,10 @@ const WeightChart = React.forwardRef<HTMLCanvasElement, WeightChartProps>(
               display: true
             },
             annotation: {
-              // @ts-expect-error - Chart.js annotation types are complex
+              // // @ts-expect-error - Chart.js annotation types are complex
               annotations: {
                 ...stateAnnotations,
-                ...phaseAnnotations
+                // ...phaseAnnotations
               }
             }
           },

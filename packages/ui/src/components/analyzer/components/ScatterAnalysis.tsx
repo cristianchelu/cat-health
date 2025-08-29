@@ -17,8 +17,8 @@ interface ScatterAnalysisProps {
 
 const ScatterAnalysis = React.forwardRef<HTMLDivElement, ScatterAnalysisProps>(
   ({ scatterData, onEventSelect, chartRef, chartInstance }, ref) => {
-    const [scatterXAxis, setScatterXAxis] = useState<string>('eliminationDuration');
-    const [scatterYAxis, setScatterYAxis] = useState<string>('wasteWeight');
+    const [scatterXAxis, setScatterXAxis] = useState<string>('totalDuration');
+    const [scatterYAxis, setScatterYAxis] = useState<string>('coveringDuration');
     const [xMin, setXMin] = useState<number | undefined>(undefined);
     const [xMax, setXMax] = useState<number | undefined>(undefined);
     const [yMin, setYMin] = useState<number | undefined>(undefined);
@@ -178,8 +178,8 @@ const ScatterAnalysis = React.forwardRef<HTMLDivElement, ScatterAnalysisProps>(
 
     return (
       <Card className="scatter-analysis" ref={ref}>
-        <h2>🔍 Event Correlation Analysis</h2>
-        
+        <h3>🔍 Event Correlation Analysis</h3>
+
         {/* Axis Selection Controls */}
         <div className="scatter-controls">
           <div className="axis-controls">

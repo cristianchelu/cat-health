@@ -43,7 +43,13 @@
   /* Shadow Colors */
   --color-shadow: rgba(15, 23, 42, 0.08);
   --color-shadow-dark: rgba(15, 23, 42, 0.16);
-  
+
+  /** Litterbox Colors **/
+  --color-litterbox-urination: rgb(255, 193, 7);
+  --color-litterbox-defecation: rgb(121, 85, 72);
+  --color-litterbox-both: rgb(76, 175, 80);
+  --color-litterbox-unknown: rgb(158, 158, 158);
+
   /* Border Radius */
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;

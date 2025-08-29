@@ -105,7 +105,10 @@ get_remote_file_list() {
     done
 
     echo "Scanning remote directories (buffer included): ${DIRS_TO_SCAN[*]}"
-    ssh "${SSH_USER}@${CAMERA_IP}" "ls -1 ${DIRS_TO_SCAN[@]}/*.mp4 2>/dev/null || true"
+    # Use a more robust approach to list files, checking each directory individually
+    for dir in "${DIRS_TO_SCAN[@]}"; do
+        ssh "${SSH_USER}@${CAMERA_IP}" "[ -d \"${dir}\" ] && ls -1 \"${dir}\"/*.mp4 2>/dev/null || true"
+    done
 }
 
 # Function to cleanup temporary files
@@ -205,8 +208,8 @@ for file in "${RELEVANT_FILES[@]}"; do
     filename=$(basename "$file")
     echo "  Downloading $filename..."
     # Using SSH+cat as the primary method as it's often more reliable than scp on embedded devices
-    if ! ssh "${SSH_USER}@${CAMERA_IP}" "cat '${file}'" > "$LOCAL_TEMP_DIR/$filename" || [[ ! -s "$LOCAL_TEMP_DIR/$filename" ]]; then
-        echo "    Error: Failed to download $filename"
+    if ! ssh "${SSH_USER}@${CAMERA_IP}" "cat \"${file}\"" > "$LOCAL_TEMP_DIR/$filename" || [[ ! -s "$LOCAL_TEMP_DIR/$filename" ]]; then
+        echo "    Error: Failed to download $filename from path: ${file}"
         exit 1
     fi
 done

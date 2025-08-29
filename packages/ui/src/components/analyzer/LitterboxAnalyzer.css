@@ -9,7 +9,7 @@
   gap: var(--space-lg);
 
   @media (min-width: 1200px) {
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: min-content 1fr;
     align-items: stretch;
   }
 
