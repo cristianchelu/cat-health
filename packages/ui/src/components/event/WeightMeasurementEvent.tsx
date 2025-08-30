@@ -1,15 +1,12 @@
-import { FaWeight, FaCalendarAlt, FaCheck } from 'react-icons/fa';
+import { FaWeight } from "react-icons/fa";
+
+import BaseEvent from "./BaseEvent";
+import { EventDataItem, EventStats } from "./EventDataItem";
+import { formatWeight, type Pet } from "./eventUtils";
 
 interface WeightMeasurementEventData {
   type: "weight_measurement";
   weight: number; // in grams
-}
-
-interface Pet {
-  id: number;
-  name: string;
-  breed: string;
-  birth_date: string;
 }
 
 interface WeightMeasurementEventProps {
@@ -21,66 +18,47 @@ interface WeightMeasurementEventProps {
   human_verified: boolean;
   pets: Pet[];
   onDelete: () => void;
-  onUpdate: (id: number, data: WeightMeasurementEventData, human_verified: boolean, pet_id?: number | null) => Promise<void>;
+  onUpdate: (
+    id: number,
+    data: WeightMeasurementEventData,
+    human_verified: boolean,
+    pet_id?: number | null
+  ) => Promise<void>;
   isDeleting: boolean;
 }
 
 export default function WeightMeasurementEvent({
+  id,
   pet_id,
   timestamp,
   data,
   human_verified,
   pets,
   onDelete,
-  isDeleting
+  isDeleting,
 }: WeightMeasurementEventProps) {
-  const formatWeight = (weightInGrams: number): string => {
-    const kg = weightInGrams / 1000;
-    return `${kg.toFixed(2)} kg`;
-  };
-
-  const pet = pets.find(p => p.id === pet_id);
+  const pet = pets.find((p) => p.id === pet_id);
 
   return (
-    <li className="weight-measurement-event-item" style={{ borderBottom: '1px solid #eee', padding: '0.5em 0' }}>
-      <div className="event-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div className="event-timestamp" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <FaCalendarAlt style={{ marginRight: 4 }} />
-          <b>{new Date(timestamp).toLocaleString()}</b>
-        </div>
-        <button
-          className="event-delete-btn"
-          onClick={onDelete}
-          disabled={isDeleting}
-          title="Delete event"
-          style={{ fontSize: 18, background: 'none', border: 'none', cursor: 'pointer', color: '#888' }}
-        >
-          {isDeleting ? '...' : '×'}
-        </button>
-      </div>
+    <BaseEvent
+      id={id}
+      pet_id={pet_id}
+      timestamp={timestamp}
+      human_verified={human_verified}
+      isDeleting={isDeleting}
+      onDelete={onDelete}
+    >
+      <EventStats humanVerified={human_verified}>
+        <EventDataItem icon={<FaWeight className="weight-icon" />}>
+          {formatWeight(data.weight, 'kg')}
+        </EventDataItem>
 
-      <div className="weight-event-details" style={{ marginTop: 6 }}>
-        <div className="event-stats" style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 18, 
-          fontSize: 15, 
-          color: '#444'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <FaWeight style={{ color: '#4CAF50' }} />
-            <span style={{ fontWeight: 'bold' }}>{formatWeight(data.weight)}</span>
-          </div>
-          {pet && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span>Cat: {pet.name}</span>
-            </div>
-          )}
-          {human_verified && (
-            <FaCheck title="Human verified" style={{ color: '#4CAF50', fontSize: '12px' }} />
-          )}
-        </div>
-      </div>
-    </li>
+        {pet && (
+          <EventDataItem>
+            <span>Cat: {pet.name}</span>
+          </EventDataItem>
+        )}
+      </EventStats>
+    </BaseEvent>
   );
 }
