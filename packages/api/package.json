@@ -8,7 +8,7 @@
     "start": "node --watch --experimental-strip-types src/main.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "node --experimental-strip-types src/database/migrate.ts",
-    "litterbox-migrate": "node --experimental-strip-types src/scripts/migrate.ts",
+    "sync": "node --experimental-strip-types src/scripts/migrate.new.ts",
     "reset-db": "rm -f data/database.sqlite && npm run migrate"
   },
   "author": "Cristian Chelu",
@@ -18,9 +18,13 @@
     "@fastify/type-provider-typebox": "^5.1.0",
     "@sinclair/typebox": "^0.34.29",
     "better-sqlite3": "^11.8.1",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "dotenv": "^17.2.1",
+    "execa": "^9.6.0",
     "fastify": "^5.2.1",
-    "kysely": "^0.27.5"
+    "kysely": "^0.27.5",
+    "node-ssh": "^13.2.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12"

@@ -5,11 +5,12 @@ import fastifyStatic from "@fastify/static";
 import path from "node:path";
 
 import { migrateToLatest } from "./database/migrate.ts";
+import { db } from "./database/index.ts";
+import { SyncService } from "./services/sync/SyncService.ts";
 
 import petRoutes from "./routes/pets.ts";
 import eventRoutes from "./routes/events.ts";
 import deviceRoutes from "./routes/devices.ts";
-import { spawn } from "child_process";
 
 const fastify = Fastify({
   logger: true,
@@ -34,45 +35,55 @@ fastify.register(deviceRoutes, { prefix: "/devices" });
 // Migration endpoint
 fastify.post("/migrate", async (request, reply) => {
   try {
-    const scriptPath = path.resolve(import.meta.dirname, "./scripts/migrate.ts");
+    const syncService = new SyncService(db);
     
-    return new Promise((resolve, reject) => {
-      const migrationProcess = spawn("npx", ["tsx", scriptPath], {
-        stdio: ["pipe", "pipe", "pipe"],
-        cwd: path.dirname(scriptPath),
-      });
-
-      let stdout = "";
-      let stderr = "";
-
-      migrationProcess.stdout.on("data", (data) => {
-        stdout += data.toString();
-        console.log(data.toString());
-      });
-
-      migrationProcess.stderr.on("data", (data) => {
-        stderr += data.toString();
-        console.error(data.toString());
-      });
-
-      migrationProcess.on("close", (code) => {
-        if (code === 0) {
-          resolve(reply.send({ success: true, message: "Migration completed successfully" }));
-        } else {
-          reject(new Error(`Migration failed with exit code ${code}: ${stderr}`));
-        }
-      });
-
-      migrationProcess.on("error", (error) => {
-        console.error('Failed to start migration process:', error);
-        reject(error);
-      });
+    // Extract optional query parameters
+    const query = request.query as any;
+    const startDate = query.startDate ? new Date(query.startDate) : undefined;
+    const endDate = query.endDate ? new Date(query.endDate) : undefined;
+    const migratorNames = query.migrators ? query.migrators.split(',').map((s: string) => s.trim()) : undefined;
+    
+    console.log("Starting migration using SyncService...");
+    if (startDate) console.log(`Start date: ${startDate.toISOString()}`);
+    if (endDate) console.log(`End date: ${endDate.toISOString()}`);
+    if (migratorNames) console.log(`Migrators: ${migratorNames.join(', ')}`);
+    
+    await syncService.migrate(startDate, endDate, migratorNames);
+    
+    await syncService.destroy();
+    
+    return reply.send({ 
+      success: true, 
+      message: "Migration completed successfully using SyncService" 
     });
   } catch (error) {
-    reply.status(500).send({ 
+    console.error("Migration failed:", error);
+    return reply.status(500).send({ 
       success: false, 
-      message: "Failed to start migration", 
-      error: error.message 
+      message: "Migration failed", 
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// Get available migrators
+fastify.get("/migrate/migrators", async (request, reply) => {
+  try {
+    const syncService = new SyncService(db);
+    const availableMigrators = syncService.getAvailableMigrators();
+    
+    await syncService.destroy();
+    
+    return reply.send({ 
+      success: true, 
+      migrators: availableMigrators 
+    });
+  } catch (error) {
+    console.error("Failed to get migrators:", error);
+    return reply.status(500).send({ 
+      success: false, 
+      message: "Failed to get available migrators", 
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });

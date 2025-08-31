@@ -15,10 +15,6 @@ Edit the `.env` file with your actual values:
 
 ## Migration Scripts
 
-### Litterbox Event Migration
-
-The `migrate.ts` script migrates litterbox events from InfluxDB to the SQLite database and optionally downloads corresponding video recordings.
-
 #### Setup
 
 1. Configure environment variables in `.env` file
@@ -36,7 +32,6 @@ npm run litterbox-migrate --workspace=api
 1. **Event Migration**: Extracts litterbox use and maintenance events from InfluxDB
 2. **Data Processing**: Processes weight sensor data and determines event types
 3. **Video Downloads** (when `CAMERA_IP` is configured in `.env`):
-   - Downloads video recordings for each event using the `littercam.sh` script
    - Creates videos with filename format: `event_YYYYMMDD_HHMMSS_{use|maintenance}.mp4`
    - Stores videos in `packages/api/data/recordings/`
    - Skips downloads for events that already have videos
@@ -52,4 +47,3 @@ Environment variables (set in `.env` file):
 For video downloads:
 - SSH access to the IP camera
 - `ffmpeg` installed on the system
-- The `littercam.sh` script in the same directory
