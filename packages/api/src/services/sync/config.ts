@@ -24,7 +24,7 @@ assert(NO_ELIMINATION_THRESHOLD >= 0, "NO_ELIMINATION_THRESHOLD should be a non-
 export const appConfig = {
   // General Migration Settings
   migration: {
-    startDate: new Date(process.env.MIGRATION_START_DATE || Date.now() - 24 * 60 * 60 * 1000),
+    startDate: new Date(process.env.MIGRATION_START_DATE || Date.now() - 48 * 60 * 60 * 1000),
     endDate: new Date(process.env.MIGRATION_END_DATE || Date.now()),
     batchDays: parseInt(process.env.MIGRATION_BATCH_DAYS),
   },

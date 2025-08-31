@@ -561,11 +561,22 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
     if (this.config.cropLeftHalf) filters.push("crop=iw/2:ih:0:0");
     if (this.config.rotate90CCW) filters.push("transpose=2");
 
+    // Determine if we need to re-encode video based on filters
+    const needsVideoReencoding = filters.length > 0;
+    
     let ffmpegCmd = `ffmpeg -i "${tempConcat}" -ss ${startTrim} -t ${totalDuration}`;
-    if (filters.length > 0) {
-      ffmpegCmd += ` -vf "${filters.join(",")}"`;
+    
+    if (needsVideoReencoding) {
+      // Need to re-encode video due to filters
+      ffmpegCmd += ` -vf "${filters.join(",")}" -c:v libx264`;
+    } else {
+      // No filters needed, copy video stream to avoid re-encoding
+      ffmpegCmd += ` -c:v copy`;
     }
-    ffmpegCmd += ` -c:v libx264 -c:a aac "${absOutputFile}" -y -loglevel warning`;
+    
+    // For audio, always copy if no video re-encoding, otherwise use aac
+    ffmpegCmd += needsVideoReencoding ? ` -c:a aac` : ` -c:a copy`;
+    ffmpegCmd += ` "${absOutputFile}" -y -loglevel warning`;
 
     await execAsync(ffmpegCmd);
 
