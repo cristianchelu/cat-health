@@ -69,13 +69,4 @@ export const appConfig = {
         return acc;
       }, {} as Record<string, number>),
   },
-
-  // Future-proofing for Drink/Eat events
-//   drink: {
-//     camera: {
-//         ip: process.env.DRINK_CAMERA_IP,
-//         snapshotUrl: process.env.DRINK_CAMERA_SNAPSHOT_URL,
-//         imagesDir: path.resolve(import.meta.dirname, "../../data/images/drink")
-//     }
-//   }
 } as const;
