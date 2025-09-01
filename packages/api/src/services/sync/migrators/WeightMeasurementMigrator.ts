@@ -1,15 +1,15 @@
 import { sql } from "kysely";
 import type { NewEvent } from "../../../database/types/EventTable.ts";
-import { appConfig } from "./../config.ts";
-import type { EventMigrator, MigratorOptions, MigrationStats } from "./../types.ts";
+import { appConfig } from "../config.ts";
+import type { EventMigrator, MigratorOptions, MigrationStats } from "../types.ts";
 
 interface WeightMeasurement {
   timestamp: Date;
   weight: number;
 }
 
-export class WeighEventMigrator implements EventMigrator {
-  readonly name = "WeighEventMigrator";
+export class WeightMeasurementMigrator implements EventMigrator {
+  readonly name = "WeightMeasurementMigrator";
   private options: MigratorOptions;
 
   constructor(options: MigratorOptions) {

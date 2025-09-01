@@ -3,7 +3,7 @@ import type { Kysely } from "kysely";
 import type { Database } from "../../database/index.ts";
 import { appConfig } from "./config.ts";
 import { CameraEventDownloader } from "./services/CameraDownloader.ts";
-import { WeighEventMigrator } from "./migrators/WeighEventMigrator.ts";
+import { WeightMeasurementMigrator } from "./migrators/WeightMeasurementMigrator.ts";
 import { LitterboxUseMigrator } from "./migrators/LitterboxUseMigrator.ts";
 import type { EventMigrator, MediaService, MigratorOptions } from "./types.ts";
 
@@ -44,7 +44,7 @@ export class SyncService {
 
     // Register migrators in order of execution preference
     this.migrators = [
-      new WeighEventMigrator(options),
+      new WeightMeasurementMigrator(options),
       new LitterboxUseMigrator(options),
       // Future migrators can be added here:
       // new DrinkMigrator(options),
