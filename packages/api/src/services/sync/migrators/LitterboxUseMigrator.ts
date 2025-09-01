@@ -220,7 +220,7 @@ export class LitterboxUseMigrator implements EventMigrator {
         };
       } else {
         // This is a regular litterbox use event
-        const petId = this.determinePetId(measurements);
+        const petId = await this.determinePetId(measurements, session.startTime);
 
         // Determine elimination type based on ending weight
         let eliminationType: "urination" | "defecation" | "both" | "no_elimination" | "unknown";
@@ -416,24 +416,85 @@ export class LitterboxUseMigrator implements EventMigrator {
     });
   }
 
-  private determinePetId(measurements: RawMeasurement[]): number {
+  private async determinePetId(measurements: RawMeasurement[], eventTimestamp: Date): Promise<number | null> {
     // Calculate median weight during event
     const weights = measurements.map((m) => m.weight).sort((a, b) => a - b);
     const median = weights[Math.floor(weights.length / 2)];
 
-    // Find closest cat weight
-    let closestPetId = 1;
-    let minDiff = Infinity;
+    // Query latest weight measurements for all pets before this event
+    const latestWeights = await this.getLatestPetWeights(eventTimestamp);
+    
+    if (latestWeights.size === 0) {
+      console.log(`No weight measurements found before ${eventTimestamp.toISOString()}, cannot determine pet`);
+      return null;
+    }
 
-    for (const [petId, catWeight] of Object.entries(appConfig.litterbox.catWeights)) {
+    // Find closest cat weight within 10% margin
+    let closestPetId: number | null = null;
+    let minDiff = Infinity;
+    const marginPercent = 0.10; // 10% margin
+
+    for (const [petId, catWeight] of latestWeights) {
       const diff = Math.abs(median - catWeight);
-      if (diff < minDiff) {
+      const margin = catWeight * marginPercent;
+      
+      // Only consider this pet if within the 10% margin
+      if (diff <= margin && diff < minDiff) {
         minDiff = diff;
-        closestPetId = parseInt(petId);
+        closestPetId = petId;
       }
     }
 
+    if (closestPetId === null) {
+      console.log(`No cat found within 10% margin for median weight ${median}g at ${eventTimestamp.toISOString()}`);
+      console.log(`Available cat weights:`, Array.from(latestWeights.entries()).map(([id, weight]) => `${id}: ${weight}g`));
+    } else {
+      const catWeight = latestWeights.get(closestPetId)!;
+      console.log(`Identified cat ${closestPetId} (weight: ${catWeight}g) for median ${median}g (diff: ${Math.abs(median - catWeight)}g)`);
+    }
+
     return closestPetId;
+  }
+
+  private async getLatestPetWeights(beforeTimestamp: Date): Promise<Map<number, number>> {
+    const latestWeights = new Map<number, number>();
+
+    // Query latest weight measurement for each pet before the given timestamp
+    const weightEvents = await this.options.db
+      .selectFrom("event")
+      .select(["pet_id", "data", "timestamp"])
+      .where("timestamp", "<", beforeTimestamp)
+      .where("pet_id", "is not", null)
+      .where(sql`json_extract(data, '$.type')`, "=", "weight_measurement")
+      .orderBy("timestamp", "desc")
+      .execute();
+
+    // Group by pet_id and take the latest weight for each pet
+    const petLatestWeights = new Map<number, { weight: number; timestamp: Date }>();
+    
+    for (const event of weightEvents) {
+      if (event.pet_id !== null) {
+        const petId = event.pet_id;
+        const eventData = event.data as any;
+        
+        if (eventData.type === "weight_measurement" && typeof eventData.weight === "number") {
+          // Only keep this weight if we haven't seen a more recent one for this pet
+          if (!petLatestWeights.has(petId) || event.timestamp > petLatestWeights.get(petId)!.timestamp) {
+            petLatestWeights.set(petId, {
+              weight: eventData.weight,
+              timestamp: event.timestamp
+            });
+          }
+        }
+      }
+    }
+
+    // Convert to simple pet_id -> weight mapping
+    for (const [petId, data] of petLatestWeights) {
+      latestWeights.set(petId, data.weight);
+    }
+
+    return latestWeights;
   }
 
   private encodeRawData(
