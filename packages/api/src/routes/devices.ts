@@ -6,7 +6,7 @@ import { type FastifyTypeBox } from "../types.ts";
 const GetDeviceSchema = Type.Object({
   id: Type.Number(),
   name: Type.String(),
-  type: Type.Union([Type.Literal("litterbox"), Type.Literal("feeder"), Type.Literal("fountain")]),
+  type: Type.Union([Type.Literal("litterbox"), Type.Literal("feeder"), Type.Literal("water_fountain")]),
 });
 const GetDevicesSchema = Type.Array(GetDeviceSchema);
 const PostDeviceSchema = Type.Omit(GetDeviceSchema, ["id"]);

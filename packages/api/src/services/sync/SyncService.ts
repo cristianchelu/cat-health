@@ -5,6 +5,7 @@ import { appConfig } from "./config.ts";
 import { CameraEventDownloader } from "./services/CameraDownloader.ts";
 import { WeightMeasurementMigrator } from "./migrators/WeightMeasurementMigrator.ts";
 import { LitterboxUseMigrator } from "./migrators/LitterboxUseMigrator.ts";
+import { WaterIntakeMigrator } from "./migrators/WaterIntakeMigrator.ts";
 import type { EventMigrator, MediaService, MigratorOptions } from "./types.ts";
 
 export class SyncService {
@@ -46,8 +47,8 @@ export class SyncService {
     this.migrators = [
       new WeightMeasurementMigrator(options),
       new LitterboxUseMigrator(options),
+      new WaterIntakeMigrator(options),
       // Future migrators can be added here:
-      // new DrinkMigrator(options),
       // new EatMigrator(options),
     ];
   }

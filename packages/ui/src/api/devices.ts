@@ -3,7 +3,7 @@ import apiClient from "./apiClient";
 export type Device = {
   id: number;
   name: string;
-  type: "litterbox" | "feeder" | "fountain";
+  type: "litterbox" | "feeder" | "water_fountain";
 };
 
 export async function getDevices(): Promise<Device[]> {
@@ -18,7 +18,7 @@ export async function getDevice(id: number): Promise<Device> {
 
 export type NewDevice = {
   name: string;
-  type: "litterbox" | "feeder" | "fountain";
+  type: "litterbox" | "feeder" | "water_fountain";
 };
 
 export async function addDevice(input: NewDevice): Promise<Device> {

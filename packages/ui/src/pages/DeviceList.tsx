@@ -8,7 +8,7 @@ import './DeviceList.css';
 export type Device = {
   id: number;
   name: string;
-  type: "litterbox" | "feeder" | "fountain";
+  type: "litterbox" | "feeder" | "water_fountain";
 };
 
 const getDeviceTypeLabel = (type: Device["type"]) => {
@@ -17,7 +17,7 @@ const getDeviceTypeLabel = (type: Device["type"]) => {
       return "Litter Box";
     case "feeder":
       return "Feeder";
-    case "fountain":
+    case "water_fountain":
       return "Water Fountain";
     default:
       return type;

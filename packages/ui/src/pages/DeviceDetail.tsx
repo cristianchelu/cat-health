@@ -12,13 +12,13 @@ import { dateToTimeRange } from '@/lib/utils';
 import './DeviceDetail.css';
 import { Card, CardContent, CardTitle } from '@/components/ui/Card';
 
-const getDeviceTypeLabel = (type: "litterbox" | "feeder" | "fountain") => {
+const getDeviceTypeLabel = (type: "litterbox" | "feeder" | "water_fountain") => {
   switch (type) {
     case "litterbox":
       return "Litter Box";
     case "feeder":
       return "Feeder";
-    case "fountain":
+    case "water_fountain":
       return "Water Fountain";
     default:
       return type;

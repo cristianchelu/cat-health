@@ -40,6 +40,14 @@ export async function up(db: Kysely<any>): Promise<void> {
     })
     .execute();
 
+  await db
+    .insertInto("device")
+    .values({
+      name: "Hallway Water Fountain",
+      type: "water_fountain",
+    })
+    .execute();
+
   await db.schema
     .createTable("event")
     .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
