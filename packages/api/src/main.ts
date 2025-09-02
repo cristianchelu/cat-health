@@ -3,6 +3,10 @@ import { type TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import path from "node:path";
+import { config } from "dotenv";
+
+// Load environment variables
+config();
 
 import { migrateToLatest } from "./database/migrate.ts";
 import { db } from "./database/index.ts";
@@ -17,7 +21,36 @@ const fastify = Fastify({
 }).withTypeProvider<TypeBoxTypeProvider>();
 
 await fastify.register(cors, {
-  origin: "http://localhost:5173",
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Check for environment-specific frontend URL first
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (frontendUrl && frontendUrl !== '*') {
+      if (origin === frontendUrl) {
+        return callback(null, true);
+      }
+    }
+    
+    // Development mode: Allow any localhost/127.0.0.1 and any IP on port 5173
+    if (process.env.NODE_ENV !== 'production') {
+      const allowedPatterns = [
+        /^http:\/\/localhost:5173$/,
+        /^http:\/\/127\.0\.0\.1:5173$/,
+        /^http:\/\/\d+\.\d+\.\d+\.\d+:5173$/,  // Any IPv4 address on port 5173
+        /^http:\/\/\[[\da-f:]+\]:5173$/i,       // IPv6 addresses on port 5173
+      ];
+      
+      const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
+      if (isAllowed) {
+        return callback(null, true);
+      }
+    }
+    
+    // Production mode: Only allow specific frontend URL
+    callback(null, false);
+  },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 });
 
@@ -91,7 +124,7 @@ fastify.get("/migrate/migrators", async (request, reply) => {
 const start = async () => {
   try {
     await migrateToLatest();
-    await fastify.listen({ port: 3000 });
+    await fastify.listen({ port: 3000, host: '0.0.0.0' });
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
