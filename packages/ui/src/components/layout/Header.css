@@ -1,0 +1,95 @@
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+  background-color: var(--color-surface);
+
+  .logo a {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    text-decoration: none;
+  }
+
+  .desktop-menu {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+  }
+
+  .main-nav {
+    display: flex;
+    gap: var(--space-lg);
+  }
+
+  .nav-link {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+
+    &:hover {
+      color: var(--color-text-primary);
+    }
+  }
+
+  .user-menu {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .mobile-menu-toggle {
+    display: none;
+  }
+
+  .mobile-menu {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    .desktop-menu {
+      display: none;
+    }
+
+    .mobile-menu-toggle {
+      display: block;
+    }
+
+    .mobile-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background-color: var(--color-surface);
+      flex-direction: column;
+      padding: var(--space-md) 0;
+      border-bottom: 1px solid var(--color-border);
+      z-index: var(--z-dropdown);
+
+      &.is-open {
+        display: flex;
+      }
+
+      .main-nav {
+        flex-direction: column;
+        gap: var(--space-md);
+        margin-bottom: var(--space-md);
+      }
+
+      .user-menu {
+        flex-direction: column;
+        gap: var(--space-md);
+        border-top: 1px solid var(--color-border);
+        padding-top: var(--space-md);
+        align-items: stretch;
+        
+        > button {
+          justify-content: center;
+        }
+      }
+    }
+  }
+}

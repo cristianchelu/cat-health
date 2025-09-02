@@ -12,21 +12,6 @@
     "footer";
 }
 
-.app-header {
-  grid-area: header;
-  position: sticky;
-  top: 0;
-  z-index: var(--z-index-sticky);
-  background-color: var(--color-surface);
-  border-bottom: var(--border-thin);
-  padding: var(--space-sm) var(--space-lg);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: var(--shadow-sm);
-  min-height: 3.5rem;
-}
-
 .app-main {
   grid-area: main;
   padding: var(--space-sm) var(--space-md);
@@ -66,12 +51,7 @@
 
 @media (max-width: 640px) {
   .sm\:grid-cols-1 { grid-template-columns: 1fr; }
-  
-  .app-header {
-    padding: var(--space-xs) var(--space-md);
-    min-height: 3rem;
-  }
-  
+    
   .app-main {
     padding: var(--space-xs) var(--space-sm);
   }
