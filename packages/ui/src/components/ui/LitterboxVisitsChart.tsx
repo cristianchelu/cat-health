@@ -4,6 +4,8 @@ import { getPetEvents } from '@/api/pets';
 import { cn } from "@/lib/utils";
 
 import './LitterboxVisitsChart.css';
+import { Card, CardContent, CardHeader } from "./Card";
+import { Select } from "./form";
 
 type TimePeriod = 'week' | 'month' | 'quarter' | 'all';
 
@@ -62,10 +64,10 @@ function getDaysForPeriod(period: TimePeriod): number {
 }
 
 const periodLabels: Record<TimePeriod, string> = {
-  week: 'This Week',
-  month: 'This Month',
-  quarter: 'Last 3 Months',
-  all: 'This Year'
+  week: 'Week',
+  month: 'Month',
+  quarter: 'Quarter',
+  all: 'All'
 };
 
 const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsChartProps>(
@@ -100,57 +102,47 @@ const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsCha
 
     if (isLoading) {
       return (
-        <div
+        <Card
           className={cn("litterbox-visits-chart", className)}
           ref={ref}
           {...props}
         >
-          <div className="chart-header">
-            <div>
-              <h3 className="chart-title">Litterbox Visits - {periodLabels[selectedPeriod]}</h3>
-            </div>
-            <div className="chart-actions">
-              {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
-                <button
-                  key={period}
-                  onClick={() => setSelectedPeriod(period)}
-                  className={`button button-sm ${selectedPeriod === period ? 'button-primary' : 'button-outline'}`}
-                >
-                  {periodLabels[period]}
-                </button>
-              ))}
-            </div>
-          </div>
+          <CardHeader>
+            <h3>Litterbox Visits</h3>
+            <Select
+              value={selectedPeriod}
+              onChange={e => setSelectedPeriod(e.target.value as TimePeriod)}
+              options={(Object.keys(periodLabels) as TimePeriod[]).map(period => ({
+                value: period,
+                label: periodLabels[period]
+              }))}
+            />
+          </CardHeader>
           <div className="chart-loading">Loading visits chart...</div>
-        </div>
+        </Card>
       );
     }
 
     if (error) {
       return (
-        <div
+        <Card
           className={cn("litterbox-visits-chart", className)}
           ref={ref}
           {...props}
         >
-          <div className="chart-header">
-            <div>
-              <h3 className="chart-title">Litterbox Visits - {periodLabels[selectedPeriod]}</h3>
-            </div>
-            <div className="chart-actions">
-              {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
-                <button
-                  key={period}
-                  onClick={() => setSelectedPeriod(period)}
-                  className={`button button-sm ${selectedPeriod === period ? 'button-primary' : 'button-outline'}`}
-                >
-                  {periodLabels[period]}
-                </button>
-              ))}
-            </div>
-          </div>
+          <CardHeader>
+            <h3>Litterbox Visits</h3>
+            <Select
+              value={selectedPeriod}
+              onChange={e => setSelectedPeriod(e.target.value as TimePeriod)}
+              options={(Object.keys(periodLabels) as TimePeriod[]).map(period => ({
+                value: period,
+                label: periodLabels[period]
+              }))}
+            />
+          </CardHeader>
           <div className="chart-error">Error loading visits chart</div>
-        </div>
+        </Card>
       );
     }
 
@@ -192,27 +184,22 @@ const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsCha
     const totalEvents = Object.values(eventsByDay).reduce((sum, day) => sum + day.events.length, 0);
 
     return (
-      <div
+      <Card
         className={cn("litterbox-visits-chart", className)}
         ref={ref}
         {...props}
       >
-        <div className="chart-header">
-          <div>
-            <h3 className="chart-title">Litterbox Visits - {periodLabels[selectedPeriod]}</h3>
-          </div>
-          <div className="chart-actions">
-            {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
-              <button
-                key={period}
-                onClick={() => setSelectedPeriod(period)}
-                className={`button button-sm ${selectedPeriod === period ? 'button-primary' : 'button-outline'}`}
-              >
-                {periodLabels[period]}
-              </button>
-            ))}
-          </div>
-        </div>
+        <CardHeader>
+          <h3>Litterbox Visits</h3>
+          <Select
+            value={selectedPeriod}
+            onChange={e => setSelectedPeriod(e.target.value as TimePeriod)}
+            options={(Object.keys(periodLabels) as TimePeriod[]).map(period => ({
+              value: period,
+              label: periodLabels[period]
+            }))}
+          />
+        </CardHeader>
         <div className="chart-legend">
           <div className="legend-item">
             <div
@@ -252,9 +239,9 @@ const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsCha
         </div>
         
         {totalEvents === 0 ? (
-          <div className="chart-empty">No litterbox visits recorded in the {periodLabels[selectedPeriod].toLowerCase()}.</div>
+          <CardContent className="chart-empty">No litterbox visits recorded in the {periodLabels[selectedPeriod].toLowerCase()}.</CardContent>
         ) : (
-          <div className="chart-container">
+          <CardContent className="chart-content">
           <div className="chart-grid">
             {dates.map(date => {
               const dayData = eventsByDay[date];
@@ -296,9 +283,9 @@ const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsCha
               );
             })}
           </div>
-          </div>
+          </CardContent>
         )}
-      </div>
+      </Card>
     );
   }
 );

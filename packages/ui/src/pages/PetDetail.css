@@ -140,7 +140,7 @@
   }
 
   @media (max-width: 768px) {
-    padding: var(--space-md) var(--space-xs);
+    padding: 0;
     gap: var(--space-md);
     
     .events-section {
@@ -156,19 +156,6 @@
     .weight-chart {
       max-width: 100%;
       overflow-x: hidden;
-    }
-  }
-
-  @media (max-width: 480px) {
-    padding: var(--space-sm) var(--space-xs);
-    gap: var(--space-sm);
-    
-    .events-title {
-      font-size: var(--text-lg);
-    }
-    
-    .event-item {
-      padding: var(--space-md) var(--space-sm);
     }
   }
 }

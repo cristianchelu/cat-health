@@ -12,7 +12,10 @@ import {
 import { Line } from 'react-chartjs-2';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Select } from './form';
 import { getPetWeightTrends } from '@/api/pets';
+import { Card, CardContent, CardHeader } from './Card';
+import { cn } from '@/lib/utils';
 
 ChartJS.register(
   CategoryScale,
@@ -95,10 +98,10 @@ export default function WeightTrendChart({
   });
 
   const periodLabels = {
-    week: 'This Week',
-    month: 'This Month', 
-    year: 'This Year',
-    all: 'All Time'
+    week: 'Week',
+    month: 'Month',
+    year: 'Year',
+    all: 'All'
   };
 
   if (isLoading) {
@@ -295,46 +298,37 @@ export default function WeightTrendChart({
   };
 
   return (
-    <div className={`chart-card ${className || ''}`}>
-      <div className="chart-header">
-        <div>
-          <h3 className="chart-title">Weight Trend - {periodLabels[selectedPeriod]}</h3>
+    <Card className={`chart-card ${className || ''}`}>
+      <CardHeader>
+          <h3>
+            Weight Trend
+            <div>
+              <span className="latest-weight">{latestWeight?.toFixed(2)} kg</span>
+              <span className={cn("weight-change", {
+                'indicator-normal': weightChange > 0,
+                'indicator-warning': weightChange < 0,
+              })}>{weightChange.toFixed(2)} kg</span>
+            </div>
+            </h3>
           {isYoungCat && (
             <div className="form-helper">
               Growing kitten • {getAgeDescription(currentAgeInMonths, Math.floor((new Date().getTime() - new Date(petBirthDate).getTime()) / (1000 * 60 * 60 * 24)))}
             </div>
           )}
-        </div>
-        <div className="chart-actions">
-          {(Object.keys(periodLabels) as TimePeriod[]).map((period) => (
-            <button
-              key={period}
-              onClick={() => setSelectedPeriod(period)}
-              className={`button button-sm ${selectedPeriod === period ? 'button-primary' : 'button-outline'}`}
-            >
-              {periodLabels[period]}
-            </button>
-          ))}
-        </div>
-      </div>
-      
-      <div className="health-indicators">
-        <div className="health-indicator">
-          <p className="indicator-value">{latestWeight?.toFixed(2)} kg</p>
-          <p className="indicator-label">Latest Weight</p>
-        </div>
-        
-        <div className="health-indicator">
-          <p className={`indicator-value ${weightChange > 0 ? 'indicator-normal' : weightChange < 0 ? 'indicator-warning' : ''}`}>
-            {weightChange > 0 ? '+' : ''}{weightChange.toFixed(2)} kg
-          </p>
-          <p className="indicator-label">Change</p>
-        </div>
-      </div>
-      
-      <div className="chart-container" style={{ height }}>
+        <Select
+          value={selectedPeriod}
+          onChange={e => setSelectedPeriod(e.target.value as TimePeriod)}
+          options={(Object.keys(periodLabels) as TimePeriod[]).map(period => ({
+            value: period,
+            label: periodLabels[period],
+          }))}
+          aria-label="Select period"
+        />
+      </CardHeader>
+
+      <CardContent className="chart-container" style={{ height }}>
         <Line data={data} options={options} />
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

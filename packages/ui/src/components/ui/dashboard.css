@@ -63,7 +63,7 @@
 }
 
 /* Chart card styling */
-.chart-card {
+/* .chart-card {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   border: var(--border-thin);
@@ -80,9 +80,9 @@
   align-items: center;
   gap: var(--space-sm);
   margin-bottom: var(--space-md);
-}
+} */
 
-.chart-title {
+/* .chart-title {
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
   color: var(--color-text);
@@ -98,7 +98,7 @@
 .chart-container {
   min-height: 250px;
   width: 100%;
-}
+} */
 
 /* Dashboard layout variations */
 .dashboard-2col {
