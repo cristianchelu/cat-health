@@ -1,8 +1,8 @@
-# Pet Health Dashboard - Codebase Context
+# Pet Assistant - Codebase Context
 
 ## Project Overview
 
-This is a **Pet Health Dashboard** application focused on cat health monitoring through smart litterbox analysis. The project is a monorepo with two main packages:
+This is a **Pet Assistant** application focused on cat health monitoring through smart litterbox analysis. The project is a monorepo with two main packages:
 
 - **API** (`packages/api`): Fastify-based TypeScript backend with SQLite database
 - **UI** (`packages/ui`): React + TypeScript frontend with Vite

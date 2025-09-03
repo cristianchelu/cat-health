@@ -21,7 +21,7 @@ const Header: React.FC<HeaderProps> = ({ isMigrating, onMigrate }) => {
   return (
     <header className="app-header">
       <div className="logo">
-        <Link to="/">Pet Health Dashboard</Link>
+        <Link to="/">Pet Assistant</Link>
       </div>
 
       {/* Desktop Menu */}
