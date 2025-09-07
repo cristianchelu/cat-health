@@ -1,5 +1,5 @@
 import type { PhaseData, PhaseDetectionResult, StateTimelineEntry } from '../types';
-import { LitterboxStateTracker } from './stateTracker';
+import { LitterboxStateTracker, type StatePeriod } from './stateTracker';
 
 // Helper function to calculate rolling variance
 const calculateRollingVariance = (weights: number[], windowSize: number = 10): number[] => {
@@ -134,7 +134,7 @@ export const detectPhasesWithEvents = (weights: number[]): PhaseDetectionResult 
   const tracker = new LitterboxStateTracker([6.6, 4.4]);
   tracker.reset(); // Ensure clean state for new analysis
   const stateTimeline: StateTimelineEntry[] = [];
-  
+
   // Process each sample
   for (let i = 0; i < weights.length; i++) {
     const result = tracker.processSample(weights[i], i);
@@ -144,14 +144,37 @@ export const detectPhasesWithEvents = (weights: number[]): PhaseDetectionResult 
       ...result
     });
   }
-  
+
   // Extract phases from state timeline
   const phases = extractPhasesFromStates(stateTimeline, weights);
-  
+
+  // Get post-processed state periods for annotation regions
+  // @ts-expect-error: Access private method for chart annotation
+  const finalStatePeriods: StatePeriod[] = tracker.postProcessTransitions ? tracker.postProcessTransitions() : [];
+
+  // Second pass: calculate total variance for each StatePeriod
+  finalStatePeriods.forEach(period => {
+    // exclude ends
+    const buffer = 5;
+    const periodWeights = weights.slice(period.start + buffer, period.end + 1 - (buffer*2));
+    if (periodWeights.length < 2) {
+      period.variance = undefined;
+      return;
+    }
+    const mean = periodWeights.reduce((sum, w) => sum + w, 0) / periodWeights.length;
+    const variance = periodWeights.reduce((sum, w) => sum + Math.pow(w - mean, 2), 0) / periodWeights.length;
+    period.variance = variance;
+  });
+  console.log(finalStatePeriods
+    .filter(p => p.state === 'eliminating')
+    .map(p => `${((p.end-p.start)/10).toFixed(0)}: ${p.variance?.toFixed(0)}`)
+    .join(', ')
+  );
   return {
     phases,
     catWeight: tracker.getCatWeight(),
     events: tracker.getEvents(),
-    stateTimeline // For visualization
+    stateTimeline, // For visualization
+    finalStatePeriods
   };
 };

@@ -17,6 +17,10 @@
     align-items: flex-start;
   }
 
+  .chart-container {
+    height: 400px;
+  }
+
   .axis-controls {
     display: flex;
     flex-direction: column;

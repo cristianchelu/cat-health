@@ -37,6 +37,7 @@ export interface Features {
   maxWeight: number;
   initialWeight: number;
   finalWeight: number;
+  eliminationVariance: number;
   coveringVariance: number;
   coveringFluctuations: number;
   coveringSpectralEntropy: number;
@@ -83,6 +84,7 @@ export interface PhaseDetectionResult {
     hesitations: number;
   };
   stateTimeline: StateTimelineEntry[];
+  finalStatePeriods: Array<{ state: string; start: number; end: number }>;
 }
 
 export interface FeatureDimension {

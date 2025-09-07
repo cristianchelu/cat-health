@@ -4,6 +4,35 @@ import { detectPhasesWithEvents } from '../lib/phaseDetection';
 import type { EventData, Features, DecodedData } from '../types';
 import { cn } from "@/lib/utils";
 
+// Helper function to calculate rolling variance (imported from phaseDetection logic)
+const calculateRollingVariance = (weights: number[], windowSize: number = 10): number[] => {
+  const variances: number[] = [];
+  
+  for (let i = 0; i < weights.length; i++) {
+    // Post processing, center window
+    // const start = Math.max(0, i - Math.floor(windowSize / 2));
+    // const end = Math.min(weights.length, i + Math.floor(windowSize / 2) + 1);
+    // const window = weights.slice(start, end);
+
+    // Real time processing, no knowledge of future, window is past values only
+    const start = Math.max(0, i - windowSize + 1);
+    const end = i + 1;
+    const window = weights.slice(start, end);
+    
+    if (window.length < 2) {
+      variances.push(0);
+      continue;
+    }
+    
+    const mean = window.reduce((sum, w) => sum + w, 0) / window.length;
+    const variance = window.reduce((sum, w) => sum + Math.pow(w - mean, 2), 0) / window.length;
+    variances.push(Math.min(variance, 500000));
+    // variances.push(variance)
+  }
+  
+  return variances;
+};
+
 import "./WeightChart.css";
 
 interface WeightChartProps {
@@ -34,64 +63,24 @@ const STATE_COLORS: Record<string, { bg: string; border: string }> = {
 };
 
 /**
- * Creates state region annotations for the chart based on the state timeline
+ * Creates state region annotations for the chart based on post-processed state periods
+ * @param statePeriods Array of { state, start, end } from LitterboxStateTracker.postProcessTransitions()
  */
-function createStateAnnotations(stateTimeline: Array<{ state: string }>) {
+function createStateAnnotations(statePeriods: Array<{ state: string; start: number; end: number }>) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const stateAnnotations: Record<string, any> = {};
-  
-  // Group consecutive states into regions
-  let currentState = '';
-  let stateStart = 0;
-  let annotationIndex = 0;
-  
-  for (let i = 0; i < stateTimeline.length; i++) {
-    const state = stateTimeline[i].state;
-    
-    if (state !== currentState) {
-      // End previous state region
-      if (currentState && i > stateStart) {
-        const color = STATE_COLORS[currentState] || STATE_COLORS['empty'];
-        
-        stateAnnotations[`state_${annotationIndex}`] = {
-          type: 'box',
-          xMin: (stateStart / 10).toFixed(1),
-          xMax: ((i - 1) / 10).toFixed(1),
-          backgroundColor: color.bg,
-          borderColor: color.border,
-          borderWidth: 1,
-          label: {
-            display: true,
-            content: currentState.toUpperCase(),
-            position: 'center',
-            font: {
-              size: 10
-            },
-            color: color.border
-          }
-        };
-        annotationIndex++;
-      }
-      
-      currentState = state;
-      stateStart = i;
-    }
-  }
-  
-  // Handle the last state
-  if (currentState && stateTimeline.length > stateStart) {
-    const color = STATE_COLORS[currentState] || STATE_COLORS['empty'];
-    
-    stateAnnotations[`state_${annotationIndex}`] = {
+  statePeriods.forEach((period, idx) => {
+    const color = STATE_COLORS[period.state] || STATE_COLORS['empty'];
+    stateAnnotations[`state_${idx}`] = {
       type: 'box',
-      xMin: (stateStart / 10).toFixed(1),
-      xMax: ((stateTimeline.length - 1) / 10).toFixed(1),
+      xMin: (period.start / 10).toFixed(1),
+      xMax: (period.end / 10).toFixed(1),
       backgroundColor: color.bg,
       borderColor: color.border,
       borderWidth: 1,
       label: {
         display: true,
-        content: currentState.toUpperCase(),
+        content: period.state.toUpperCase(),
         position: 'center',
         font: {
           size: 10
@@ -99,8 +88,7 @@ function createStateAnnotations(stateTimeline: Array<{ state: string }>) {
         color: color.border
       }
     };
-  }
-
+  });
   return stateAnnotations;
 }
 
@@ -185,13 +173,14 @@ const WeightChart = React.forwardRef<HTMLCanvasElement, WeightChartProps>(
       const weights = data.measurements.map((m: { weight: number }) => m.weight);
       const phases = features.phases;
 
-      // Get state timeline for annotations
+      // Calculate rolling variance
+      const rollingVariance = calculateRollingVariance(weights);
+
+      // Get state timeline and post-processed state periods for annotations
       const result = detectPhasesWithEvents(weights);
-      const stateTimeline = result.stateTimeline;
-      
-      // Create annotations
-      const stateAnnotations = createStateAnnotations(stateTimeline);
-      const phaseAnnotations = createPhaseAnnotations(phases);
+      // Use post-processed state periods for annotation regions
+      const statePeriods = result.finalStatePeriods || [];
+      const stateAnnotations = createStateAnnotations(statePeriods);
 
       chartInstanceRef.current = new ChartJS(ctx, {
         type: 'line',
@@ -205,17 +194,32 @@ const WeightChart = React.forwardRef<HTMLCanvasElement, WeightChartProps>(
               backgroundColor: 'rgba(75, 192, 192, 0.2)',
               tension: 0.1,
               pointRadius: 1,
-              pointHoverRadius: 4
+              pointHoverRadius: 4,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Rolling Variance',
+              data: rollingVariance,
+              borderColor: 'rgb(255, 99, 132)',
+              backgroundColor: 'rgba(255, 99, 132, 0.1)',
+              tension: 0.1,
+              pointRadius: 0,
+              pointHoverRadius: 3,
+              yAxisID: 'y1'
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
           plugins: {
             title: {
               display: true,
-              text: `Weight Over Time - Event ${selectedEvent.id}`
+              text: `Weight & Variance Over Time - Event ${selectedEvent.id}`
             },
             legend: {
               display: true
@@ -237,11 +241,25 @@ const WeightChart = React.forwardRef<HTMLCanvasElement, WeightChartProps>(
               }
             },
             y: {
+              type: 'linear',
               display: true,
+              position: 'left',
               title: {
                 display: true,
                 text: 'Weight (grams)'
               }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: 'Rolling Variance'
+              },
+              grid: {
+                drawOnChartArea: false,
+              },
             }
           }
         }

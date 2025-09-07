@@ -66,7 +66,7 @@ export const extractFeatures = (weights: number[], sampleRate = 10): Features =>
   const result = detectPhasesWithEvents(weights);
   const phases = result.phases;
   const timeStep = 1 / sampleRate;
-  
+
   const features: Features = {
     preEliminationDuration: (phases.eliminationStart - phases.stepIn) * timeStep,
     eliminationDuration: (phases.eliminationEnd - phases.eliminationStart) * timeStep,
@@ -83,6 +83,7 @@ export const extractFeatures = (weights: number[], sampleRate = 10): Features =>
     coveringSpectralEntropy: 0,
     preEliminationVariance: 0,
     eliminationRate: 0,
+    eliminationVariance: 0,
     
     phases
   };
@@ -107,7 +108,32 @@ export const extractFeatures = (weights: number[], sampleRate = 10): Features =>
       features.preEliminationVariance = calculateFilteredVariance(preSignal);
     }
   }
-  
+
+  // Calculate elimination variance
+
+  // const hasOneElimination = result.finalStatePeriods.filter(p => p.state === 'eliminating').length === 1;
+  // const elimination = hasOneElimination ? result.finalStatePeriods.find(p => p.state === 'eliminating') : null;
+  // if (elimination) {
+  //   const eliminationSignal = weights.slice(elimination.start, elimination.end + 1);
+  //   if (eliminationSignal.length > 0) {
+  //     features.eliminationVariance = calculateFilteredVariance(eliminationSignal);
+  //   }
+  // }
+
+  const eliminations = result.finalStatePeriods.filter(p => p.state === 'eliminating').map(p=>{
+    const buffer = 5;
+    const start = p.start + buffer;
+    const end = p.end - buffer * 2;
+    return {
+      ...p,
+      variance: calculateFilteredVariance(weights.slice(start, end + 1))
+    }
+  }).filter(p => p.variance < 1000); // Exclude high variance eliminations likely due to noise
+
+  if (eliminations.length == 1) {
+    features.eliminationVariance = eliminations[0].variance;
+  }
+
   return features;
 };
 
@@ -123,7 +149,8 @@ export const featureDimensions: FeatureDimension[] = [
   { key: 'coveringFluctuations', label: 'Covering Fluctuations', unit: 'peaks' },
   { key: 'coveringSpectralEntropy', label: 'Covering Spectral Entropy', unit: '' },
   { key: 'preEliminationVariance', label: 'Pre-elimination Variance', unit: '' },
-  { key: 'eliminationRate', label: 'Elimination Rate (g/s)', unit: 'g/s' }
+  { key: 'eliminationRate', label: 'Elimination Rate (g/s)', unit: 'g/s' },
+  { key: 'eliminationVariance', label: 'Elimination Variance', unit: '' }
 ];
 
 // Get feature value by key
@@ -140,6 +167,7 @@ export const getFeatureValue = (features: Features, key: string): number => {
     case 'coveringSpectralEntropy': return features.coveringSpectralEntropy;
     case 'preEliminationVariance': return features.preEliminationVariance;
     case 'eliminationRate': return features.eliminationRate;
+    case 'eliminationVariance': return features.eliminationVariance;
     default: return 0;
   }
 };

@@ -14,6 +14,13 @@ class Ring {
     return s/(this.filled-1);
   }
   size() { return this.filled; }
+  toArray(): number[] { 
+    const result: number[] = [];
+    for (let k = 0; k < this.filled; k++) {
+      result.push(this.buf[k]);
+    }
+    return result;
+  }
 }
 
 // Optional shape you can import/merge with your types
@@ -28,6 +35,10 @@ type StateResult = {
 
 type StateTransition = { from: string; to: string; index: number };
 
+// NEW: A type to represent a state over a period of time
+export type StatePeriod = { state: string; start: number; end: number, variance?: number };
+
+
 export class LitterboxStateTracker {
   private states = {
     EMPTY: 'empty',          // no presence
@@ -40,7 +51,7 @@ export class LitterboxStateTracker {
 
   // Config (tune)
   private hz = 10;                      // samples per second
-  private varStable = 200;              // variance threshold for "stable"
+  private varStable = 250;              // variance threshold for "stable" (updated from 200 to 250)
   private stableMin = 1 * this.hz;           // min samples for a stable bout (1s)
   private entryDeltaMin = 1200;         // grams, minimum rise to consider presence
   private entryDeltaFrac = 0.22;        // fraction of known cat weight to consider presence
@@ -60,6 +71,7 @@ export class LitterboxStateTracker {
 
   // Running buffers
   private win1s = new Ring(10);         // 1s window at 10Hz
+  private weightHistory = new Ring(10); // 10-sample rolling window for variance calculation
   private baseline = 0;                 // EMA baseline (tray + litter)
   private preSessionBaseline = 0;
   private postSessionBaseline = 0;
@@ -68,7 +80,6 @@ export class LitterboxStateTracker {
   private exitBelowCnt = 0;
   private gapCnt = 0;
   private stableCnt = 0;
-  private presentConfirmed = false; // set true once weight sits near a known cat
 
   // Session
   private sessionActive = false;
@@ -104,9 +115,14 @@ export class LitterboxStateTracker {
 
     // Update windows
     this.win1s.push(weight);
+    this.weightHistory.push(weight);
+    
     const mean1s = this.win1s.mean();
-    const var1s = this.win1s.variance();
-    const stableNow = (var1s > 0 && var1s < this.varStable);
+    
+    // Calculate 10-sample rolling variance using the enhanced method
+    const var10sample = this.weightHistory.variance();
+    
+    const stableNow = (var10sample > 0 && var10sample < this.varStable);
     const rel = Math.max(0, mean1s - this.baseline);
 
     // Update baseline only when we think tray is empty or during gap and mean is near baseline
@@ -153,20 +169,13 @@ export class LitterboxStateTracker {
         // Presence IS confirmed. Now, check for stability.
         if (stableNow) {
           this.stableCnt++;
-          // Check if the stable duration threshold has been met.
-          if (this.stableCnt >= this.stableMin) {
-            if (this.nearKnownCatWeight(mean1s)) {
-              this.onStablePlateau(mean1s, this.stableCnt);
-              this.transitionTo(this.states.ELIMINATING);
-              this.beginEliminationIfNeeded();
-            } else {
-              // The weight is stable but doesn't match a cat. Treat it as a generic occupation.
-              this.transitionTo(this.states.OCCUPIED);
-            }
+          if (this.nearKnownCatWeight(mean1s)) {
+            this.onStablePlateau(mean1s, this.stableCnt);
+            this.transitionTo(this.states.ELIMINATING);
+            this.beginEliminationIfNeeded();
+          } else {
+            this.transitionTo(this.states.OCCUPIED);
           }
-          // FIX #1: If stable but duration not met, do nothing.
-          // By not transitioning, we IMPLICITLY stay in the ENTERING state
-          // to continue incrementing stableCnt on the next tick.
         } else {
           // If not stable, the cat is moving around. Reset stability counter and go to OCCUPIED.
           this.stableCnt = 0;
@@ -178,12 +187,10 @@ export class LitterboxStateTracker {
       case this.states.OCCUPIED: {
         if (stableNow) {
           this.stableCnt++;
-          if (this.stableCnt >= this.stableMin) {
-            const plateau = mean1s;
-            this.onStablePlateau(plateau, this.stableCnt);
-            this.transitionTo(this.states.ELIMINATING);
-            this.beginEliminationIfNeeded();
-          }
+          const plateau = mean1s;
+          this.onStablePlateau(plateau, this.stableCnt);
+          this.transitionTo(this.states.ELIMINATING);
+          this.beginEliminationIfNeeded();
         } else {
           this.stableCnt = 0;
         }
@@ -265,11 +272,89 @@ export class LitterboxStateTracker {
   }
 
   // --- internals ---
+
+  /**
+   * NEW: Post-processes the transition history to create a cleaned-up sequence of state periods.
+   * 1. Merges ELIMINATING -> OCCUPIED -> ELIMINATING where OCCUPIED is < 1s.
+   * 2. Removes ELIMINATING periods < 10s by re-classifying them as OCCUPIED.
+   * 3. Merges any adjacent, identical states.
+   */
+  private postProcessTransitions(): StatePeriod[] {
+    if (!this.transitions.length) {
+      return [];
+    }
+
+    // 1. Convert transition points to a list of state periods
+    let initialPeriods: StatePeriod[] = [];
+    for (let i = 0; i < this.transitions.length; i++) {
+        const currentTransition = this.transitions[i];
+        // The first state of the session starts at sessionStartSample
+        const start = i === 0 ? this.sessionStartSample : currentTransition.index;
+        const end = this.transitions[i + 1] ? this.transitions[i + 1].index : this.currentSample;
+        // The state is the one we *transitioned to*
+        initialPeriods.push({ state: currentTransition.to, start, end });
+    }
+    
+    // Filter out any states outside the session start/end (e.g. initial EMPTY)
+    initialPeriods = initialPeriods.filter(p => p.state !== this.states.EMPTY && p.end > p.start);
+
+    // DEBUG: Return initial periods
+    // return initialPeriods;
+    // 2. Merge short OCCUPIED gaps between ELIMINATING states
+    const shortOccupiedGap = 1.5 * this.hz;
+    for (let i = 1; i < initialPeriods.length - 1; i++) {
+        const prev = initialPeriods[i-1];
+        const curr = initialPeriods[i];
+        const next = initialPeriods[i+1];
+        if (
+            prev.state === this.states.ELIMINATING &&
+            curr.state === this.states.OCCUPIED &&
+            next.state === this.states.ELIMINATING &&
+            (curr.end - curr.start) < shortOccupiedGap
+        ) {
+            // Extend the first eliminating period to cover the gap and the next period
+            prev.end = next.end;
+            // Remove the two now-merged periods
+            initialPeriods.splice(i, 2);
+            // Decrement index to re-evaluate from the same spot after mutation
+            i--;
+        }
+    }
+
+    // 3. Remove short ELIMINATING states by re-classifying them as OCCUPIED
+    const minEliminationDuration = 5 * this.hz;
+    initialPeriods.forEach(p => {
+        if (p.state === this.states.ELIMINATING && (p.end - p.start) < minEliminationDuration) {
+            p.state = this.states.OCCUPIED;
+        }
+    });
+
+    // 4. Merge adjacent identical states
+    if (initialPeriods.length === 0) return [];
+
+    const mergedPeriods: StatePeriod[] = [ { ...initialPeriods[0] } ];
+    for (let i = 1; i < initialPeriods.length; i++) {
+        const currentPeriod = initialPeriods[i];
+        const lastMergedPeriod = mergedPeriods[mergedPeriods.length - 1];
+        if (currentPeriod.state === lastMergedPeriod.state) {
+            // Extend the last merged period
+            lastMergedPeriod.end = currentPeriod.end;
+        } else {
+            // Add a new period
+            mergedPeriods.push({ ...currentPeriod });
+        }
+    }
+
+    return mergedPeriods;
+  }
+
+  // UPDATED: Uses post-processed transition data
   private getSessionSummary(): StateResult {
-    // Normalize bouts and compute simple health flag
-    const completedBouts = this.eliminationBouts
-      .map(b => (b.end === undefined ? { start: b.start, end: this.currentSample } : { start: b.start, end: b.end }))
-      .filter(b => b.end >= b.start);
+    // Process the transition log to get clean state periods
+    const finalStatePeriods = this.postProcessTransitions();
+    
+    // Filter to get just the final, valid elimination bouts
+    const completedBouts = finalStatePeriods.filter(p => p.state === this.states.ELIMINATING);
 
     const stableBouts = completedBouts.filter(b => (b.end - b.start) >= this.stableMin);
     const postBase = this.postSessionBaseline || this.baseline;
@@ -324,7 +409,6 @@ export class LitterboxStateTracker {
 
   private startSession(): void {
     this.sessionActive = true;
-    this.presentConfirmed = false;
     this.sessionStartSample = this.currentSample;
     this.preSessionBaseline = this.baseline;
     this.entries = 0;
@@ -338,34 +422,22 @@ export class LitterboxStateTracker {
     this.exitBelowCnt = 0;
     this.gapCnt = 0;
     this.stableCnt = 0;
+    // Reset transitions for the new session
+    this.transitions = [];
   }
 
+  // UPDATED: Delegates to getSessionSummary for final report
   private endSession(): StateResult {
     this.sessionActive = false;
     this.transitionTo(this.states.ENDED);
-    // Close any open bout
+    // Close any open bout. This ensures the raw transition data is complete.
     this.endEliminationIfNeeded();
 
-    // Final baseline: collect a small tail window after session end if you call process afterwards;
-    // here we just use the latest EMA
+    // Final baseline: capture the baseline at the moment the session is declared over.
     this.postSessionBaseline = this.baseline;
-
-    const wasteDelta = this.postSessionBaseline - this.preSessionBaseline;
-    const suspectedStraining = (this.eliminationBouts.filter(b => (b.end ?? b.start) - b.start >= this.stableMin).length >= 2) && (wasteDelta < this.minWasteDelta);
-
-    return {
-      state: this.states.ENDED,
-      catWeight: this.catWeight || this.bestStableWeight,
-      events: {
-        entries: this.entries,
-        exits: this.exits,
-        hesitations: this.hesitations,
-        shortExits: this.shortExits,
-        eliminations: this.eliminationBouts.length
-      },
-      eliminationBouts: this.eliminationBouts.filter(b => b.end !== undefined) as Array<{start:number; end:number}>,
-      flags: { suspectedStraining }
-    };
+     
+    // Now get the final summary, which includes the post-processing step.
+    return this.getSessionSummary();
   }
 
   private getPartial(): StateResult {
@@ -377,6 +449,7 @@ export class LitterboxStateTracker {
         exits: this.exits,
         hesitations: this.hesitations,
         shortExits: this.shortExits,
+        // Raw count during session
         eliminations: this.eliminationBouts.length
       }
     };
@@ -384,6 +457,16 @@ export class LitterboxStateTracker {
 
   private transitionTo(newState: string): void {
     if (this.currentState !== newState) {
+      // Don't record transitions back to EMPTY during a session - startSession handles the log
+      if (this.sessionActive && newState === this.states.EMPTY) {
+        // Reset counters for re-entry logic, but don't transition the whole session state
+        this.currentState = newState;
+        // Optionally, finalize session here if needed
+        // For now, we allow it to transition to EMPTY and restart
+        this.endSession();
+        return;
+      }
+
       this.transitions.push({ from: this.currentState, to: newState, index: this.currentSample });
       this.currentState = newState;
     }
@@ -414,6 +497,7 @@ export class LitterboxStateTracker {
     this.currentState = this.states.EMPTY;
     this.sessionActive = false;
     this.win1s = new Ring(10);
+    this.weightHistory = new Ring(10);
     this.baseline = 0;
     this.preSessionBaseline = 0;
     this.postSessionBaseline = 0;

@@ -18,11 +18,11 @@ interface ScatterAnalysisProps {
 const ScatterAnalysis = React.forwardRef<HTMLDivElement, ScatterAnalysisProps>(
   ({ scatterData, onEventSelect, chartRef, chartInstance }, ref) => {
     const [scatterXAxis, setScatterXAxis] = useState<string>('totalDuration');
-    const [scatterYAxis, setScatterYAxis] = useState<string>('coveringDuration');
+    const [scatterYAxis, setScatterYAxis] = useState<string>('eliminationVariance');
     const [xMin, setXMin] = useState<number | undefined>(undefined);
     const [xMax, setXMax] = useState<number | undefined>(undefined);
-    const [yMin, setYMin] = useState<number | undefined>(undefined);
-    const [yMax, setYMax] = useState<number | undefined>(undefined);
+    const [yMin, setYMin] = useState<number | undefined>(0.1);
+    const [yMax, setYMax] = useState<number | undefined>(300);
 
     // Helper function to calculate data bounds for the current axes
     const calculateAxisBounds = () => {
