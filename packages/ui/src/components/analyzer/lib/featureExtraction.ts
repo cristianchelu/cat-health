@@ -18,7 +18,7 @@ export const calculateFilteredVariance = (signal: number[], outlierPercentile = 
   const filteredMean = filteredSignal.reduce((s, w) => s + w, 0) / filteredSignal.length;
   const variance = filteredSignal.reduce((s, w) => s + Math.pow(w - filteredMean, 2), 0) / filteredSignal.length;
   
-  return variance;
+  return Math.sqrt(variance);
 };
 
 export const calculateSpectralEntropy = (signal: number[]): number => {
@@ -132,6 +132,9 @@ export const extractFeatures = (weights: number[], sampleRate = 10): Features =>
 
   if (eliminations.length == 1) {
     features.eliminationVariance = eliminations[0].variance;
+    features.eliminationDuration = (eliminations[0].end - eliminations[0].start) * timeStep;
+    features.eliminationRate = features.eliminationDuration > 0 ? 
+      features.wasteWeight / features.eliminationDuration : 0;
   }
 
   return features;

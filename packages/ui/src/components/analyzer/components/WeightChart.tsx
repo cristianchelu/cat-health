@@ -25,8 +25,8 @@ const calculateRollingVariance = (weights: number[], windowSize: number = 10): n
     }
     
     const mean = window.reduce((sum, w) => sum + w, 0) / window.length;
-    const variance = window.reduce((sum, w) => sum + Math.pow(w - mean, 2), 0) / window.length;
-    variances.push(Math.min(variance, 500000));
+    const variance = Math.sqrt(window.reduce((sum, w) => sum + Math.pow(w - mean, 2), 0) / window.length);
+    variances.push(Math.min(variance, 300));
     // variances.push(variance)
   }
   

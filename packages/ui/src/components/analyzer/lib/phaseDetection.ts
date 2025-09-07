@@ -17,7 +17,7 @@ const calculateRollingVariance = (weights: number[], windowSize: number = 10): n
     
     const mean = window.reduce((sum, w) => sum + w, 0) / window.length;
     const variance = window.reduce((sum, w) => sum + Math.pow(w - mean, 2), 0) / window.length;
-    variances.push(variance);
+    variances.push(Math.sqrt(variance));
   }
   
   return variances;
@@ -163,7 +163,7 @@ export const detectPhasesWithEvents = (weights: number[]): PhaseDetectionResult 
     }
     const mean = periodWeights.reduce((sum, w) => sum + w, 0) / periodWeights.length;
     const variance = periodWeights.reduce((sum, w) => sum + Math.pow(w - mean, 2), 0) / periodWeights.length;
-    period.variance = variance;
+    period.variance = Math.sqrt(variance);
   });
   console.log(finalStatePeriods
     .filter(p => p.state === 'eliminating')

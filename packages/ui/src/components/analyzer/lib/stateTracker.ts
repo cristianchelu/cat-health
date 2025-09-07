@@ -51,7 +51,7 @@ export class LitterboxStateTracker {
 
   // Config (tune)
   private hz = 10;                      // samples per second
-  private varStable = 250;              // variance threshold for "stable" (updated from 200 to 250)
+  private varStable = Math.sqrt(250);              // variance threshold for "stable" (updated from 200 to 250)
   private stableMin = 1 * this.hz;           // min samples for a stable bout (1s)
   private entryDeltaMin = 1200;         // grams, minimum rise to consider presence
   private entryDeltaFrac = 0.22;        // fraction of known cat weight to consider presence
@@ -120,7 +120,7 @@ export class LitterboxStateTracker {
     const mean1s = this.win1s.mean();
     
     // Calculate 10-sample rolling variance using the enhanced method
-    const var10sample = this.weightHistory.variance();
+    const var10sample = Math.sqrt(this.weightHistory.variance());
     
     const stableNow = (var10sample > 0 && var10sample < this.varStable);
     const rel = Math.max(0, mean1s - this.baseline);
@@ -301,7 +301,7 @@ export class LitterboxStateTracker {
     // DEBUG: Return initial periods
     // return initialPeriods;
     // 2. Merge short OCCUPIED gaps between ELIMINATING states
-    const shortOccupiedGap = 1.5 * this.hz;
+    const shortOccupiedGap = 1 * this.hz;
     for (let i = 1; i < initialPeriods.length - 1; i++) {
         const prev = initialPeriods[i-1];
         const curr = initialPeriods[i];
@@ -322,7 +322,7 @@ export class LitterboxStateTracker {
     }
 
     // 3. Remove short ELIMINATING states by re-classifying them as OCCUPIED
-    const minEliminationDuration = 5 * this.hz;
+    const minEliminationDuration = 4 * this.hz;
     initialPeriods.forEach(p => {
         if (p.state === this.states.ELIMINATING && (p.end - p.start) < minEliminationDuration) {
             p.state = this.states.OCCUPIED;
