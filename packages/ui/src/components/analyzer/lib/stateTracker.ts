@@ -279,7 +279,7 @@ export class LitterboxStateTracker {
    * 2. Removes ELIMINATING periods < 10s by re-classifying them as OCCUPIED.
    * 3. Merges any adjacent, identical states.
    */
-  private postProcessTransitions(): StatePeriod[] {
+  public postProcessTransitions(): StatePeriod[] {
     if (!this.transitions.length) {
       return [];
     }

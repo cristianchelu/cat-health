@@ -149,7 +149,6 @@ export const detectPhasesWithEvents = (weights: number[]): PhaseDetectionResult 
   const phases = extractPhasesFromStates(stateTimeline, weights);
 
   // Get post-processed state periods for annotation regions
-  // @ts-expect-error: Access private method for chart annotation
   const finalStatePeriods: StatePeriod[] = tracker.postProcessTransitions ? tracker.postProcessTransitions() : [];
 
   // Second pass: calculate total variance for each StatePeriod

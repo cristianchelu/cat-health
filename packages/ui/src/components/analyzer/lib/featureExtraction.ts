@@ -130,9 +130,43 @@ export const extractFeatures = (weights: number[], sampleRate = 10): Features =>
     }
   }).filter(p => p.variance < 1000); // Exclude high variance eliminations likely due to noise
 
-  if (eliminations.length == 1) {
-    features.eliminationVariance = eliminations[0].variance;
-    features.eliminationDuration = (eliminations[0].end - eliminations[0].start) * timeStep;
+  const chooseLongest = (candidates: Array<{start: number, end: number}>) => {
+    return candidates.reduce((a, b) => (b.end - b.start) > (a.end - a.start) ? b : a);
+  };
+  // If multiple elimination candidates, choose the one with the highest
+  // variance "walls" 1second before and after.
+  const chooseHighestNeighboringVariance = (candidates: Array<{start: number, end: number, variance: number}>) => {
+    return candidates.reduce((a, b) => {
+      const aNeighbors = weights.slice(a.start - 1, a.end + 2);
+      const bNeighbors = weights.slice(b.start - 1, b.end + 2);
+      const aVariance = calculateFilteredVariance(aNeighbors);
+      const bVariance = calculateFilteredVariance(bNeighbors);
+      return aVariance > bVariance ? a : b;
+    });
+  };
+
+  const chooseSymmetricHighestNeighboringVariance = (candidates: Array<{start: number, end: number, variance: number}>) => {
+    return candidates.reduce((a, b) => {
+      const aNeighbors = weights.slice(a.start - 1, a.end + 2);
+      const bNeighbors = weights.slice(b.start - 1, b.end + 2);
+      const aVariance = Math.abs(calculateFilteredVariance(aNeighbors.slice(0, 1)) - calculateFilteredVariance(aNeighbors.slice(-1)));
+      const bVariance = Math.abs(calculateFilteredVariance(bNeighbors.slice(0, 1)) - calculateFilteredVariance(bNeighbors.slice(-1)));
+      return aVariance > bVariance ? a : b;
+    });
+  }
+
+  const sectionSelectionStrategy = {
+    'longest': chooseLongest,
+    'highestNeighboringVariance': chooseHighestNeighboringVariance,
+    'symmetricHighestNeighboringVariance': chooseSymmetricHighestNeighboringVariance
+  }
+
+  
+  if (eliminations.length > 0) {
+    const selected = sectionSelectionStrategy['symmetricHighestNeighboringVariance'](eliminations);
+
+    features.eliminationVariance = selected.variance;
+    features.eliminationDuration = (selected.end - selected.start) * timeStep;
     features.eliminationRate = features.eliminationDuration > 0 ? 
       features.wasteWeight / features.eliminationDuration : 0;
   }

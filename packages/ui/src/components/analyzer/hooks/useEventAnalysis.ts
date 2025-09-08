@@ -17,9 +17,16 @@ export const useEventAnalysis = () => {
         throw new Error('No raw data available for this event');
       }
 
+      if (selectedEvent && selectedEvent.id === event.id) {
+        // Same event selected, no need to re-analyze
+        setAnalysisData(null);
+        setSelectedEvent(null);
+        return;
+      }
       // Clear existing analysis first
       setAnalysisData(null);
       setSelectedEvent(null);
+
       
       const decodedData = decodeRawData(event.raw_data);
       const weights = decodedData.measurements.map((m: { weight: number }) => m.weight);
@@ -33,7 +40,7 @@ export const useEventAnalysis = () => {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
       setAnalysisData(null);
     }
-  }, []);
+  }, [selectedEvent]);
 
   const clearAnalysis = useCallback(() => {
     setSelectedEvent(null);
