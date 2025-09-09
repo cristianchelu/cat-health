@@ -4,9 +4,6 @@ import { Outlet } from 'react-router';
 import { postMigrate } from './api/scripts';
 import Header from './components/layout/Header';
 
-import './app.css';
-import '@/components/ui/layout.css';
-
 function App() {
   const [queryClient] = useState(() => new QueryClient());
   const [isMigrating, setIsMigrating] = useState(false);
@@ -38,12 +35,6 @@ function App() {
             <Outlet />
           </div>
         </main>
-        
-        <footer className="app-footer">
-          <div className="container">
-            <p className="copyright">&copy; {new Date().getFullYear()} Pet Health Dashboard</p>
-          </div>
-        </footer>
       </div>
     </QueryClientProvider>
   );

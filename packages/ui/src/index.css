@@ -63,27 +63,24 @@ p {
   margin-bottom: var(--space-lg);
   line-height: var(--line-height-normal);
 }
-
-/* Container */
-.container {
-  width: 100%;
-  max-width: var(--max-width-content);
-  margin: 0 auto;
-  padding: 0 var(--space-lg);
+                                                                                                                                      
+/* Global styles */
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
-/* Responsive containers */
-@media (max-width: 768px) {
-  .container {
-    padding: 0;
-  }
-  
-  h1 {
-    font-size: var(--text-3xl);
-  }
-  
-  h2 {
-    font-size: var(--text-2xl);
-  }
+/* Remove default focus styles and implement our own */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Image styles */
+img {
+  max-width: 100%;
+  height: auto;
 }
