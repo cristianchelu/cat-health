@@ -1,5 +1,6 @@
 import type { PhaseData, PhaseDetectionResult, StateTimelineEntry } from '../types';
 import { LitterboxStateTracker, type StatePeriod } from './stateTracker';
+import { LitterboxStateTracker2 } from './stateTracker2';
 
 // Helper function to calculate rolling variance
 const calculateRollingVariance = (weights: number[], windowSize: number = 10): number[] => {
@@ -131,7 +132,8 @@ export const extractPhasesFromStates = (stateTimeline: StateTimelineEntry[], wei
 };
 
 export const detectPhasesWithEvents = (weights: number[]): PhaseDetectionResult => {
-  const tracker = new LitterboxStateTracker([6.6, 4.4]);
+  const tracker = new LitterboxStateTracker([6600, 4700]);
+  // const tracker = new LitterboxStateTracker2([6.6, 4.4]);
   tracker.reset(); // Ensure clean state for new analysis
   const stateTimeline: StateTimelineEntry[] = [];
 
@@ -154,8 +156,8 @@ export const detectPhasesWithEvents = (weights: number[]): PhaseDetectionResult 
   // Second pass: calculate total variance for each StatePeriod
   finalStatePeriods.forEach(period => {
     // exclude ends
-    const buffer = 5;
-    const periodWeights = weights.slice(period.start + buffer, period.end + 1 - (buffer*2));
+    const buffer = 10;
+    const periodWeights = weights.slice(period.start + buffer, period.end + 1 - (buffer));
     if (periodWeights.length < 2) {
       period.variance = undefined;
       return;

@@ -189,8 +189,10 @@ export class LitterboxStateTracker {
           this.stableCnt++;
           const plateau = mean1s;
           this.onStablePlateau(plateau, this.stableCnt);
-          this.transitionTo(this.states.ELIMINATING);
-          this.beginEliminationIfNeeded();
+          if (this.nearKnownCatWeight(mean1s)) {
+            this.transitionTo(this.states.ELIMINATING);
+            this.beginEliminationIfNeeded();
+          }
         } else {
           this.stableCnt = 0;
         }
@@ -251,8 +253,10 @@ export class LitterboxStateTracker {
           if (stableNow) {
             const plateau = mean1s;
             this.onStablePlateau(plateau, 1);
-            this.transitionTo(this.states.ELIMINATING);
-            this.beginEliminationIfNeeded();
+            if (this.nearKnownCatWeight(mean1s)) {
+              this.transitionTo(this.states.ELIMINATING);
+              this.beginEliminationIfNeeded();
+            }
           } else {
             this.transitionTo(this.states.OCCUPIED);
           }

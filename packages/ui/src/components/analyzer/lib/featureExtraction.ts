@@ -121,16 +121,16 @@ export const extractFeatures = (weights: number[], sampleRate = 10): Features =>
   // }
 
   const eliminations = result.finalStatePeriods.filter(p => p.state === 'eliminating').map(p=>{
-    const buffer = 5;
+    const buffer = 10;
     const start = p.start + buffer;
-    const end = p.end - buffer * 2;
+    const end = p.end - buffer;
     return {
       ...p,
       variance: calculateFilteredVariance(weights.slice(start, end + 1))
     }
   }).filter(p => p.variance < 1000); // Exclude high variance eliminations likely due to noise
 
-  const chooseLongest = (candidates: Array<{start: number, end: number}>) => {
+  const chooseLongest = (candidates: Array<{start: number, end: number, variance: number}>) => {
     return candidates.reduce((a, b) => (b.end - b.start) > (a.end - a.start) ? b : a);
   };
   // If multiple elimination candidates, choose the one with the highest
@@ -163,7 +163,7 @@ export const extractFeatures = (weights: number[], sampleRate = 10): Features =>
 
   
   if (eliminations.length > 0) {
-    const selected = sectionSelectionStrategy['symmetricHighestNeighboringVariance'](eliminations);
+    const selected = sectionSelectionStrategy['longest'](eliminations);
 
     features.eliminationVariance = selected.variance;
     features.eliminationDuration = (selected.end - selected.start) * timeStep;
