@@ -15,6 +15,7 @@ export interface BaseEventProps {
 }
 
 interface BaseEventHeaderProps {
+  id: number;
   timestamp: string;
   isDeleting: boolean;
   onDelete: () => void;
@@ -26,9 +27,10 @@ interface BaseEventContentProps {
 }
 
 const BaseEventHeader = React.forwardRef<HTMLDivElement, BaseEventHeaderProps>(
-  ({ timestamp, isDeleting, onDelete }, ref) => {
+  ({ id, timestamp, isDeleting, onDelete }, ref) => {
     return (
       <div ref={ref} className="event-header">
+        <div className='event-id'>{id}</div>
         <div className="event-timestamp">
           <FaCalendarAlt />
           <b>{new Date(timestamp).toLocaleString()}</b>
@@ -65,6 +67,7 @@ const BaseEvent = React.forwardRef<HTMLLIElement, BaseEventProps>(
     return (
       <li ref={ref} className={cn("base-event-item", className)} data-event-id={id}>
         <BaseEventHeader
+          id={id}
           timestamp={timestamp}
           isDeleting={isDeleting}
           onDelete={onDelete}
