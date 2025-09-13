@@ -1,7 +1,7 @@
 import * as React from "react";
 import { FaCalendarAlt, FaCheck, FaWeight, FaClock } from 'react-icons/fa';
 import type { EventData } from '../types';
-import { getEventDataProp, getEliminationIcon } from '../lib/utils';
+import { getEliminationIcon } from '../lib/utils';
 
 import './EventCard.css';
 
@@ -13,9 +13,9 @@ interface EventCardProps {
 
 const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
   ({ event, isSelected, onSelect }, ref) => {
-    const eliminationType = String(getEventDataProp(event.data, 'elimination_type') || 'unknown');
-    const weight = getEventDataProp(event.data, 'elimination_weight');
-    const duration = getEventDataProp(event.data, 'duration');
+    const eliminationType = String(event.data.elimination_type) || 'unknown';
+    const weight = event.data.elimination_weight;
+    const duration = event.data.duration;
 
     const handleClick = () => {
       onSelect(event);

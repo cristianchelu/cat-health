@@ -121,6 +121,12 @@ fastify.get("/migrate/migrators", async (request, reply) => {
   }
 });
 
+fastify.register(fastifyStatic, {
+  root: path.join(import.meta.dirname, "../public"),
+  prefix: "/",
+  decorateReply: false,
+});
+
 const start = async () => {
   try {
     await migrateToLatest();

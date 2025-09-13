@@ -20,7 +20,6 @@ export * from './types';
 // Utilities
 export * from './lib/binaryDecoder';
 export * from './lib/stateTracker';
-export * from './lib/phaseDetection';
 export * from './lib/featureExtraction';
 export * from './lib/utils';
 export * from './lib/chartHelpers';

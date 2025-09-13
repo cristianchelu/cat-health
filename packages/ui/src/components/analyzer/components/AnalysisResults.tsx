@@ -12,10 +12,11 @@ interface AnalysisResultsProps {
     features: Features;
   };
   className?: string;
+  catWeights: number[];
 }
 
 const AnalysisResults = React.forwardRef<HTMLDivElement, AnalysisResultsProps>(
-  ({ selectedEvent, analysisData, className }, ref) => {
+  ({ selectedEvent, analysisData, className, catWeights }, ref) => {
     const weightChartRef = React.useRef<HTMLCanvasElement>(null);
 
     return (
@@ -29,6 +30,7 @@ const AnalysisResults = React.forwardRef<HTMLDivElement, AnalysisResultsProps>(
           selectedEvent={selectedEvent}
           analysisData={analysisData}
           ref={weightChartRef}
+          catWeights={catWeights}
         />
         <PhaseMarkers features={analysisData.features} />
       </div>

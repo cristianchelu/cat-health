@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { EventData, ProcessedEventData } from '../types';
 import { decodeRawData } from '../lib/binaryDecoder';
 import { extractFeatures } from '../lib/featureExtraction';
-import { getEventDataProp, filterLitterboxEvents } from '../lib/utils';
+import { filterLitterboxEvents, getLatestCatWeights } from '../lib/utils';
 
 export const useScatterData = (events: EventData[], selectedEvent: EventData | null) => {
   const litterboxEvents = useMemo(() => filterLitterboxEvents(events), [events]);
@@ -17,16 +17,18 @@ export const useScatterData = (events: EventData[], selectedEvent: EventData | n
     for (const event of litterboxEvents) {
       try {
         if (!event.raw_data || event.raw_data.length === 0) continue;
-        
+        const catWeights = getLatestCatWeights(events, event.timestamp);
         const decodedData = decodeRawData(event.raw_data);
         const weights = decodedData.measurements.map((m: { weight: number }) => m.weight);
-        const features = extractFeatures(weights);
-        const eliminationType = String(getEventDataProp(event.data, 'elimination_type') || 'unknown');
+        const features = extractFeatures(weights, catWeights);
+        const eliminationType = String(event.data?.elimination_type);
+        const stdDev = features.eliminationVariance || 0;
+        const detectedEliminationType = stdDev ? stdDev > 4 ? 'defecation' : 'urination' : 'unknown';
         
         processedEvents.push({
           event,
           features,
-          eliminationType
+          eliminationType: eliminationType || detectedEliminationType
         });
       } catch (err) {
         // Skip events that can't be processed
@@ -35,7 +37,7 @@ export const useScatterData = (events: EventData[], selectedEvent: EventData | n
     }
     
     return processedEvents;
-  }, [selectedEvent, litterboxEvents]);
+  }, [selectedEvent?.id, events]);
 
   return {
     litterboxEvents,

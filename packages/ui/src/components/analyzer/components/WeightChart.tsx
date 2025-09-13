@@ -1,12 +1,14 @@
 import * as React from "react";
 import { ChartJS } from '../lib/chartHelpers';
-import { detectPhasesWithEvents } from '../lib/phaseDetection';
 import type { EventData, Features, DecodedData } from '../types';
 import { cn } from "@/lib/utils";
 
-// Helper function to calculate rolling variance (imported from phaseDetection logic)
-const calculateRollingVariance = (weights: number[], windowSize: number = 10): number[] => {
+import "./WeightChart.css";
+import { LitterboxStateTracker } from "../lib/stateTracker";
+
+const calculateRollingVariance = (weights: number[], windowSize: number = 10): number[][] => {
   const variances: number[] = [];
+  const means: number[] = [];
   
   for (let i = 0; i < weights.length; i++) {
     // Post processing, center window
@@ -27,13 +29,13 @@ const calculateRollingVariance = (weights: number[], windowSize: number = 10): n
     const mean = window.reduce((sum, w) => sum + w, 0) / window.length;
     const variance = Math.sqrt(window.reduce((sum, w) => sum + Math.pow(w - mean, 2), 0) / window.length);
     variances.push(Math.min(variance, 300));
+    means.push(mean);
     // variances.push(variance)
   }
   
-  return variances;
+  return [variances, means];
 };
 
-import "./WeightChart.css";
 
 interface WeightChartProps {
   selectedEvent: EventData;
@@ -42,6 +44,7 @@ interface WeightChartProps {
     features: Features;
   };
   className?: string;
+  catWeights: number[]
 }
 
 // State color configuration
@@ -92,69 +95,13 @@ function createStateAnnotations(statePeriods: Array<{ state: string; start: numb
   return stateAnnotations;
 }
 
-/**
- * Creates phase marker annotations for the chart
- */
-function createPhaseAnnotations(phases: Features['phases']) {
-  return {
-    stepIn: {
-      type: 'line',
-      xMin: (phases.stepIn / 10).toFixed(1),
-      xMax: (phases.stepIn / 10).toFixed(1),
-      borderColor: 'blue',
-      borderWidth: 2,
-      label: {
-        display: true,
-        content: 'Step In',
-        position: 'start'
-      }
-    },
-    eliminationStart: {
-      type: 'line',
-      xMin: (phases.eliminationStart / 10).toFixed(1),
-      xMax: (phases.eliminationStart / 10).toFixed(1),
-      borderColor: 'orange',
-      borderWidth: 2,
-      label: {
-        display: true,
-        content: 'Elimination Start',
-        position: 'start'
-      }
-    },
-    eliminationEnd: {
-      type: 'line',
-      xMin: (phases.eliminationEnd / 10).toFixed(1),
-      xMax: (phases.eliminationEnd / 10).toFixed(1),
-      borderColor: 'red',
-      borderWidth: 2,
-      label: {
-        display: true,
-        content: 'Elimination End',
-        position: 'start'
-      }
-    },
-    stepOut: {
-      type: 'line',
-      xMin: (phases.stepOut / 10).toFixed(1),
-      xMax: (phases.stepOut / 10).toFixed(1),
-      borderColor: 'purple',
-      borderWidth: 2,
-      label: {
-        display: true,
-        content: 'Step Out',
-        position: 'start'
-      }
-    }
-  };
-}
-
 const WeightChart = React.forwardRef<HTMLCanvasElement, WeightChartProps>(
-  ({ selectedEvent, analysisData, className }, ref) => {
+  ({ selectedEvent, analysisData, className, catWeights }, ref) => {
     const chartInstanceRef = React.useRef<InstanceType<typeof ChartJS> | null>(null);
 
     React.useEffect(() => {
       if (!analysisData || !selectedEvent || !ref || typeof ref === 'function') return;
-      
+
       const canvas = ref.current;
       if (!canvas) return;
 
@@ -163,23 +110,22 @@ const WeightChart = React.forwardRef<HTMLCanvasElement, WeightChartProps>(
         chartInstanceRef.current.destroy();
         chartInstanceRef.current = null;
       }
-      
+
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
       const data = analysisData.decodedData;
-      const features = analysisData.features;
       const timeLabels = data.measurements.map((_, i) => (i / 10).toFixed(1));
       const weights = data.measurements.map((m: { weight: number }) => m.weight);
-      const phases = features.phases;
 
       // Calculate rolling variance
-      const rollingVariance = calculateRollingVariance(weights);
+      const [rollingVariance, /* rollingMeans */] = calculateRollingVariance(weights);
+      const [/* rollingVariance */, rollingMeans] = calculateRollingVariance(weights, 10);
 
       // Get state timeline and post-processed state periods for annotations
-      const result = detectPhasesWithEvents(weights);
-      // Use post-processed state periods for annotation regions
-      const statePeriods = result.finalStatePeriods || [];
+      const tracker = new LitterboxStateTracker(catWeights);
+      const result = tracker.processEvent(weights);
+      const statePeriods = result.periods;
       const stateAnnotations = createStateAnnotations(statePeriods);
 
       chartInstanceRef.current = new ChartJS(ctx, {
@@ -206,6 +152,16 @@ const WeightChart = React.forwardRef<HTMLCanvasElement, WeightChartProps>(
               pointRadius: 0,
               pointHoverRadius: 3,
               yAxisID: 'y1'
+            },
+            {
+              label: 'Rolling Mean',
+              data: rollingMeans,
+              borderColor: 'rgba(255, 205, 86, 1)',
+              backgroundColor: 'rgba(255, 205, 86, 0.2)',
+              tension: 0.1,
+              pointRadius: 0,
+              pointHoverRadius: 0,
+              yAxisID: 'y',
             }
           ]
         },
@@ -225,10 +181,9 @@ const WeightChart = React.forwardRef<HTMLCanvasElement, WeightChartProps>(
               display: true
             },
             annotation: {
-              // // @ts-expect-error - Chart.js annotation types are complex
               annotations: {
                 ...stateAnnotations,
-                // ...phaseAnnotations
+                // dc: dcAnnotation
               }
             }
           },

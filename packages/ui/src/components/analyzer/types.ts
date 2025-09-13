@@ -19,15 +19,6 @@ export interface DecodedData {
   };
 }
 
-export interface PhaseData {
-  entry: number;
-  stepIn: number;
-  eliminationStart: number;
-  eliminationEnd: number;
-  stepOut: number;
-  exit: number;
-}
-
 export interface Features {
   preEliminationDuration: number;
   eliminationDuration: number;
@@ -43,7 +34,6 @@ export interface Features {
   coveringSpectralEntropy: number;
   preEliminationVariance: number;
   eliminationRate: number;
-  phases: PhaseData;
 }
 
 export interface StateTransition {
@@ -75,16 +65,11 @@ export interface StateTimelineEntry {
   };
 }
 
-export interface PhaseDetectionResult {
-  phases: PhaseData;
-  catWeight: number;
-  events: {
-    entries: number;
-    exits: number;
-    hesitations: number;
-  };
-  stateTimeline: StateTimelineEntry[];
-  finalStatePeriods: Array<{ state: string; start: number; end: number }>;
+export interface StatePeriod {
+  state: string;
+  start: number;
+  end: number;
+  variance?: number;
 }
 
 export interface FeatureDimension {

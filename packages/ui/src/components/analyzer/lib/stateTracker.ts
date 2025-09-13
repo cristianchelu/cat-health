@@ -1,3 +1,5 @@
+import type { StatePeriod } from "../types";
+
 class Ring {
   private buf: number[];
   private i = 0;
@@ -13,6 +15,11 @@ class Ring {
     for (let k=0;k<this.filled;k++) { const d = this.buf[k]-m; s += d*d; }
     return s/(this.filled-1);
   }
+  every(fn: (v: number) => boolean): boolean {
+    return this.buf.every(fn);
+  }
+  first(): number | undefined { return this.filled ? this.buf[0] : undefined; }
+  last(): number | undefined { return this.filled ? this.buf[(this.i + this.n - 1) % this.n] : undefined; }
   size() { return this.filled; }
   toArray(): number[] { 
     const result: number[] = [];
@@ -27,16 +34,15 @@ class Ring {
 type StateResult = {
   state: string;
   catWeight: number;
-  events: { entries: number; exits: number; hesitations: number; shortExits?: number; eliminations?: number };
+  wasteWeight: number;
+  periods: StatePeriod[];
+  // events: { entries: number; exits: number; hesitations: number; shortExits?: number; eliminations?: number };
   // extras (optional)
-  eliminationBouts?: Array<{ start: number; end: number }>;
-  flags?: { suspectedStraining?: boolean };
+  // eliminationBouts?: Array<{ start: number; end: number }>;
+  // flags?: { suspectedStraining?: boolean };
 };
 
 type StateTransition = { from: string; to: string; index: number };
-
-// NEW: A type to represent a state over a period of time
-export type StatePeriod = { state: string; start: number; end: number, variance?: number };
 
 
 export class LitterboxStateTracker {
@@ -50,52 +56,51 @@ export class LitterboxStateTracker {
   };
 
   // Config (tune)
-  private hz = 10;                      // samples per second
-  private varStable = Math.sqrt(250);              // variance threshold for "stable" (updated from 200 to 250)
-  private stableMin = 1 * this.hz;           // min samples for a stable bout (1s)
-  private entryDeltaMin = 1200;         // grams, minimum rise to consider presence
-  private entryDeltaFrac = 0.22;        // fraction of known cat weight to consider presence
-  private presenceFrac = 0.28;          // fraction of cat weight regarded as "gone"
-  private exitHold = 6;                  // samples below presence threshold to consider exit onset
-  private reentryWindow = 15 * this.hz;      // samples allowed for re-entry (15s)
-  private maxSession = 10 * 60 * this.hz;    // 10 minutes at 10Hz
-  private minWasteDelta = 15;           // grams; if elimination bouts but < delta => suspected straining
-  private emaBaselineAlpha = 0.02;      // EMA smoothing for baseline when empty/gap
-  private knownPresenceTol = 0.10; // ±10% band for confirming presence
-
-
+  private hz = 10;                        // samples per second
+  private varStable = Math.sqrt(250);     // variance threshold for "stable" (updated from 200 to 250)
+  // private stableDur = 1 * this.hz;        // min samples for a stable bout (1s)
+  private stableMergeGap = 1.5 * this.hz; // max gap to merge stable bouts (1.5s)
+  private entryDeltaMin = 1200;           // grams, minimum rise to consider presence
+  private entryDeltaFrac = 0.22;          // fraction of known cat weight to consider presence
+  private presenceFrac = 0.28;            // fraction of cat weight regarded as "gone"
+  private exitHold = 6;                   // samples below presence threshold to consider exit onset
+  private reentryWindow = 15 * this.hz;   // samples allowed for re-entry (15s)
+  private maxSession = 10 * 60 * this.hz; // 10 minutes at 10Hz
+  // private minWasteDelta = 15;             // grams; if elimination bouts but < delta => suspected straining
+  private knownPresenceTol = 0.10;        // ±10% band for confirming presence
+  private windowSize = 10;
+  
   private currentState = this.states.EMPTY;
 
   // Known weights (from history), injected in constructor
   private knownCatWeights: number[];
 
   // Running buffers
-  private win1s = new Ring(10);         // 1s window at 10Hz
-  private weightHistory = new Ring(10); // 10-sample rolling window for variance calculation
-  private baseline = 0;                 // EMA baseline (tray + litter)
-  private preSessionBaseline = 0;
-  private postSessionBaseline = 0;
-
+  private window = new Ring(this.windowSize);        // 1s window at 10Hz
+  private weightHistory = new Ring(this.windowSize); // 10-sample rolling window for variance calculation
+  private meanHistory = new Ring(3);    // 3-sample rolling mean for baseline tracking
+  
   // Presence and stability trackers
   private exitBelowCnt = 0;
   private gapCnt = 0;
   private stableCnt = 0;
-
+  
   // Session
   private sessionActive = false;
   private sessionStartSample = 0;
   private currentSample = 0;
-
+  
   // Counters
-  private entries = 0;
-  private exits = 0;
-  private hesitations = 0;
-  private shortExits = 0;
-
-  // Elimination bouts
-  private eliminationBouts: Array<{ start: number; end?: number }> = [];
-
+  // private entries = 0;
+  // private exits = 0;
+  // private hesitations = 0;
+  // private shortExits = 0;
+  
+  // // Elimination bouts
+  // private eliminationBouts: Array<{ start: number; end?: number }> = [];
+  
   // Cat weight estimation
+  private wasteWeight = 0;
   private catWeight = 0;
   private bestStableWeight = 0;
   private bestStableDur = 0;
@@ -110,45 +115,37 @@ export class LitterboxStateTracker {
   }
 
   // Main API
-  processSample(weight: number, index: number): StateResult {
+  processSample(weight: number, index: number): void {
     this.currentSample = index;
 
     // Update windows
-    this.win1s.push(weight);
+    this.window.push(weight);
     this.weightHistory.push(weight);
     
-    const mean1s = this.win1s.mean();
-    
+    const mean1s = this.window.mean();
+    this.meanHistory.push(mean1s);
+
     // Calculate 10-sample rolling variance using the enhanced method
     const var10sample = Math.sqrt(this.weightHistory.variance());
     
     const stableNow = (var10sample > 0 && var10sample < this.varStable);
-    const rel = Math.max(0, mean1s - this.baseline);
-
-    // Update baseline only when we think tray is empty or during gap and mean is near baseline
-    if (this.currentState === this.states.EMPTY || this.currentState === this.states.GAP) {
-      // Gentle EMA towards observed mean when it's not obviously a presence
-      const closeToBaseline = Math.abs(mean1s - this.baseline) < 600;
-      if (this.win1s.size() >= 5 && closeToBaseline) {
-        this.baseline = this.baseline === 0 ? mean1s : (1 - this.emaBaselineAlpha) * this.baseline + this.emaBaselineAlpha * mean1s;
-      }
-    }
 
     // Session timeout
     if (this.sessionActive && (this.currentSample - this.sessionStartSample) > this.maxSession) {
-      return this.endSession();
+      // return this.endSession();
+      return;
     }
 
     // Presence thresholds
     const entryDelta = this.entryThreshold();
-    const presenceThreshold = this.catWeight > 0 ? this.catWeight * this.presenceFrac : entryDelta * 0.6;
+    const presenceThreshold = this.catWeight > 0 ? this.catWeight * this.presenceFrac : entryDelta;
 
     // State machine
     switch (this.currentState) {
       case this.states.EMPTY: {
-        if (mean1s - this.baseline > entryDelta) {
+        if (mean1s > entryDelta) {
           this.startSession();
-          this.entries++;
+          // this.entries++;
           this.transitionTo(this.states.ENTERING);
         }
         break;
@@ -156,56 +153,50 @@ export class LitterboxStateTracker {
 
       case this.states.ENTERING: {
         // Not “fully inside” yet
-        if (!this.confirmPresence(rel)) {
+        if (!this.confirmPresence(mean1s)) {
           // Backed off toward baseline → hesitation, abort entry
-          if (rel < 0.5 * this.entryThreshold()) {
-            this.hesitations++;
-            this.transitionTo(this.states.EMPTY);
+          if (mean1s < 0.5 * this.entryThreshold()) {
+            // this.hesitations++;
+            this.transitionTo(this.states.GAP, this.windowSize/2);
           }
           // If presence is not confirmed, we stay in ENTERING and wait for more weight.
           break;
         }
 
         // Presence IS confirmed. Now, check for stability.
-        if (stableNow) {
-          this.stableCnt++;
-          if (this.nearKnownCatWeight(mean1s)) {
-            this.onStablePlateau(mean1s, this.stableCnt);
-            this.transitionTo(this.states.ELIMINATING);
-            this.beginEliminationIfNeeded();
-          } else {
-            this.transitionTo(this.states.OCCUPIED);
-          }
+        // const oldest = this.meanHistory.first();
+        // const newest = this.meanHistory.last() || Infinity;
+        // const meanSlope = newest && oldest ? newest - oldest : Infinity;
+        if (this.meanHistory.variance() < 10 && this.meanHistory.every(m => this.nearKnownCatWeight(m))) {
+          this.transitionTo(this.states.OCCUPIED, this.windowSize/2);
         } else {
           // If not stable, the cat is moving around. Reset stability counter and go to OCCUPIED.
           this.stableCnt = 0;
-          this.transitionTo(this.states.OCCUPIED);
+          // this.transitionTo(this.states.OCCUPIED);
         }
         break;
       }
 
       case this.states.OCCUPIED: {
-        if (stableNow) {
-          this.stableCnt++;
-          const plateau = mean1s;
-          this.onStablePlateau(plateau, this.stableCnt);
+        if (stableNow) { 
           if (this.nearKnownCatWeight(mean1s)) {
             this.transitionTo(this.states.ELIMINATING);
-            this.beginEliminationIfNeeded();
           }
-        } else {
-          this.stableCnt = 0;
         }
 
         // Exit detection
-        if (this.catWeight > 0 && (this.catWeight - Math.max(mean1s - this.baseline, 0)) > presenceThreshold) {
+        if (weight < entryDelta) {
+          this.transitionTo(this.states.GAP, this.windowSize);
+          this.exitBelowCnt = 0;
+          break;
+        }
+        if (this.catWeight > 0 && (this.catWeight - mean1s) > presenceThreshold) {
           this.exitBelowCnt++;
           if (this.exitBelowCnt >= this.exitHold) {
             this.exitBelowCnt = 0;
             this.gapCnt = 0;
-            this.exits++;
-            this.transitionTo(this.states.GAP);
-            this.endEliminationIfNeeded();
+            // this.exits++;
+            this.transitionTo(this.states.GAP, this.windowSize);
           }
         } else {
           this.exitBelowCnt = 0;
@@ -217,23 +208,18 @@ export class LitterboxStateTracker {
         // While stable => keep bout open and keep best estimate
         if (stableNow) {
           this.stableCnt++;
-          const plateau = mean1s;
-          this.onStablePlateau(plateau, this.stableCnt);
         } else {
-          // End stable phase -> return to occupied
+          this.updateCatWeightEstimate(mean1s, this.stableCnt);
           this.stableCnt = 0;
           this.transitionTo(this.states.OCCUPIED);
-          this.endEliminationIfNeeded();
         }
 
         // Exit while eliminating
-        if (this.catWeight > 0 && (this.catWeight - Math.max(mean1s - this.baseline, 0)) > presenceThreshold) {
+        if (this.catWeight > 0 && (this.catWeight - mean1s) > presenceThreshold) {
           this.exitBelowCnt++;
           if (this.exitBelowCnt >= this.exitHold) {
             this.exitBelowCnt = 0;
             this.gapCnt = 0;
-            this.exits++;
-            this.endEliminationIfNeeded();
             this.transitionTo(this.states.GAP);
           }
         } else {
@@ -246,44 +232,51 @@ export class LitterboxStateTracker {
         this.gapCnt++;
 
         // Re-entry within window: short exit (covering or hop out/in)
-        if (mean1s - this.baseline > entryDelta) {
-          this.entries++;
-          this.shortExits++;
+        if (mean1s > entryDelta) {
+          // this.entries++;
+          // this.shortExits++;
           // Consider whether it re-enters directly into eliminating or moving
           if (stableNow) {
-            const plateau = mean1s;
-            this.onStablePlateau(plateau, 1);
             if (this.nearKnownCatWeight(mean1s)) {
               this.transitionTo(this.states.ELIMINATING);
-              this.beginEliminationIfNeeded();
             }
           } else {
-            this.transitionTo(this.states.OCCUPIED);
+            this.transitionTo(this.states.ENTERING);
           }
         } else if (this.gapCnt > this.reentryWindow) {
           // No re-entry: end session
-          return this.endSession();
+          this.wasteWeight = weight;
+          // return this.endSession();
+          return;
         }
         break;
       }
 
       case this.states.ENDED: {
-        return this.getSessionSummary();
+        // return this.getSessionSummary();
+        return;
       }
     }
 
-    return this.getPartial();
+    // return this.getPartial();
   }
 
   // --- internals ---
-
+  private updateCatWeightEstimate(stableWeight: number, durationSamples: number): void {
+    if (durationSamples > this.bestStableDur) {
+      this.bestStableDur = durationSamples;
+      this.bestStableWeight = stableWeight;
+    }
+    if (this.catWeight <= 0) this.catWeight = this.bestStableWeight;
+    else this.catWeight = 0.9 * this.catWeight + 0.1 * this.bestStableWeight;
+  }
   /**
    * NEW: Post-processes the transition history to create a cleaned-up sequence of state periods.
    * 1. Merges ELIMINATING -> OCCUPIED -> ELIMINATING where OCCUPIED is < 1s.
    * 2. Removes ELIMINATING periods < 10s by re-classifying them as OCCUPIED.
    * 3. Merges any adjacent, identical states.
    */
-  public postProcessTransitions(): StatePeriod[] {
+  private postProcessTransitions(): StatePeriod[] {
     if (!this.transitions.length) {
       return [];
     }
@@ -305,7 +298,6 @@ export class LitterboxStateTracker {
     // DEBUG: Return initial periods
     // return initialPeriods;
     // 2. Merge short OCCUPIED gaps between ELIMINATING states
-    const shortOccupiedGap = 1 * this.hz;
     for (let i = 1; i < initialPeriods.length - 1; i++) {
         const prev = initialPeriods[i-1];
         const curr = initialPeriods[i];
@@ -314,7 +306,7 @@ export class LitterboxStateTracker {
             prev.state === this.states.ELIMINATING &&
             curr.state === this.states.OCCUPIED &&
             next.state === this.states.ELIMINATING &&
-            (curr.end - curr.start) < shortOccupiedGap
+            (curr.end - curr.start) < this.stableMergeGap
         ) {
             // Extend the first eliminating period to cover the gap and the next period
             prev.end = next.end;
@@ -354,31 +346,38 @@ export class LitterboxStateTracker {
 
   // UPDATED: Uses post-processed transition data
   private getSessionSummary(): StateResult {
-    // Process the transition log to get clean state periods
     const finalStatePeriods = this.postProcessTransitions();
-    
-    // Filter to get just the final, valid elimination bouts
-    const completedBouts = finalStatePeriods.filter(p => p.state === this.states.ELIMINATING);
-
-    const stableBouts = completedBouts.filter(b => (b.end - b.start) >= this.stableMin);
-    const postBase = this.postSessionBaseline || this.baseline;
-    const wasteDelta = postBase - this.preSessionBaseline;
-    const suspectedStraining = (stableBouts.length >= 2) && (wasteDelta < this.minWasteDelta);
-
     return {
       state: this.states.ENDED,
       catWeight: this.catWeight || this.bestStableWeight,
-      events: {
-        entries: this.entries,
-        exits: this.exits,
-        hesitations: this.hesitations,
-        shortExits: this.shortExits,
-        eliminations: completedBouts.length
-      },
-      eliminationBouts: completedBouts,
-      flags: { suspectedStraining }
+      wasteWeight: this.wasteWeight,
+      periods: finalStatePeriods,
     };
   }
+
+  public processEvent(weights: number[]): StateResult {
+    this.reset();
+    for (let i = 0; i < weights.length; i++) {
+      this.processSample(weights[i], i);
+    }
+    const result = this.getSessionSummary();
+
+    result.periods.forEach(period => {
+      // exclude ends
+      const buffer = 10;
+      const periodWeights = weights.slice(period.start + buffer, period.end + 1 - (buffer));
+      if (periodWeights.length < 2) {
+        period.variance = undefined;
+        return;
+      }
+      const mean = periodWeights.reduce((sum, w) => sum + w, 0) / periodWeights.length;
+      const variance = periodWeights.reduce((sum, w) => sum + Math.pow(w - mean, 2), 0) / periodWeights.length;
+      period.variance = Math.sqrt(variance);
+    });
+
+    return result;
+  };
+
   private entryThreshold(): number {
     // Dynamic entry delta using known weights if available (20–30% of the smallest known)
     const minKnown = this.knownCatWeights.length ? this.knownCatWeights[0] : 0;
@@ -386,40 +385,14 @@ export class LitterboxStateTracker {
     return frac;
   }
 
-  private onStablePlateau(stableWeight: number, durationSamples: number): void {
-    const rel = Math.max(0, stableWeight - this.baseline);
-
-    if (durationSamples > this.bestStableDur) {
-      this.bestStableDur = durationSamples;
-      this.bestStableWeight = rel;
-    }
-    if (this.catWeight <= 0) this.catWeight = this.bestStableWeight;
-    else this.catWeight = 0.9 * this.catWeight + 0.1 * this.bestStableWeight;
-  }
-
-  private beginEliminationIfNeeded(): void {
-    const last = this.eliminationBouts[this.eliminationBouts.length - 1];
-    if (!last || last.end !== undefined) {
-      this.eliminationBouts.push({ start: this.currentSample });
-    }
-  }
-
-  private endEliminationIfNeeded(): void {
-    const last = this.eliminationBouts[this.eliminationBouts.length - 1];
-    if (last && last.end === undefined) {
-      last.end = this.currentSample;
-    }
-  }
-
   private startSession(): void {
     this.sessionActive = true;
     this.sessionStartSample = this.currentSample;
-    this.preSessionBaseline = this.baseline;
-    this.entries = 0;
-    this.exits = 0;
-    this.hesitations = 0;
-    this.shortExits = 0;
-    this.eliminationBouts = [];
+    // this.entries = 0;
+    // this.exits = 0;
+    // this.hesitations = 0;
+    // this.shortExits = 0;
+    // this.eliminationBouts = [];
     this.catWeight = 0;
     this.bestStableWeight = 0;
     this.bestStableDur = 0;
@@ -435,31 +408,28 @@ export class LitterboxStateTracker {
     this.sessionActive = false;
     this.transitionTo(this.states.ENDED);
     // Close any open bout. This ensures the raw transition data is complete.
-    this.endEliminationIfNeeded();
-
-    // Final baseline: capture the baseline at the moment the session is declared over.
-    this.postSessionBaseline = this.baseline;
+    // this.endEliminationIfNeeded();
      
     // Now get the final summary, which includes the post-processing step.
     return this.getSessionSummary();
   }
 
-  private getPartial(): StateResult {
-    return {
-      state: this.currentState,
-      catWeight: this.catWeight || this.bestStableWeight,
-      events: {
-        entries: this.entries,
-        exits: this.exits,
-        hesitations: this.hesitations,
-        shortExits: this.shortExits,
-        // Raw count during session
-        eliminations: this.eliminationBouts.length
-      }
-    };
-  }
+  // private getPartial(): StateResult {
+  //   return {
+  //     state: this.currentState,
+  //     catWeight: this.catWeight || this.bestStableWeight,
+  //     events: {
+  //       entries: this.entries,
+  //       exits: this.exits,
+  //       hesitations: this.hesitations,
+  //       shortExits: this.shortExits,
+  //       // Raw count during session
+  //       eliminations: this.eliminationBouts.length
+  //     }
+  //   };
+  // }
 
-  private transitionTo(newState: string): void {
+  private transitionTo(newState: string, offset?: number): void {
     if (this.currentState !== newState) {
       // Don't record transitions back to EMPTY during a session - startSession handles the log
       if (this.sessionActive && newState === this.states.EMPTY) {
@@ -471,17 +441,17 @@ export class LitterboxStateTracker {
         return;
       }
 
-      this.transitions.push({ from: this.currentState, to: newState, index: this.currentSample });
+      this.transitions.push({ from: this.currentState, to: newState, index: this.currentSample - (offset || 0) });
       this.currentState = newState;
     }
   }
 
   // Optional getters
-  getCatWeight(): number { return this.catWeight || this.bestStableWeight; }
-  getEvents(): { entries: number; exits: number; hesitations: number; shortExits: number; eliminations: number } {
-    return { entries: this.entries, exits: this.exits, hesitations: this.hesitations, shortExits: this.shortExits, eliminations: this.eliminationBouts.length };
-  }
-  getTransitions(): StateTransition[] { return this.transitions.slice(); }
+  // getCatWeight(): number { return this.catWeight || this.bestStableWeight; }
+  // getEvents(): { entries: number; exits: number; hesitations: number; shortExits: number; eliminations: number } {
+  //   return { entries: this.entries, exits: this.exits, hesitations: this.hesitations, shortExits: this.shortExits, eliminations: this.eliminationBouts.length };
+  // }
+  // getTransitions(): StateTransition[] { return this.transitions.slice(); }
 
   private nearKnownCatWeight(delta: number, tolFrac = this.knownPresenceTol): boolean {
     if (!this.knownCatWeights.length) return false;
@@ -500,15 +470,14 @@ export class LitterboxStateTracker {
   reset(): void {
     this.currentState = this.states.EMPTY;
     this.sessionActive = false;
-    this.win1s = new Ring(10);
+    this.window = new Ring(10);
     this.weightHistory = new Ring(10);
-    this.baseline = 0;
-    this.preSessionBaseline = 0;
-    this.postSessionBaseline = 0;
-    this.entries = 0; this.exits = 0; this.hesitations = 0; this.shortExits = 0;
-    this.eliminationBouts = [];
-    this.catWeight = 0; this.bestStableWeight = 0; this.bestStableDur = 0;
+    // this.entries = 0; this.exits = 0; this.hesitations = 0; this.shortExits = 0;
+    // this.eliminationBouts = [];
+    this.catWeight = 0; this.bestStableWeight = 0; 
+    this.bestStableDur = 0;
     this.exitBelowCnt = 0; this.gapCnt = 0; this.stableCnt = 0;
     this.transitions = [];
+    this.wasteWeight = 0;
   }
 }

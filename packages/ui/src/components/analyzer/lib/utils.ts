@@ -2,11 +2,6 @@ import * as React from "react";
 import { FaTint, FaPoop, FaQuestion, FaGift } from 'react-icons/fa';
 import type { EventData } from '../types';
 
-// Helper to safely get event data properties
-export const getEventDataProp = (data: Record<string, unknown>, key: string): unknown => {
-  return data[key];
-};
-
 // Helper to get elimination type icon
 export const getEliminationIcon = (eliminationType: string): React.ReactElement => {
   switch (eliminationType) {
@@ -47,3 +42,22 @@ export const filterLitterboxEvents = (events: EventData[]): EventData[] => {
     event.raw_data.length > 0
   );
 };
+
+const defaultCats = [6600, 4700];
+export const getLatestCatWeights = (events: EventData[], cutoff?: string) => {
+  const weightEventsByPet = events
+    .filter((e) => e.data.type === "weight_measurement")
+    .filter((e) => !cutoff || new Date(e.timestamp) <= new Date(cutoff))
+    .reduce((acc, event) => {
+      const petId = event.data.pet_id as number;
+      if (!acc[petId]) {
+        acc[petId] = [];
+      }
+      acc[petId].push(event);
+      return acc;
+    }, {} as Record<number, typeof events>);
+    return [
+    weightEventsByPet[0]?.[0]?.data.weight as number || defaultCats[0],
+    weightEventsByPet[1]?.[0]?.data.weight as number || defaultCats[1],
+  ];
+}

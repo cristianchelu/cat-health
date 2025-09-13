@@ -1,5 +1,5 @@
-import type { Features, FeatureDimension } from '../types';
-import { detectPhasesWithEvents } from './phaseDetection';
+import type { Features, FeatureDimension, StatePeriod } from '../types';
+import { LitterboxStateTracker } from './stateTracker';
 
 // Helper functions for feature extraction
 export const calculateFilteredVariance = (signal: number[], outlierPercentile = 95): number => {
@@ -62,17 +62,17 @@ export const countPeaks = (signal: number[], prominence = 20): number => {
 };
 
 // Calculate features with state machine approach
-export const extractFeatures = (weights: number[], sampleRate = 10): Features => {
-  const result = detectPhasesWithEvents(weights);
-  const phases = result.phases;
+export const extractFeatures = (weights: number[], cats: number[], sampleRate = 10): Features => {
+  const tracker = new LitterboxStateTracker(cats);
+  const result = tracker.processEvent(weights);
   const timeStep = 1 / sampleRate;
 
   const features: Features = {
-    preEliminationDuration: (phases.eliminationStart - phases.stepIn) * timeStep,
-    eliminationDuration: (phases.eliminationEnd - phases.eliminationStart) * timeStep,
-    coveringDuration: (phases.stepOut - phases.eliminationEnd) * timeStep,
-    totalDuration: (phases.stepOut - phases.stepIn) * timeStep,
-    
+    preEliminationDuration: 0,//(phases.eliminationStart - phases.stepIn) * timeStep,
+    eliminationDuration: 0,//(phases.eliminationEnd - phases.eliminationStart) * timeStep,
+    coveringDuration: 0,//(phases.stepOut - phases.eliminationEnd) * timeStep,
+    totalDuration: weights.length * timeStep,
+
     wasteWeight: weights[weights.length - 1],
     maxWeight: Math.max(...weights),
     initialWeight: weights[0],
@@ -84,58 +84,20 @@ export const extractFeatures = (weights: number[], sampleRate = 10): Features =>
     preEliminationVariance: 0,
     eliminationRate: 0,
     eliminationVariance: 0,
-    
-    phases
   };
   
   features.eliminationRate = features.eliminationDuration > 0 ? 
     features.wasteWeight / features.eliminationDuration : 0;
-  
-  // Calculate covering variance with outlier filtering
-  if (phases.eliminationEnd < phases.stepOut) {
-    const coveringSignal = weights.slice(phases.eliminationEnd, phases.stepOut);
-    if (coveringSignal.length > 0) {
-      features.coveringVariance = calculateFilteredVariance(coveringSignal);
-      features.coveringFluctuations = countPeaks(coveringSignal);
-      features.coveringSpectralEntropy = calculateSpectralEntropy(coveringSignal);
-    }
-  }
-  
-  // Calculate pre-elimination variance
-  if (phases.eliminationStart > phases.stepIn) {
-    const preSignal = weights.slice(phases.stepIn, phases.eliminationStart);
-    if (preSignal.length > 0) {
-      features.preEliminationVariance = calculateFilteredVariance(preSignal);
-    }
-  }
 
-  // Calculate elimination variance
+  const eliminations = result.periods.filter(p => p.state === 'eliminating').filter(p => (p.variance || 0) < 1000); // Exclude high variance eliminations likely due to noise
 
-  // const hasOneElimination = result.finalStatePeriods.filter(p => p.state === 'eliminating').length === 1;
-  // const elimination = hasOneElimination ? result.finalStatePeriods.find(p => p.state === 'eliminating') : null;
-  // if (elimination) {
-  //   const eliminationSignal = weights.slice(elimination.start, elimination.end + 1);
-  //   if (eliminationSignal.length > 0) {
-  //     features.eliminationVariance = calculateFilteredVariance(eliminationSignal);
-  //   }
-  // }
-
-  const eliminations = result.finalStatePeriods.filter(p => p.state === 'eliminating').map(p=>{
-    const buffer = 10;
-    const start = p.start + buffer;
-    const end = p.end - buffer;
-    return {
-      ...p,
-      variance: calculateFilteredVariance(weights.slice(start, end + 1))
-    }
-  }).filter(p => p.variance < 1000); // Exclude high variance eliminations likely due to noise
-
-  const chooseLongest = (candidates: Array<{start: number, end: number, variance: number}>) => {
+  const chooseLongest = (candidates: Array<StatePeriod>) => {
     return candidates.reduce((a, b) => (b.end - b.start) > (a.end - a.start) ? b : a);
   };
+
   // If multiple elimination candidates, choose the one with the highest
   // variance "walls" 1second before and after.
-  const chooseHighestNeighboringVariance = (candidates: Array<{start: number, end: number, variance: number}>) => {
+  const chooseHighestNeighboringVariance = (candidates: Array<StatePeriod>) => {
     return candidates.reduce((a, b) => {
       const aNeighbors = weights.slice(a.start - 1, a.end + 2);
       const bNeighbors = weights.slice(b.start - 1, b.end + 2);
@@ -145,7 +107,7 @@ export const extractFeatures = (weights: number[], sampleRate = 10): Features =>
     });
   };
 
-  const chooseSymmetricHighestNeighboringVariance = (candidates: Array<{start: number, end: number, variance: number}>) => {
+  const chooseSymmetricHighestNeighboringVariance = (candidates: Array<StatePeriod>) => {
     return candidates.reduce((a, b) => {
       const aNeighbors = weights.slice(a.start - 1, a.end + 2);
       const bNeighbors = weights.slice(b.start - 1, b.end + 2);
@@ -163,13 +125,32 @@ export const extractFeatures = (weights: number[], sampleRate = 10): Features =>
 
   
   if (eliminations.length > 0) {
-    const selected = sectionSelectionStrategy['longest'](eliminations);
-
-    features.eliminationVariance = selected.variance;
-    features.eliminationDuration = (selected.end - selected.start) * timeStep;
-    features.eliminationRate = features.eliminationDuration > 0 ? 
+    const elimination = sectionSelectionStrategy['longest'](eliminations);
+    features.eliminationVariance = elimination.variance ?? 0;
+    features.eliminationDuration = (elimination.end - elimination.start) * timeStep;
+    features.eliminationRate = features.eliminationDuration > 0 ?
       features.wasteWeight / features.eliminationDuration : 0;
   }
+
+  // TODO: Convert to use state periods
+
+  // // Calculate covering variance with outlier filtering
+  // if (phases.eliminationEnd < phases.stepOut) {
+  //   const coveringSignal = weights.slice(phases.eliminationEnd, phases.stepOut);
+  //   if (coveringSignal.length > 0) {
+  //     features.coveringVariance = calculateFilteredVariance(coveringSignal);
+  //     features.coveringFluctuations = countPeaks(coveringSignal);
+  //     features.coveringSpectralEntropy = calculateSpectralEntropy(coveringSignal);
+  //   }
+  // }
+  
+  // Calculate pre-elimination variance
+  // if (phases.eliminationStart > phases.stepIn) {
+  //   const preSignal = weights.slice(phases.stepIn, phases.eliminationStart);
+  //   if (preSignal.length > 0) {
+  //     features.preEliminationVariance = calculateFilteredVariance(preSignal);
+  //   }
+  // }
 
   return features;
 };
