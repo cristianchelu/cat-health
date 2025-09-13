@@ -45,6 +45,12 @@ export class WeightMeasurementMigrator implements EventMigrator {
             continue;
           }
 
+          if (measurement.weight <= 0) {
+            console.warn(`Skipping invalid weight measurement at ${measurement.timestamp.toISOString()} with weight ${measurement.weight}`);
+            stats.errors++;
+            continue;
+          }
+
           newEvents.push(this.createWeightEvent(measurement, petId));
         }
       }
