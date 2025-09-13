@@ -196,7 +196,7 @@ export class LitterboxStateTracker {
             this.exitBelowCnt = 0;
             this.gapCnt = 0;
             // this.exits++;
-            this.transitionTo(this.states.GAP, this.windowSize);
+            this.transitionTo(this.states.ENTERING, this.windowSize);
           }
         } else {
           this.exitBelowCnt = 0;

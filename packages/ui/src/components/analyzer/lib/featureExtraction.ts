@@ -84,6 +84,8 @@ export const extractFeatures = (weights: number[], cats: number[], sampleRate = 
     preEliminationVariance: 0,
     eliminationRate: 0,
     eliminationVariance: 0,
+
+    periods: result.periods,
   };
   
   features.eliminationRate = features.eliminationDuration > 0 ? 
@@ -126,31 +128,38 @@ export const extractFeatures = (weights: number[], cats: number[], sampleRate = 
   
   if (eliminations.length > 0) {
     const elimination = sectionSelectionStrategy['longest'](eliminations);
-    features.eliminationVariance = elimination.variance ?? 0;
+    const elimSignal = weights.slice(elimination.start, elimination.end);
+    features.eliminationVariance = calculateFilteredVariance(elimSignal);//elimination.variance ?? 0;
     features.eliminationDuration = (elimination.end - elimination.start) * timeStep;
     features.eliminationRate = features.eliminationDuration > 0 ?
       features.wasteWeight / features.eliminationDuration : 0;
+
+    // Find preSignal: last occupied before elimination
+    const occupiedBefore = result.periods
+      .filter(p => p.state === 'occupied' && p.end <= elimination.start);
+    const preSignalPeriod = occupiedBefore.length > 0 ? occupiedBefore[occupiedBefore.length - 1] : undefined;
+    if (preSignalPeriod) {
+      const preSignal = weights.slice(preSignalPeriod.start, preSignalPeriod.end);
+      if (preSignal.length > 0) {
+        features.preEliminationVariance = calculateFilteredVariance(preSignal);
+        features.preEliminationDuration = (preSignalPeriod.end - preSignalPeriod.start) * timeStep;
+      }
+    }
+
+    // Find coveringSignal: first occupied after elimination
+    const occupiedAfter = result.periods
+      .filter(p => p.state === 'occupied' && p.start >= elimination.end);
+    const coveringSignalPeriod = occupiedAfter.length > 0 ? occupiedAfter[0] : undefined;
+    if (coveringSignalPeriod) {
+      const coveringSignal = weights.slice(coveringSignalPeriod.start, coveringSignalPeriod.end);
+      if (coveringSignal.length > 0) {
+        features.coveringVariance = calculateFilteredVariance(coveringSignal);
+        features.coveringFluctuations = countPeaks(coveringSignal);
+        features.coveringSpectralEntropy = calculateSpectralEntropy(coveringSignal);
+        features.coveringDuration = (coveringSignalPeriod.end - coveringSignalPeriod.start) * timeStep;
+      }
+    }
   }
-
-  // TODO: Convert to use state periods
-
-  // // Calculate covering variance with outlier filtering
-  // if (phases.eliminationEnd < phases.stepOut) {
-  //   const coveringSignal = weights.slice(phases.eliminationEnd, phases.stepOut);
-  //   if (coveringSignal.length > 0) {
-  //     features.coveringVariance = calculateFilteredVariance(coveringSignal);
-  //     features.coveringFluctuations = countPeaks(coveringSignal);
-  //     features.coveringSpectralEntropy = calculateSpectralEntropy(coveringSignal);
-  //   }
-  // }
-  
-  // Calculate pre-elimination variance
-  // if (phases.eliminationStart > phases.stepIn) {
-  //   const preSignal = weights.slice(phases.stepIn, phases.eliminationStart);
-  //   if (preSignal.length > 0) {
-  //     features.preEliminationVariance = calculateFilteredVariance(preSignal);
-  //   }
-  // }
 
   return features;
 };

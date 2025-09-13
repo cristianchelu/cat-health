@@ -34,6 +34,8 @@ export interface Features {
   coveringSpectralEntropy: number;
   preEliminationVariance: number;
   eliminationRate: number;
+
+  periods: StatePeriod[];
 }
 
 export interface StateTransition {

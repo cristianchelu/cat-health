@@ -10,13 +10,21 @@ interface PhaseMarkersProps {
 
 const PhaseMarkers = React.forwardRef<HTMLDivElement, PhaseMarkersProps>(
   ({ features, className }, ref) => {
-    // const { phases } = features;
+    const { periods } = features;
     
     return (
       <div 
         className={`phase-markers${className ? ` ${className}` : ''}`}
         ref={ref}
       >
+        <h4>Detected Phases - Enhanced Session Analysis:</h4>
+        <div className="phase-markers-grid">
+          {periods.map((period) => (
+            <span key={period.start} className={`phase-marker state-${period.state}`}>
+              {period.state.charAt(0).toUpperCase() + period.state.slice(1)}: {((period.end - period.start) / 10).toFixed(1)}s ({period.variance !== undefined ? `Var: ${period.variance.toFixed(2)}` : 'Var: N/A'})
+            </span>
+          ))}
+        </div>
         <div className="metrics-row">
           <span className="metric">
             Total: <strong>{features.totalDuration.toFixed(1)}s</strong>
