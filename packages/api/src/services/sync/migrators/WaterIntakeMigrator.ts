@@ -15,7 +15,7 @@ interface DrinkEvent {
   startTime: Date;
   endTime: Date;
   amount: number; // in ml
-  durationMs: number;
+  duration: number;
 }
 
 export class WaterIntakeMigrator implements EventMigrator {
@@ -57,7 +57,7 @@ export class WaterIntakeMigrator implements EventMigrator {
 
         const newDbEvent = this.createDbEvent(drink);
         newEvents.push(newDbEvent);
-        console.log(`Prepared new event at ${drink.startTime.toISOString()}: ${drink.durationMs}ms, ${drink.amount}ml`);
+        console.log(`Prepared new event at ${drink.startTime.toISOString()}: ${drink.duration}ms, ${drink.amount}ml`);
       }
 
       // 3. Batch insert new events
@@ -151,10 +151,10 @@ export class WaterIntakeMigrator implements EventMigrator {
           startTime,
           endTime,
           amount: record.amount,
-          durationMs,
+          duration: record.duration,
         };
       })
-      .filter(event => event.durationMs >= WaterIntakeMigrator.MIN_EVENT_DURATION_MS);
+      .filter(event => event.duration >= WaterIntakeMigrator.MIN_EVENT_DURATION_MS);
   }
 
   private createDbEvent(drink: DrinkEvent): NewEvent {
@@ -166,30 +166,10 @@ export class WaterIntakeMigrator implements EventMigrator {
       data: {
         type: "water_intake",
         amount: drink.amount,
+        duration: drink.duration
       },
-      raw_data: this.encodeRawData(drink.startTime, drink.durationMs, drink.amount),
       human_verified: false,
     };
-  }
-
-  private encodeRawData(startTime: Date, durationMs: number, amount: number): Buffer {
-    // Binary encoding: [version:1byte][startTimestamp:8bytes][duration:4bytes][amount:4bytes]
-    const version = 1;
-    const buffer = Buffer.allocUnsafe(1 + 8 + 4 + 4);
-
-    let offset = 0;
-    buffer.writeUInt8(version, offset);
-    offset += 1;
-
-    buffer.writeBigUInt64BE(BigInt(startTime.getTime()), offset);
-    offset += 8;
-
-    buffer.writeUInt32BE(durationMs, offset);
-    offset += 4;
-
-    buffer.writeFloatBE(amount, offset);
-    
-    return buffer;
   }
 
   private logStats(stats: MigrationStats): void {

@@ -8,6 +8,7 @@ export interface WeightMeasurementEventData {
 export interface WaterIntakeEventData {
   type: "water_intake";
   amount: number;
+  duration?: number;
 }
 
 export interface LitterboxUseEventData {
