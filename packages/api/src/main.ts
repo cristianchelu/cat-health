@@ -5,8 +5,7 @@ import fastifyStatic from "@fastify/static";
 import path from "node:path";
 import { config } from "dotenv";
 
-// Load environment variables
-config();
+config({ path: path.resolve(import.meta.dirname, "../../../.env") });
 
 import { migrateToLatest } from "./database/migrate.ts";
 import { db } from "./database/index.ts";
@@ -55,18 +54,23 @@ await fastify.register(cors, {
 });
 
 // Serve video recordings statically
-const recordingsDir = path.resolve(import.meta.dirname, "../data/recordings");
+const recordingsDir = path.resolve(import.meta.dirname, "../../../data/recordings");
 await fastify.register(fastifyStatic, {
   root: recordingsDir,
-  prefix: "/recordings/",
+  prefix: "/api/recordings/",
 });
 
-fastify.register(petRoutes, { prefix: "/pets" });
-fastify.register(eventRoutes, { prefix: "/events" });
-fastify.register(deviceRoutes, { prefix: "/devices" });
+fastify.register(petRoutes, { prefix: "/api/pets" });
+fastify.register(eventRoutes, { prefix: "/api/events" });
+fastify.register(deviceRoutes, { prefix: "/api/devices" });
+
+// Healthcheck endpoint
+fastify.get("/api/healthcheck", async (request, reply) => {
+  return reply.send({ status: "ok" });
+});
 
 // Migration endpoint
-fastify.post("/migrate", async (request, reply) => {
+fastify.post("/api/migrate", async (request, reply) => {
   try {
     const syncService = new SyncService(db);
     
@@ -100,7 +104,7 @@ fastify.post("/migrate", async (request, reply) => {
 });
 
 // Get available migrators
-fastify.get("/migrate/migrators", async (request, reply) => {
+fastify.get("/api/migrate/migrators", async (request, reply) => {
   try {
     const syncService = new SyncService(db);
     const availableMigrators = syncService.getAvailableMigrators();
@@ -121,10 +125,23 @@ fastify.get("/migrate/migrators", async (request, reply) => {
   }
 });
 
+const spaDistDir = path.resolve(import.meta.dirname, "../../ui/dist");
 fastify.register(fastifyStatic, {
-  root: path.join(import.meta.dirname, "../public"),
+  root: spaDistDir,
   prefix: "/",
   decorateReply: false,
+});
+
+fastify.setNotFoundHandler((request, reply) => {
+  // Only fallback for GET requests not starting with /api or /recordings
+  if (
+    request.raw.method === "GET" &&
+    !request.raw.url?.startsWith("/api") &&
+    !request.raw.url?.startsWith("/recordings")
+  ) {
+    return reply.sendFile("index.html", spaDistDir);
+  }
+  reply.status(404).send({ error: "Not Found" });
 });
 
 const start = async () => {

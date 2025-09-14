@@ -15,10 +15,10 @@ export interface Database {
 }
 
 const dir = dirname(fileURLToPath(import.meta.url));
-const dbPath = resolve(dir, "..", "..", "data", "database.sqlite");
+const dbPath = process.env.SQLITE_PATH ?? resolve(dir, "..", "..", "..", "..", "data", "database.sqlite");
 
 export const dialect = new SqliteDialect({
-  database: new SQLite(dbPath),
+  database: new SQLite(dbPath, { readonly: false, fileMustExist: false }),
 });
 
 export const db = new Kysely<Database>({

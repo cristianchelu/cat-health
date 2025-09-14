@@ -80,8 +80,8 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
       cropLeftHalf: config.cropLeftHalf || false,
       rotate90CCW: config.rotate90CCW || false,
       tempDir:
-        config.tempDir || `./temp_camera_${ip.replace(/\./g, "_")}`,
-      recordingsDir: config.recordingsDir || "./data/recordings",
+        config.tempDir || `/tmp/temp_camera_${ip.replace(/\./g, "_")}`,
+      recordingsDir: config.recordingsDir || "/app/data/recordings",
     };
   }
 

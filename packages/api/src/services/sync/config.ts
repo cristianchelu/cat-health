@@ -51,7 +51,6 @@ export const appConfig = {
     camera: {
       ip: process.env.LITTERBOX_CAMERA_IP, // Using a more specific name
       timezoneOffsetHours: parseInt(process.env.CAMERA_TIMEZONE_OFFSET_HOURS || "3"),
-      recordingsDir: path.resolve(import.meta.dirname, "../../../data/recordings"),
       sshUser: process.env.LITTERBOX_CAMERA_SSH_USER || "root",
       sshOptions: {
         privateKey: process.env.LITTERBOX_CAMERA_SSH_PRIVATE_KEY,

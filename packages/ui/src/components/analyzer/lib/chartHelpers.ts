@@ -1,8 +1,20 @@
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, BarElement } from 'chart.js';
-import annotationPlugin from 'chartjs-plugin-annotation';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  ScatterController,
+} from "chart.js";
+import annotationPlugin from "chartjs-plugin-annotation";
 
 // Register Chart.js components
 ChartJS.register(
+  ScatterController,
   CategoryScale,
   LinearScale,
   PointElement,
