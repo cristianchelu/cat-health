@@ -5,7 +5,7 @@ import fastifyStatic from "@fastify/static";
 import path from "node:path";
 import { config } from "dotenv";
 
-config({ path: path.resolve(import.meta.dirname, "../../../.env") });
+config();
 
 import { migrateToLatest } from "./database/migrate.ts";
 import { db } from "./database/index.ts";
