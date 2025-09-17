@@ -83,7 +83,7 @@ export default function PetDetail() {
     queryKey: ['petEvents', petId, currentDateRange],
     queryFn: () => {
       const { startTime, endTime } = dateRangeToTimeRange(currentDateRange);
-      return getPetEvents(petId, startTime, endTime);
+      return getPetEvents(petId, startTime, endTime, 5000);
     },
     enabled: isValidId,
   });

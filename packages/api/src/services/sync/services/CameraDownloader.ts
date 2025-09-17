@@ -4,6 +4,7 @@ import { promisify } from "util";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { format } from "date-fns";
+
 import { EventEmitter } from "events";
 import { createWriteStream } from "fs";
 import type { MediaService } from "../types.ts";
@@ -14,13 +15,13 @@ export interface CameraConfig {
   ip: string;
   sshUser?: string;
   sshOptions?: { privateKey?: string; password?: string };
-  remotePath?: string;
+  remotePath: string;
   bufferSeconds?: number;
   clipDurationSeconds?: number;
   cropLeftHalf?: boolean;
   rotate90CCW?: boolean;
   tempDir?: string;
-  recordingsDir?: string;
+  recordingsDir: string;
 }
 
 export interface EventRequest {
@@ -74,14 +75,14 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
       ip,
       sshUser: config.sshUser || "root",
       sshOptions: config.sshOptions || {},
-      remotePath: config.remotePath || "/mnt/mmcblk0p1/littercam/records",
+      remotePath: config.remotePath,
       bufferSeconds: config.bufferSeconds || 60,
       clipDurationSeconds: config.clipDurationSeconds || 120,
       cropLeftHalf: config.cropLeftHalf || false,
       rotate90CCW: config.rotate90CCW || false,
       tempDir:
         config.tempDir || `/tmp/temp_camera_${ip.replace(/\./g, "_")}`,
-      recordingsDir: config.recordingsDir || "/app/data/recordings",
+      recordingsDir: config.recordingsDir,
     };
   }
 

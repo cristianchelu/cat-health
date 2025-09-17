@@ -3,9 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { getPetEvents } from '@/api/pets';
 import { cn } from "@/lib/utils";
 
-import './LitterboxVisitsChart.css';
 import { Card, CardContent, CardHeader } from "./Card";
 import { Select } from "./form";
+
+import './LitterboxVisitsChart.css';
 
 type TimePeriod = 'week' | 'month' | 'quarter' | 'all';
 
@@ -88,8 +89,8 @@ const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsCha
     const apiEndTime = endDate.toISOString().split('T')[0] + 'T23:59:59.999Z';
 
     // Calculate appropriate limit based on time period
-    // Assume max 10 events per day for safety
-    const apiLimit = Math.max(100, daysToShow * 10);
+    // Assume max 20 events per day
+    const apiLimit = daysToShow * 20;
 
     // Fetch events for the date range
     const { data: eventsData, isLoading, error } = useQuery({

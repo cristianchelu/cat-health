@@ -29,6 +29,8 @@ export class SyncService {
         privateKey: appConfig.litterbox.camera.sshOptions?.privateKey || "",
         password: appConfig.litterbox.camera.sshOptions?.password || ""
       },
+      remotePath: appConfig.litterbox.camera.remotePath,
+      recordingsDir: appConfig.litterbox.camera.recordingsDir,
     });
     
     this.setupMigrators();

@@ -13,6 +13,7 @@ assert(process.env.INFLUX_BUCKET, "INFLUX_BUCKET is required in .env");
 assert(process.env.MIGRATION_BATCH_DAYS, "MIGRATION_BATCH_DAYS is required in .env");
 assert(process.env.CAT_WEIGHTS, "CAT_WEIGHTS is required in .env");
 assert(process.env.PET_SENSOR_MAPPINGS, "PET_SENSOR_MAPPINGS is required in .env");
+assert(process.env.RECORDING_PATH, "RECORDING_PATH is required in .env");
 
 // Validate thresholds
 const MAINTENANCE_THRESHOLD = parseInt(process.env.MAINTENANCE_THRESHOLD || "-20");
@@ -55,7 +56,9 @@ export const appConfig = {
       sshOptions: {
         privateKey: process.env.LITTERBOX_CAMERA_SSH_PRIVATE_KEY,
         password: process.env.LITTERBOX_CAMERA_SSH_PASSWORD
-      }
+      },
+      recordingsDir: process.env.RECORDING_PATH,
+      remotePath: "/mnt/mmcblk0p1/littercam/records",
     }
   },
 
