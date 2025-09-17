@@ -25,7 +25,8 @@ export class WaterIntakeMigrator implements EventMigrator {
   // Use constants for friendly names to avoid typos and for easier updates
   private static readonly DRINK_AMOUNT_FRIENDLY_NAME = "PetLibro PLWF105 Last drink amount";
   private static readonly DRINK_DURATION_FRIENDLY_NAME = "PetLibro PLWF105 Last drink duration";
-  private static readonly MIN_EVENT_DURATION_MS = 1000; // 1 second
+  private static readonly MIN_EVENT_DURATION = 1; // 1 second
+  private static readonly MIN_EVENT_AMOUNT   = 1; // 1 ml
 
   constructor(options: MigratorOptions) {
     this.options = options;
@@ -135,7 +136,6 @@ export class WaterIntakeMigrator implements EventMigrator {
         |> filter(fn: (r) => exists r.amount and exists r.duration)
         
     `;
-    console.log(fluxQuery);
 
     const records = await queryApi.collectRows<InfluxDrinkRecord>(fluxQuery);
 
@@ -150,11 +150,11 @@ export class WaterIntakeMigrator implements EventMigrator {
         return {
           startTime,
           endTime,
-          amount: record.amount,
+          amount: Math.round(record.amount),
           duration: record.duration,
         };
       })
-      .filter(event => event.duration >= WaterIntakeMigrator.MIN_EVENT_DURATION_MS);
+      .filter(event => event.duration >= WaterIntakeMigrator.MIN_EVENT_DURATION && event.amount >= WaterIntakeMigrator.MIN_EVENT_AMOUNT);
   }
 
   private createDbEvent(drink: DrinkEvent): NewEvent {
