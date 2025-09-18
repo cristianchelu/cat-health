@@ -20,7 +20,9 @@ const router = createBrowserRouter([
       { path: '/devices/:id', element: <DeviceDetail /> },
     ],
   },
-]);
+], {
+  basename: window.baseUrl
+});
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

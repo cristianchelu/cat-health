@@ -4,6 +4,7 @@ import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import path from "node:path";
 import { config } from "dotenv";
+import fs from "node:fs/promises";
 
 config();
 
@@ -17,7 +18,17 @@ import deviceRoutes from "./routes/devices.ts";
 
 const fastify = Fastify({
   logger: true,
+  trustProxy: true
 }).withTypeProvider<TypeBoxTypeProvider>();
+
+fastify.addHook("onRequest", (req, _reply, done) => {
+  const ingressPath = req.headers["x-ingress-path"];
+  if (typeof ingressPath === "string" && ingressPath !== "/" && req.url?.startsWith(ingressPath)) {
+    req.raw.url = req.url.slice(ingressPath.length) || "/";
+  }
+  done();
+});
+
 
 await fastify.register(cors, {
   origin: (origin, callback) => {
@@ -126,22 +137,63 @@ fastify.get("/api/migrate/migrators", async (request, reply) => {
 });
 
 const spaDistDir = path.resolve(import.meta.dirname, "../../ui/dist");
+fastify.get('/', async (request, reply) => {
+  // Prefer X-Ingress-Path (HA), fallback to X-Forwarded-Prefix if present
+  const ingress =
+    (request.headers["x-ingress-path"] as string | undefined) ||
+    (request.headers["x-forwarded-prefix"] as string | undefined);
+
+  if (ingress && ingress !== "/") {
+    const html = injectBase(indexHtmlRaw, ingress);
+    return reply.type("text/html; charset=utf-8").send(html);
+  }
+
+  // Normal mode (no ingress) -> serve the unmodified file
+  return reply.sendFile("index.html", spaDistDir);
+});
 fastify.register(fastifyStatic, {
   root: spaDistDir,
   prefix: "/",
   decorateReply: false,
 });
 
+// Load the built index.html once
+const indexHtmlPath = path.join(spaDistDir, "index.html");
+const indexHtmlRaw = await fs.readFile(indexHtmlPath, "utf8");
+
+function ensureSlashEnd(s: string) {
+  return s.endsWith("/") ? s : s + "/";
+}
+
+function injectBase(html: string, baseHref: string) {
+  const href = ensureSlashEnd(baseHref).replace(/"/g, "&quot;");
+  return html.replace('<base href="/" />', `<base href="${href}"><script>window.baseUrl = "${href}";</script>`);
+}
+
 fastify.setNotFoundHandler((request, reply) => {
-  // Only fallback for GET requests not starting with /api or /recordings
-  if (
+  // Only fallback for GET requests not starting with /api or /api/recordings
+  const url = request.raw.url || "";
+  const isSpaRoute =
     request.raw.method === "GET" &&
-    !request.raw.url?.startsWith("/api") &&
-    !request.raw.url?.startsWith("/recordings")
-  ) {
-    return reply.sendFile("index.html", spaDistDir);
+    !url.startsWith("/api") &&
+    !url.startsWith("/api/recordings");
+
+  if (!isSpaRoute) {
+    return reply.status(404).send({ error: "Not Found" });
   }
-  reply.status(404).send({ error: "Not Found" });
+
+  // Prefer X-Ingress-Path (HA), fallback to X-Forwarded-Prefix if present
+  const ingress =
+    (request.headers["x-ingress-path"] as string | undefined) ||
+    (request.headers["x-forwarded-prefix"] as string | undefined);
+
+  if (ingress && ingress !== "/") {
+    const html = injectBase(indexHtmlRaw, ingress);
+    return reply.type("text/html; charset=utf-8").send(html);
+  }
+
+  // Normal mode (no ingress) -> serve the unmodified file
+  return reply.sendFile("index.html", spaDistDir);
 });
 
 const start = async () => {
