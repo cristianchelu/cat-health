@@ -1,5 +1,5 @@
 {
-  "name": "api",
+  "name": "@cat-health/api",
   "version": "1.0.0",
   "description": "",
   "main": "main.ts",
@@ -14,6 +14,7 @@
   "author": "Cristian Chelu",
   "license": "MIT",
   "dependencies": {
+    "@cat-health/shared": "*",
     "@fastify/static": "^8.2.0",
     "@fastify/type-provider-typebox": "^5.1.0",
     "@sinclair/typebox": "^0.34.29",
@@ -31,7 +32,6 @@
     "kysely-plugin-serialize": "^0.8.2"
   },
   "devDependencies": {
-    "typescript": "^5.7.3",
     "@types/better-sqlite3": "^7.6.12"
   }
 }

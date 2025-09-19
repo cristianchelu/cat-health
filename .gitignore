@@ -4,3 +4,6 @@ dist
 .vscode
 .env
 packages/api/.env
+
+# TypeScript incremental build info
+*.tsbuildinfo
