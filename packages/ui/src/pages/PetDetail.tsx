@@ -1,7 +1,6 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { usePet, usePetEvents, usePets, useDeleteEvent, useUpdateEvent } from '@/hooks/queries/petQueries';
 import { useParams } from 'react-router';
 import { useState } from 'react';
-import { getPet, getPetEvents, deleteEvent, updateEvent, getPets } from '@/api/pets';
 import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
 import LitterboxMaintenanceEventItem from '@/components/event/LitterboxMaintenanceEvent';
 import WeightMeasurementEventItem from '@/components/event/WeightMeasurementEvent';
@@ -9,14 +8,13 @@ import DateRangeNavigation from '@/components/ui/DateRangeNavigation';
 import PetSummaryCard from '@/components/ui/PetSummaryCard';
 import WeightTrendChart from '@/components/ui/WeightTrendChart';
 import LitterboxVisitsChart from '@/components/ui/LitterboxVisitsChart';
-import { dateRangeToTimeRange, createDateRange, type DateRange } from '@/lib/utils';
+import { LitterboxAnalyzer } from '@/components/analyzer';
+import { createDateRange, type DateRange } from '@/lib/utils';
 
 import './PetDetail.css';
-import { LitterboxAnalyzer } from '@/components/analyzer';
 
 export default function PetDetail() {
   const { id } = useParams<{ id: string }>();
-  const queryClient = useQueryClient();
   const [deletingEventIds, setDeletingEventIds] = useState<Set<number>>(new Set());
   const [activeTab, setActiveTab] = useState<'events' | 'analyzer'>('events');
   
@@ -26,20 +24,20 @@ export default function PetDetail() {
     const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
     return createDateRange(todayStr, 'day');
   });
-  
+
   const petId = id ? Number(id) : NaN;
   const isValidId = !isNaN(petId) && petId > 0;
+
+  const deleteEventMutation = useDeleteEvent(petId, currentDateRange);
+  const updateEventMutation = useUpdateEvent(petId, currentDateRange);
 
   const handleDeleteEvent = async (eventId: number) => {
     if (!confirm('Are you sure you want to delete this event?')) {
       return;
     }
-
     setDeletingEventIds(prev => new Set(prev).add(eventId));
-    
     try {
-      await deleteEvent(eventId);
-      await queryClient.invalidateQueries({ queryKey: ['petEvents', petId, currentDateRange] });
+      await deleteEventMutation.mutateAsync(eventId);
     } catch (error) {
       console.error('Failed to delete event:', error);
     } finally {
@@ -53,8 +51,7 @@ export default function PetDetail() {
 
   const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean, pet_id?: number | null) => {
     try {
-      await updateEvent(eventId, { data, human_verified, pet_id: pet_id ?? null });
-      await queryClient.invalidateQueries({ queryKey: ['petEvents', petId, currentDateRange] });
+      await updateEventMutation.mutateAsync({ eventId, data: { data, human_verified, pet_id: pet_id ?? null } });
     } catch (error) {
       console.error('Failed to update event:', error);
       throw error; // Re-throw so the component can handle the error
@@ -73,25 +70,9 @@ export default function PetDetail() {
     return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified, pet_id);
   };
 
-  const { data: pet, isLoading: petLoading, error: petError } = useQuery({
-    queryKey: ['pet', petId],
-    queryFn: () => getPet(petId),
-    enabled: isValidId,
-  });
-
-  const { data: eventsData, isLoading: eventsLoading, error: eventsError } = useQuery({
-    queryKey: ['petEvents', petId, currentDateRange],
-    queryFn: () => {
-      const { startTime, endTime } = dateRangeToTimeRange(currentDateRange);
-      return getPetEvents(petId, startTime, endTime, 5000);
-    },
-    enabled: isValidId,
-  });
-
-  const { data: pets, isLoading: petsLoading } = useQuery({
-    queryKey: ['pets'],
-    queryFn: getPets,
-  });
+  const { data: pet, isLoading: petLoading, error: petError } = usePet(petId, isValidId);
+  const { data: eventsData, isLoading: eventsLoading, error: eventsError } = usePetEvents(petId, currentDateRange, isValidId);
+  const { data: pets, isLoading: petsLoading } = usePets();
   
   if (!isValidId) {
     return <div className="pet-detail pet-detail--error">Invalid pet ID.</div>;

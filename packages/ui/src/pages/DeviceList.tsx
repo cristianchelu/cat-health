@@ -1,17 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { getDevices } from '@/api/devices';
+
+import type { DeviceType } from '@cat-health/shared';
+
 import { Card, CardContent, CardTitle } from '@/components/ui/Card';
+import { useDevices } from '@/hooks/queries/deviceQueries';
 
 import './DeviceList.css';
 
-export type Device = {
-  id: number;
-  name: string;
-  type: "litterbox" | "feeder" | "water_fountain";
-};
-
-const getDeviceTypeLabel = (type: Device["type"]) => {
+const getDeviceTypeLabel = (type: DeviceType) => {
   switch (type) {
     case "litterbox":
       return "Litter Box";
@@ -25,10 +21,7 @@ const getDeviceTypeLabel = (type: Device["type"]) => {
 };
 
 export default function DeviceList() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['devices'],
-    queryFn: getDevices,
-  });
+  const { data, isLoading, error } = useDevices();
 
   if (isLoading) return <div className="device-list"><div className="loading">Loading...</div></div>;
   if (error) return <div className="device-list"><div className="error">Error loading devices.</div></div>;

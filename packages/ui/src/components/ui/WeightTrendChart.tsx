@@ -10,12 +10,11 @@ import {
   Filler,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Select } from './form';
-import { getPetWeightTrends } from '@/api/pets';
 import { Card, CardContent, CardHeader } from './Card';
 import { cn } from '@/lib/utils';
+import { usePetWeightTrends } from '@/hooks/queries/petQueries';
 
 ChartJS.register(
   CategoryScale,
@@ -92,10 +91,7 @@ export default function WeightTrendChart({
 
   const days = getDaysForPeriod(selectedPeriod);
 
-  const { data: trends, isLoading, error } = useQuery({
-    queryKey: ['weightTrends', petId, days],
-    queryFn: () => getPetWeightTrends(petId, days),
-  });
+  const { data: trends, isLoading, error } = usePetWeightTrends(petId, days);
 
   const periodLabels = {
     week: 'Week',

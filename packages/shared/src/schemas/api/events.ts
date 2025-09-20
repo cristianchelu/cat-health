@@ -39,20 +39,23 @@ export type PatchEventRequestDTO = Static<typeof PatchEventRequestSchema>;
 export const GetEventsQuerySchema = Type.Object({
   pet_id: Type.Optional(Type.Number()),
   device_id: Type.Optional(Type.Number()),
-  startTime: Type.Optional(Type.String({ format: 'date-time' })), // ISO 8601 format
-  endTime: Type.Optional(Type.String({ format: 'date-time' })), // ISO 8601 format
+  startTime: Type.Optional(Type.String({ format: "date-time" })), // ISO 8601 format
+  endTime: Type.Optional(Type.String({ format: "date-time" })), // ISO 8601 format
   limit: Type.Optional(Type.Number({ minimum: 1, maximum: 5000 })),
   offset: Type.Optional(Type.Number({ minimum: 0 })),
 });
 export type GetEventsQueryDTO = Static<typeof GetEventsQuerySchema>;
 
-export const GetEventsResponseSchema = getPaginatedResponseSchema(GetEventsSchema);
+export const GetEventsResponseSchema =
+  getPaginatedResponseSchema(GetEventsSchema);
 export type GetEventsResponseDTO = Static<typeof GetEventsResponseSchema>;
 
 export const DeleteEventParamsSchema = Type.Object({ eventId: Type.Number() });
 export type DeleteEventParamsDTO = Static<typeof DeleteEventParamsSchema>;
 
-export const DeleteEventResponseSchema = Type.Object({ success: Type.Boolean() });
+export const DeleteEventResponseSchema = Type.Object({
+  success: Type.Boolean(),
+});
 export type DeleteEventResponseDTO = Static<typeof DeleteEventResponseSchema>;
 
 // Weight trends
@@ -64,12 +67,11 @@ export const WeightTrendQuerySchema = Type.Object({
 });
 export type WeightTrendQueryDTO = Static<typeof WeightTrendQuerySchema>;
 
-export const WeightTrendResponseSchema = Type.Object({
-  date: Type.String(),
-  weight: Type.Number(),
-  timestamp: Type.String(),
-});
-
-export const WeightTrendsResponseSchema = Type.Array(WeightTrendResponseSchema);
-export type WeightTrendResponseDTO = Static<typeof WeightTrendResponseSchema>;
+export const WeightTrendsResponseSchema = Type.Array(
+  Type.Object({
+    date: Type.String(),
+    weight: Type.Number(),
+    timestamp: Type.String(),
+  })
+);
 export type WeightTrendsResponseDTO = Static<typeof WeightTrendsResponseSchema>;

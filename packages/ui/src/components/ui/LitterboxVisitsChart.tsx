@@ -1,7 +1,7 @@
 import * as React from "react";
-import { useQuery } from '@tanstack/react-query';
-import { getPetEvents } from '@/api/pets';
-import { cn } from "@/lib/utils";
+
+import { cn, type DateRange } from "@/lib/utils";
+import { usePetEvents } from "@/hooks/queries/petQueries";
 
 import { Card, CardContent, CardHeader } from "./Card";
 import { Select } from "./form";
@@ -85,21 +85,17 @@ const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsCha
     startDate.setDate(startDate.getDate() - daysToShow); // Remove the +1
     const endDate = new Date();
     
-    const apiStartTime = startDate.toISOString().split('T')[0] + 'T00:00:00.000Z';
-    const apiEndTime = endDate.toISOString().split('T')[0] + 'T23:59:59.999Z';
+    const apiStartTime = startDate.toISOString().split('T')[0];
+    const apiEndTime = endDate.toISOString().split('T')[0];
 
-    // Calculate appropriate limit based on time period
-    // Assume max 20 events per day
-    const apiLimit = daysToShow * 20;
+    const dateRange: DateRange = {
+      startDate: apiStartTime,
+      endDate: apiEndTime,
+      type: "custom"
+    }
 
     // Fetch events for the date range
-    const { data: eventsData, isLoading, error } = useQuery({
-      queryKey: ['petEventsRange', petId, selectedPeriod, daysToShow],
-      queryFn: async () => {
-        return getPetEvents(petId, apiStartTime, apiEndTime, apiLimit);
-      },
-      enabled: !!petId,
-    });
+    const { data: eventsData, isLoading, error } = usePetEvents(petId, dateRange, true);
 
     if (isLoading) {
       return (
@@ -153,8 +149,8 @@ const LitterboxVisitsChart = React.forwardRef<HTMLDivElement, LitterboxVisitsCha
       eventsByDay[date] = { date, events: [] };
     });
 
-    if (eventsData?.events) {
-      eventsData.events.forEach(event => {
+    if (eventsData?.data) {
+      eventsData.data.forEach(event => {
         const eventDate = event.timestamp.split('T')[0];
         if (eventsByDay[eventDate] && 
             event.data && 

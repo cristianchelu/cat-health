@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { FaWeight, FaCalendarAlt, FaArrowUp, FaArrowDown } from 'react-icons/fa';
-import { getPetWeightTrends } from '@/api/pets';
+
+import { usePetWeightTrends } from '@/hooks/queries/petQueries';
+
 import './PetSummaryCard.css';
 
 interface Pet {
@@ -32,10 +33,7 @@ export default function PetSummaryCard({ pet }: PetSummaryCardProps) {
 
   const days = getDaysForPeriod(selectedPeriod);
 
-  const { data: trends } = useQuery({
-    queryKey: ['weightTrends', pet.id, days],
-    queryFn: () => getPetWeightTrends(pet.id, days),
-  });
+  const { data: trends } = usePetWeightTrends(pet.id, days);
 
   const periodLabels = {
     week: '7d',

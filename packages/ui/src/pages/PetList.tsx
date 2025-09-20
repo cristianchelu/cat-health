@@ -1,16 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { getPets } from '@/api/pets';
+import { usePets } from '@/hooks/queries/petQueries';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
 
 import './PetList.css';
-
-export type Pet = {
-  id: number;
-  name: string;
-  breed: string;
-  birth_date: string;
-};
 
 // Helper function to calculate age from birth date
 function calculateAge(birthDate: string): string {
@@ -35,10 +27,7 @@ function calculateAge(birthDate: string): string {
 }
 
 export default function PetList() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['pets'],
-    queryFn: getPets,
-  });
+  const { data, isLoading, error } = usePets();
 
   if (isLoading) return <div className="pet-list"><div className="loading">Loading...</div></div>;
   if (error) return <div className="pet-list"><div className="error">Error loading pets.</div></div>;

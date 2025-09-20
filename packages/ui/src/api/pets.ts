@@ -1,9 +1,13 @@
-import { 
-  type GetEventsResponseDTO, 
-  type GetEventDTO, 
-  type PostEventRequestDTO, 
-  type DeleteEventResponseDTO, 
-  type PatchEventRequestDTO 
+import type { 
+  GetEventsResponseDTO, 
+  GetEventDTO, 
+  PostEventRequestDTO, 
+  DeleteEventResponseDTO, 
+  PatchEventRequestDTO, 
+  GetPetsResponseDTO,
+  GetPetResponseDTO,
+  WeightTrendsResponseDTO,
+  WeightTrendQueryDTO
 } from "@cat-health/shared";
 
 import apiClient from "./apiClient";
@@ -14,12 +18,12 @@ export async function addEvent(input: PostEventRequestDTO) {
 }
 
 export async function getPets() {
-  const { data } = await apiClient.get('/pets');
+  const { data } = await apiClient.get<GetPetsResponseDTO>('/pets');
   return data;
 }
 
 export async function getPet(id: number) {
-  const { data } = await apiClient.get(`/pets/${id}`);
+  const { data } = await apiClient.get<GetPetResponseDTO>(`/pets/${id}`);
   return data;
 }
 
@@ -48,15 +52,9 @@ export async function updateEvent(eventId: number, input: PatchEventRequestDTO) 
   return data;
 }
 
-export type WeightTrend = {
-  date: string;
-  weight: number;
-  timestamp: string;
-};
-
-export async function getPetWeightTrends(petId: number, days: number = 30) {
-  const { data } = await apiClient.get(`/events/weight-trends/${petId}`, { 
-    params: { days } 
+export async function getPetWeightTrends(petId: number, query: WeightTrendQueryDTO) {
+  const { data } = await apiClient.get<WeightTrendsResponseDTO>(`/events/weight-trends/${petId}`, { 
+    params: query 
   });
   return data;
 }

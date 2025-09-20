@@ -1,16 +1,14 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { useState } from 'react';
-import { getDevice, getDeviceEvents } from '@/api/devices';
-import { deleteEvent, updateEvent, getPets} from '@/api/pets';
+import { useDevice, useDeviceEvents, useDeleteEvent, useUpdateEvent } from '@/hooks/queries/deviceQueries';
+import { usePets } from '@/hooks/queries/petQueries';
 import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
 import LitterboxMaintenanceEventItem from '@/components/event/LitterboxMaintenanceEvent';
 import WeightMeasurementEventItem from '@/components/event/WeightMeasurementEvent';
 import DateNavigation from '@/components/ui/DateNavigation';
-import { dateToTimeRange } from '@/lib/utils';
+import { Card, CardContent, CardTitle } from '@/components/ui/Card';
 
 import './DeviceDetail.css';
-import { Card, CardContent, CardTitle } from '@/components/ui/Card';
 
 const getDeviceTypeLabel = (type: "litterbox" | "feeder" | "water_fountain") => {
   switch (type) {
@@ -27,7 +25,6 @@ const getDeviceTypeLabel = (type: "litterbox" | "feeder" | "water_fountain") => 
 
 export default function DeviceDetail() {
   const { id } = useParams<{ id: string }>();
-  const queryClient = useQueryClient();
   const [deletingEventIds, setDeletingEventIds] = useState<Set<number>>(new Set());
   
   // Initialize current date to today
@@ -39,12 +36,13 @@ export default function DeviceDetail() {
   const deviceId = id ? Number(id) : NaN;
   const isValidId = !isNaN(deviceId) && deviceId > 0;
 
+  const deleteEventMutation = useDeleteEvent(deviceId, currentDate);
+  const updateEventMutation = useUpdateEvent(deviceId, currentDate);
+
   const handleDeleteEvent = async (eventId: number) => {
     setDeletingEventIds(prev => new Set(prev).add(eventId));
-    
     try {
-      await deleteEvent(eventId);
-      await queryClient.invalidateQueries({ queryKey: ['deviceEvents', deviceId, currentDate] });
+      await deleteEventMutation.mutateAsync(eventId);
     } catch (error) {
       console.error('Failed to delete event:', error);
     } finally {
@@ -58,8 +56,7 @@ export default function DeviceDetail() {
 
   const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean, pet_id?: number | null) => {
     try {
-      await updateEvent(eventId, { data, human_verified, pet_id: pet_id ?? null });
-      await queryClient.invalidateQueries({ queryKey: ['deviceEvents', deviceId, currentDate] });
+      await updateEventMutation.mutateAsync({ eventId, data: { data, human_verified, pet_id: pet_id ?? null } });
     } catch (error) {
       console.error('Failed to update event:', error);
       throw error;
@@ -78,26 +75,12 @@ export default function DeviceDetail() {
     return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified, pet_id);
   };
 
-  const { data: device, isLoading: deviceLoading, error: deviceError } = useQuery({
-    queryKey: ['device', deviceId],
-    queryFn: () => getDevice(deviceId),
-    enabled: isValidId,
-  });
+  const { data: device, isLoading: deviceLoading, error: deviceError } = useDevice(deviceId, isValidId);
 
-  const { data: eventsData = { data: [], total: 0, hasMore: false, limit: 0, offset: 0 }, isLoading: eventsLoading, error: eventsError } = useQuery({
-    queryKey: ['deviceEvents', deviceId, currentDate],
-    queryFn: () => {
-      const { startTime, endTime } = dateToTimeRange(currentDate);
-      return getDeviceEvents(deviceId, startTime, endTime);
-    },
-    enabled: isValidId,
-  });
+  const { data: eventsData = { data: [], total: 0, hasMore: false, limit: 0, offset: 0 }, isLoading: eventsLoading, error: eventsError } = useDeviceEvents(deviceId, currentDate, isValidId);
 
-  const { data: pets, isLoading: petsLoading } = useQuery({
-    queryKey: ['pets'],
-    queryFn: getPets,
-  });
-  
+  const { data: pets, isLoading: petsLoading } = usePets();
+
   if (!isValidId) {
     return <div className="device-detail device-detail--error">Invalid device ID.</div>;
   }

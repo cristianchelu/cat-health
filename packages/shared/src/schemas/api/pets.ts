@@ -7,10 +7,10 @@ export const GetPetResponseSchema = Type.Object({
   breed: Type.String(),
   birth_date: Type.Any(), //TODO: Type.Date()
 });
-export type GetPetDTO = Static<typeof GetPetResponseSchema>;
+export type GetPetResponseDTO = Static<typeof GetPetResponseSchema>;
 
 export const GetPetsResponseSchema = Type.Array(GetPetResponseSchema);
-export type GetPetsDTO = Static<typeof GetPetsResponseSchema>;
+export type GetPetsResponseDTO = Static<typeof GetPetsResponseSchema>;
 
 export const PostPetRequestSchema = Type.Omit(GetPetResponseSchema, ["id"]);
-export type PostPetDTO = Static<typeof PostPetRequestSchema>;
+export type PostPetRequestDTO = Static<typeof PostPetRequestSchema>;
