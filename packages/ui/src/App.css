@@ -1,0 +1,26 @@
+#app {
+  display: grid;
+  height: 100vh;
+  width: 100%;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 100%;
+  grid-template-areas:
+    "header"
+    "main"
+    "footer";
+
+  header {
+    grid-area: header;
+  }
+
+  main {
+    grid-area: main;
+    padding: var(--space-sm) var(--space-md);
+    overflow: auto;
+
+    #content {
+      max-width: var(--max-width-content);
+      margin: 0 auto;
+    }
+  }
+}

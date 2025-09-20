@@ -4,6 +4,8 @@ import { Outlet } from 'react-router';
 import { postMigrate } from './api/scripts';
 import Header from './components/layout/Header';
 
+import './App.css'
+
 function App() {
   const [queryClient] = useState(() => new QueryClient());
   const [isMigrating, setIsMigrating] = useState(false);
@@ -27,11 +29,10 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="app-layout">
+      <div id="app">
         <Header isMigrating={isMigrating} onMigrate={handleMigrate} />
-        
-        <main className="app-main">
-          <div className="container">
+        <main>
+          <div id='content'>
             <Outlet />
           </div>
         </main>
