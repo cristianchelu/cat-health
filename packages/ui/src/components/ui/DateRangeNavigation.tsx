@@ -9,6 +9,7 @@ import {
 } from '@/lib/utils';
 
 import './DateRangeNavigation.css';
+import { Button } from './Button';
 
 interface DateRangeNavigationProps {
   currentRange: DateRange;
@@ -155,12 +156,9 @@ export default function DateRangeNavigation({
 
       {showCustomPicker && (
         <div className="custom-range-picker">
-          <div className="custom-range-header">
-            <h3>Select Custom Date Range</h3>
-          </div>
           <div className="custom-range-inputs">
             <div className="date-input-group">
-              <label htmlFor="start-date">Start Date:</label>
+              {/* <label htmlFor="start-date">Start Date:</label> */}
               <input
                 id="start-date"
                 type="date"
@@ -171,7 +169,7 @@ export default function DateRangeNavigation({
               />
             </div>
             <div className="date-input-group">
-              <label htmlFor="end-date">End Date:</label>
+              {/* <label htmlFor="end-date">End Date:</label> */}
               <input
                 id="end-date"
                 type="date"
@@ -184,19 +182,20 @@ export default function DateRangeNavigation({
             </div>
           </div>
           <div className="custom-range-actions">
-            <button
+            <Button
               onClick={handleCustomRangeCancel}
-              className="cancel-button"
+              variant='ghost'
+              // className="cancel-button"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleCustomRangeApply}
-              className="apply-button"
+              // className="apply-button"
               disabled={!tempStartDate || !tempEndDate || tempStartDate > tempEndDate}
             >
               Apply
-            </button>
+            </Button>
           </div>
         </div>
       )}

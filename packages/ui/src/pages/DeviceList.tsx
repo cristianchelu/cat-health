@@ -1,24 +1,10 @@
 import { Link } from 'react-router';
 
-import type { DeviceType } from '@cat-health/shared';
-
-import { Card, CardContent, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { getDeviceTypeLabel } from '@/lib/utils';
 import { useDevices } from '@/hooks/queries/deviceQueries';
 
 import './DeviceList.css';
-
-const getDeviceTypeLabel = (type: DeviceType) => {
-  switch (type) {
-    case "litterbox":
-      return "Litter Box";
-    case "feeder":
-      return "Feeder";
-    case "water_fountain":
-      return "Water Fountain";
-    default:
-      return type;
-  }
-};
 
 export default function DeviceList() {
   const { data, isLoading, error } = useDevices();
@@ -29,14 +15,16 @@ export default function DeviceList() {
 
   return (
     <div className="device-list">
-      <h2 className="title">Device List</h2>
+      <h2>Your devices</h2>
       <div className="grid">
         {data?.map((device) => (
           <Link key={device.id} to={`/devices/${device.id}`} className="card-link">
             <Card>
-              <CardTitle>{device.name}</CardTitle>
-              <CardContent>
-                <div><b>Type:</b> {getDeviceTypeLabel(device.type)}</div>
+              <CardHeader>
+                <CardTitle>{device.name}</CardTitle>
+              </CardHeader>
+              <CardContent className='details'>
+                <p><b>Type:</b> {getDeviceTypeLabel(device.type)}</p>
               </CardContent>
             </Card>
           </Link>

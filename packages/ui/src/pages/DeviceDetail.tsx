@@ -7,21 +7,9 @@ import LitterboxMaintenanceEventItem from '@/components/event/LitterboxMaintenan
 import WeightMeasurementEventItem from '@/components/event/WeightMeasurementEvent';
 import DateNavigation from '@/components/ui/DateNavigation';
 import { Card, CardContent, CardTitle } from '@/components/ui/Card';
+import { getDeviceTypeLabel } from '@/lib/utils';
 
 import './DeviceDetail.css';
-
-const getDeviceTypeLabel = (type: "litterbox" | "feeder" | "water_fountain") => {
-  switch (type) {
-    case "litterbox":
-      return "Litter Box";
-    case "feeder":
-      return "Feeder";
-    case "water_fountain":
-      return "Water Fountain";
-    default:
-      return type;
-  }
-};
 
 export default function DeviceDetail() {
   const { id } = useParams<{ id: string }>();

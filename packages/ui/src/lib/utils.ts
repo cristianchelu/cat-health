@@ -1,3 +1,4 @@
+import type { DeviceType } from "@cat-health/shared";
 import { clsx } from "clsx"
 
 export const cn = clsx;
@@ -216,3 +217,15 @@ export function formatDateRangeForDisplay(dateRange: DateRange): string {
     return `${startMonth} - ${endMonth}, ${year}`;
   }
 }
+
+
+export const getDeviceTypeLabel = (type: DeviceType) => {
+  switch (type) {
+    case "litterbox":
+      return "Litter Box";
+    case "feeder":
+      return "Feeder";
+    case "water_fountain":
+      return "Water Fountain";
+  }
+};

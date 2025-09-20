@@ -1,8 +1,4 @@
 .pet-detail {
-  width: 100%;
-  max-width: var(--max-width-content);
-  margin: 0 auto;
-  padding: var(--space-md) var(--space-sm);
   display: grid;
   gap: var(--space-lg);
   overflow-x: hidden;

@@ -40,15 +40,11 @@ const Header: React.FC = () => {
           <Button variant="ghost">Settings</Button>
         </div>
       </div>
-
-      {/* Mobile Menu Toggle */}
       <div className="mobile-menu-toggle">
         <Button variant="ghost" onClick={toggleMenu} aria-label="Toggle menu">
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </Button>
       </div>
-
-      {/* Mobile Menu */}
       <div className={cn('mobile-menu', { 'is-open': isMenuOpen })}>
         <nav className="main-nav">
           <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>Pets</Link>

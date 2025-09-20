@@ -87,12 +87,6 @@
     align-items: center;
     gap: var(--space-xs);
     justify-content: center;
-    padding: var(--space-xs) 0;
-    border-top: var(--border-thin);
-    margin-top: var(--space-xs);
-    background-color: var(--color-surface-muted);
-    border-radius: var(--radius-sm);
-    padding: var(--space-sm);
   }
 
   .range-type-label {

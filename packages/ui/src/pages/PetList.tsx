@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { usePets } from '@/hooks/queries/petQueries';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 
 import './PetList.css';
 
@@ -35,35 +35,22 @@ export default function PetList() {
 
   return (
     <div className="pet-list">
-      <div className="container">
-        <div className="section">
-          <div className="section-header">
-            <h1>Your Pets</h1>
-            <p>View and manage your pet health information</p>
-          </div>
-          
-          <div className="card-grid">
-            {data?.map((pet) => (
-              <Link key={pet.id} to={`/pets/${pet.id}`} className="card-link">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{pet.name}</CardTitle>
-                    <CardDescription>{pet.breed}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="pet-details">
-                      <p><b>Birth Date:</b> {new Date(pet.birth_date).toLocaleDateString()}</p>
-                      <p><b>Age:</b> {calculateAge(pet.birth_date)}</p>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <span className="view-details">View Details →</span>
-                  </CardFooter>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
+      <h2>Your pets</h2>
+      <div className="grid">
+        {data?.map((pet) => (
+          <Link key={pet.id} to={`/pets/${pet.id}`} className="card-link">
+            <Card>
+              <CardHeader>
+                <CardTitle>{pet.name}</CardTitle>
+                <CardDescription>{pet.breed}</CardDescription>
+              </CardHeader>
+              <CardContent className='details'>
+                <p><b>Birth Date:</b> {new Date(pet.birth_date).toLocaleDateString()}</p>
+                <p><b>Age:</b> {calculateAge(pet.birth_date)}</p>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
       </div>
     </div>
   );
