@@ -1,15 +1,11 @@
-import { Type } from "@sinclair/typebox";
-
+import { 
+  GetDeviceParamsSchema,
+  GetDeviceResponseSchema, 
+  GetDevicesResponseSchema, 
+  PostDeviceRequestSchema 
+} from "@cat-health/shared";
 import { db } from "../database/index.ts";
 import { type FastifyTypeBox } from "../types.ts";
-
-const GetDeviceSchema = Type.Object({
-  id: Type.Number(),
-  name: Type.String(),
-  type: Type.Union([Type.Literal("litterbox"), Type.Literal("feeder"), Type.Literal("water_fountain")]),
-});
-const GetDevicesSchema = Type.Array(GetDeviceSchema);
-const PostDeviceSchema = Type.Omit(GetDeviceSchema, ["id"]);
 
 export default function deviceRoutes(fastify: FastifyTypeBox): void {
   fastify.get(
@@ -17,7 +13,7 @@ export default function deviceRoutes(fastify: FastifyTypeBox): void {
     {
       schema: {
         response: {
-          "200": GetDevicesSchema,
+          "200": GetDevicesResponseSchema,
         },
       },
     },
@@ -30,9 +26,9 @@ export default function deviceRoutes(fastify: FastifyTypeBox): void {
     "/",
     {
       schema: {
-        body: PostDeviceSchema,
+        body: PostDeviceRequestSchema,
         response: {
-          "200": GetDeviceSchema,
+          "200": GetDeviceResponseSchema,
         },
       },
     },
@@ -52,14 +48,14 @@ export default function deviceRoutes(fastify: FastifyTypeBox): void {
     "/:id",
     {
       schema: {
-        params: Type.Object({ id: Type.Number() }),
+        params: GetDeviceParamsSchema,
         response: {
-          "200": GetDeviceSchema,
+          "200": GetDeviceResponseSchema,
         },
       },
     },
     async (request) => {
-      const { id } = request.params as { id: number };
+      const { id } = request.params;
       const device = await db.selectFrom("device").selectAll().where("id", "=", id).executeTakeFirst();
       if (!device) throw new Error("Device not found");
       return device;

@@ -31,9 +31,9 @@ export default function PetDetail() {
   const isValidId = !isNaN(petId) && petId > 0;
 
   const handleDeleteEvent = async (eventId: number) => {
-    // if (!confirm('Are you sure you want to delete this event?')) {
-    //   return;
-    // }
+    if (!confirm('Are you sure you want to delete this event?')) {
+      return;
+    }
 
     setDeletingEventIds(prev => new Set(prev).add(eventId));
     
@@ -53,7 +53,7 @@ export default function PetDetail() {
 
   const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean, pet_id?: number | null) => {
     try {
-      await updateEvent(eventId, { data, human_verified, pet_id });
+      await updateEvent(eventId, { data, human_verified, pet_id: pet_id ?? null });
       await queryClient.invalidateQueries({ queryKey: ['petEvents', petId, currentDateRange] });
     } catch (error) {
       console.error('Failed to update event:', error);
@@ -109,7 +109,7 @@ export default function PetDetail() {
     return <div className="pet-detail pet-detail--empty">Pet not found.</div>;
   }
   
-  const events = eventsData?.events || [];
+  const events = eventsData?.data || [];
   const hasEvents = events.length > 0;
 
   return (

@@ -1,16 +1,8 @@
-import { Type } from "@sinclair/typebox";
-
 import { db } from "../database/index.ts";
 import { type FastifyTypeBox } from "../types.ts";
+import { GetPetParamsSchema, GetPetResponseSchema, GetPetsResponseSchema, PostPetRequestSchema } from "@cat-health/shared";
 
-const GetPetSchema = Type.Object({
-  id: Type.Number(),
-  name: Type.String(),
-  breed: Type.String(),
-  birth_date: Type.Any(), //TODO: Type.Date()
-});
-const GetPetsSchema = Type.Array(GetPetSchema);
-const PostPetSchema = Type.Omit(GetPetSchema, ["id"]);
+
 
 export default function petRoutes(fastify: FastifyTypeBox): void {
   fastify.get(
@@ -18,7 +10,7 @@ export default function petRoutes(fastify: FastifyTypeBox): void {
     {
       schema: {
         response: {
-          "200": GetPetsSchema,
+          "200": GetPetsResponseSchema,
         },
       },
     },
@@ -31,9 +23,9 @@ export default function petRoutes(fastify: FastifyTypeBox): void {
     "/",
     {
       schema: {
-        body: PostPetSchema,
+        body: PostPetRequestSchema,
         response: {
-          "200": GetPetSchema,
+          "200": GetPetResponseSchema,
         },
       },
     },
@@ -53,9 +45,9 @@ export default function petRoutes(fastify: FastifyTypeBox): void {
     "/:id",
     {
       schema: {
-        params: Type.Object({ id: Type.Number() }),
+        params: GetPetParamsSchema,
         response: {
-          "200": GetPetSchema,
+          "200": GetPetResponseSchema,
         },
       },
     },

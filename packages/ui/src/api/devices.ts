@@ -1,50 +1,28 @@
+import type { 
+  GetEventsResponseDTO, 
+  GetDeviceResponseDTO, 
+  GetDevicesResponseDTO, 
+  PostDeviceRequestDTO 
+} from "@cat-health/shared";
 import apiClient from "./apiClient";
 
-export type Device = {
-  id: number;
-  name: string;
-  type: "litterbox" | "feeder" | "water_fountain";
-};
 
-export async function getDevices(): Promise<Device[]> {
-  const { data } = await apiClient.get('/devices');
+export async function getDevices() {
+  const { data } = await apiClient.get<GetDevicesResponseDTO>('/devices');
   return data;
 }
 
-export async function getDevice(id: number): Promise<Device> {
-  const { data } = await apiClient.get(`/devices/${id}`);
+export async function getDevice(id: number) {
+  const { data } = await apiClient.get<GetDeviceResponseDTO>(`/devices/${id}`);
   return data;
 }
 
-export type NewDevice = {
-  name: string;
-  type: "litterbox" | "feeder" | "water_fountain";
-};
-
-export async function addDevice(input: NewDevice): Promise<Device> {
-  const { data } = await apiClient.post('/devices', input);
+export async function addDevice(input: PostDeviceRequestDTO) {
+  const { data } = await apiClient.post<GetDeviceResponseDTO>('/devices', input);
   return data;
 }
 
-export type Event = {
-  id: number;
-  pet_id: number;
-  device_id: number | null;
-  timestamp: string;
-  data: Record<string, unknown>;
-  raw_data: number[] | null;
-  human_verified: boolean;
-};
-
-export type PaginatedEvents = {
-  events: Event[];
-  total: number;
-  limit: number;
-  offset: number;
-  hasMore: boolean;
-};
-
-export async function getDeviceEvents(deviceId: number, startTime?: string, endTime?: string): Promise<PaginatedEvents> {
+export async function getDeviceEvents(deviceId: number, startTime?: string, endTime?: string) {
   const params: Record<string, unknown> = { device_id: deviceId };
   if (startTime) {
     params.startTime = startTime;
@@ -52,6 +30,6 @@ export async function getDeviceEvents(deviceId: number, startTime?: string, endT
   if (endTime) {
     params.endTime = endTime;
   }
-  const { data } = await apiClient.get('/events', { params });
+  const { data } = await apiClient.get<GetEventsResponseDTO>('/events', { params });
   return data;
 }

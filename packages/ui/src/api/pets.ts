@@ -1,46 +1,29 @@
-export type AddEventInput = {
-  pet_id?: number | null;
-  device_id?: number | null;
-  timestamp?: string;
-  data: Record<string, unknown>;
-};
+import { 
+  type GetEventsResponseDTO, 
+  type GetEventDTO, 
+  type PostEventRequestDTO, 
+  type DeleteEventResponseDTO, 
+  type PatchEventRequestDTO 
+} from "@cat-health/shared";
 
-export async function addEvent(input: AddEventInput): Promise<Event> {
-  const { data } = await apiClient.post('/events', input);
-  return data;
-}
-import type { Pet } from "@/pages/PetList";
 import apiClient from "./apiClient";
 
-export async function getPets(): Promise<Pet[]> {
+export async function addEvent(input: PostEventRequestDTO) {
+  const { data } = await apiClient.post<GetEventDTO>('/events', input);
+  return data;
+}
+
+export async function getPets() {
   const { data } = await apiClient.get('/pets');
   return data;
 }
 
-export async function getPet(id: number): Promise<Pet> {
+export async function getPet(id: number) {
   const { data } = await apiClient.get(`/pets/${id}`);
   return data;
 }
 
-export type Event = {
-  id: number;
-  pet_id: number;
-  device_id: number | null;
-  timestamp: string;
-  data: Record<string, unknown>;
-  raw_data: number[] | null;
-  human_verified: boolean;
-};
-
-export type PaginatedEvents = {
-  events: Event[];
-  total: number;
-  limit: number;
-  offset: number;
-  hasMore: boolean;
-};
-
-export async function getPetEvents(petId: number, startTime?: string, endTime?: string, limit?: number): Promise<PaginatedEvents> {
+export async function getPetEvents(petId: number, startTime?: string, endTime?: string, limit?: number){
   const params: Record<string, unknown> = { pet_id: petId };
   if (startTime) {
     params.startTime = startTime;
@@ -51,23 +34,17 @@ export async function getPetEvents(petId: number, startTime?: string, endTime?: 
   if (limit) {
     params.limit = limit;
   }
-  const { data } = await apiClient.get('/events', { params });
+  const { data } = await apiClient.get<GetEventsResponseDTO>('/events', { params });
   return data;
 }
 
-export async function deleteEvent(eventId: number): Promise<{ success: boolean }> {
-  const { data } = await apiClient.delete(`/events/${eventId}`);
+export async function deleteEvent(eventId: number) {
+  const { data } = await apiClient.delete<DeleteEventResponseDTO>(`/events/${eventId}`);
   return data;
 }
 
-export type UpdateEventInput = {
-  pet_id?: number | null;
-  data?: Record<string, unknown>;
-  human_verified?: boolean;
-};
-
-export async function updateEvent(eventId: number, input: UpdateEventInput): Promise<Event> {
-  const { data } = await apiClient.patch(`/events/${eventId}`, input);
+export async function updateEvent(eventId: number, input: PatchEventRequestDTO) {
+  const { data } = await apiClient.patch<GetEventDTO>(`/events/${eventId}`, input);
   return data;
 }
 
@@ -77,7 +54,7 @@ export type WeightTrend = {
   timestamp: string;
 };
 
-export async function getPetWeightTrends(petId: number, days: number = 30): Promise<WeightTrend[]> {
+export async function getPetWeightTrends(petId: number, days: number = 30) {
   const { data } = await apiClient.get(`/events/weight-trends/${petId}`, { 
     params: { days } 
   });

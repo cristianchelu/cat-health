@@ -1,61 +1,31 @@
-import { type Static, Type } from "@sinclair/typebox";
-import { db } from "../database/index.ts";
 import { sql } from "kysely";
+
+import { 
+  DeleteEventParamsSchema,
+  DeleteEventResponseSchema,
+  GetEventSchema,
+  GetEventsQuerySchema,
+  GetEventsResponseSchema,
+  PatchEventParamsSchema,
+  PatchEventRequestSchema,
+  PostEventRequestSchema,
+  WeightTrendParamsSchema,
+  WeightTrendQuerySchema,
+  WeightTrendsResponseSchema 
+} from "@cat-health/shared";
+
+import { db } from "../database/index.ts";
 import { type FastifyTypeBox } from "../types.ts";
-
-const GetEventSchema = Type.Object({
-  id: Type.Number(),
-  pet_id: Type.Union([Type.Number(), Type.Null()]),
-  device_id: Type.Union([Type.Null(), Type.Number()]),
-  timestamp: Type.Any(), // TODO: Type.Date(),
-  data: Type.Any(), // TODO: Type
-  raw_data: Type.Union([Type.Null(), Type.Array(Type.Number())]),
-  human_verified: Type.Boolean(),
-});
-export type GetEventDTO = Static<typeof GetEventSchema>;
-
-const GetEventsSchema = Type.Array(GetEventSchema);
-export type GetEventsDTO = Static<typeof GetEventsSchema>;
-
-const PostEventSchema = Type.Composite([
-  Type.Omit(GetEventSchema, ["id", "timestamp", "raw_data"]),
-  Type.Object({
-    timestamp: Type.Optional(Type.String()),
-    raw_data: Type.Optional(
-      Type.Union([Type.Null(), Type.Array(Type.Number())])
-    ),
-  }),
-]);
-export type PostEventDTO = Static<typeof PostEventSchema>;
-
-const PatchEventSchema = Type.Object({
-  pet_id: Type.Union([Type.Number(), Type.Null()]),
-  data: Type.Optional(Type.Any()),
-  human_verified: Type.Optional(Type.Boolean()),
-});
-export type PatchEventDTO = Static<typeof PatchEventSchema>;
-
-const WeightTrendSchema = Type.Object({
-  date: Type.String(),
-  weight: Type.Number(),
-  timestamp: Type.String(),
-});
-
-const WeightTrendsSchema = Type.Array(WeightTrendSchema);
-export type WeightTrendDTO = Static<typeof WeightTrendSchema>;
-export type WeightTrendsDTO = Static<typeof WeightTrendsSchema>;
 
 export default function eventRoutes(fastify: FastifyTypeBox): void {
   fastify.get(
     "/weight-trends/:petId",
     {
       schema: {
-        params: Type.Object({ petId: Type.Number() }),
-        querystring: Type.Object({
-          days: Type.Optional(Type.Number({ minimum: 1 })),
-        }),
+        params: WeightTrendParamsSchema,
+        querystring: WeightTrendQuerySchema,
         response: {
-          "200": WeightTrendsSchema,
+          "200": WeightTrendsResponseSchema,
         },
       },
     },
@@ -79,7 +49,7 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
 
       const weightEvents = await query.execute();
 
-      const trends: WeightTrendDTO[] = weightEvents.map((event) => {
+      const trends = weightEvents.map((event) => {
         const data = event.data as { type: string; weight: number };
         return {
           date: event.timestamp.toISOString().split('T')[0],
@@ -96,22 +66,9 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
     "/",
     {
       schema: {
-        querystring: Type.Object({
-          pet_id: Type.Optional(Type.Number()),
-          device_id: Type.Optional(Type.Number()),
-          startTime: Type.Optional(Type.String({ format: 'date-time' })), // ISO 8601 format
-          endTime: Type.Optional(Type.String({ format: 'date-time' })), // ISO 8601 format
-          limit: Type.Optional(Type.Number({ minimum: 1, maximum: 5000 })),
-          offset: Type.Optional(Type.Number({ minimum: 0 })),
-        }),
+        querystring: GetEventsQuerySchema,
         response: {
-          "200": Type.Object({
-            events: GetEventsSchema,
-            total: Type.Number(),
-            limit: Type.Number(),
-            offset: Type.Number(),
-            hasMore: Type.Boolean(),
-          }),
+          "200": GetEventsResponseSchema,
         },
       },
     },
@@ -158,7 +115,7 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
       const hasMore = offset + events.length < total;
 
       return {
-        events: events.map((event) => ({
+        data: events.map((event) => ({
           ...event,
           raw_data: event.raw_data ? Array.from(event.raw_data) : null,
         })),
@@ -174,7 +131,7 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
     "/",
     {
       schema: {
-        body: PostEventSchema,
+        body: PostEventRequestSchema,
         response: {
           "200": GetEventSchema,
         },
@@ -207,8 +164,8 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
     "/:eventId",
     {
       schema: {
-        params: Type.Object({ eventId: Type.Number() }),
-        body: PatchEventSchema,
+        params: PatchEventParamsSchema,
+        body: PatchEventRequestSchema,
         response: {
           "200": GetEventSchema,
         },
@@ -239,9 +196,9 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
     "/:eventId",
     {
       schema: {
-        params: Type.Object({ eventId: Type.Number() }),
+        params: DeleteEventParamsSchema,
         response: {
-          "200": Type.Object({ success: Type.Boolean() }),
+          "200": DeleteEventResponseSchema,
         },
       },
     },

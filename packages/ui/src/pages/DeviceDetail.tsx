@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { useState } from 'react';
-import { getDevice, getDeviceEvents, type Event } from '@/api/devices';
+import { getDevice, getDeviceEvents } from '@/api/devices';
 import { deleteEvent, updateEvent, getPets} from '@/api/pets';
 import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
 import LitterboxMaintenanceEventItem from '@/components/event/LitterboxMaintenanceEvent';
@@ -58,7 +58,7 @@ export default function DeviceDetail() {
 
   const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean, pet_id?: number | null) => {
     try {
-      await updateEvent(eventId, { data, human_verified, pet_id });
+      await updateEvent(eventId, { data, human_verified, pet_id: pet_id ?? null });
       await queryClient.invalidateQueries({ queryKey: ['deviceEvents', deviceId, currentDate] });
     } catch (error) {
       console.error('Failed to update event:', error);
@@ -84,7 +84,7 @@ export default function DeviceDetail() {
     enabled: isValidId,
   });
 
-  const { data: eventsData = { events: [], total: 0, hasMore: false, limit: 0, offset: 0 }, isLoading: eventsLoading, error: eventsError } = useQuery({
+  const { data: eventsData = { data: [], total: 0, hasMore: false, limit: 0, offset: 0 }, isLoading: eventsLoading, error: eventsError } = useQuery({
     queryKey: ['deviceEvents', deviceId, currentDate],
     queryFn: () => {
       const { startTime, endTime } = dateToTimeRange(currentDate);
@@ -114,7 +114,7 @@ export default function DeviceDetail() {
     return <div className="device-detail device-detail--empty">Device not found.</div>;
   }
 
-  const events = eventsData.events;
+  const events = eventsData.data;
   const hasEvents = events.length > 0;
 
   return (
@@ -138,7 +138,7 @@ export default function DeviceDetail() {
         )}
         <div className="event-group">
           <ul className="event-list">
-            {events.sort((a: Event, b: Event) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((event: Event) => {
+            {events.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((event) => {
               if (event.data && typeof event.data === 'object' && 
                   'type' in event.data && event.data.type === 'litterbox_use') {
                 const litterboxData = event.data as {
