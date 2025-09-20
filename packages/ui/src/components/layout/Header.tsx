@@ -1,18 +1,15 @@
 import * as React from 'react';
 import { Link } from 'react-router';
 import { Menu, RefreshCw, X } from 'lucide-react';
+import { useMigrateMutation } from '@/hooks/queries/scriptQueries';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
 import './Header.css';
 
-interface HeaderProps {
-  isMigrating: boolean;
-  onMigrate: () => void;
-}
-
-const Header: React.FC<HeaderProps> = ({ isMigrating, onMigrate }) => {
+const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const {mutate: migrate, isPending: isMigrating} = useMigrateMutation();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -33,7 +30,7 @@ const Header: React.FC<HeaderProps> = ({ isMigrating, onMigrate }) => {
         <div className="user-menu">
           <Button
             variant="ghost"
-            onClick={onMigrate}
+            onClick={() => migrate()}
             disabled={isMigrating}
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
@@ -60,7 +57,7 @@ const Header: React.FC<HeaderProps> = ({ isMigrating, onMigrate }) => {
         <div className="user-menu">
           <Button
             variant="ghost"
-            onClick={() => { onMigrate(); setIsMenuOpen(false); }}
+            onClick={() => { migrate(); setIsMenuOpen(false); }}
             disabled={isMigrating}
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
