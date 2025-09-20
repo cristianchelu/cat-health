@@ -1,7 +1,8 @@
 node_modules
 dist
 /data/
-.vscode
+.vscode/*
+!.vscode/settings.json
 .env
 packages/api/.env
 
