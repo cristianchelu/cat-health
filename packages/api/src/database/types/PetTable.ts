@@ -1,4 +1,4 @@
-import type { Generated, Insertable, Selectable, Updateable } from "kysely";
+import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
 
 export interface PetTable {
   id: Generated<number>;

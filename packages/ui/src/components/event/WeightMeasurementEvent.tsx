@@ -1,11 +1,11 @@
-import { FaWeight } from "react-icons/fa";
+import { FaWeight } from 'react-icons/fa';
 
-import BaseEvent from "./BaseEvent";
-import { EventDataItem, EventStats } from "./EventDataItem";
-import { formatWeight, type Pet } from "./eventUtils";
+import BaseEvent from './BaseEvent';
+import { EventDataItem, EventStats } from './EventDataItem';
+import { formatWeight, type Pet } from './eventUtils';
 
 interface WeightMeasurementEventData {
-  type: "weight_measurement";
+  type: 'weight_measurement';
   weight: number; // in grams
 }
 
@@ -22,7 +22,7 @@ interface WeightMeasurementEventProps {
     id: number,
     data: WeightMeasurementEventData,
     human_verified: boolean,
-    pet_id?: number | null
+    pet_id?: number | null,
   ) => Promise<void>;
   isDeleting: boolean;
 }

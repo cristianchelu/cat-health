@@ -15,5 +15,7 @@ export type GetDeviceResponseDTO = Static<typeof GetDeviceResponseSchema>;
 export const GetDevicesResponseSchema = Type.Array(GetDeviceResponseSchema);
 export type GetDevicesResponseDTO = Static<typeof GetDevicesResponseSchema>;
 
-export const PostDeviceRequestSchema = Type.Omit(GetDeviceResponseSchema, ["id"]);
+export const PostDeviceRequestSchema = Type.Omit(GetDeviceResponseSchema, [
+  "id",
+]);
 export type PostDeviceRequestDTO = Static<typeof PostDeviceRequestSchema>;

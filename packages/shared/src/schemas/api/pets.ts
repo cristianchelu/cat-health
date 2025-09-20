@@ -1,6 +1,6 @@
 import { type Static, Type } from "@sinclair/typebox";
 
-export const GetPetParamsSchema = Type.Object({ id: Type.Number() })
+export const GetPetParamsSchema = Type.Object({ id: Type.Number() });
 export const GetPetResponseSchema = Type.Object({
   id: Type.Number(),
   name: Type.String(),

@@ -9,7 +9,7 @@ import './Header.css';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-  const {mutate: migrate, isPending: isMigrating} = useMigrateMutation();
+  const { mutate: migrate, isPending: isMigrating } = useMigrateMutation();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -24,8 +24,12 @@ const Header: React.FC = () => {
       {/* Desktop Menu */}
       <div className="desktop-menu">
         <nav className="main-nav">
-          <Link to="/" className="nav-link">Pets</Link>
-          <Link to="/devices" className="nav-link">Devices</Link>
+          <Link to="/" className="nav-link">
+            Pets
+          </Link>
+          <Link to="/devices" className="nav-link">
+            Devices
+          </Link>
         </nav>
         <div className="user-menu">
           <Button
@@ -34,7 +38,10 @@ const Header: React.FC = () => {
             disabled={isMigrating}
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            <RefreshCw size={16} className={isMigrating ? 'animate-spin' : ''} />
+            <RefreshCw
+              size={16}
+              className={isMigrating ? 'animate-spin' : ''}
+            />
             {isMigrating ? 'Syncing...' : 'Sync'}
           </Button>
           <Button variant="ghost">Settings</Button>
@@ -47,20 +54,40 @@ const Header: React.FC = () => {
       </div>
       <div className={cn('mobile-menu', { 'is-open': isMenuOpen })}>
         <nav className="main-nav">
-          <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>Pets</Link>
-          <Link to="/devices" className="nav-link" onClick={() => setIsMenuOpen(false)}>Devices</Link>
+          <Link
+            to="/"
+            className="nav-link"
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Pets
+          </Link>
+          <Link
+            to="/devices"
+            className="nav-link"
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Devices
+          </Link>
         </nav>
         <div className="user-menu">
           <Button
             variant="ghost"
-            onClick={() => { migrate(); setIsMenuOpen(false); }}
+            onClick={() => {
+              migrate();
+              setIsMenuOpen(false);
+            }}
             disabled={isMigrating}
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            <RefreshCw size={16} className={isMigrating ? 'animate-spin' : ''} />
+            <RefreshCw
+              size={16}
+              className={isMigrating ? 'animate-spin' : ''}
+            />
             {isMigrating ? 'Syncing...' : 'Sync'}
           </Button>
-          <Button variant="ghost" onClick={() => setIsMenuOpen(false)}>Settings</Button>
+          <Button variant="ghost" onClick={() => setIsMenuOpen(false)}>
+            Settings
+          </Button>
         </div>
       </div>
     </header>

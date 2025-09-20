@@ -20,7 +20,7 @@ export const PostEventRequestSchema = Type.Composite([
   Type.Object({
     timestamp: Type.Optional(Type.String()),
     raw_data: Type.Optional(
-      Type.Union([Type.Null(), Type.Array(Type.Number())])
+      Type.Union([Type.Null(), Type.Array(Type.Number())]),
     ),
   }),
 ]);
@@ -72,6 +72,6 @@ export const WeightTrendsResponseSchema = Type.Array(
     date: Type.String(),
     weight: Type.Number(),
     timestamp: Type.String(),
-  })
+  }),
 );
 export type WeightTrendsResponseDTO = Static<typeof WeightTrendsResponseSchema>;

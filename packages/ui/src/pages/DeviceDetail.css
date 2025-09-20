@@ -96,12 +96,12 @@
     line-height: 1;
     transition: all 0.2s;
     flex-shrink: 0;
-    
+
     &:hover:not(:disabled) {
       background: color-mix(in srgb, var(--color-error) 80%, #000);
       transform: scale(1.1);
     }
-    
+
     &:disabled {
       opacity: 0.6;
       cursor: not-allowed;
@@ -126,7 +126,9 @@
     color: var(--color-text-light);
   }
 
-  &--loading, &--error, &--empty {
+  &--loading,
+  &--error,
+  &--empty {
     display: flex;
     align-items: center;
     justify-content: center;

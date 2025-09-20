@@ -9,7 +9,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "node --experimental-strip-types src/database/migrate.ts",
     "sync": "node --experimental-strip-types src/scripts/migrate.new.ts",
-    "reset-db": "rm -f data/database.sqlite && npm run migrate"
+    "reset-db": "rm -f data/database.sqlite && npm run migrate",
+    "format": "prettier --write ."
   },
   "author": "Cristian Chelu",
   "license": "MIT",

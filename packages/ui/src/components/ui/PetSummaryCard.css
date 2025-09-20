@@ -70,11 +70,11 @@
     grid-template-columns: 1fr;
     gap: var(--space-sm);
   }
-  
+
   .pet-card-header {
     font-size: var(--text-lg);
   }
-  
+
   .weight-value {
     font-size: var(--text-md);
   }

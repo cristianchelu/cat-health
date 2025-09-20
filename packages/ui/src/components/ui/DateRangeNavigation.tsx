@@ -1,11 +1,16 @@
 import { useState } from 'react';
-import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaCog } from 'react-icons/fa';
+import {
+  FaChevronLeft,
+  FaChevronRight,
+  FaCalendarAlt,
+  FaCog,
+} from 'react-icons/fa';
 import type { DateRange, TimeRangeType } from '@/lib/utils';
-import { 
-  createDateRange, 
-  getPreviousDateRange, 
-  getNextDateRange, 
-  formatDateRangeForDisplay 
+import {
+  createDateRange,
+  getPreviousDateRange,
+  getNextDateRange,
+  formatDateRangeForDisplay,
 } from '@/lib/utils';
 
 import './DateRangeNavigation.css';
@@ -17,10 +22,10 @@ interface DateRangeNavigationProps {
   hasEvents?: boolean;
 }
 
-export default function DateRangeNavigation({ 
-  currentRange, 
-  onRangeChange, 
-  hasEvents = true 
+export default function DateRangeNavigation({
+  currentRange,
+  onRangeChange,
+  hasEvents = true,
 }: DateRangeNavigationProps) {
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [tempStartDate, setTempStartDate] = useState(currentRange.startDate);
@@ -63,7 +68,7 @@ export default function DateRangeNavigation({
       setShowCustomPicker(true);
       return;
     }
-    
+
     // Use the start date of current range as reference for new range type
     const newRange = createDateRange(currentRange.startDate, type);
     onRangeChange(newRange);
@@ -74,7 +79,7 @@ export default function DateRangeNavigation({
       const customRange: DateRange = {
         startDate: tempStartDate,
         endDate: tempEndDate,
-        type: 'custom'
+        type: 'custom',
       };
       onRangeChange(customRange);
       setShowCustomPicker(false);
@@ -107,11 +112,7 @@ export default function DateRangeNavigation({
           <span className="date-text">
             {formatDateRangeForDisplay(currentRange)}
           </span>
-          {!hasEvents && (
-            <span className="date-no-events">
-              (No events)
-            </span>
-          )}
+          {!hasEvents && <span className="date-no-events">(No events)</span>}
         </div>
 
         <div className="date-navigation-actions">
@@ -144,7 +145,9 @@ export default function DateRangeNavigation({
         </label>
         <select
           value={currentRange.type}
-          onChange={(e) => handleRangeTypeChange(e.target.value as TimeRangeType)}
+          onChange={(e) =>
+            handleRangeTypeChange(e.target.value as TimeRangeType)
+          }
           className="range-type-select"
         >
           <option value="day">Day</option>
@@ -184,7 +187,7 @@ export default function DateRangeNavigation({
           <div className="custom-range-actions">
             <Button
               onClick={handleCustomRangeCancel}
-              variant='ghost'
+              variant="ghost"
               // className="cancel-button"
             >
               Cancel
@@ -192,7 +195,9 @@ export default function DateRangeNavigation({
             <Button
               onClick={handleCustomRangeApply}
               // className="apply-button"
-              disabled={!tempStartDate || !tempEndDate || tempStartDate > tempEndDate}
+              disabled={
+                !tempStartDate || !tempEndDate || tempStartDate > tempEndDate
+              }
             >
               Apply
             </Button>

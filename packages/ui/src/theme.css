@@ -5,41 +5,41 @@
   --color-primary-light: #e0e7ff;
   --color-primary-lighter: #c7d2fe;
   --color-primary-lightest: #eef2ff;
-  
+
   --color-secondary: #12b488;
   --color-secondary-dark: #0e9d74;
   --color-secondary-light: #ecfdf5;
-  
+
   --color-warning: #f59e0b;
   --color-warning-light: #fef3c7;
-  
+
   --color-error: #ef4444;
   --color-error-light: #fee2e2;
-  
+
   --color-success: #22c55e;
   --color-success-light: #dcfce7;
-  
+
   --color-background: #f8fafc;
   --color-white: #ffffff;
   --color-black: #121212;
-  
+
   /* Text Colors */
   --color-text: #334155;
   --color-text-light: #64748b;
   --color-text-muted: #94a3b8;
   --color-text-subtle: #cbd5e1;
   --color-text-inverted: #ffffff;
-  
+
   /* Surface Colors */
   --color-surface: #ffffff;
   --color-surface-muted: #f1f5f9;
   --color-surface-highlight: #fafafa;
-  
+
   /* Border Colors */
   --color-border: #e2e8f0;
   --color-border-hover: #cbd5e1;
   --color-border-focus: var(--color-primary);
-  
+
   /* Shadow Colors */
   --color-shadow: rgba(15, 23, 42, 0.08);
   --color-shadow-dark: rgba(15, 23, 42, 0.16);
@@ -60,64 +60,69 @@
 
   /* Spacing System */
   --space-3xs: 0.125rem; /* 2px */
-  --space-2xs: 0.25rem;  /* 4px */
-  --space-xs: 0.5rem;    /* 8px */
-  --space-sm: 0.75rem;   /* 12px */
-  --space-md: 1rem;      /* 16px */
-  --space-lg: 1.25rem;   /* 20px */
-  --space-xl: 1.5rem;    /* 24px */
-  --space-2xl: 2rem;     /* 32px */
-  --space-3xl: 2.5rem;   /* 40px */
-  --space-4xl: 3rem;     /* 48px */
-  --space-5xl: 4rem;     /* 64px */
-  
+  --space-2xs: 0.25rem; /* 4px */
+  --space-xs: 0.5rem; /* 8px */
+  --space-sm: 0.75rem; /* 12px */
+  --space-md: 1rem; /* 16px */
+  --space-lg: 1.25rem; /* 20px */
+  --space-xl: 1.5rem; /* 24px */
+  --space-2xl: 2rem; /* 32px */
+  --space-3xl: 2.5rem; /* 40px */
+  --space-4xl: 3rem; /* 48px */
+  --space-5xl: 4rem; /* 64px */
+
   /* Typography */
-  --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  
+  --font-family:
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', sans-serif;
+
   /* Font Sizes */
-  --text-xs: 0.75rem;    /* 12px */
-  --text-sm: 0.875rem;   /* 14px */
-  --text-base: 1rem;     /* 16px */
-  --text-lg: 1.125rem;   /* 18px */
-  --text-xl: 1.25rem;    /* 20px */
-  --text-2xl: 1.5rem;    /* 24px */
-  --text-3xl: 1.875rem;  /* 30px */
-  --text-4xl: 2.25rem;   /* 36px */
-  --text-5xl: 3rem;      /* 48px */
-  
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-3xl: 1.875rem; /* 30px */
+  --text-4xl: 2.25rem; /* 36px */
+  --text-5xl: 3rem; /* 48px */
+
   /* Font Weights */
   --font-normal: 400;
   --font-medium: 500;
   --font-semibold: 600;
   --font-bold: 700;
   --font-black: 900;
-  
+
   /* Line Heights */
   --line-height-tight: 1.25;
   --line-height-normal: 1.5;
   --line-height-loose: 1.75;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 var(--color-shadow);
-  --shadow-md: 0 4px 6px -1px var(--color-shadow), 0 2px 4px -2px var(--color-shadow);
-  --shadow-lg: 0 10px 15px -3px var(--color-shadow), 0 4px 6px -4px var(--color-shadow);
-  --shadow-xl: 0 20px 25px -5px var(--color-shadow), 0 8px 10px -6px var(--color-shadow);
-  
+  --shadow-md:
+    0 4px 6px -1px var(--color-shadow), 0 2px 4px -2px var(--color-shadow);
+  --shadow-lg:
+    0 10px 15px -3px var(--color-shadow), 0 4px 6px -4px var(--color-shadow);
+  --shadow-xl:
+    0 20px 25px -5px var(--color-shadow), 0 8px 10px -6px var(--color-shadow);
+
   /* Layout */
-  --max-width-xs: 20rem;    /* 320px */
-  --max-width-sm: 30rem;    /* 480px */
-  --max-width-md: 48rem;    /* 768px */
-  --max-width-lg: 64rem;    /* 1024px */
-  --max-width-xl: 80rem;    /* 1280px */
-  --max-width-2xl: 96rem;   /* 1536px */
+  --max-width-xs: 20rem; /* 320px */
+  --max-width-sm: 30rem; /* 480px */
+  --max-width-md: 48rem; /* 768px */
+  --max-width-lg: 64rem; /* 1024px */
+  --max-width-xl: 80rem; /* 1280px */
+  --max-width-2xl: 96rem; /* 1536px */
   --max-width-content: var(--max-width-lg);
-  
+
   /* Borders */
   --border-thin: 1px solid var(--color-border);
   --border-medium: 2px solid var(--color-border);
   --border-thick: 3px solid var(--color-border);
   --border-primary: 2px solid var(--color-primary);
-  
+
   /* Z-index layers */
   --z-index-dropdown: 1000;
   --z-index-sticky: 1020;
@@ -126,23 +131,35 @@
   --z-index-modal: 1050;
   --z-index-popover: 1060;
   --z-index-tooltip: 1070;
-  
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow: 350ms ease;
-  
+
   /* Breakpoints */
   --breakpoint-sm: 640px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
   --breakpoint-xl: 1280px;
   --breakpoint-2xl: 1536px;
-  
+
   /* Gradients */
-  --gradient-background: linear-gradient(to bottom right, var(--color-background), var(--color-primary-lightest));
-  --gradient-primary: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
-  --gradient-secondary: linear-gradient(to right, var(--color-secondary), var(--color-secondary-dark));
+  --gradient-background: linear-gradient(
+    to bottom right,
+    var(--color-background),
+    var(--color-primary-lightest)
+  );
+  --gradient-primary: linear-gradient(
+    to right,
+    var(--color-primary),
+    var(--color-primary-dark)
+  );
+  --gradient-secondary: linear-gradient(
+    to right,
+    var(--color-secondary),
+    var(--color-secondary-dark)
+  );
 }
 
 /* Dark Theme */
@@ -153,45 +170,49 @@
     --color-primary-light: #818cf8;
     --color-primary-lighter: #93c5fd;
     --color-primary-lightest: #3730a3;
-    
+
     --color-secondary: #10b981;
     --color-secondary-dark: #059669;
     --color-secondary-light: #6ee7b7;
-    
+
     --color-warning: #f59e0b;
     --color-warning-light: #fbbf24;
-    
+
     --color-error: #ef4444;
     --color-error-light: #f87171;
-    
+
     --color-success: #10b981;
     --color-success-light: #34d399;
-    
+
     --color-background: #0f172a;
     --color-white: #1e293b;
     --color-black: #f8fafc;
-    
+
     /* Text Colors */
     --color-text: #e2e8f0;
     --color-text-light: #cbd5e1;
     --color-text-muted: #94a3b8;
     --color-text-subtle: #64748b;
     --color-text-inverted: #0f172a;
-    
+
     /* Surface Colors */
     --color-surface: #1e293b;
     --color-surface-muted: #0f172a;
     --color-surface-highlight: #334155;
-    
+
     /* Border Colors */
     --color-border: #334155;
     --color-border-hover: #475569;
-    
+
     /* Shadow Colors */
     --color-shadow: rgba(0, 0, 0, 0.3);
     --color-shadow-dark: rgba(0, 0, 0, 0.5);
-    
+
     /* Gradients */
-    --gradient-background: linear-gradient(to bottom right, var(--color-background), var(--color-primary-lightest));
+    --gradient-background: linear-gradient(
+      to bottom right,
+      var(--color-background),
+      var(--color-primary-lightest)
+    );
   }
 }

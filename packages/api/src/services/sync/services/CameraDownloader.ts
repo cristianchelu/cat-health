@@ -1,13 +1,13 @@
-import { NodeSSH } from "node-ssh";
-import { exec } from "child_process";
-import { promisify } from "util";
-import * as fs from "fs/promises";
-import * as path from "path";
-import { format } from "date-fns";
+import { NodeSSH } from 'node-ssh';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { format } from 'date-fns';
 
-import { EventEmitter } from "events";
-import { createWriteStream } from "fs";
-import type { MediaService } from "../types.ts";
+import { EventEmitter } from 'events';
+import { createWriteStream } from 'fs';
+import type { MediaService } from '../types.ts';
 
 const execAsync = promisify(exec);
 
@@ -53,7 +53,10 @@ interface QueuedEvent extends EventRequest {
  * This simplified version assumes the Node.js server and the camera
  * are operating in the SAME timezone.
  */
-export class CameraEventDownloader extends EventEmitter implements MediaService {
+export class CameraEventDownloader
+  extends EventEmitter
+  implements MediaService
+{
   private ssh: NodeSSH;
   private config: Required<CameraConfig>;
   private isConnected: boolean = false;
@@ -67,21 +70,20 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
     const { ip } = config;
 
     if (!ip) {
-      throw new Error("Camera IP is required");
+      throw new Error('Camera IP is required');
     }
 
     this.ssh = new NodeSSH();
     this.config = {
       ip,
-      sshUser: config.sshUser || "root",
+      sshUser: config.sshUser || 'root',
       sshOptions: config.sshOptions || {},
       remotePath: config.remotePath,
       bufferSeconds: config.bufferSeconds || 60,
       clipDurationSeconds: config.clipDurationSeconds || 120,
       cropLeftHalf: config.cropLeftHalf || false,
       rotate90CCW: config.rotate90CCW || false,
-      tempDir:
-        config.tempDir || `/tmp/temp_camera_${ip.replace(/\./g, "_")}`,
+      tempDir: config.tempDir || `/tmp/temp_camera_${ip.replace(/\./g, '_')}`,
       recordingsDir: config.recordingsDir,
     };
   }
@@ -100,7 +102,7 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
 
   private async _doConnect(): Promise<void> {
     try {
-      this.emit("connecting", { ip: this.config.ip });
+      this.emit('connecting', { ip: this.config.ip });
 
       await this.ssh.connect({
         host: this.config.ip,
@@ -113,7 +115,7 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
 
       this.isConnected = true;
 
-      this.emit("connected", { ip: this.config.ip });
+      this.emit('connected', { ip: this.config.ip });
 
       if (this.eventQueue.length > 0 && !this.isProcessing) {
         this.processQueue();
@@ -121,7 +123,7 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
     } catch (error) {
       this.isConnected = false;
       this.connectionPromise = null;
-      this.emit("error", error);
+      this.emit('error', error);
       throw error;
     }
   }
@@ -135,10 +137,10 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
         this.ssh.dispose();
         this.isConnected = false;
         this.connectionPromise = null;
-        this.emit("disconnected", { ip: this.config.ip });
+        this.emit('disconnected', { ip: this.config.ip });
       }
     } catch (error) {
-      this.emit("error", error);
+      this.emit('error', error);
     }
   }
 
@@ -180,7 +182,7 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
 
       const priority = request.priority || 0;
       const insertIndex = this.eventQueue.findIndex(
-        (e) => (e.priority || 0) < priority
+        (e) => (e.priority || 0) < priority,
       );
 
       if (insertIndex === -1) {
@@ -189,7 +191,7 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
         this.eventQueue.splice(insertIndex, 0, queuedEvent);
       }
 
-      this.emit("eventQueued", {
+      this.emit('eventQueued', {
         id: request.id,
         queuePosition:
           insertIndex === -1 ? this.eventQueue.length : insertIndex + 1,
@@ -223,16 +225,16 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
     }
 
     this.isProcessing = true;
-    this.emit("processingStarted");
+    this.emit('processingStarted');
 
     while (this.eventQueue.length > 0 && this.isConnected) {
       const event = this.eventQueue.shift()!;
 
       try {
-        this.emit("eventProcessingStarted", { id: event.id });
+        this.emit('eventProcessingStarted', { id: event.id });
         const result = await this.processEvent(event);
         event.resolve(result);
-        this.emit("eventCompleted", result);
+        this.emit('eventCompleted', result);
       } catch (error) {
         const errorResult: EventResult = {
           id: event.id,
@@ -240,12 +242,12 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
           error: error instanceof Error ? error.message : String(error),
         };
         event.reject(error instanceof Error ? error : new Error(String(error)));
-        this.emit("eventFailed", errorResult);
+        this.emit('eventFailed', errorResult);
       }
     }
 
     this.isProcessing = false;
-    this.emit("processingStopped");
+    this.emit('processingStopped');
   }
 
   /**
@@ -255,7 +257,7 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
     const startTime = Date.now();
     const tempDir = path.join(
       this.config.tempDir,
-      `event_${event.id}_${Date.now()}`
+      `event_${event.id}_${Date.now()}`,
     );
 
     try {
@@ -263,7 +265,7 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
       const endEpoch = this.datetimeToEpoch(event.endDateTime);
 
       if (startEpoch >= endEpoch) {
-        throw new Error("Start datetime must be before end datetime");
+        throw new Error('Start datetime must be before end datetime');
       }
 
       const outputFile =
@@ -274,15 +276,15 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
 
       const relevantFiles = await this.findRelevantFiles(
         event.startDateTime,
-        event.endDateTime
+        event.endDateTime,
       );
       if (relevantFiles.length === 0) {
         throw new Error(
-          "No files found that overlap with the specified time range"
+          'No files found that overlap with the specified time range',
         );
       }
 
-      this.emit("filesFound", {
+      this.emit('filesFound', {
         id: event.id,
         fileCount: relevantFiles.length,
       });
@@ -294,7 +296,7 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
         tempDir,
         outputFile,
         startEpoch,
-        endEpoch
+        endEpoch,
       );
 
       const stats = await fs.stat(finalOutputPath);
@@ -331,7 +333,7 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
    */
   private filenameToEpoch(filename: string): number {
     try {
-      const datetimePart = path.basename(filename, ".mp4");
+      const datetimePart = path.basename(filename, '.mp4');
       const year = parseInt(datetimePart.substring(0, 4));
       const month = parseInt(datetimePart.substring(4, 6)) - 1; // Month is 0-indexed in JS Date
       const day = parseInt(datetimePart.substring(6, 8));
@@ -349,14 +351,17 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
     }
   }
 
-  private generateOutputFilename(startDateTime: Date, eventIdOrType: string): string {
-    const timestamp = format(startDateTime, "yyyyMMdd_HHmmss");
+  private generateOutputFilename(
+    startDateTime: Date,
+    eventIdOrType: string,
+  ): string {
+    const timestamp = format(startDateTime, 'yyyyMMdd_HHmmss');
     return `event_${timestamp}_${eventIdOrType}.mp4`;
   }
 
   private async findRelevantFiles(
     startDateTime: Date,
-    endDateTime: Date
+    endDateTime: Date,
   ): Promise<string[]> {
     const startEpoch = this.datetimeToEpoch(startDateTime);
     const endEpoch = this.datetimeToEpoch(endDateTime);
@@ -383,7 +388,7 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
 
   private async getRemoteFileList(
     startDt: Date,
-    endDt: Date
+    endDt: Date,
   ): Promise<string[]> {
     const startEpoch = this.datetimeToEpoch(startDt);
     const searchStartEpoch = startEpoch - this.config.bufferSeconds;
@@ -397,13 +402,13 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
       searchStartDate.getFullYear(),
       searchStartDate.getMonth(),
       searchStartDate.getDate(),
-      searchStartDate.getHours()
+      searchStartDate.getHours(),
     );
     const endHourDate = new Date(
       endDate.getFullYear(),
       endDate.getMonth(),
       endDate.getDate(),
-      endDate.getHours()
+      endDate.getHours(),
     );
 
     const dirsToScan: string[] = [];
@@ -414,7 +419,7 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
       d.setHours(d.getHours() + 1)
     ) {
       // Format the directory path using the local date parts.
-      const dirPath = format(d, "yyyyMMdd/HH");
+      const dirPath = format(d, 'yyyyMMdd/HH');
       dirsToScan.push(`${this.config.remotePath}/${dirPath}`);
     }
 
@@ -422,10 +427,10 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
     for (const dir of dirsToScan) {
       try {
         const result = await this.ssh.execCommand(
-          `[ -d "${dir}" ] && ls -1 "${dir}"/*.mp4 2>/dev/null || true`
+          `[ -d "${dir}" ] && ls -1 "${dir}"/*.mp4 2>/dev/null || true`,
         );
         if (result.stdout.trim()) {
-          allFiles.push(...result.stdout.trim().split("\n").filter(Boolean));
+          allFiles.push(...result.stdout.trim().split('\n').filter(Boolean));
         }
       } catch (error) {
         // Log or handle error if a directory scan fails, but continue
@@ -438,14 +443,14 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
   private async downloadFiles(
     files: string[],
     tempDir: string,
-    eventId: string
+    eventId: string,
   ): Promise<void> {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const filename = path.basename(file);
       const localPath = path.join(tempDir, filename);
 
-      this.emit("fileDownloadStarted", {
+      this.emit('fileDownloadStarted', {
         id: eventId,
         filename,
         progress: i + 1,
@@ -457,9 +462,9 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
         await this.downloadFileAsStream(file, localPath);
         const stats = await fs.stat(localPath);
         if (stats.size === 0) {
-          throw new Error("Downloaded file is empty");
+          throw new Error('Downloaded file is empty');
         }
-        this.emit("fileDownloaded", {
+        this.emit('fileDownloaded', {
           id: eventId,
           filename,
           size: stats.size,
@@ -470,13 +475,13 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
         throw new Error(
           `Failed to download ${filename}: ${
             error instanceof Error ? error.message : String(error)
-          }`
+          }`,
         );
       }
     }
   }
 
-    /**
+  /**
    * Downloads a single remote file to a local path using the recommended streaming approach.
    * This uses `ssh.exec('cat', ...)` with an `onStdout` handler.
    *
@@ -485,29 +490,29 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
    */
   private async downloadFileAsStream(
     remotePath: string,
-    localPath: string
+    localPath: string,
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const localWriteStream = createWriteStream(localPath);
 
       // Handle errors during the local file writing process
-      localWriteStream.on("error", (err) => {
+      localWriteStream.on('error', (err) => {
         reject(
           new Error(
-            `Failed to write to local file ${localPath}: ${err.message}`
-          )
+            `Failed to write to local file ${localPath}: ${err.message}`,
+          ),
         );
       });
 
       // The 'finish' event is emitted after .end() is called and all data has been flushed.
       // This is the true signal that the file is completely written.
-      localWriteStream.on("finish", () => {
+      localWriteStream.on('finish', () => {
         localWriteStream.close((err) => (err ? reject(err) : resolve()));
       });
 
       // Execute the remote 'cat' command
       this.ssh
-        .exec("cat", [remotePath], {
+        .exec('cat', [remotePath], {
           // This onStdout callback receives each chunk of data from the remote process.
           onStdout: (chunk: Buffer) => {
             localWriteStream.write(chunk);
@@ -525,8 +530,8 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
           localWriteStream.end(); // Attempt to close the stream on failure too
           reject(
             new Error(
-              `Remote command 'cat ${remotePath}' failed: ${err.message}`
-            )
+              `Remote command 'cat ${remotePath}' failed: ${err.message}`,
+            ),
           );
         });
     });
@@ -537,19 +542,19 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
     tempDir: string,
     outputFile: string,
     startEpoch: number,
-    endEpoch: number
+    endEpoch: number,
   ): Promise<string> {
-    const filelistPath = path.join(tempDir, "filelist.txt");
+    const filelistPath = path.join(tempDir, 'filelist.txt');
     const filelistContent = files
       .map((file) => `file '${path.basename(file)}'`)
-      .join("\n");
+      .join('\n');
     await fs.writeFile(filelistPath, filelistContent);
 
-    const tempConcat = path.join(tempDir, "temp_concat.mp4");
+    const tempConcat = path.join(tempDir, 'temp_concat.mp4');
     await execAsync(
       `cd "${tempDir}" && ffmpeg -f concat -safe 0 -i "filelist.txt" -c copy "${path.basename(
-        tempConcat
-      )}" -y -loglevel warning -fflags +genpts`
+        tempConcat,
+      )}" -y -loglevel warning -fflags +genpts`,
     );
 
     const firstFileStart = this.filenameToEpoch(files[0]);
@@ -559,22 +564,22 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
     const absOutputFile = path.resolve(outputFile);
 
     const filters: string[] = [];
-    if (this.config.cropLeftHalf) filters.push("crop=iw/2:ih:0:0");
-    if (this.config.rotate90CCW) filters.push("transpose=2");
+    if (this.config.cropLeftHalf) filters.push('crop=iw/2:ih:0:0');
+    if (this.config.rotate90CCW) filters.push('transpose=2');
 
     // Determine if we need to re-encode video based on filters
     const needsVideoReencoding = filters.length > 0;
-    
+
     let ffmpegCmd = `ffmpeg -i "${tempConcat}" -ss ${startTrim} -t ${totalDuration}`;
-    
+
     if (needsVideoReencoding) {
       // Need to re-encode video due to filters
-      ffmpegCmd += ` -vf "${filters.join(",")}" -c:v libx264`;
+      ffmpegCmd += ` -vf "${filters.join(',')}" -c:v libx264`;
     } else {
       // No filters needed, copy video stream to avoid re-encoding
       ffmpegCmd += ` -c:v copy`;
     }
-    
+
     // For audio, always copy if no video re-encoding, otherwise use aac
     ffmpegCmd += needsVideoReencoding ? ` -c:a aac` : ` -c:a copy`;
     ffmpegCmd += ` "${absOutputFile}" -y -loglevel warning`;
@@ -588,18 +593,19 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
    * MediaService implementation: Download video for an event
    */
   async downloadVideo(
-    startTime: Date, 
-    endTime: Date, 
-    eventType: string, 
-    filename?: string
+    startTime: Date,
+    endTime: Date,
+    eventType: string,
+    filename?: string,
   ): Promise<void> {
     // Generate filename if not provided
-    const videoFilename = filename || this.generateOutputFilename(startTime, eventType);
+    const videoFilename =
+      filename || this.generateOutputFilename(startTime, eventType);
     const outputPath = path.join(this.config.recordingsDir, videoFilename);
 
     try {
       await this.connect();
-      
+
       const result = await this.queueEvent({
         id: `${startTime.getTime()}-${eventType}`,
         startDateTime: startTime,
@@ -608,7 +614,9 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
       });
 
       if (!result.success) {
-        console.warn(`Video download failed for ${videoFilename}: ${result.error}`);
+        console.warn(
+          `Video download failed for ${videoFilename}: ${result.error}`,
+        );
       } else {
         console.log(`✅ Video downloaded successfully: ${videoFilename}`);
       }
@@ -622,13 +630,15 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
    * MediaService implementation: Capture snapshot (not implemented)
    */
   async captureSnapshot(
-    timestamp: Date, 
-    eventType: string, 
-    filename?: string
+    timestamp: Date,
+    eventType: string,
+    filename?: string,
   ): Promise<void> {
     // For now, snapshots are not implemented in CameraEventDownloader
     // This could be extended in the future for drink/eat events
-    console.log(`Snapshot capture not implemented for ${eventType} at ${timestamp.toISOString()}`);
+    console.log(
+      `Snapshot capture not implemented for ${eventType} at ${timestamp.toISOString()}`,
+    );
   }
 
   /**
@@ -637,7 +647,7 @@ export class CameraEventDownloader extends EventEmitter implements MediaService 
   async cleanup(): Promise<void> {
     while (this.eventQueue.length > 0) {
       const event = this.eventQueue.shift()!;
-      event.reject(new Error("Downloader is being cleaned up"));
+      event.reject(new Error('Downloader is being cleaned up'));
     }
     await this.disconnect();
     try {

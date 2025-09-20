@@ -1,6 +1,6 @@
-import type { InfluxDB } from "@influxdata/influxdb-client";
-import type { Kysely } from "kysely";
-import type { Database } from "../../database/index.ts";
+import type { InfluxDB } from '@influxdata/influxdb-client';
+import type { Kysely } from 'kysely';
+import type { Database } from '../../database/index.ts';
 
 export interface EventMigrator {
   readonly name: string;
@@ -8,8 +8,17 @@ export interface EventMigrator {
 }
 
 export interface MediaService {
-  downloadVideo(startTime: Date, endTime: Date, eventType: string, filename?: string): Promise<void>;
-  captureSnapshot(timestamp: Date, eventType: string, filename?: string): Promise<void>;
+  downloadVideo(
+    startTime: Date,
+    endTime: Date,
+    eventType: string,
+    filename?: string,
+  ): Promise<void>;
+  captureSnapshot(
+    timestamp: Date,
+    eventType: string,
+    filename?: string,
+  ): Promise<void>;
   destroy(): Promise<void>;
 }
 

@@ -1,9 +1,9 @@
-import * as React from "react";
+import * as React from 'react';
 import WeightChart from './WeightChart';
 import PhaseMarkers from './PhaseMarkers';
 import type { EventData, Features, DecodedData } from '../types';
 
-import './AnalysisResults.css'
+import './AnalysisResults.css';
 
 interface AnalysisResultsProps {
   selectedEvent: EventData;
@@ -20,12 +20,12 @@ const AnalysisResults = React.forwardRef<HTMLDivElement, AnalysisResultsProps>(
     const weightChartRef = React.useRef<HTMLCanvasElement>(null);
 
     return (
-      <div 
+      <div
         className={`analysis-results${className ? ` ${className}` : ''}`}
         ref={ref}
       >
         <h2>📊 Event Visualization</h2>
-        
+
         <WeightChart
           selectedEvent={selectedEvent}
           analysisData={analysisData}
@@ -35,10 +35,10 @@ const AnalysisResults = React.forwardRef<HTMLDivElement, AnalysisResultsProps>(
         <PhaseMarkers features={analysisData.features} />
       </div>
     );
-  }
+  },
 );
 
-AnalysisResults.displayName = "AnalysisResults";
+AnalysisResults.displayName = 'AnalysisResults';
 
 export { type AnalysisResultsProps };
 export default AnalysisResults;

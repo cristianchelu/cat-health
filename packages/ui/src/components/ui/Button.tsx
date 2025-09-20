@@ -1,27 +1,37 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
-import "./Button.css"
+import * as React from 'react';
+import { cn } from '@/lib/utils';
+import './Button.css';
 
-interface ButtonProps extends React.ComponentProps<"button"> {
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
-  size?: "sm" | "md" | "lg";
+interface ButtonProps extends React.ComponentProps<'button'> {
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  size?: 'sm' | 'md' | 'lg';
   icon?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "primary", size = "md", icon = false, children, ...props }, ref) => {
+  (
+    {
+      className,
+      variant = 'primary',
+      size = 'md',
+      icon = false,
+      children,
+      ...props
+    },
+    ref,
+  ) => {
     return (
       <button
-        className={cn("button", variant, size, icon, className)}
+        className={cn('button', variant, size, icon, className)}
         ref={ref}
         {...props}
       >
         {children}
       </button>
-    )
-  }
-)
+    );
+  },
+);
 
-Button.displayName = "Button"
+Button.displayName = 'Button';
 
-export { Button, type ButtonProps }
+export { Button, type ButtonProps };

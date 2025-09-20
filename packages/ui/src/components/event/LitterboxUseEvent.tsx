@@ -1,15 +1,37 @@
-import * as React from "react";
-import { FaTint, FaPoop, FaBan, FaQuestion, FaClock, FaGift } from 'react-icons/fa';
+import * as React from 'react';
+import {
+  FaTint,
+  FaPoop,
+  FaBan,
+  FaQuestion,
+  FaClock,
+  FaGift,
+} from 'react-icons/fa';
 
-import BaseEvent from "./BaseEvent";
-import { EventDataItem, EventSelect, EventPetSelect, EventStats } from "./EventDataItem";
-import { EventChartButton, EventExpandedSection, EventContextData, EventExpandedChart } from "./EventChart";
-import { EventVideoButton, EventVideoPlayer } from "./EventVideo";
-import { parseRawBuffer, formatDuration, type Pet } from "./eventUtils";
+import BaseEvent from './BaseEvent';
+import {
+  EventDataItem,
+  EventSelect,
+  EventPetSelect,
+  EventStats,
+} from './EventDataItem';
+import {
+  EventChartButton,
+  EventExpandedSection,
+  EventContextData,
+  EventExpandedChart,
+} from './EventChart';
+import { EventVideoButton, EventVideoPlayer } from './EventVideo';
+import { parseRawBuffer, formatDuration, type Pet } from './eventUtils';
 
 interface LitterboxUseEventData {
-  type: "litterbox_use";
-  elimination_type: "urination" | "defecation" | "both" | "no_elimination" | "unknown";
+  type: 'litterbox_use';
+  elimination_type:
+    | 'urination'
+    | 'defecation'
+    | 'both'
+    | 'no_elimination'
+    | 'unknown';
   elimination_weight: number;
   duration: number;
 }
@@ -23,21 +45,43 @@ interface LitterboxUseEventProps {
   human_verified: boolean;
   pets: Pet[];
   onDelete: () => void;
-  onUpdate: (id: number, data: LitterboxUseEventData, human_verified: boolean, pet_id?: number | null) => Promise<void>;
+  onUpdate: (
+    id: number,
+    data: LitterboxUseEventData,
+    human_verified: boolean,
+    pet_id?: number | null,
+  ) => Promise<void>;
   isDeleting: boolean;
   hasVideo?: boolean;
 }
 
-function formatEliminationType(type: string): { icon: React.JSX.Element; label: string } {
+function formatEliminationType(type: string): {
+  icon: React.JSX.Element;
+  label: string;
+} {
   switch (type) {
     case 'urination':
-      return { icon: <FaTint title="Urination" color={"#FFD700"} />, label: 'Urination' };
+      return {
+        icon: <FaTint title="Urination" color={'#FFD700'} />,
+        label: 'Urination',
+      };
     case 'defecation':
-      return { icon: <FaPoop title="Defecation" color={"#8B4513"} />, label: 'Defecation' };
+      return {
+        icon: <FaPoop title="Defecation" color={'#8B4513'} />,
+        label: 'Defecation',
+      };
     case 'both':
-      return { icon: <FaGift title="Both urination and defecation" color={"#32CD32"} />, label: 'Both' };
+      return {
+        icon: (
+          <FaGift title="Both urination and defecation" color={'#32CD32'} />
+        ),
+        label: 'Both',
+      };
     case 'no_elimination':
-      return { icon: <FaBan title="No elimination" color={"#808080"} />, label: 'No elimination' };
+      return {
+        icon: <FaBan title="No elimination" color={'#808080'} />,
+        label: 'No elimination',
+      };
     case 'unknown':
       return { icon: <FaQuestion title="Unknown" />, label: 'Unknown' };
     default:
@@ -46,25 +90,25 @@ function formatEliminationType(type: string): { icon: React.JSX.Element; label: 
 }
 
 const eliminationTypeOptions = [
-  { value: "urination", label: "Urination" },
-  { value: "defecation", label: "Defecation" },
-  { value: "both", label: "Both" },
-  { value: "no_elimination", label: "No elimination" },
-  { value: "unknown", label: "Unknown" }
+  { value: 'urination', label: 'Urination' },
+  { value: 'defecation', label: 'Defecation' },
+  { value: 'both', label: 'Both' },
+  { value: 'no_elimination', label: 'No elimination' },
+  { value: 'unknown', label: 'Unknown' },
 ];
 
-export default function LitterboxUseEvent({ 
-  id, 
-  pet_id, 
-  timestamp, 
-  data, 
-  raw_data, 
-  human_verified, 
-  pets, 
-  onDelete, 
-  onUpdate, 
-  isDeleting, 
-  hasVideo = false 
+export default function LitterboxUseEvent({
+  id,
+  pet_id,
+  timestamp,
+  data,
+  raw_data,
+  human_verified,
+  pets,
+  onDelete,
+  onUpdate,
+  isDeleting,
+  hasVideo = false,
 }: LitterboxUseEventProps) {
   const { timestamps, weights, context } = parseRawBuffer(raw_data);
   const [showChart, setShowChart] = React.useState(false);
@@ -73,10 +117,13 @@ export default function LitterboxUseEvent({
 
   const handleEliminationTypeChange = async (newType: string) => {
     if (isUpdating) return;
-    
+
     setIsUpdating(true);
     try {
-      const updatedData = { ...data, elimination_type: newType as typeof data.elimination_type };
+      const updatedData = {
+        ...data,
+        elimination_type: newType as typeof data.elimination_type,
+      };
       await onUpdate(id, updatedData, true, pet_id);
     } catch (error) {
       console.error('Failed to update event:', error);
@@ -87,7 +134,7 @@ export default function LitterboxUseEvent({
 
   const handlePetAssignmentChange = async (newPetId: number | null) => {
     if (isUpdating) return;
-    
+
     setIsUpdating(true);
     try {
       await onUpdate(id, data, true, newPetId);
@@ -104,7 +151,7 @@ export default function LitterboxUseEvent({
     <EventChartButton
       data={{ timestamps, weights }}
       isExpanded={showChart}
-      onToggle={() => setShowChart(prev => !prev)}
+      onToggle={() => setShowChart((prev) => !prev)}
       borderColor="rgb(75, 192, 192)"
       backgroundColor="rgba(75, 192, 192, 0.2)"
     />
@@ -114,7 +161,7 @@ export default function LitterboxUseEvent({
     <EventVideoButton
       timestamp={timestamp}
       isExpanded={showVideo}
-      onToggle={() => setShowVideo(prev => !prev)}
+      onToggle={() => setShowVideo((prev) => !prev)}
       hasVideo={hasVideo}
     />
   );

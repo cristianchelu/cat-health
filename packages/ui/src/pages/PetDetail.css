@@ -62,7 +62,9 @@
     border-radius: var(--radius-lg);
     border: var(--border-thin);
     padding: var(--space-md);
-    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    transition:
+      transform var(--transition-fast),
+      box-shadow var(--transition-fast);
     overflow: hidden;
     width: 100%;
     max-width: 100%;
@@ -102,12 +104,12 @@
       line-height: 1;
       transition: all 0.2s;
       flex-shrink: 0;
-      
+
       &:hover:not(:disabled) {
         background: color-mix(in srgb, var(--color-error) 80%, #000);
         transform: scale(1.1);
       }
-      
+
       &:disabled {
         opacity: 0.6;
         cursor: not-allowed;
@@ -138,17 +140,17 @@
   @media (max-width: 768px) {
     padding: 0;
     gap: var(--space-md);
-    
+
     .events-section {
       width: 100%;
       max-width: 100%;
       overflow-x: hidden;
     }
-    
+
     .events-title {
       font-size: var(--text-xl);
     }
-    
+
     .weight-chart {
       max-width: 100%;
       overflow-x: hidden;

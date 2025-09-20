@@ -1,4 +1,3 @@
-
 .litterbox-analyzer {
   width: 100%;
   padding: 0;
@@ -20,7 +19,9 @@
     padding: var(--space-xl);
     box-shadow: var(--shadow-sm);
     margin-bottom: var(--space-lg);
-    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    transition:
+      transform var(--transition-fast),
+      box-shadow var(--transition-fast);
 
     &:hover {
       box-shadow: var(--shadow-md);
@@ -52,11 +53,11 @@
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: var(--space-md);
-    
+
     .analysis-results {
       padding: var(--space-md);
     }
-    
+
     .phase-markers {
       .metrics-row {
         flex-direction: column;

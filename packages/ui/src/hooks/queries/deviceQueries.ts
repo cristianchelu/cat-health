@@ -1,18 +1,18 @@
-import { getDevice, getDeviceEvents, getDevices } from "@/api/devices";
-import { deleteEvent, updateEvent } from "@/api/pets";
-import { dateToTimeRange } from "@/lib/utils";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getDevice, getDeviceEvents, getDevices } from '@/api/devices';
+import { deleteEvent, updateEvent } from '@/api/pets';
+import { dateToTimeRange } from '@/lib/utils';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export function useDevices() {
   return useQuery({
-    queryKey: ["devices"],
+    queryKey: ['devices'],
     queryFn: () => getDevices(),
   });
 }
 
 export function useDevice(deviceId: number, enabled: boolean) {
   return useQuery({
-    queryKey: ["device", deviceId],
+    queryKey: ['device', deviceId],
     queryFn: () => getDevice(deviceId),
     enabled,
   });
@@ -21,10 +21,10 @@ export function useDevice(deviceId: number, enabled: boolean) {
 export function useDeviceEvents(
   deviceId: number,
   currentDate: string,
-  enabled: boolean
+  enabled: boolean,
 ) {
   return useQuery({
-    queryKey: ["deviceEvents", deviceId, currentDate],
+    queryKey: ['deviceEvents', deviceId, currentDate],
     queryFn: () => {
       const { startTime, endTime } = dateToTimeRange(currentDate);
       return getDeviceEvents(deviceId, startTime, endTime);
@@ -39,7 +39,7 @@ export function useDeleteEvent(deviceId: number, currentDate: string) {
     mutationFn: (eventId: number) => deleteEvent(eventId),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["deviceEvents", deviceId, currentDate],
+        queryKey: ['deviceEvents', deviceId, currentDate],
       });
     },
   });
@@ -52,7 +52,7 @@ export function useUpdateEvent(deviceId: number, currentDate: string) {
       updateEvent(eventId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["deviceEvents", deviceId, currentDate],
+        queryKey: ['deviceEvents', deviceId, currentDate],
       });
     },
   });

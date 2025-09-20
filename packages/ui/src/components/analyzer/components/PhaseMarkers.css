@@ -1,114 +1,114 @@
-  .phase-markers {
-    margin: var(--space-sm) 0;
-    padding: var(--space-sm);
-    background: var(--color-surface);
-    border-radius: var(--radius-md);
-    border: var(--border-thin);
+.phase-markers {
+  margin: var(--space-sm) 0;
+  padding: var(--space-sm);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: var(--border-thin);
 
-    .phase-markers-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5em 0.7em;
-      margin-bottom: 0.1em;
+  .phase-markers-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em 0.7em;
+    margin-bottom: 0.1em;
+  }
+
+  .phase-marker {
+    display: inline-block;
+    padding: 0.18em 0.95em;
+    border-radius: 999px;
+    font-size: 0.97em;
+    font-weight: 500;
+    margin-bottom: var(--space-2xs);
+    margin-right: var(--space-2xs);
+    cursor: help;
+    user-select: none;
+    box-shadow: var(--shadow-sm);
+    transition: filter 0.13s;
+
+    &:hover {
+      filter: brightness(1.08);
     }
 
-    .phase-marker {
-      display: inline-block;
-      padding: 0.18em 0.95em;
-      border-radius: 999px;
-      font-size: 0.97em;
-      font-weight: 500;
-      margin-bottom: var(--space-2xs);
-      margin-right: var(--space-2xs);
-      cursor: help;
-      user-select: none;
-      box-shadow: var(--shadow-sm);
-      transition: filter 0.13s;
-
-      &:hover {
-        filter: brightness(1.08);
-      }
-
-      &.state-empty {
-        background: var(--color-surface-muted);
-        color: var(--color-text);
-      }
-      &.state-entering {
-        background: var(--color-primary);
-        color: var(--color-white);
-      }
-      &.state-occupied {
-        background: var(--color-success);
-        color: var(--color-white);
-      }
-      &.state-eliminating {
-        background: var(--color-warning);
-        color: var(--color-white);
-      }
-      &.state-gap {
-        background: var(--color-secondary);
-        color: var(--color-white);
-      }
-    }
-    h4 {
-      margin: 0 0 var(--space-xs) 0;
+    &.state-empty {
+      background: var(--color-surface-muted);
       color: var(--color-text);
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    }
+    &.state-entering {
+      background: var(--color-primary);
+      color: var(--color-white);
+    }
+    &.state-occupied {
+      background: var(--color-success);
+      color: var(--color-white);
+    }
+    &.state-eliminating {
+      background: var(--color-warning);
+      color: var(--color-white);
+    }
+    &.state-gap {
+      background: var(--color-secondary);
+      color: var(--color-white);
+    }
+  }
+  h4 {
+    margin: 0 0 var(--space-xs) 0;
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .phase-markers-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3xs);
+    margin-bottom: var(--space-xs);
+  }
+
+  .phase-marker {
+    display: inline-block;
+    padding: var(--space-3xs) var(--space-2xs);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+
+    &.phase-entry {
+      background: var(--color-primary-light);
+      color: var(--color-primary-dark);
     }
 
-    .phase-markers-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-3xs);
-      margin-bottom: var(--space-xs);
+    &.phase-elimination {
+      background: var(--color-warning-light);
+      color: var(--color-warning);
     }
 
-    .phase-marker {
-      display: inline-block;
-      padding: var(--space-3xs) var(--space-2xs);
-      border-radius: var(--radius-sm);
+    &.phase-covering {
+      background: var(--color-secondary-light);
+      color: var(--color-secondary-dark);
+    }
+
+    &.phase-exit {
+      background: var(--color-success-light);
+      color: var(--color-success);
+    }
+  }
+
+  .metrics-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    padding-top: var(--space-xs);
+    border-top: var(--border-thin);
+
+    .metric {
       font-size: var(--text-xs);
-      font-weight: var(--font-medium);
+      color: var(--color-text-muted);
 
-      &.phase-entry {
-        background: var(--color-primary-light);
+      strong {
         color: var(--color-primary-dark);
-      }
-
-      &.phase-elimination {
-        background: var(--color-warning-light);
-        color: var(--color-warning);
-      }
-
-      &.phase-covering {
-        background: var(--color-secondary-light);
-        color: var(--color-secondary-dark);
-      }
-
-      &.phase-exit {
-        background: var(--color-success-light);
-        color: var(--color-success);
-      }
-    }
-
-    .metrics-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-sm);
-      padding-top: var(--space-xs);
-      border-top: var(--border-thin);
-
-      .metric {
-        font-size: var(--text-xs);
-        color: var(--color-text-muted);
-
-        strong {
-          color: var(--color-primary-dark);
-          font-weight: var(--font-semibold);
-        }
+        font-weight: var(--font-semibold);
       }
     }
   }
+}

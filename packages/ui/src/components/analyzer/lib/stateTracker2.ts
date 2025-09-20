@@ -1,6 +1,6 @@
 /** Describes a detected sub-event like an elimination. */
 export interface SubEvent {
-  type: "ELIMINATION_URINATION" | "ELIMINATION_DEFECATION" | "PAUSE";
+  type: 'ELIMINATION_URINATION' | 'ELIMINATION_DEFECATION' | 'PAUSE';
   startTs: number;
   endTs: number;
   durationS: number;
@@ -21,7 +21,7 @@ export interface DetectedEvent {
   eventStartTs: number;
   eventEndTs: number;
   catProfile: {
-    identifiedCatId: string | "UNKNOWN";
+    identifiedCatId: string | 'UNKNOWN';
     confidence: number;
   };
   mainPlateau: {
@@ -159,7 +159,7 @@ export class ExponentialMovingAverage {
 
   constructor(alpha: number) {
     if (alpha <= 0 || alpha > 1) {
-      throw new Error("Alpha must be between 0 and 1.");
+      throw new Error('Alpha must be between 0 and 1.');
     }
     this.alpha = alpha;
   }
@@ -179,11 +179,11 @@ export class ExponentialMovingAverage {
 }
 
 const State = {
-  BASELINE: "baseline", // Waiting for an event, weight is low and stable.
-  ENTERING: "entering", // Weight is increasing, cat is entering.
-  PLATEAU_CANDIDATE: "plateau_candidate", // Weight is high and stable, but not for long enough.
-  OCCUPIED: "occupied", // Confirmed stable plateau.
-  COOLDOWN: "cooldown", // Event finished, waiting briefly to ensure cat has fully left.
+  BASELINE: 'baseline', // Waiting for an event, weight is low and stable.
+  ENTERING: 'entering', // Weight is increasing, cat is entering.
+  PLATEAU_CANDIDATE: 'plateau_candidate', // Weight is high and stable, but not for long enough.
+  OCCUPIED: 'occupied', // Confirmed stable plateau.
+  COOLDOWN: 'cooldown', // Event finished, waiting briefly to ensure cat has fully left.
 };
 type State = (typeof State)[keyof typeof State];
 
@@ -221,13 +221,13 @@ export class LitterboxStateTracker2 {
 
   constructor(weights: number[]) {
     this.fastEma = new ExponentialMovingAverage(
-      2 / (this.config.fastEmaSamples + 1)
+      2 / (this.config.fastEmaSamples + 1),
     );
     this.slowEma = new ExponentialMovingAverage(
-      2 / (this.config.slowEmaSamples + 1)
+      2 / (this.config.slowEmaSamples + 1),
     );
     this.plateauSdv = new StreamingStandardDeviation(
-      this.config.plateauSdvSamples
+      this.config.plateauSdvSamples,
     );
     this.config.catWeights = weights;
   }
@@ -354,7 +354,7 @@ export class LitterboxStateTracker2 {
     for (const transition of this.transitions) {
       if (transition.from !== currentState) {
         // This should not happen if transitions are well-formed
-        console.warn("Unexpected transition sequence");
+        console.warn('Unexpected transition sequence');
       }
       initialPeriods.push({
         state: currentState,

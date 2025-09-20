@@ -9,20 +9,23 @@ import { createBrowserRouter, RouterProvider } from 'react-router';
 
 import './index.css';
 
-const router = createBrowserRouter([
+const router = createBrowserRouter(
+  [
+    {
+      path: '/',
+      element: <App />,
+      children: [
+        { path: '/', element: <PetList /> },
+        { path: '/pets/:id', element: <PetDetail /> },
+        { path: '/devices', element: <DeviceList /> },
+        { path: '/devices/:id', element: <DeviceDetail /> },
+      ],
+    },
+  ],
   {
-    path: '/',
-    element: <App />,
-    children: [
-      { path: '/', element: <PetList /> },
-      { path: '/pets/:id', element: <PetDetail /> },
-      { path: '/devices', element: <DeviceList /> },
-      { path: '/devices/:id', element: <DeviceDetail /> },
-    ],
+    basename: window.baseUrl,
   },
-], {
-  basename: window.baseUrl
-});
+);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

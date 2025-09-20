@@ -1,32 +1,41 @@
-import type { Generated, Insertable, Selectable, Updateable } from "kysely";
+import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
 
 export interface WeightMeasurementEventData {
-  type: "weight_measurement";
+  type: 'weight_measurement';
   weight: number;
 }
 
 export interface WaterIntakeEventData {
-  type: "water_intake";
+  type: 'water_intake';
   amount: number;
   duration?: number;
 }
 
 export interface LitterboxUseEventData {
-  type: "litterbox_use";
-  elimination_type: "urination" | "defecation" | "both" | "no_elimination" | "unknown";
+  type: 'litterbox_use';
+  elimination_type:
+    | 'urination'
+    | 'defecation'
+    | 'both'
+    | 'no_elimination'
+    | 'unknown';
   elimination_weight: number;
   duration: number;
 }
 
 export interface FoodIntakeEventData {
-  type: "food_intake";
-  food_type: "dry" | "wet" | "treat" | "unknown";
+  type: 'food_intake';
+  food_type: 'dry' | 'wet' | 'treat' | 'unknown';
   amount: number;
 }
 
 export interface LitterboxMaintenanceEventData {
-  type: "litterbox_maintenance";
-  maintenance_type: "scoop" | "deep_clean" | "litter_change" | "litter_addition";
+  type: 'litterbox_maintenance';
+  maintenance_type:
+    | 'scoop'
+    | 'deep_clean'
+    | 'litter_change'
+    | 'litter_addition';
   litter_amount?: number; // in grams, for litter_change/litter_addition
 }
 

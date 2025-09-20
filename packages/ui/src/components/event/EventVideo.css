@@ -8,7 +8,7 @@
   cursor: pointer;
   color: var(--color-text-muted);
   transition: all var(--transition-fast);
-  
+
   &:hover {
     background: var(--color-surface-highlight);
     border-color: var(--color-primary);

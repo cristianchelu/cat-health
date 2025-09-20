@@ -1,6 +1,6 @@
-import * as React from "react";
-import { cn } from "@/lib/utils";
-import "./forms.css";
+import * as React from 'react';
+import { cn } from '@/lib/utils';
+import './forms.css';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -10,11 +10,14 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, helperText, fullWidth = true, ...props }, ref) => {
+  (
+    { className, label, error, helperText, fullWidth = true, ...props },
+    ref,
+  ) => {
     const id = React.useId();
-    
+
     return (
-      <div className={cn("form-group", fullWidth ? "w-full" : "", className)}>
+      <div className={cn('form-group', fullWidth ? 'w-full' : '', className)}>
         {label && (
           <label htmlFor={id} className="form-label">
             {label}
@@ -22,7 +25,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         <input
           id={id}
-          className={cn("form-input", error ? "invalid" : "")}
+          className={cn('form-input', error ? 'invalid' : '')}
           ref={ref}
           {...props}
         />
@@ -30,10 +33,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {helperText && <p className="form-helper">{helperText}</p>}
       </div>
     );
-  }
+  },
 );
 
-Input.displayName = "Input";
+Input.displayName = 'Input';
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
@@ -44,11 +47,22 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, label, error, helperText, options, fullWidth = true, ...props }, ref) => {
+  (
+    {
+      className,
+      label,
+      error,
+      helperText,
+      options,
+      fullWidth = true,
+      ...props
+    },
+    ref,
+  ) => {
     const id = React.useId();
-    
+
     return (
-      <div className={cn("form-group", fullWidth ? "w-full" : "", className)}>
+      <div className={cn('form-group', fullWidth ? 'w-full' : '', className)}>
         {label && (
           <label htmlFor={id} className="form-label">
             {label}
@@ -56,11 +70,11 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         )}
         <select
           id={id}
-          className={cn("form-input form-select", error ? "invalid" : "")}
+          className={cn('form-input form-select', error ? 'invalid' : '')}
           ref={ref}
           {...props}
         >
-          {options.map(option => (
+          {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -70,10 +84,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         {helperText && <p className="form-helper">{helperText}</p>}
       </div>
     );
-  }
+  },
 );
 
-Select.displayName = "Select";
+Select.displayName = 'Select';
 
 interface CheckboxProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
@@ -84,35 +98,28 @@ interface CheckboxProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
   ({ className, label, error, helperText, ...props }, ref) => {
     const id = React.useId();
-    
+
     return (
-      <div className={cn("form-group", className)}>
+      <div className={cn('form-group', className)}>
         <label className="form-checkbox" htmlFor={id}>
-          <input
-            type="checkbox"
-            id={id}
-            ref={ref}
-            {...props}
-          />
+          <input type="checkbox" id={id} ref={ref} {...props} />
           <span>{label}</span>
         </label>
         {error && <p className="form-error">{error}</p>}
         {helperText && <p className="form-helper">{helperText}</p>}
       </div>
     );
-  }
+  },
 );
 
-Checkbox.displayName = "Checkbox";
+Checkbox.displayName = 'Checkbox';
 
 interface FormProps extends React.FormHTMLAttributes<HTMLFormElement> {}
 
 export const Form = React.forwardRef<HTMLFormElement, FormProps>(
   ({ className, ...props }, ref) => {
-    return (
-      <form className={className} ref={ref} {...props} />
-    );
-  }
+    return <form className={className} ref={ref} {...props} />;
+  },
 );
 
-Form.displayName = "Form";
+Form.displayName = 'Form';

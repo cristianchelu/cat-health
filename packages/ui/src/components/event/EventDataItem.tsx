@@ -1,7 +1,7 @@
-import * as React from "react";
-import { FaCheck } from "react-icons/fa";
-import { cn } from "@/lib/utils";
-import "./EventDataItem.css";
+import * as React from 'react';
+import { FaCheck } from 'react-icons/fa';
+import { cn } from '@/lib/utils';
+import './EventDataItem.css';
 
 export interface EventDataItemProps {
   icon?: React.ReactNode;
@@ -36,15 +36,15 @@ export interface EventPetSelectProps {
 const EventDataItem = React.forwardRef<HTMLDivElement, EventDataItemProps>(
   ({ icon, children, className }, ref) => {
     return (
-      <div ref={ref} className={cn("event-data-item", className)}>
+      <div ref={ref} className={cn('event-data-item', className)}>
         {icon && <span className="event-data-icon">{icon}</span>}
         <span className="event-data-content">{children}</span>
       </div>
     );
-  }
+  },
 );
 
-EventDataItem.displayName = "EventDataItem";
+EventDataItem.displayName = 'EventDataItem';
 
 const EventSelect = React.forwardRef<HTMLSelectElement, EventSelectProps>(
   ({ value, options, onChange, disabled = false, className }, ref) => {
@@ -54,19 +54,19 @@ const EventSelect = React.forwardRef<HTMLSelectElement, EventSelectProps>(
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className={cn("event-select", className)}
+        className={cn('event-select', className)}
       >
-        {options.map(option => (
+        {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
         ))}
       </select>
     );
-  }
+  },
 );
 
-EventSelect.displayName = "EventSelect";
+EventSelect.displayName = 'EventSelect';
 
 const EventPetSelect = React.forwardRef<HTMLSelectElement, EventPetSelectProps>(
   ({ value, pets, onChange, disabled = false, className }, ref) => {
@@ -85,23 +85,29 @@ const EventPetSelect = React.forwardRef<HTMLSelectElement, EventPetSelectProps>(
         value={value || ''}
         onChange={(e) => handleChange(e.target.value)}
         disabled={disabled}
-        className={cn("event-pet-select", value ? "assigned" : "unknown", className)}
+        className={cn(
+          'event-pet-select',
+          value ? 'assigned' : 'unknown',
+          className,
+        )}
       >
         <option value="">Unknown</option>
-        {pets.map(pet => (
-          <option key={pet.id} value={pet.id}>{pet.name}</option>
+        {pets.map((pet) => (
+          <option key={pet.id} value={pet.id}>
+            {pet.name}
+          </option>
         ))}
       </select>
     );
-  }
+  },
 );
 
-EventPetSelect.displayName = "EventPetSelect";
+EventPetSelect.displayName = 'EventPetSelect';
 
 const EventStats = React.forwardRef<HTMLDivElement, EventStatsProps>(
   ({ children, chartAction, videoAction, humanVerified, className }, ref) => {
     return (
-      <div ref={ref} className={cn("event-stats", className)}>
+      <div ref={ref} className={cn('event-stats', className)}>
         <div className="event-stats-main">
           {children}
           {videoAction}
@@ -112,10 +118,10 @@ const EventStats = React.forwardRef<HTMLDivElement, EventStatsProps>(
         {chartAction}
       </div>
     );
-  }
+  },
 );
 
-EventStats.displayName = "EventStats";
+EventStats.displayName = 'EventStats';
 
 export { EventDataItem, EventSelect, EventPetSelect, EventStats };
 export default EventDataItem;

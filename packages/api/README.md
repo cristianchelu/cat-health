@@ -39,11 +39,13 @@ npm run litterbox-migrate --workspace=api
 #### Configuration
 
 Environment variables (set in `.env` file):
+
 - `INFLUX_TOKEN`: Required for InfluxDB access
 - `CAMERA_IP`: Optional, enables video downloads (e.g., "192.168.1.101")
 
 #### Requirements
 
 For video downloads:
+
 - SSH access to the IP camera
 - `ffmpeg` installed on the system

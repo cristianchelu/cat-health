@@ -1,16 +1,16 @@
-import type { 
-  GetEventsResponseDTO, 
-  GetEventDTO, 
-  PostEventRequestDTO, 
-  DeleteEventResponseDTO, 
-  PatchEventRequestDTO, 
+import type {
+  GetEventsResponseDTO,
+  GetEventDTO,
+  PostEventRequestDTO,
+  DeleteEventResponseDTO,
+  PatchEventRequestDTO,
   GetPetsResponseDTO,
   GetPetResponseDTO,
   WeightTrendsResponseDTO,
-  WeightTrendQueryDTO
-} from "@cat-health/shared";
+  WeightTrendQueryDTO,
+} from '@cat-health/shared';
 
-import apiClient from "./apiClient";
+import apiClient from './apiClient';
 
 export async function addEvent(input: PostEventRequestDTO) {
   const { data } = await apiClient.post<GetEventDTO>('/events', input);
@@ -27,7 +27,12 @@ export async function getPet(id: number) {
   return data;
 }
 
-export async function getPetEvents(petId: number, startTime?: string, endTime?: string, limit?: number){
+export async function getPetEvents(
+  petId: number,
+  startTime?: string,
+  endTime?: string,
+  limit?: number,
+) {
   const params: Record<string, unknown> = { pet_id: petId };
   if (startTime) {
     params.startTime = startTime;
@@ -38,23 +43,39 @@ export async function getPetEvents(petId: number, startTime?: string, endTime?: 
   if (limit) {
     params.limit = limit;
   }
-  const { data } = await apiClient.get<GetEventsResponseDTO>('/events', { params });
+  const { data } = await apiClient.get<GetEventsResponseDTO>('/events', {
+    params,
+  });
   return data;
 }
 
 export async function deleteEvent(eventId: number) {
-  const { data } = await apiClient.delete<DeleteEventResponseDTO>(`/events/${eventId}`);
+  const { data } = await apiClient.delete<DeleteEventResponseDTO>(
+    `/events/${eventId}`,
+  );
   return data;
 }
 
-export async function updateEvent(eventId: number, input: PatchEventRequestDTO) {
-  const { data } = await apiClient.patch<GetEventDTO>(`/events/${eventId}`, input);
+export async function updateEvent(
+  eventId: number,
+  input: PatchEventRequestDTO,
+) {
+  const { data } = await apiClient.patch<GetEventDTO>(
+    `/events/${eventId}`,
+    input,
+  );
   return data;
 }
 
-export async function getPetWeightTrends(petId: number, query: WeightTrendQueryDTO) {
-  const { data } = await apiClient.get<WeightTrendsResponseDTO>(`/events/weight-trends/${petId}`, { 
-    params: query 
-  });
+export async function getPetWeightTrends(
+  petId: number,
+  query: WeightTrendQueryDTO,
+) {
+  const { data } = await apiClient.get<WeightTrendsResponseDTO>(
+    `/events/weight-trends/${petId}`,
+    {
+      params: query,
+    },
+  );
   return data;
 }

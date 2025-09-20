@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "./apiClient";
-import { addHours } from "date-fns";
+import { API_BASE_URL } from './apiClient';
+import { addHours } from 'date-fns';
 
 /**
  * Generate the full URL for an event recording video
@@ -7,9 +7,13 @@ import { addHours } from "date-fns";
 export function getEventVideoUrl(timestamp: string): string {
   // TODO: Implement timezone-aware formatting
   const date = addHours(new Date(timestamp), 3);
-  const formattedTimestamp = date.toISOString().replace(/[:-]/g, '').replace('T', '_').split('.')[0];
+  const formattedTimestamp = date
+    .toISOString()
+    .replace(/[:-]/g, '')
+    .replace('T', '_')
+    .split('.')[0];
   const filename = `event_${formattedTimestamp}_use.mp4`;
-  
+
   return `${API_BASE_URL}/recordings/${filename}`;
 }
 

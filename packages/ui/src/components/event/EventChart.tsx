@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -11,7 +11,7 @@ import {
 } from 'chart.js';
 import type { TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import "./EventChart.css";
+import './EventChart.css';
 
 ChartJS.register(
   CategoryScale,
@@ -20,7 +20,7 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
 export interface ChartData {
@@ -61,17 +61,23 @@ export interface EventExpandedChartProps {
   backgroundColor?: string;
 }
 
-const EventChartButton = React.forwardRef<HTMLButtonElement, EventChartButtonProps>(
-  ({ 
-    data, 
-    isExpanded, 
-    onToggle, 
-    title = isExpanded ? 'Hide chart' : 'Expand chart',
-    borderColor = 'rgb(75, 192, 192)',
-    backgroundColor = 'rgba(75, 192, 192, 0.2)'
-  }, ref) => {
+const EventChartButton = React.forwardRef<
+  HTMLButtonElement,
+  EventChartButtonProps
+>(
+  (
+    {
+      data,
+      isExpanded,
+      onToggle,
+      title = isExpanded ? 'Hide chart' : 'Expand chart',
+      borderColor = 'rgb(75, 192, 192)',
+      backgroundColor = 'rgba(75, 192, 192, 0.2)',
+    },
+    ref,
+  ) => {
     const chartData = {
-      labels: data.timestamps.map(t => (t / 1000).toFixed(1)),
+      labels: data.timestamps.map((t) => (t / 1000).toFixed(1)),
       datasets: [
         {
           label: 'Weight (grams)',
@@ -115,78 +121,88 @@ const EventChartButton = React.forwardRef<HTMLButtonElement, EventChartButtonPro
         <Line data={chartData} options={options} height={28} width={80} />
       </button>
     );
-  }
+  },
 );
 
-EventChartButton.displayName = "EventChartButton";
+EventChartButton.displayName = 'EventChartButton';
 
-const EventExpandedSection = React.forwardRef<HTMLDivElement, EventExpandedSectionProps>(
-  ({ children, className }, ref) => {
-    return (
-      <div ref={ref} className={`event-expanded-section ${className || ''}`}>
-        {children}
+const EventExpandedSection = React.forwardRef<
+  HTMLDivElement,
+  EventExpandedSectionProps
+>(({ children, className }, ref) => {
+  return (
+    <div ref={ref} className={`event-expanded-section ${className || ''}`}>
+      {children}
+    </div>
+  );
+});
+
+EventExpandedSection.displayName = 'EventExpandedSection';
+
+const EventContextData = React.forwardRef<
+  HTMLDivElement,
+  EventContextDataProps
+>(({ context }, ref) => {
+  const hasContextData =
+    context.wasteWeight !== null ||
+    context.litterRemaining !== null ||
+    context.daysSinceLitterReplaced !== null ||
+    context.hoursSinceLastScoop !== null;
+
+  if (!hasContextData) {
+    return null;
+  }
+
+  return (
+    <div ref={ref} className="event-context-data">
+      <div className="event-context-data-grid">
+        {context.wasteWeight !== null && (
+          <div className="event-context-data-item">
+            Existing waste: <strong>{context.wasteWeight}g</strong>
+          </div>
+        )}
+        {context.litterRemaining !== null && (
+          <div className="event-context-data-item">
+            Litter:{' '}
+            <strong>{(context.litterRemaining / 1000).toFixed(1)}kg</strong>
+          </div>
+        )}
+        {context.daysSinceLitterReplaced !== null && (
+          <div className="event-context-data-item">
+            Litter age: <strong>{context.daysSinceLitterReplaced}d</strong>
+          </div>
+        )}
+        {context.hoursSinceLastScoop !== null && (
+          <div className="event-context-data-item">
+            Last scoop: <strong>{context.hoursSinceLastScoop}h</strong>
+          </div>
+        )}
+        {context.totalVisits !== null && (
+          <div className="event-context-data-item">
+            Visits since scoop: <strong>{context.totalVisits}</strong>
+          </div>
+        )}
       </div>
-    );
-  }
-);
+    </div>
+  );
+});
 
-EventExpandedSection.displayName = "EventExpandedSection";
+EventContextData.displayName = 'EventContextData';
 
-const EventContextData = React.forwardRef<HTMLDivElement, EventContextDataProps>(
-  ({ context }, ref) => {
-    const hasContextData = context.wasteWeight !== null || 
-                          context.litterRemaining !== null || 
-                          context.daysSinceLitterReplaced !== null || 
-                          context.hoursSinceLastScoop !== null;
-
-    if (!hasContextData) {
-      return null;
-    }
-
-    return (
-      <div ref={ref} className="event-context-data">
-        <div className="event-context-data-grid">
-          {context.wasteWeight !== null && (
-            <div className="event-context-data-item">
-              Existing waste: <strong>{context.wasteWeight}g</strong>
-            </div>
-          )}
-          {context.litterRemaining !== null && (
-            <div className="event-context-data-item">
-              Litter: <strong>{(context.litterRemaining / 1000).toFixed(1)}kg</strong>
-            </div>
-          )}
-          {context.daysSinceLitterReplaced !== null && (
-            <div className="event-context-data-item">
-              Litter age: <strong>{context.daysSinceLitterReplaced}d</strong>
-            </div>
-          )}
-          {context.hoursSinceLastScoop !== null && (
-            <div className="event-context-data-item">
-              Last scoop: <strong>{context.hoursSinceLastScoop}h</strong>
-            </div>
-          )}
-          {context.totalVisits !== null && (
-            <div className="event-context-data-item">
-              Visits since scoop: <strong>{context.totalVisits}</strong>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-);
-
-EventContextData.displayName = "EventContextData";
-
-const EventExpandedChart = React.forwardRef<HTMLDivElement, EventExpandedChartProps>(
-  ({ 
-    data, 
-    borderColor = 'rgb(75, 192, 192)', 
-    backgroundColor = 'rgba(75, 192, 192, 0.2)' 
-  }, ref) => {
+const EventExpandedChart = React.forwardRef<
+  HTMLDivElement,
+  EventExpandedChartProps
+>(
+  (
+    {
+      data,
+      borderColor = 'rgb(75, 192, 192)',
+      backgroundColor = 'rgba(75, 192, 192, 0.2)',
+    },
+    ref,
+  ) => {
     const chartData = {
-      labels: data.timestamps.map(t => (t / 1000).toFixed(1)),
+      labels: data.timestamps.map((t) => (t / 1000).toFixed(1)),
       datasets: [
         {
           label: 'Weight (grams)',
@@ -209,8 +225,10 @@ const EventExpandedChart = React.forwardRef<HTMLDivElement, EventExpandedChartPr
         tooltip: {
           enabled: true,
           callbacks: {
-            title: (context: TooltipItem<'line'>[]) => `Time: ${context[0].label}s`,
-            label: (context: TooltipItem<'line'>) => `Weight: ${context.parsed.y?.toFixed(1)}g`,
+            title: (context: TooltipItem<'line'>[]) =>
+              `Time: ${context[0].label}s`,
+            label: (context: TooltipItem<'line'>) =>
+              `Weight: ${context.parsed.y?.toFixed(1)}g`,
           },
         },
       },
@@ -234,10 +252,15 @@ const EventExpandedChart = React.forwardRef<HTMLDivElement, EventExpandedChartPr
         <Line data={chartData} options={options} />
       </div>
     );
-  }
+  },
 );
 
-EventExpandedChart.displayName = "EventExpandedChart";
+EventExpandedChart.displayName = 'EventExpandedChart';
 
-export { EventChartButton, EventExpandedSection, EventContextData, EventExpandedChart };
+export {
+  EventChartButton,
+  EventExpandedSection,
+  EventContextData,
+  EventExpandedChart,
+};
 export default EventChartButton;

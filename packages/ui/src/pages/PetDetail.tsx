@@ -1,4 +1,10 @@
-import { usePet, usePetEvents, usePets, useDeleteEvent, useUpdateEvent } from '@/hooks/queries/petQueries';
+import {
+  usePet,
+  usePetEvents,
+  usePets,
+  useDeleteEvent,
+  useUpdateEvent,
+} from '@/hooks/queries/petQueries';
 import { useParams } from 'react-router';
 import { useState } from 'react';
 import LitterboxEventItem from '@/components/event/LitterboxUseEvent';
@@ -15,9 +21,11 @@ import './PetDetail.css';
 
 export default function PetDetail() {
   const { id } = useParams<{ id: string }>();
-  const [deletingEventIds, setDeletingEventIds] = useState<Set<number>>(new Set());
+  const [deletingEventIds, setDeletingEventIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [activeTab, setActiveTab] = useState<'events' | 'analyzer'>('events');
-  
+
   // Initialize current date range to today
   const [currentDateRange, setCurrentDateRange] = useState<DateRange>(() => {
     const today = new Date();
@@ -35,13 +43,13 @@ export default function PetDetail() {
     if (!confirm('Are you sure you want to delete this event?')) {
       return;
     }
-    setDeletingEventIds(prev => new Set(prev).add(eventId));
+    setDeletingEventIds((prev) => new Set(prev).add(eventId));
     try {
       await deleteEventMutation.mutateAsync(eventId);
     } catch (error) {
       console.error('Failed to delete event:', error);
     } finally {
-      setDeletingEventIds(prev => {
+      setDeletingEventIds((prev) => {
         const newSet = new Set(prev);
         newSet.delete(eventId);
         return newSet;
@@ -49,31 +57,84 @@ export default function PetDetail() {
     }
   };
 
-  const handleUpdateEvent = async (eventId: number, data: Record<string, unknown>, human_verified: boolean, pet_id?: number | null) => {
+  const handleUpdateEvent = async (
+    eventId: number,
+    data: Record<string, unknown>,
+    human_verified: boolean,
+    pet_id?: number | null,
+  ) => {
     try {
-      await updateEventMutation.mutateAsync({ eventId, data: { data, human_verified, pet_id: pet_id ?? null } });
+      await updateEventMutation.mutateAsync({
+        eventId,
+        data: { data, human_verified, pet_id: pet_id ?? null },
+      });
     } catch (error) {
       console.error('Failed to update event:', error);
       throw error; // Re-throw so the component can handle the error
     }
   };
 
-  const handleUpdateLitterboxEvent = async (eventId: number, data: { type: "litterbox_use"; elimination_type: string; elimination_weight: number; duration: number }, human_verified: boolean, pet_id?: number | null) => {
-    return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified, pet_id);
+  const handleUpdateLitterboxEvent = async (
+    eventId: number,
+    data: {
+      type: 'litterbox_use';
+      elimination_type: string;
+      elimination_weight: number;
+      duration: number;
+    },
+    human_verified: boolean,
+    pet_id?: number | null,
+  ) => {
+    return handleUpdateEvent(
+      eventId,
+      data as Record<string, unknown>,
+      human_verified,
+      pet_id,
+    );
   };
 
-  const handleUpdateMaintenanceEvent = async (eventId: number, data: { type: "litterbox_maintenance"; maintenance_type: string; litter_amount?: number }, human_verified: boolean) => {
-    return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified);
+  const handleUpdateMaintenanceEvent = async (
+    eventId: number,
+    data: {
+      type: 'litterbox_maintenance';
+      maintenance_type: string;
+      litter_amount?: number;
+    },
+    human_verified: boolean,
+  ) => {
+    return handleUpdateEvent(
+      eventId,
+      data as Record<string, unknown>,
+      human_verified,
+    );
   };
 
-  const handleUpdateWeightEvent = async (eventId: number, data: { type: "weight_measurement"; weight: number }, human_verified: boolean, pet_id?: number | null) => {
-    return handleUpdateEvent(eventId, data as Record<string, unknown>, human_verified, pet_id);
+  const handleUpdateWeightEvent = async (
+    eventId: number,
+    data: { type: 'weight_measurement'; weight: number },
+    human_verified: boolean,
+    pet_id?: number | null,
+  ) => {
+    return handleUpdateEvent(
+      eventId,
+      data as Record<string, unknown>,
+      human_verified,
+      pet_id,
+    );
   };
 
-  const { data: pet, isLoading: petLoading, error: petError } = usePet(petId, isValidId);
-  const { data: eventsData, isLoading: eventsLoading, error: eventsError } = usePetEvents(petId, currentDateRange, isValidId);
+  const {
+    data: pet,
+    isLoading: petLoading,
+    error: petError,
+  } = usePet(petId, isValidId);
+  const {
+    data: eventsData,
+    isLoading: eventsLoading,
+    error: eventsError,
+  } = usePetEvents(petId, currentDateRange, isValidId);
   const { data: pets, isLoading: petsLoading } = usePets();
-  
+
   if (!isValidId) {
     return <div className="pet-detail pet-detail--error">Invalid pet ID.</div>;
   }
@@ -81,73 +142,86 @@ export default function PetDetail() {
   if (petLoading || eventsLoading || petsLoading) {
     return <div className="pet-detail pet-detail--loading">Loading...</div>;
   }
-  
+
   if (petError || eventsError) {
-    return <div className="pet-detail pet-detail--error">Error loading pet details.</div>;
+    return (
+      <div className="pet-detail pet-detail--error">
+        Error loading pet details.
+      </div>
+    );
   }
-  
+
   if (!pet) {
     return <div className="pet-detail pet-detail--empty">Pet not found.</div>;
   }
-  
+
   const events = eventsData?.data || [];
   const hasEvents = events.length > 0;
 
   return (
     <div className="pet-detail">
       <PetSummaryCard pet={pet} />
-      
+
       {/* Tab Navigation */}
       <div className="tab-navigation">
-        <button 
+        <button
           className={`tab-button ${activeTab === 'events' ? 'active' : ''}`}
           onClick={() => setActiveTab('events')}
         >
           📅 Events
         </button>
-        <button 
+        <button
           className={`tab-button ${activeTab === 'analyzer' ? 'active' : ''}`}
           onClick={() => setActiveTab('analyzer')}
         >
           🔬 Event Analyzer
         </button>
       </div>
-      <DateRangeNavigation 
+      <DateRangeNavigation
         currentRange={currentDateRange}
         onRangeChange={setCurrentDateRange}
         hasEvents={hasEvents}
       />
       {activeTab === 'events' && (
         <>
-          <WeightTrendChart 
+          <WeightTrendChart
             key={`weight-chart-${petId}`}
-            petId={pet.id} 
-            petName={pet.name} 
-            petBirthDate={pet.birth_date} 
+            petId={pet.id}
+            petName={pet.name}
+            petBirthDate={pet.birth_date}
             className="weight-chart"
           />
-          
-          <LitterboxVisitsChart 
+
+          <LitterboxVisitsChart
             key={`visits-chart-${petId}`}
             petId={pet.id}
             className="visits-chart"
           />
-          
+
           <div className="events-section">
             <div className="events-title">Events</div>
 
             {events.length === 0 && (
               <div className="empty">No events found for this date.</div>
             )}
-            
+
             <ul className="event-list">
-              {events.map(event => {
+              {events.map((event) => {
                 // Check if this is a litterbox event
-                if (event.data && typeof event.data === 'object' && 
-                    'type' in event.data && event.data.type === 'litterbox_use') {
+                if (
+                  event.data &&
+                  typeof event.data === 'object' &&
+                  'type' in event.data &&
+                  event.data.type === 'litterbox_use'
+                ) {
                   const litterboxData = event.data as {
-                    type: "litterbox_use";
-                    elimination_type: "urination" | "defecation" | "both" | "no_elimination" | "unknown";
+                    type: 'litterbox_use';
+                    elimination_type:
+                      | 'urination'
+                      | 'defecation'
+                      | 'both'
+                      | 'no_elimination'
+                      | 'unknown';
                     elimination_weight: number;
                     duration: number;
                   };
@@ -167,13 +241,21 @@ export default function PetDetail() {
                     />
                   );
                 }
-                
+
                 // Check if this is a maintenance event
-                if (event.data && typeof event.data === 'object' && 
-                    'type' in event.data && event.data.type === 'litterbox_maintenance') {
+                if (
+                  event.data &&
+                  typeof event.data === 'object' &&
+                  'type' in event.data &&
+                  event.data.type === 'litterbox_maintenance'
+                ) {
                   const maintenanceData = event.data as {
-                    type: "litterbox_maintenance";
-                    maintenance_type: "scoop" | "deep_clean" | "litter_change" | "litter_addition";
+                    type: 'litterbox_maintenance';
+                    maintenance_type:
+                      | 'scoop'
+                      | 'deep_clean'
+                      | 'litter_change'
+                      | 'litter_addition';
                     litter_amount?: number;
                   };
                   return (
@@ -191,12 +273,16 @@ export default function PetDetail() {
                     />
                   );
                 }
-                
+
                 // Check if this is a weight measurement event
-                if (event.data && typeof event.data === 'object' && 
-                    'type' in event.data && event.data.type === 'weight_measurement') {
+                if (
+                  event.data &&
+                  typeof event.data === 'object' &&
+                  'type' in event.data &&
+                  event.data.type === 'weight_measurement'
+                ) {
                   const weightData = event.data as {
-                    type: "weight_measurement";
+                    type: 'weight_measurement';
                     weight: number;
                   };
                   return (
@@ -215,13 +301,14 @@ export default function PetDetail() {
                     />
                   );
                 }
-                
+
                 // Fallback for other event types
                 return (
                   <li key={event.id} className="event-item">
                     <div className="event-header">
                       <div className="event-timestamp">
-                        <b>Timestamp:</b> {new Date(event.timestamp).toLocaleString()}
+                        <b>Timestamp:</b>{' '}
+                        {new Date(event.timestamp).toLocaleString()}
                       </div>
                       <button
                         className="event-delete-btn"
@@ -244,7 +331,10 @@ export default function PetDetail() {
       )}
 
       {activeTab === 'analyzer' && (
-        <LitterboxAnalyzer key={`analyzer-${petId}-${activeTab}`} events={events} />
+        <LitterboxAnalyzer
+          key={`analyzer-${petId}-${activeTab}`}
+          events={events}
+        />
       )}
     </div>
   );

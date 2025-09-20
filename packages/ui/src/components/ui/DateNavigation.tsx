@@ -8,14 +8,18 @@ interface DateNavigationProps {
   hasEvents?: boolean;
 }
 
-export default function DateNavigation({ currentDate, onDateChange, hasEvents = true }: DateNavigationProps) {
+export default function DateNavigation({
+  currentDate,
+  onDateChange,
+  hasEvents = true,
+}: DateNavigationProps) {
   const formatDateForDisplay = (dateStr: string): string => {
     const date = new Date(dateStr + 'T00:00:00.000Z');
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
   };
 
@@ -78,14 +82,8 @@ export default function DateNavigation({ currentDate, onDateChange, hasEvents = 
 
       <div className="date-display">
         <FaCalendarAlt />
-        <span className="date-text">
-          {formatDateForDisplay(currentDate)}
-        </span>
-        {!hasEvents && (
-          <span className="date-no-events">
-            (No events)
-          </span>
-        )}
+        <span className="date-text">{formatDateForDisplay(currentDate)}</span>
+        {!hasEvents && <span className="date-no-events">(No events)</span>}
       </div>
 
       <div className="date-navigation-actions">

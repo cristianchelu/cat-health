@@ -38,6 +38,6 @@ export const useChartManager = () => {
     weightChartInstance,
     analysisChartInstance,
     scatterChartInstance,
-    destroyCharts
+    destroyCharts,
   };
 };

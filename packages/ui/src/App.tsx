@@ -1,9 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
-import { Outlet } from "react-router";
-import Header from "./components/layout/Header";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Outlet } from 'react-router';
+import Header from './components/layout/Header';
 
-import "./App.css";
+import './App.css';
 
 function App() {
   const [queryClient] = useState(() => new QueryClient());
@@ -11,7 +11,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <div id="app">
-        <Header/>
+        <Header />
         <main>
           <div id="content">
             <Outlet />

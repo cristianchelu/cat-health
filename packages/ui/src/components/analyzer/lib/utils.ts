@@ -1,18 +1,28 @@
-import * as React from "react";
+import * as React from 'react';
 import { FaTint, FaPoop, FaQuestion, FaGift } from 'react-icons/fa';
 import type { EventData } from '../types';
 
 // Helper to get elimination type icon
-export const getEliminationIcon = (eliminationType: string): React.ReactElement => {
+export const getEliminationIcon = (
+  eliminationType: string,
+): React.ReactElement => {
   switch (eliminationType) {
     case 'urination':
-      return React.createElement(FaTint, { className: "elimination-icon urination" });
+      return React.createElement(FaTint, {
+        className: 'elimination-icon urination',
+      });
     case 'defecation':
-      return React.createElement(FaPoop, { className: "elimination-icon defecation" });
+      return React.createElement(FaPoop, {
+        className: 'elimination-icon defecation',
+      });
     case 'both':
-      return React.createElement(FaGift, { className: "elimination-icon both" });
+      return React.createElement(FaGift, {
+        className: 'elimination-icon both',
+      });
     default:
-      return React.createElement(FaQuestion, { className: "elimination-icon unknown" });
+      return React.createElement(FaQuestion, {
+        className: 'elimination-icon unknown',
+      });
   }
 };
 
@@ -33,31 +43,35 @@ export const getEliminationColor = (eliminationType: string) => {
 
 // Filter events with raw data
 export const filterLitterboxEvents = (events: EventData[]): EventData[] => {
-  return events.filter(event => 
-    event.data && 
-    typeof event.data === 'object' &&
-    'type' in event.data &&
-    event.data.type === 'litterbox_use' && 
-    event.raw_data && 
-    event.raw_data.length > 0
+  return events.filter(
+    (event) =>
+      event.data &&
+      typeof event.data === 'object' &&
+      'type' in event.data &&
+      event.data.type === 'litterbox_use' &&
+      event.raw_data &&
+      event.raw_data.length > 0,
   );
 };
 
 const defaultCats = [6600, 4700];
 export const getLatestCatWeights = (events: EventData[], cutoff?: string) => {
   const weightEventsByPet = events
-    .filter((e) => e.data.type === "weight_measurement")
+    .filter((e) => e.data.type === 'weight_measurement')
     .filter((e) => !cutoff || new Date(e.timestamp) <= new Date(cutoff))
-    .reduce((acc, event) => {
-      const petId = event.data.pet_id as number;
-      if (!acc[petId]) {
-        acc[petId] = [];
-      }
-      acc[petId].push(event);
-      return acc;
-    }, {} as Record<number, typeof events>);
-    return [
-    weightEventsByPet[0]?.[0]?.data.weight as number || defaultCats[0],
-    weightEventsByPet[1]?.[0]?.data.weight as number || defaultCats[1],
+    .reduce(
+      (acc, event) => {
+        const petId = event.data.pet_id as number;
+        if (!acc[petId]) {
+          acc[petId] = [];
+        }
+        acc[petId].push(event);
+        return acc;
+      },
+      {} as Record<number, typeof events>,
+    );
+  return [
+    (weightEventsByPet[0]?.[0]?.data.weight as number) || defaultCats[0],
+    (weightEventsByPet[1]?.[0]?.data.weight as number) || defaultCats[1],
   ];
-}
+};

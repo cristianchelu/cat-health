@@ -1,5 +1,5 @@
-import { postMigrate } from "@/api/scripts";
-import { useMutation } from "@tanstack/react-query";
+import { postMigrate } from '@/api/scripts';
+import { useMutation } from '@tanstack/react-query';
 
 export function useMigrateMutation() {
   return useMutation({

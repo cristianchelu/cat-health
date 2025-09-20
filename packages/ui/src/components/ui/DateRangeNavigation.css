@@ -226,66 +226,66 @@
       cursor: not-allowed;
       background-color: var(--color-surface-muted);
       color: var(--color-text-muted);
-  }
+    }
 
-  /* Responsive styling */
-  @media (max-width: 768px) {
-    .date-range-controls {
-      flex-direction: column;
-      gap: var(--space-xs);
-    }
-    
-    .date-display {
-      order: -1;
-      width: 100%;
-      margin-bottom: var(--space-xs);
-      flex: none;
-    }
-    
-    .date-navigation-actions {
-      width: 100%;
-      justify-content: space-between;
-    }
-    
-    .date-nav-button {
-      flex: 1;
-      justify-content: center;
-    }
-    
-    .today-button {
-      order: 0;
-    }
-    
-    .custom-range-inputs {
-      grid-template-columns: 1fr;
-      gap: var(--space-sm);
-    }
-    
-    .custom-range-actions {
-      flex-direction: column;
-      gap: var(--space-xs);
-    }
-    
-    .cancel-button,
-    .apply-button {
-      width: 100%;
-      justify-content: center;
-    }
-  }
+    /* Responsive styling */
+    @media (max-width: 768px) {
+      .date-range-controls {
+        flex-direction: column;
+        gap: var(--space-xs);
+      }
 
-  @media (max-width: 480px) {
-    gap: var(--space-xs);
-    padding: var(--space-xs) 0;
-    
-    .range-type-selector {
-      flex-direction: column;
-      gap: var(--space-2xs);
-      text-align: center;
+      .date-display {
+        order: -1;
+        width: 100%;
+        margin-bottom: var(--space-xs);
+        flex: none;
+      }
+
+      .date-navigation-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .date-nav-button {
+        flex: 1;
+        justify-content: center;
+      }
+
+      .today-button {
+        order: 0;
+      }
+
+      .custom-range-inputs {
+        grid-template-columns: 1fr;
+        gap: var(--space-sm);
+      }
+
+      .custom-range-actions {
+        flex-direction: column;
+        gap: var(--space-xs);
+      }
+
+      .cancel-button,
+      .apply-button {
+        width: 100%;
+        justify-content: center;
+      }
     }
-    
-    .range-type-select {
-      width: 100%;
+
+    @media (max-width: 480px) {
+      gap: var(--space-xs);
+      padding: var(--space-xs) 0;
+
+      .range-type-selector {
+        flex-direction: column;
+        gap: var(--space-2xs);
+        text-align: center;
+      }
+
+      .range-type-select {
+        width: 100%;
+      }
     }
   }
-}
 }

@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { FaWeight, FaCalendarAlt, FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import {
+  FaWeight,
+  FaCalendarAlt,
+  FaArrowUp,
+  FaArrowDown,
+} from 'react-icons/fa';
 
 import { usePetWeightTrends } from '@/hooks/queries/petQueries';
 
@@ -24,10 +29,14 @@ export default function PetSummaryCard({ pet }: PetSummaryCardProps) {
   // Calculate days based on selected period
   const getDaysForPeriod = (period: TimePeriod): number => {
     switch (period) {
-      case 'week': return 7;
-      case 'month': return 30;
-      case 'year': return 365;
-      default: return 30;
+      case 'week':
+        return 7;
+      case 'month':
+        return 30;
+      case 'year':
+        return 365;
+      default:
+        return 30;
     }
   };
 
@@ -37,7 +46,7 @@ export default function PetSummaryCard({ pet }: PetSummaryCardProps) {
 
   const periodLabels = {
     week: '7d',
-    month: '30d', 
+    month: '30d',
     year: '1y',
   };
 
@@ -45,14 +54,17 @@ export default function PetSummaryCard({ pet }: PetSummaryCardProps) {
   const calculateAge = (birthDate: string): string => {
     const birth = new Date(birthDate);
     const now = new Date();
-    const ageInYears = (now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+    const ageInYears =
+      (now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
     return ageInYears.toFixed(1);
   };
 
   const calculateAgeInMonths = (birthDate: string): number => {
     const birth = new Date(birthDate);
     const now = new Date();
-    const diffMonths = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
+    const diffMonths =
+      (now.getFullYear() - birth.getFullYear()) * 12 +
+      (now.getMonth() - birth.getMonth());
     return diffMonths;
   };
 
@@ -72,7 +84,7 @@ export default function PetSummaryCard({ pet }: PetSummaryCardProps) {
 
     // Group by date and get daily averages
     const dailyWeights = new Map<string, number[]>();
-    trends.forEach(trend => {
+    trends.forEach((trend) => {
       if (!dailyWeights.has(trend.date)) {
         dailyWeights.set(trend.date, []);
       }
@@ -97,16 +109,20 @@ export default function PetSummaryCard({ pet }: PetSummaryCardProps) {
 
     const currentWeight = dailyAverages[dailyAverages.length - 1].weight;
     const firstWeight = dailyAverages[0].weight;
-    const weightChange = dailyAverages.length > 1 ? currentWeight - firstWeight : 0;
-    
+    const weightChange =
+      dailyAverages.length > 1 ? currentWeight - firstWeight : 0;
+
     // Determine trend based on last week vs previous weeks
     let trend: 'up' | 'down' | 'stable' = 'stable';
     if (dailyAverages.length >= 7) {
-      const lastWeekAvg = dailyAverages.slice(-7).reduce((sum, d) => sum + d.weight, 0) / 7;
-      const prevWeekAvg = dailyAverages.slice(-14, -7).reduce((sum, d) => sum + d.weight, 0) / 7;
+      const lastWeekAvg =
+        dailyAverages.slice(-7).reduce((sum, d) => sum + d.weight, 0) / 7;
+      const prevWeekAvg =
+        dailyAverages.slice(-14, -7).reduce((sum, d) => sum + d.weight, 0) / 7;
       if (dailyAverages.length >= 14) {
         const diff = lastWeekAvg - prevWeekAvg;
-        if (diff > 50) trend = 'up'; // 50g increase
+        if (diff > 50)
+          trend = 'up'; // 50g increase
         else if (diff < -50) trend = 'down'; // 50g decrease
       }
     }
@@ -156,8 +172,12 @@ export default function PetSummaryCard({ pet }: PetSummaryCardProps) {
               </div>
               <div>
                 <div className="weight-label">
-                  {weightStats.trend === 'up' && <FaArrowUp className="weight-change-positive" />}
-                  {weightStats.trend === 'down' && <FaArrowDown className="weight-change-negative" />}
+                  {weightStats.trend === 'up' && (
+                    <FaArrowUp className="weight-change-positive" />
+                  )}
+                  {weightStats.trend === 'down' && (
+                    <FaArrowDown className="weight-change-negative" />
+                  )}
                   Weight Change
                 </div>
                 <div className="period-buttons">
@@ -171,15 +191,22 @@ export default function PetSummaryCard({ pet }: PetSummaryCardProps) {
                     </button>
                   ))}
                 </div>
-                <div className={`weight-value ${
-                  weightStats.weightChange && weightStats.weightChange > 0 
-                    ? 'weight-change-positive' 
-                    : weightStats.weightChange && weightStats.weightChange < 0 
-                    ? 'weight-change-negative' 
-                    : ''
-                }`}>
-                  {weightStats.weightChange && weightStats.weightChange > 0 ? '+' : ''}
-                  {weightStats.weightChange ? (weightStats.weightChange / 1000).toFixed(2) : '0.00'} kg
+                <div
+                  className={`weight-value ${
+                    weightStats.weightChange && weightStats.weightChange > 0
+                      ? 'weight-change-positive'
+                      : weightStats.weightChange && weightStats.weightChange < 0
+                        ? 'weight-change-negative'
+                        : ''
+                  }`}
+                >
+                  {weightStats.weightChange && weightStats.weightChange > 0
+                    ? '+'
+                    : ''}
+                  {weightStats.weightChange
+                    ? (weightStats.weightChange / 1000).toFixed(2)
+                    : '0.00'}{' '}
+                  kg
                 </div>
               </div>
             </div>
@@ -188,7 +215,12 @@ export default function PetSummaryCard({ pet }: PetSummaryCardProps) {
 
         {weightStats.measurementCount > 0 && (
           <div className="weight-stats-footer">
-            {weightStats.measurementCount} weight measurements in last {selectedPeriod === 'week' ? '7 days' : selectedPeriod === 'month' ? '30 days' : '365 days'}
+            {weightStats.measurementCount} weight measurements in last{' '}
+            {selectedPeriod === 'week'
+              ? '7 days'
+              : selectedPeriod === 'month'
+                ? '30 days'
+                : '365 days'}
           </div>
         )}
       </div>

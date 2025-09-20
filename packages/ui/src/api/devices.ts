@@ -1,11 +1,10 @@
-import type { 
-  GetEventsResponseDTO, 
-  GetDeviceResponseDTO, 
-  GetDevicesResponseDTO, 
-  PostDeviceRequestDTO 
-} from "@cat-health/shared";
-import apiClient from "./apiClient";
-
+import type {
+  GetEventsResponseDTO,
+  GetDeviceResponseDTO,
+  GetDevicesResponseDTO,
+  PostDeviceRequestDTO,
+} from '@cat-health/shared';
+import apiClient from './apiClient';
 
 export async function getDevices() {
   const { data } = await apiClient.get<GetDevicesResponseDTO>('/devices');
@@ -18,11 +17,18 @@ export async function getDevice(id: number) {
 }
 
 export async function addDevice(input: PostDeviceRequestDTO) {
-  const { data } = await apiClient.post<GetDeviceResponseDTO>('/devices', input);
+  const { data } = await apiClient.post<GetDeviceResponseDTO>(
+    '/devices',
+    input,
+  );
   return data;
 }
 
-export async function getDeviceEvents(deviceId: number, startTime?: string, endTime?: string) {
+export async function getDeviceEvents(
+  deviceId: number,
+  startTime?: string,
+  endTime?: string,
+) {
   const params: Record<string, unknown> = { device_id: deviceId };
   if (startTime) {
     params.startTime = startTime;
@@ -30,6 +36,8 @@ export async function getDeviceEvents(deviceId: number, startTime?: string, endT
   if (endTime) {
     params.endTime = endTime;
   }
-  const { data } = await apiClient.get<GetEventsResponseDTO>('/events', { params });
+  const { data } = await apiClient.get<GetEventsResponseDTO>('/events', {
+    params,
+  });
   return data;
 }

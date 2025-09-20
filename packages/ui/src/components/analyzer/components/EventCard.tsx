@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react';
 import { FaCalendarAlt, FaCheck, FaWeight, FaClock } from 'react-icons/fa';
 import type { EventData } from '../types';
 import { getEliminationIcon } from '../lib/utils';
@@ -38,7 +38,7 @@ const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
                 month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
               })}
             </div>
             {event.human_verified && <FaCheck className="verified-icon" />}
@@ -51,15 +51,17 @@ const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
           </span>
           <span className="metric">
             <FaClock className="metric-icon" />
-            {typeof duration === 'number' ? `${(Number(duration) / 1000).toFixed(1)}s` : 'N/A'}
+            {typeof duration === 'number'
+              ? `${(Number(duration) / 1000).toFixed(1)}s`
+              : 'N/A'}
           </span>
         </div>
       </div>
     );
-  }
+  },
 );
 
-EventCard.displayName = "EventCard";
+EventCard.displayName = 'EventCard';
 
 export { type EventCardProps };
 export default EventCard;

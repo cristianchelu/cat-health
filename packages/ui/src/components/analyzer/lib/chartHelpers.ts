@@ -9,8 +9,8 @@ import {
   Legend,
   BarElement,
   ScatterController,
-} from "chart.js";
-import annotationPlugin from "chartjs-plugin-annotation";
+} from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 
 // Register Chart.js components
 ChartJS.register(
@@ -23,7 +23,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  annotationPlugin
+  annotationPlugin,
 );
 
 export { ChartJS };

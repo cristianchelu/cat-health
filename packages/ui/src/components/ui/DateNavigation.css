@@ -82,19 +82,19 @@
   @media (max-width: 480px) {
     gap: var(--space-xs);
     padding: var(--space-xs) 0;
-    
+
     .date-display {
       order: -1;
       width: 100%;
       margin-bottom: var(--space-xs);
       flex: none;
     }
-    
+
     .date-nav-button {
       flex: 1;
       justify-content: center;
     }
-    
+
     .today-button {
       order: 3;
       flex: 1;

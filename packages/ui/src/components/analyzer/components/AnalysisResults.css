@@ -4,7 +4,8 @@
   border: var(--border-thin);
   padding: var(--space-xl);
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast),
+  transition:
+    transform var(--transition-fast),
     box-shadow var(--transition-fast);
 
   @media (max-width: 768px) {

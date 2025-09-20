@@ -123,7 +123,7 @@
   .event-layout {
     grid-template-columns: auto 1fr;
   }
-  
+
   .event-actions {
     grid-column: 1 / -1;
     flex-direction: row;
@@ -138,11 +138,11 @@
     height: 2.5rem;
     font-size: var(--text-lg);
   }
-  
+
   .event-meta {
     gap: var(--space-xs);
   }
-  
+
   .event-chart-container {
     height: 160px;
   }

@@ -1,7 +1,11 @@
-import { sql } from "kysely";
-import type { NewEvent } from "../../../database/types/EventTable.ts";
-import { appConfig } from "../config.ts";
-import type { EventMigrator, MigratorOptions, MigrationStats } from "../types.ts";
+import { sql } from 'kysely';
+import type { NewEvent } from '../../../database/types/EventTable.ts';
+import { appConfig } from '../config.ts';
+import type {
+  EventMigrator,
+  MigratorOptions,
+  MigrationStats,
+} from '../types.ts';
 
 // Define an interface for the shape of the data returned by our Flux query
 interface InfluxDrinkRecord {
@@ -19,14 +23,16 @@ interface DrinkEvent {
 }
 
 export class WaterIntakeMigrator implements EventMigrator {
-  readonly name = "WaterIntakeMigrator";
+  readonly name = 'WaterIntakeMigrator';
   private options: MigratorOptions;
 
   // Use constants for friendly names to avoid typos and for easier updates
-  private static readonly DRINK_AMOUNT_FRIENDLY_NAME = "PetLibro PLWF105 Last drink amount";
-  private static readonly DRINK_DURATION_FRIENDLY_NAME = "PetLibro PLWF105 Last drink duration";
+  private static readonly DRINK_AMOUNT_FRIENDLY_NAME =
+    'PetLibro PLWF105 Last drink amount';
+  private static readonly DRINK_DURATION_FRIENDLY_NAME =
+    'PetLibro PLWF105 Last drink duration';
   private static readonly MIN_EVENT_DURATION = 1; // 1 second
-  private static readonly MIN_EVENT_AMOUNT   = 1; // 1 ml
+  private static readonly MIN_EVENT_AMOUNT = 1; // 1 ml
 
   constructor(options: MigratorOptions) {
     this.options = options;
@@ -34,19 +40,36 @@ export class WaterIntakeMigrator implements EventMigrator {
 
   async migrate(startDate: Date, endDate: Date): Promise<void> {
     console.log(`\n=== ${this.name} Migration ===`);
-    console.log(`Processing water intake events from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+    console.log(
+      `Processing water intake events from ${startDate.toISOString()} to ${endDate.toISOString()}`,
+    );
 
-    const stats: MigrationStats = { processed: 0, skipped: 0, inserted: 0, errors: 0 };
+    const stats: MigrationStats = {
+      processed: 0,
+      skipped: 0,
+      inserted: 0,
+      errors: 0,
+    };
 
     try {
       // 1. Get existing events from our DB to prevent duplicates
-      const existingEvents = await this.getExistingWaterIntakeEvents(startDate, endDate);
-      console.log(`Found ${existingEvents.size} existing water intake events in time range.`);
+      const existingEvents = await this.getExistingWaterIntakeEvents(
+        startDate,
+        endDate,
+      );
+      console.log(
+        `Found ${existingEvents.size} existing water intake events in time range.`,
+      );
 
       // 2. Get all completed drink events from InfluxDB in one query
-      const drinkEvents = await this.getDrinkEventsFromInflux(startDate, endDate);
+      const drinkEvents = await this.getDrinkEventsFromInflux(
+        startDate,
+        endDate,
+      );
       stats.processed = drinkEvents.length;
-      console.log(`Found ${drinkEvents.length} completed drink events from InfluxDB.`);
+      console.log(
+        `Found ${drinkEvents.length} completed drink events from InfluxDB.`,
+      );
 
       const newEvents: NewEvent[] = [];
       for (const drink of drinkEvents) {
@@ -58,16 +81,18 @@ export class WaterIntakeMigrator implements EventMigrator {
 
         const newDbEvent = this.createDbEvent(drink);
         newEvents.push(newDbEvent);
-        console.log(`Prepared new event at ${drink.startTime.toISOString()}: ${drink.duration}ms, ${drink.amount}ml`);
+        console.log(
+          `Prepared new event at ${drink.startTime.toISOString()}: ${drink.duration}ms, ${drink.amount}ml`,
+        );
       }
 
       // 3. Batch insert new events
       if (newEvents.length > 0) {
         console.log(`Inserting ${newEvents.length} new water intake events...`);
-        await this.options.db.insertInto("event").values(newEvents).execute();
+        await this.options.db.insertInto('event').values(newEvents).execute();
         stats.inserted = newEvents.length;
       } else {
-        console.log("No new water intake events to insert.");
+        console.log('No new water intake events to insert.');
       }
 
       this.logStats(stats);
@@ -78,20 +103,26 @@ export class WaterIntakeMigrator implements EventMigrator {
     }
   }
 
-  private async getExistingWaterIntakeEvents(startDate: Date, endDate: Date): Promise<Set<string>> {
+  private async getExistingWaterIntakeEvents(
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Set<string>> {
     const results = await this.options.db
-      .selectFrom("event")
-      .select(["timestamp"])
-      .where("timestamp", ">=", startDate)
-      .where("timestamp", "<=", endDate)
-      .where(sql`json_extract(data, '$.type')`, "=", "water_intake")
+      .selectFrom('event')
+      .select(['timestamp'])
+      .where('timestamp', '>=', startDate)
+      .where('timestamp', '<=', endDate)
+      .where(sql`json_extract(data, '$.type')`, '=', 'water_intake')
       .execute();
 
     // Use a Set for efficient O(1) lookups
-    return new Set(results.map(e => e.timestamp.toISOString()));
+    return new Set(results.map((e) => e.timestamp.toISOString()));
   }
 
-  private async getDrinkEventsFromInflux(startDate: Date, endDate: Date): Promise<DrinkEvent[]> {
+  private async getDrinkEventsFromInflux(
+    startDate: Date,
+    endDate: Date,
+  ): Promise<DrinkEvent[]> {
     const queryApi = this.options.influx.getQueryApi(appConfig.influx.org);
 
     // This query uses `aggregateWindow` to group related amount/duration events
@@ -141,7 +172,7 @@ export class WaterIntakeMigrator implements EventMigrator {
 
     // This processing logic remains the same.
     return records
-      .map(record => {
+      .map((record) => {
         const endTime = new Date(record._time);
         // The duration from the sensor is in seconds, convert to milliseconds
         const durationMs = Math.round(record.duration * 1000);
@@ -154,7 +185,11 @@ export class WaterIntakeMigrator implements EventMigrator {
           duration: record.duration,
         };
       })
-      .filter(event => event.duration >= WaterIntakeMigrator.MIN_EVENT_DURATION && event.amount >= WaterIntakeMigrator.MIN_EVENT_AMOUNT);
+      .filter(
+        (event) =>
+          event.duration >= WaterIntakeMigrator.MIN_EVENT_DURATION &&
+          event.amount >= WaterIntakeMigrator.MIN_EVENT_AMOUNT,
+      );
   }
 
   private createDbEvent(drink: DrinkEvent): NewEvent {
@@ -164,9 +199,9 @@ export class WaterIntakeMigrator implements EventMigrator {
       device_id: 2, // Water fountain device
       timestamp: drink.startTime,
       data: {
-        type: "water_intake",
+        type: 'water_intake',
         amount: drink.amount,
-        duration: drink.duration
+        duration: drink.duration,
       },
       human_verified: false,
     };

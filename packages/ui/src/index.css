@@ -1,4 +1,3 @@
-
 @import './theme.css';
 
 /* Base styles */
@@ -26,7 +25,15 @@ body {
 }
 
 /* Reset margins */
-h1, h2, h3, h4, h5, h6, p, ul, ol {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+ul,
+ol {
   margin-top: 0;
 }
 
@@ -63,9 +70,11 @@ p {
   margin-bottom: var(--space-lg);
   line-height: var(--line-height-normal);
 }
-                                                                                                                                      
+
 /* Global styles */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 

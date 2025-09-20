@@ -1,12 +1,12 @@
-import { InfluxDB } from "@influxdata/influxdb-client";
-import type { Kysely } from "kysely";
-import type { Database } from "../../database/index.ts";
-import { appConfig } from "./config.ts";
-import { CameraEventDownloader } from "./services/CameraDownloader.ts";
-import { WeightMeasurementMigrator } from "./migrators/WeightMeasurementMigrator.ts";
-import { LitterboxUseMigrator } from "./migrators/LitterboxUseMigrator.ts";
-import { WaterIntakeMigrator } from "./migrators/WaterIntakeMigrator.ts";
-import type { EventMigrator, MediaService, MigratorOptions } from "./types.ts";
+import { InfluxDB } from '@influxdata/influxdb-client';
+import type { Kysely } from 'kysely';
+import type { Database } from '../../database/index.ts';
+import { appConfig } from './config.ts';
+import { CameraEventDownloader } from './services/CameraDownloader.ts';
+import { WeightMeasurementMigrator } from './migrators/WeightMeasurementMigrator.ts';
+import { LitterboxUseMigrator } from './migrators/LitterboxUseMigrator.ts';
+import { WaterIntakeMigrator } from './migrators/WaterIntakeMigrator.ts';
+import type { EventMigrator, MediaService, MigratorOptions } from './types.ts';
 
 export class SyncService {
   private influx: InfluxDB;
@@ -16,9 +16,9 @@ export class SyncService {
 
   constructor(db: Kysely<Database>) {
     this.db = db;
-    this.influx = new InfluxDB({ 
-      url: appConfig.influx.url, 
-      token: appConfig.influx.token 
+    this.influx = new InfluxDB({
+      url: appConfig.influx.url,
+      token: appConfig.influx.token,
     });
 
     // Configure the camera downloader with explicit config
@@ -26,13 +26,13 @@ export class SyncService {
       ip: appConfig.litterbox.camera.ip!,
       sshUser: appConfig.litterbox.camera.sshUser,
       sshOptions: {
-        privateKey: appConfig.litterbox.camera.sshOptions?.privateKey || "",
-        password: appConfig.litterbox.camera.sshOptions?.password || ""
+        privateKey: appConfig.litterbox.camera.sshOptions?.privateKey || '',
+        password: appConfig.litterbox.camera.sshOptions?.password || '',
       },
       remotePath: appConfig.litterbox.camera.remotePath,
       recordingsDir: appConfig.litterbox.camera.recordingsDir,
     });
-    
+
     this.setupMigrators();
   }
 
@@ -54,16 +54,18 @@ export class SyncService {
   }
 
   async migrate(
-    startDate?: Date, 
-    endDate?: Date, 
-    migratorNames?: string[]
+    startDate?: Date,
+    endDate?: Date,
+    migratorNames?: string[],
   ): Promise<void> {
     const start = startDate || appConfig.migration.startDate;
     const end = endDate || appConfig.migration.endDate;
     const batchDays = appConfig.migration.batchDays;
 
-    console.log("=== SyncService Migration Started ===");
-    console.log(`Migration period: ${start.toISOString()} to ${end.toISOString()}`);
+    console.log('=== SyncService Migration Started ===');
+    console.log(
+      `Migration period: ${start.toISOString()} to ${end.toISOString()}`,
+    );
     console.log(`Batch size: ${batchDays} days`);
 
     // Process in batches
@@ -72,23 +74,25 @@ export class SyncService {
       const batchEnd = new Date(
         Math.min(
           currentStart.getTime() + batchDays * 24 * 60 * 60 * 1000,
-          end.getTime()
-        )
+          end.getTime(),
+        ),
       );
 
-      console.log(`\n=== Processing batch: ${currentStart.toISOString()} to ${batchEnd.toISOString()} ===`);
-      
+      console.log(
+        `\n=== Processing batch: ${currentStart.toISOString()} to ${batchEnd.toISOString()} ===`,
+      );
+
       // Run migrators in parallel for each batch
       await Promise.all(
-        this.migrators.map(migrator => 
-          migrator.migrate(currentStart, batchEnd)
-        )
+        this.migrators.map((migrator) =>
+          migrator.migrate(currentStart, batchEnd),
+        ),
       );
 
       currentStart.setTime(batchEnd.getTime());
     }
 
-    console.log("\n🎉 SyncService migration completed successfully!");
+    console.log('\n🎉 SyncService migration completed successfully!');
   }
 
   /**
@@ -102,7 +106,7 @@ export class SyncService {
    * Get available migrator names
    */
   getAvailableMigrators(): string[] {
-    return this.migrators.map(m => m.name);
+    return this.migrators.map((m) => m.name);
   }
 
   /**

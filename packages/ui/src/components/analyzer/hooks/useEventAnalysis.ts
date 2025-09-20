@@ -3,7 +3,10 @@ import type { EventData, DecodedData, Features } from '../types';
 import { decodeRawData } from '../lib/binaryDecoder';
 import { extractFeatures } from '../lib/featureExtraction';
 
-export const useEventAnalysis = (selectedEvent: EventData | null, catWeights: number[]) => {
+export const useEventAnalysis = (
+  selectedEvent: EventData | null,
+  catWeights: number[],
+) => {
   const [analysisData, setAnalysisData] = useState<{
     decodedData: DecodedData;
     features: Features;
@@ -21,7 +24,9 @@ export const useEventAnalysis = (selectedEvent: EventData | null, catWeights: nu
         throw new Error('No raw data available for this event');
       }
       const decodedData = decodeRawData(selectedEvent.raw_data);
-      const weights = decodedData.measurements.map((m: { weight: number }) => m.weight);
+      const weights = decodedData.measurements.map(
+        (m: { weight: number }) => m.weight,
+      );
       const features = extractFeatures(weights, catWeights);
       setAnalysisData({ decodedData, features });
       setError('');
@@ -33,6 +38,6 @@ export const useEventAnalysis = (selectedEvent: EventData | null, catWeights: nu
 
   return {
     analysisData,
-    error
+    error,
   };
 };
