@@ -1,5 +1,5 @@
 {
-  "name": "@cat-health/api",
+  "name": "api",
   "version": "1.0.0",
   "description": "",
   "main": "main.ts",
@@ -15,7 +15,7 @@
   "author": "Cristian Chelu",
   "license": "MIT",
   "dependencies": {
-    "@cat-health/shared": "*",
+    "shared": "*",
     "@fastify/static": "^8.2.0",
     "@fastify/type-provider-typebox": "^5.1.0",
     "@sinclair/typebox": "^0.34.29",

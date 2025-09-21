@@ -8,7 +8,7 @@ import type {
   GetPetResponseDTO,
   WeightTrendsResponseDTO,
   WeightTrendQueryDTO,
-} from '@cat-health/shared';
+} from 'shared';
 
 import apiClient from './apiClient';
 

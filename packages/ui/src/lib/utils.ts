@@ -1,4 +1,4 @@
-import type { DeviceType } from '@cat-health/shared';
+import type { DeviceType } from 'shared';
 import { clsx } from 'clsx';
 
 export const cn = clsx;

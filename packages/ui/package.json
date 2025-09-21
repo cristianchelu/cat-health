@@ -1,5 +1,5 @@
 {
-  "name": "@cat-health/ui",
+  "name": "ui",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,7 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@cat-health/shared": "*",
+    "shared": "*",
     "@tanstack/react-query": "^5.82.0",
     "@tanstack/react-router": "^1.125.6",
     "axios": "^1.10.0",

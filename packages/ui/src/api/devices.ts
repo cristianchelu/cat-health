@@ -3,7 +3,7 @@ import type {
   GetDeviceResponseDTO,
   GetDevicesResponseDTO,
   PostDeviceRequestDTO,
-} from '@cat-health/shared';
+} from 'shared';
 import apiClient from './apiClient';
 
 export async function getDevices() {

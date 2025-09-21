@@ -2,39 +2,51 @@
 FROM node:22-slim AS build
 WORKDIR /app
 
-# Copy root and workspace package files
+# Copy all package manifests and lock file
 COPY package.json package-lock.json ./
-COPY packages/api/package.json packages/api/package.json
-COPY packages/ui/package.json packages/ui/package.json
+COPY packages/api/package.json packages/api/
+COPY packages/ui/package.json packages/ui/
+COPY packages/shared/package.json packages/shared/
 
-# Install dependencies (including dev for build)
+# Install all dependencies for all workspaces
+# This is done before copying source to leverage layer caching
 RUN npm ci
 
-# Build UI (Vite SPA)
-COPY packages/ui packages/ui
-RUN npm --workspace=packages/ui run build
+# Copy the rest of the source code
+COPY . .
 
-# Copy API source (no build needed)
-COPY packages/api packages/api
+# Build all workspaces that have a build script
+RUN npm run build --workspaces --if-present
+
+# ---- Install Stage ----
+FROM node:22-slim AS install
+WORKDIR /app
+
+# Copy all package manifests and lock file for production dependencies
+COPY package.json package-lock.json ./
+COPY packages/api/package.json packages/api/
+COPY packages/ui/package.json packages/ui/
+COPY packages/shared/package.json packages/shared/
+
+# Install only production dependencies
+RUN npm ci --omit=dev
 
 # ---- Production Stage ----
 FROM node:22-slim AS prod
 WORKDIR /app
 
+# Install ffmpeg for video processing (if needed by the API)
 RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
-# Copy only production dependencies
-COPY package.json package-lock.json ./
-COPY packages/api/package.json packages/api/package.json
-COPY packages/ui/package.json packages/ui/package.json
+# Copy production node_modules from the install stage
+COPY --from=install /app/node_modules/ ./node_modules/
 
-RUN npm ci --omit=dev
+# Copy all built packages from the build stage. This includes the source code for the API
+# and the built static assets for the UI.
+COPY --from=build /app/packages/ ./packages/
 
-# Copy built UI assets
-COPY --from=build /app/packages/ui/dist packages/ui/dist
-
-# Copy API source code
-COPY --from=build /app/packages/api packages/api
+# Copy the root package.json for the entrypoint command to work
+COPY package.json .
 
 USER node
 

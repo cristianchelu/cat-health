@@ -5,7 +5,7 @@ import {
   GetPetResponseSchema,
   GetPetsResponseSchema,
   PostPetRequestSchema,
-} from '@cat-health/shared';
+} from 'shared';
 
 export default function petRoutes(fastify: FastifyTypeBox): void {
   fastify.get(

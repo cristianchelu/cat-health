@@ -12,7 +12,7 @@ import {
   WeightTrendParamsSchema,
   WeightTrendQuerySchema,
   WeightTrendsResponseSchema,
-} from '@cat-health/shared';
+} from 'shared';
 
 import { db } from '../database/index.ts';
 import { type FastifyTypeBox } from '../types.ts';
