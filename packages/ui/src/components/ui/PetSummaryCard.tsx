@@ -9,6 +9,7 @@ import {
 import { usePetWeightTrends } from '@/hooks/queries/petQueries';
 
 import './PetSummaryCard.css';
+import { calculateAge, formatAge } from '@/lib/utils';
 
 interface Pet {
   id: number;
@@ -50,26 +51,8 @@ export default function PetSummaryCard({ pet }: PetSummaryCardProps) {
     year: '1y',
   };
 
-  // Calculate age in years
-  const calculateAge = (birthDate: string): string => {
-    const birth = new Date(birthDate);
-    const now = new Date();
-    const ageInYears =
-      (now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-    return ageInYears.toFixed(1);
-  };
-
-  const calculateAgeInMonths = (birthDate: string): number => {
-    const birth = new Date(birthDate);
-    const now = new Date();
-    const diffMonths =
-      (now.getFullYear() - birth.getFullYear()) * 12 +
-      (now.getMonth() - birth.getMonth());
-    return diffMonths;
-  };
-
-  const currentAgeInMonths = calculateAgeInMonths(pet.birth_date);
-  const isYoungCat = currentAgeInMonths < 18;
+  const age = calculateAge(pet.birth_date);
+  const isYoungCat = (age.years || 0) * 12 + (age.months || 0) < 18;
 
   // Calculate weight stats
   const getWeightStats = () => {
@@ -152,7 +135,7 @@ export default function PetSummaryCard({ pet }: PetSummaryCardProps) {
               Age
             </div>
             <div className="pet-info-value">
-              {calculateAge(pet.birth_date)} years
+              {formatAge(age)}
               {isYoungCat && <span className="pet-growth-tag">• Growing</span>}
             </div>
           </div>

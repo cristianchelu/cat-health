@@ -13,7 +13,7 @@ import { Line } from 'react-chartjs-2';
 import { useState } from 'react';
 import { Select } from './form';
 import { Card, CardContent, CardHeader } from './Card';
-import { cn } from '@/lib/utils';
+import { calculateAge, cn, formatAge } from '@/lib/utils';
 import { usePetWeightTrends } from '@/hooks/queries/petQueries';
 
 ChartJS.register(
@@ -46,18 +46,8 @@ export default function WeightTrendChart({
 }: WeightTrendChartProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
 
-  // Calculate pet's current age
-  const calculateAgeInMonths = (birthDate: string): number => {
-    const birth = new Date(birthDate);
-    const now = new Date();
-    const diffMonths =
-      (now.getFullYear() - birth.getFullYear()) * 12 +
-      (now.getMonth() - birth.getMonth());
-    return diffMonths;
-  };
-
-  const currentAgeInMonths = calculateAgeInMonths(petBirthDate);
-  const isYoungCat = currentAgeInMonths < 18; // Less than 1.5 years old
+  const age = calculateAge(petBirthDate);
+  const isYoungCat = (age.years || 0) * 12 + (age.months || 0) < 18;
 
   // Growth expectations for kittens (approximate ranges in grams)
   const getExpectedWeightRange = (
@@ -71,18 +61,6 @@ export default function WeightTrendChart({
     if (ageInMonths < 12) return { min: 2500, max: 4500 }; // 2.5-4.5 kg
     if (ageInMonths < 18) return { min: 3000, max: 5500 }; // 3.0-5.5 kg (still growing)
     return null; // Adult cat, no specific growth expectations
-  };
-
-  const getAgeDescription = (
-    ageInMonths: number,
-    ageInDays: number,
-  ): string => {
-    if (ageInMonths < 1) return `${ageInDays} days old`;
-    if (ageInMonths < 12) return `${ageInMonths} months old`;
-    const years = Math.floor(ageInMonths / 12);
-    const months = ageInMonths % 12;
-    if (months === 0) return `${years} year${years > 1 ? 's' : ''} old`;
-    return `${years}y ${months}m old`;
   };
 
   // Calculate days based on selected period
@@ -298,10 +276,11 @@ export default function WeightTrendChart({
                   : 'day';
             const weightInGrams = dataPoint.weight;
             const expectedRange = getExpectedWeightRange(dataPoint.ageInMonths);
-            const ageDesc = getAgeDescription(
-              dataPoint.ageInMonths,
-              dataPoint.ageInDays,
-            );
+            const ageDesc = formatAge({
+              years: Math.floor(dataPoint.ageInMonths / 12),
+              months: dataPoint.ageInMonths % 12,
+              days: dataPoint.ageInDays % 30,
+            });
 
             const tooltipLines = [
               `Average Weight: ${context.parsed.y.toFixed(2)} kg`,
@@ -379,14 +358,7 @@ export default function WeightTrendChart({
         </h3>
         {isYoungCat && (
           <div className="form-helper">
-            Growing kitten •{' '}
-            {getAgeDescription(
-              currentAgeInMonths,
-              Math.floor(
-                (new Date().getTime() - new Date(petBirthDate).getTime()) /
-                  (1000 * 60 * 60 * 24),
-              ),
-            )}
+            Growing kitten • {formatAge(age)} old
           </div>
         )}
         <Select

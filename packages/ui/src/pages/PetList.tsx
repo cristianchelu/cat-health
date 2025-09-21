@@ -9,28 +9,7 @@ import {
 } from '@/components/ui/Card';
 
 import './PetList.css';
-
-// Helper function to calculate age from birth date
-function calculateAge(birthDate: string): string {
-  const today = new Date();
-  const birth = new Date(birthDate);
-
-  let years = today.getFullYear() - birth.getFullYear();
-  let months = today.getMonth() - birth.getMonth();
-
-  // Adjust years and months if birth month is ahead of current month
-  if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
-    years--;
-    months += 12;
-  }
-
-  // Format the result based on age
-  if (years > 0) {
-    return `${years} year${years !== 1 ? 's' : ''}`;
-  } else {
-    return `${months} month${months !== 1 ? 's' : ''}`;
-  }
-}
+import { calculateAge, formatAge } from '@/lib/utils';
 
 export default function PetList() {
   const { data, isLoading, error } = usePets();
@@ -71,7 +50,7 @@ export default function PetList() {
                   {new Date(pet.birth_date).toLocaleDateString()}
                 </p>
                 <p>
-                  <b>Age:</b> {calculateAge(pet.birth_date)}
+                  <b>Age:</b> {formatAge(calculateAge(pet.birth_date))}
                 </p>
               </CardContent>
             </Card>

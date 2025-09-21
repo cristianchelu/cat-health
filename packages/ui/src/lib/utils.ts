@@ -252,3 +252,40 @@ export const getDeviceTypeLabel = (type: DeviceType) => {
       return 'Water Fountain';
   }
 };
+
+type Age = { years?: number; months?: number; days?: number };
+export const calculateAge = (birthDate: string): Age => {
+  const birth = new Date(birthDate);
+  const now = new Date();
+
+  let years = now.getFullYear() - birth.getFullYear();
+  let months = now.getMonth() - birth.getMonth();
+  let days = now.getDate() - birth.getDate();
+
+  if (days < 0) {
+    months--;
+    // Get the last day of the previous month
+    const lastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    days += lastMonth.getDate();
+  }
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  return {
+    years: years > 0 ? years : undefined,
+    months: months > 0 ? months : undefined,
+    days: years < 1 && months < 1 ? days : undefined,
+  };
+};
+export const formatAge = (age: Age): string => {
+  // @ts-expect-error Intl.DurationFormat is newly available
+  const df = new Intl.DurationFormat('en', {
+    style: 'long',
+    format: ['years', 'months', 'days'],
+  });
+
+  return df.format(age);
+};

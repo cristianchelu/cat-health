@@ -145,11 +145,6 @@
   --breakpoint-2xl: 1536px;
 
   /* Gradients */
-  --gradient-background: linear-gradient(
-    to bottom right,
-    var(--color-background),
-    var(--color-primary-lightest)
-  );
   --gradient-primary: linear-gradient(
     to right,
     var(--color-primary),
@@ -207,12 +202,5 @@
     /* Shadow Colors */
     --color-shadow: rgba(0, 0, 0, 0.3);
     --color-shadow-dark: rgba(0, 0, 0, 0.5);
-
-    /* Gradients */
-    --gradient-background: linear-gradient(
-      to bottom right,
-      var(--color-background),
-      var(--color-primary-lightest)
-    );
   }
 }
