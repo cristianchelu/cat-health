@@ -3,10 +3,13 @@ import { type TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import path from 'node:path';
+import assert from 'node:assert';
 import { config } from 'dotenv';
 import fs from 'node:fs/promises';
 
 config();
+
+assert(process.env.RECORDING_PATH, 'RECORDING_PATH is not set in .env');
 
 import { migrateToLatest } from './database/migrate.ts';
 import { db } from './database/index.ts';
@@ -68,12 +71,8 @@ await fastify.register(cors, {
 });
 
 // Serve video recordings statically
-const recordingsDir = path.resolve(
-  import.meta.dirname,
-  '../../../data/recordings',
-);
 await fastify.register(fastifyStatic, {
-  root: recordingsDir,
+  root: process.env.RECORDING_PATH,
   prefix: '/api/recordings/',
 });
 
