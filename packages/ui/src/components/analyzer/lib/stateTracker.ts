@@ -341,7 +341,9 @@ export class LitterboxStateTracker {
         prev.state === this.states.ELIMINATING &&
         curr.state === this.states.OCCUPIED &&
         next.state === this.states.ELIMINATING &&
-        curr.end - curr.start < this.stableMergeGap
+        curr.end - curr.start < this.stableMergeGap &&
+        prev.end - prev.start > 1 * this.hz && // only if the first ELIMINATING is at least 1s
+        next.end - next.start > 1 * this.hz // only if the next ELIMINATING is at least 1s
       ) {
         // Extend the first eliminating period to cover the gap and the next period
         prev.end = next.end;
@@ -353,7 +355,7 @@ export class LitterboxStateTracker {
     }
 
     // 3. Remove short ELIMINATING states by re-classifying them as OCCUPIED
-    const minEliminationDuration = 4 * this.hz;
+    const minEliminationDuration = 5 * this.hz;
     initialPeriods.forEach((p) => {
       if (
         p.state === this.states.ELIMINATING &&

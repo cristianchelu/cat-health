@@ -1,3 +1,14 @@
+// RMS of derivative helper
+export const calculateRmsDerivative = (signal: number[]): number => {
+  if (signal.length < 2) return 0;
+  let sumSq = 0;
+  for (let i = 1; i < signal.length; i++) {
+    const diff = signal[i] - signal[i - 1];
+    sumSq += diff * diff;
+  }
+  return Math.sqrt(sumSq / (signal.length - 1));
+};
+
 import type { Features, FeatureDimension, StatePeriod } from '../types';
 import { LitterboxStateTracker } from './stateTracker';
 
@@ -102,6 +113,7 @@ export const extractFeatures = (
     preEliminationVariance: 0,
     eliminationRate: 0,
     eliminationVariance: 0,
+    eliminationRmsDerivative: 0,
 
     periods: result.periods,
   };
@@ -113,7 +125,7 @@ export const extractFeatures = (
 
   const eliminations = result.periods
     .filter((p) => p.state === 'eliminating')
-    .filter((p) => (p.variance || 0) < 1000); // Exclude high variance eliminations likely due to noise
+    .filter((p) => (p.variance || 0) < 20); // Exclude high variance eliminations likely due to noise
 
   const chooseLongest = (candidates: Array<StatePeriod>) => {
     return candidates.reduce((a, b) =>
@@ -150,8 +162,12 @@ export const extractFeatures = (
       return aVariance > bVariance ? a : b;
     });
   };
+  const chooseLatest = (candidates: Array<StatePeriod>) => {
+    return candidates.reduce((a, b) => (b.start > a.start ? b : a));
+  };
 
   const sectionSelectionStrategy = {
+    latest: chooseLatest,
     longest: chooseLongest,
     highestNeighboringVariance: chooseHighestNeighboringVariance,
     symmetricHighestNeighboringVariance:
@@ -159,9 +175,13 @@ export const extractFeatures = (
   };
 
   if (eliminations.length > 0) {
-    const elimination = sectionSelectionStrategy['longest'](eliminations);
-    const elimSignal = weights.slice(elimination.start, elimination.end);
-    features.eliminationVariance = calculateFilteredVariance(elimSignal); //elimination.variance ?? 0;
+    const elimination = sectionSelectionStrategy['latest'](eliminations);
+    const elimSignal = weights.slice(
+      elimination.start + 10,
+      elimination.end - 10,
+    );
+    features.eliminationVariance = calculateFilteredVariance(elimSignal, 90); //elimination.variance ?? 0;
+    features.eliminationRmsDerivative = calculateRmsDerivative(elimSignal);
     features.eliminationDuration =
       (elimination.end - elimination.start) * timeStep;
     features.eliminationRate =
@@ -244,6 +264,11 @@ export const featureDimensions: FeatureDimension[] = [
   },
   { key: 'eliminationRate', label: 'Elimination Rate (g/s)', unit: 'g/s' },
   { key: 'eliminationVariance', label: 'Elimination Variance', unit: '' },
+  {
+    key: 'eliminationRmsDerivative',
+    label: 'Elimination RMS Derivative',
+    unit: '',
+  },
 ];
 
 // Get feature value by key
@@ -273,6 +298,8 @@ export const getFeatureValue = (features: Features, key: string): number => {
       return features.eliminationRate;
     case 'eliminationVariance':
       return features.eliminationVariance;
+    case 'eliminationRmsDerivative':
+      return features.eliminationRmsDerivative;
     default:
       return 0;
   }

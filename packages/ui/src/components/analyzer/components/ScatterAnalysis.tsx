@@ -17,7 +17,9 @@ interface ScatterAnalysisProps {
 
 const ScatterAnalysis = React.forwardRef<HTMLDivElement, ScatterAnalysisProps>(
   ({ scatterData, onEventSelect, chartRef, chartInstance }, ref) => {
-    const [scatterXAxis, setScatterXAxis] = useState<string>('totalDuration');
+    const [scatterXAxis, setScatterXAxis] = useState<string>(
+      'eliminationRmsDerivative',
+    );
     const [scatterYAxis, setScatterYAxis] = useState<string>(
       'eliminationVariance',
     );
