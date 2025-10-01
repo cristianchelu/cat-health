@@ -6,6 +6,7 @@ import type {
   NewEvent,
   WaterIntakeEventData,
 } from '../../database/types/EventTable.ts';
+import { db } from '../../database/index.ts';
 import { generateOutputFilename } from '../../helpers/events.ts';
 
 interface FountainClientConfig {
@@ -144,17 +145,24 @@ export class FountainClient {
     }, 1000);
   }
 
-  private saveDrinkEvent() {
+  private async saveDrinkEvent() {
     console.log('--- SAVING DRINK EVENT ---');
     console.log(`Device: ${this.config.host}`);
     console.log(`Amount: ${this.currentEvent?.data.amount}ml`);
     console.log(`Duration: ${this.currentEvent?.data.duration}s`);
     console.log('--------------------------');
 
-    // TODO: Add database persistence logic here.
-    // This would involve creating a new EventTable record.
+    if (!this.currentEvent) {
+      console.warn('No drink event to save.');
+      return;
+    }
 
-    this.currentEvent = null;
+    try {
+      await db.insertInto('event').values(this.currentEvent).execute();
+      console.log('Drink event inserted into DB.');
+    } catch (err) {
+      console.error('Failed to insert drink event:', err);
+    }
   }
 
   public async connect() {

@@ -95,16 +95,16 @@ fastify.post('/api/migrate', async (request, reply) => {
     const query = request.query as any;
     const startDate = query.startDate ? new Date(query.startDate) : undefined;
     const endDate = query.endDate ? new Date(query.endDate) : undefined;
-    const migratorNames = query.migrators
-      ? query.migrators.split(',').map((s: string) => s.trim())
-      : undefined;
+    // const migratorNames = query.migrators
+    //   ? query.migrators.split(',').map((s: string) => s.trim())
+    //   : undefined;
 
     console.log('Starting migration using SyncService...');
     if (startDate) console.log(`Start date: ${startDate.toISOString()}`);
     if (endDate) console.log(`End date: ${endDate.toISOString()}`);
-    if (migratorNames) console.log(`Migrators: ${migratorNames.join(', ')}`);
+    // if (migratorNames) console.log(`Migrators: ${migratorNames.join(', ')}`);
 
-    await syncService.migrate(startDate, endDate, migratorNames);
+    await syncService.migrate(startDate, endDate /* , migratorNames */);
 
     await syncService.destroy();
 

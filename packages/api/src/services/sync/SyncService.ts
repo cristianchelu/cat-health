@@ -5,7 +5,7 @@ import { appConfig } from './config.ts';
 import { CameraEventDownloader } from './services/CameraDownloader.ts';
 import { WeightMeasurementMigrator } from './migrators/WeightMeasurementMigrator.ts';
 import { LitterboxUseMigrator } from './migrators/LitterboxUseMigrator.ts';
-import { WaterIntakeMigrator } from './migrators/WaterIntakeMigrator.ts';
+// import { WaterIntakeMigrator } from './migrators/WaterIntakeMigrator.ts';
 import type { EventMigrator, MediaService, MigratorOptions } from './types.ts';
 
 export class SyncService {
@@ -47,17 +47,13 @@ export class SyncService {
     this.migrators = [
       new WeightMeasurementMigrator(options),
       new LitterboxUseMigrator(options),
-      new WaterIntakeMigrator(options),
+      // new WaterIntakeMigrator(options), // Disabled due to realtime ingestion
       // Future migrators can be added here:
       // new EatMigrator(options),
     ];
   }
 
-  async migrate(
-    startDate?: Date,
-    endDate?: Date,
-    migratorNames?: string[],
-  ): Promise<void> {
+  async migrate(startDate?: Date, endDate?: Date): Promise<void> {
     const start = startDate || appConfig.migration.startDate;
     const end = endDate || appConfig.migration.endDate;
     const batchDays = appConfig.migration.batchDays;
