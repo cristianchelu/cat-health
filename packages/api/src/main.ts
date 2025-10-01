@@ -18,6 +18,7 @@ import { SyncService } from './services/sync/SyncService.ts';
 import petRoutes from './routes/pets.ts';
 import eventRoutes from './routes/events.ts';
 import deviceRoutes from './routes/devices.ts';
+import { FountainClient } from './services/ingest/FountainClient.ts';
 
 const fastify = Fastify({
   logger: true,
@@ -205,6 +206,17 @@ fastify.setNotFoundHandler((request, reply) => {
   // Normal mode (no ingress) -> serve the unmodified file
   return reply.sendFile('index.html', spaDistDir);
 });
+
+// Register ingest services
+if (process.env.FOUNTAIN_HOST) {
+  const fountainIngest = new FountainClient({
+    host: process.env.FOUNTAIN_HOST,
+    snapshotUrl: process.env.FOUNTAIN_CAMERA_SNAPSHOT_URL,
+    snapshotAuth: process.env.FOUNTAIN_CAMERA_SNAPSHOT_AUTH,
+    encryptionKey: process.env.FOUNTAIN_PSK,
+  });
+  fountainIngest.connect();
+}
 
 const start = async () => {
   try {

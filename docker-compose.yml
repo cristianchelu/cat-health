@@ -11,6 +11,7 @@ services:
     volumes:
       - ./data:/app/data:Z
       - ./recordings:/app/recordings:Z
+      - ./images:/app/images:Z
     env_file:
-      - ./.env
+      - ./packages/api/.env
     restart: unless-stopped

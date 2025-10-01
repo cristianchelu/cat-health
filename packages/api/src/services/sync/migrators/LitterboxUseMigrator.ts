@@ -567,7 +567,7 @@ export class LitterboxUseMigrator implements EventMigrator {
     for (const event of weightEvents) {
       if (event.pet_id !== null) {
         const petId = event.pet_id;
-        const eventData = event.data as any;
+        const eventData = event.data;
 
         if (
           eventData.type === 'weight_measurement' &&
@@ -714,7 +714,7 @@ export class LitterboxUseMigrator implements EventMigrator {
     // Download videos sequentially to avoid overwhelming the camera
     for (let i = 0; i < events.length; i++) {
       const event = events[i];
-      const eventData = event.data as any;
+      const eventData = event.data;
       const eventTimestampKey = event.timestamp.toISOString();
       const session = eventSessionMap.get(eventTimestampKey);
 
@@ -723,13 +723,13 @@ export class LitterboxUseMigrator implements EventMigrator {
           await this.options.mediaService.downloadVideo(
             session.startTime,
             session.endTime,
-            'use',
+            'litterbox_use',
           );
         } else if (eventData.type === 'litterbox_maintenance') {
           await this.options.mediaService.downloadVideo(
             session.startTime,
             session.endTime,
-            'maintenance',
+            'litterbox_maintenance',
           );
         }
       } else {
@@ -740,7 +740,7 @@ export class LitterboxUseMigrator implements EventMigrator {
           await this.options.mediaService.downloadVideo(
             event.timestamp,
             endTime,
-            'use',
+            'litterbox_use',
           );
         } else if (eventData.type === 'litterbox_maintenance') {
           // For maintenance events, use a fixed 3-minute duration
@@ -748,7 +748,7 @@ export class LitterboxUseMigrator implements EventMigrator {
           await this.options.mediaService.downloadVideo(
             event.timestamp,
             endTime,
-            'maintenance',
+            'litterbox_maintenance',
           );
         }
       }

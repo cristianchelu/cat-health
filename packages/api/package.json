@@ -15,22 +15,24 @@
   "author": "Cristian Chelu",
   "license": "MIT",
   "dependencies": {
-    "shared": "*",
+    "@fastify/cors": "^11.0.1",
     "@fastify/static": "^8.2.0",
+    "@fastify/type-provider-json-schema-to-ts": "^5.0.0",
     "@fastify/type-provider-typebox": "^5.1.0",
+    "@influxdata/influxdb-client": "^1.35.0",
     "@sinclair/typebox": "^0.34.29",
     "better-sqlite3": "^11.8.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^17.2.1",
+    "esphome-client": "^1.1.2",
     "execa": "^9.6.0",
     "fastify": "^5.2.1",
     "kysely": "^0.27.5",
+    "kysely-plugin-serialize": "^0.8.2",
     "node-ssh": "^13.2.1",
-    "@influxdata/influxdb-client": "^1.35.0",
-    "@fastify/cors": "^11.0.1",
-    "@fastify/type-provider-json-schema-to-ts": "^5.0.0",
-    "kysely-plugin-serialize": "^0.8.2"
+    "shared": "*",
+    "sharp": "^0.34.4"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12"

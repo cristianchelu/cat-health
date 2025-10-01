@@ -8,6 +8,8 @@ import { format } from 'date-fns';
 import { EventEmitter } from 'events';
 import { createWriteStream } from 'fs';
 import type { MediaService } from '../types.ts';
+import { type EventType } from '../../../database/types/EventTable.ts';
+import { generateOutputFilename } from '../../../helpers/events.ts';
 
 const execAsync = promisify(exec);
 
@@ -28,7 +30,7 @@ export interface EventRequest {
   id: string;
   startDateTime: Date;
   endDateTime: Date;
-  outputFile?: string;
+  outputFile: string;
   priority?: number;
 }
 
@@ -268,10 +270,6 @@ export class CameraEventDownloader
         throw new Error('Start datetime must be before end datetime');
       }
 
-      const outputFile =
-        event.outputFile ||
-        this.generateOutputFilename(event.startDateTime, event.id);
-
       await fs.mkdir(tempDir, { recursive: true });
 
       const relevantFiles = await this.findRelevantFiles(
@@ -294,7 +292,7 @@ export class CameraEventDownloader
       const finalOutputPath = await this.processVideo(
         relevantFiles,
         tempDir,
-        outputFile,
+        event.outputFile,
         startEpoch,
         endEpoch,
       );
@@ -349,14 +347,6 @@ export class CameraEventDownloader
     } catch {
       return 0; // Return 0 on parsing error
     }
-  }
-
-  private generateOutputFilename(
-    startDateTime: Date,
-    eventIdOrType: string,
-  ): string {
-    const timestamp = format(startDateTime, 'yyyyMMdd_HHmmss');
-    return `event_${timestamp}_${eventIdOrType}.mp4`;
   }
 
   private async findRelevantFiles(
@@ -432,8 +422,8 @@ export class CameraEventDownloader
         if (result.stdout.trim()) {
           allFiles.push(...result.stdout.trim().split('\n').filter(Boolean));
         }
-      } catch (error) {
-        // Log or handle error if a directory scan fails, but continue
+      } catch {
+        // Ignore errors for missing directories
       }
     }
 
@@ -595,13 +585,11 @@ export class CameraEventDownloader
   async downloadVideo(
     startTime: Date,
     endTime: Date,
-    eventType: string,
-    filename?: string,
+    eventType: EventType,
   ): Promise<void> {
     // Generate filename if not provided
-    const videoFilename =
-      filename || this.generateOutputFilename(startTime, eventType);
-    const outputPath = path.join(this.config.recordingsDir, videoFilename);
+    const filename = generateOutputFilename(startTime, eventType, 'mp4');
+    const outputPath = path.join(this.config.recordingsDir, filename);
 
     try {
       await this.connect();
@@ -614,14 +602,12 @@ export class CameraEventDownloader
       });
 
       if (!result.success) {
-        console.warn(
-          `Video download failed for ${videoFilename}: ${result.error}`,
-        );
+        console.warn(`Video download failed for ${filename}: ${result.error}`);
       } else {
-        console.log(`✅ Video downloaded successfully: ${videoFilename}`);
+        console.log(`✅ Video downloaded successfully: ${filename}`);
       }
     } catch (error) {
-      console.error(`❌ Video download error for ${videoFilename}:`, error);
+      console.error(`❌ Video download error for ${filename}:`, error);
       // Don't throw - allow migration to continue
     }
   }
@@ -629,16 +615,9 @@ export class CameraEventDownloader
   /**
    * MediaService implementation: Capture snapshot (not implemented)
    */
-  async captureSnapshot(
-    timestamp: Date,
-    eventType: string,
-    filename?: string,
-  ): Promise<void> {
-    // For now, snapshots are not implemented in CameraEventDownloader
-    // This could be extended in the future for drink/eat events
-    console.log(
-      `Snapshot capture not implemented for ${eventType} at ${timestamp.toISOString()}`,
-    );
+  async captureSnapshot(timestamp: Date, eventType: string): Promise<void> {
+    console.log(`Snapshot capture: ${timestamp} ${eventType}`);
+    throw new Error('Snapshot capture not supported by CameraEventDownloader');
   }
 
   /**
