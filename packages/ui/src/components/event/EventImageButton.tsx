@@ -12,8 +12,6 @@ interface EventImageButtonProps {
 function formatTimestamp(ts: string) {
   // Expecting ISO string, convert to yyyyMMdd_HHmmss
   const d = new Date(ts);
-  // Subtract 3 hours to convert from UTC to local time (assuming local is UTC-3)
-  d.setHours(d.getHours() - 3);
 
   const pad = (n: number) => n.toString().padStart(2, '0');
   return (
@@ -32,7 +30,7 @@ const EventImageButton = React.forwardRef<
   EventImageButtonProps
 >(({ timestamp, type, width = 80, height = 28 }, ref) => {
   const formatted = formatTimestamp(timestamp);
-  const src = `/api/images/event_${formatted}_${type}.jpg`;
+  const src = `api/images/event_${formatted}_${type}.jpg`;
   return (
     <img
       src={src}

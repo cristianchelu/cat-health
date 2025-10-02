@@ -12,7 +12,7 @@ export function getEventVideoUrl(timestamp: string): string {
     .replace(/[:-]/g, '')
     .replace('T', '_')
     .split('.')[0];
-  const filename = `event_${formattedTimestamp}_use.mp4`;
+  const filename = `event_${formattedTimestamp}_litterbox_use.mp4`;
 
   return `${API_BASE_URL}/recordings/${filename}`;
 }

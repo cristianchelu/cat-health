@@ -193,7 +193,8 @@ fastify.setNotFoundHandler((request, reply) => {
   const isSpaRoute =
     request.raw.method === 'GET' &&
     !url.startsWith('/api') &&
-    !url.startsWith('/api/recordings');
+    !url.startsWith('/api/recordings') &&
+    !url.startsWith('/api/images');
 
   if (!isSpaRoute) {
     return reply.status(404).send({ error: 'Not Found' });
