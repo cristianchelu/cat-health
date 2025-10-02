@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
 
 interface EventImageButtonProps {
   timestamp: string;
@@ -29,14 +28,15 @@ function formatTimestamp(ts: string) {
 }
 
 const EventImageButton = React.forwardRef<
-  HTMLButtonElement,
+  HTMLImageElement,
   EventImageButtonProps
->(({ timestamp, type, onClick, className, width = 80, height = 28 }, ref) => {
+>(({ timestamp, type, width = 80, height = 28 }, ref) => {
   const formatted = formatTimestamp(timestamp);
   const src = `/api/images/event_${formatted}_${type}.jpg`;
   return (
     <img
       src={src}
+      ref={ref}
       alt="Event snapshot"
       width={width}
       height={height}
