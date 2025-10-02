@@ -10,6 +10,7 @@ import fs from 'node:fs/promises';
 config();
 
 assert(process.env.RECORDING_PATH, 'RECORDING_PATH is not set in .env');
+assert(process.env.IMAGE_PATH, 'IMAGE_PATH is not set in .env');
 
 import { migrateToLatest } from './database/migrate.ts';
 import { db } from './database/index.ts';
@@ -71,10 +72,15 @@ await fastify.register(cors, {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 });
 
-// Serve video recordings statically
+// Serve video recordings & snapshots statically
 await fastify.register(fastifyStatic, {
   root: process.env.RECORDING_PATH,
   prefix: '/api/recordings/',
+});
+await fastify.register(fastifyStatic, {
+  root: process.env.IMAGE_PATH,
+  prefix: '/api/images/',
+  decorateReply: false,
 });
 
 fastify.register(petRoutes, { prefix: '/api/pets' });

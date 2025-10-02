@@ -18,6 +18,7 @@ import { LitterboxAnalyzer } from '@/components/analyzer';
 import { createDateRange, type DateRange } from '@/lib/utils';
 
 import './PetDetail.css';
+import WaterIntakeEvent from '@/components/event/WaterIntakeEvent';
 
 export default function PetDetail() {
   const { id } = useParams<{ id: string }>();
@@ -112,6 +113,20 @@ export default function PetDetail() {
   const handleUpdateWeightEvent = async (
     eventId: number,
     data: { type: 'weight_measurement'; weight: number },
+    human_verified: boolean,
+    pet_id?: number | null,
+  ) => {
+    return handleUpdateEvent(
+      eventId,
+      data as Record<string, unknown>,
+      human_verified,
+      pet_id,
+    );
+  };
+
+  const handleUpdateWaterIntakeEvent = async (
+    eventId: number,
+    data: { type: 'water_intake'; amount: number; duration?: number },
     human_verified: boolean,
     pet_id?: number | null,
   ) => {
@@ -297,6 +312,35 @@ export default function PetDetail() {
                       pets={pets || []}
                       onDelete={() => handleDeleteEvent(event.id)}
                       onUpdate={handleUpdateWeightEvent}
+                      isDeleting={deletingEventIds.has(event.id)}
+                    />
+                  );
+                }
+
+                if (
+                  event.data &&
+                  typeof event.data === 'object' &&
+                  'type' in event.data &&
+                  event.data.type === 'water_intake'
+                ) {
+                  return (
+                    <WaterIntakeEvent
+                      key={event.id}
+                      id={event.id}
+                      pet_id={event.pet_id}
+                      timestamp={event.timestamp}
+                      data={
+                        event.data as {
+                          type: 'water_intake';
+                          amount: number;
+                          duration?: number;
+                        }
+                      }
+                      raw_data={event.raw_data}
+                      human_verified={event.human_verified}
+                      pets={pets || []}
+                      onDelete={() => handleDeleteEvent(event.id)}
+                      onUpdate={handleUpdateWaterIntakeEvent}
                       isDeleting={deletingEventIds.has(event.id)}
                     />
                   );

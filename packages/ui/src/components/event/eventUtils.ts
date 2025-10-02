@@ -112,7 +112,7 @@ export function parseRawBuffer(bufferData: number[] | null): ChartData {
 export function formatDuration(ms: number): string {
   const minutes = Math.floor(ms / 60000);
   const seconds = Math.floor((ms % 60000) / 1000);
-  return `${minutes}m ${seconds}s`;
+  return minutes ? `${minutes}m ${seconds}s` : `${seconds}s`;
 }
 
 export function formatWeight(
