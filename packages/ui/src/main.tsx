@@ -1,11 +1,13 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
-import PetList from './pages/PetList';
-import PetDetail from './pages/PetDetail';
-import DeviceList from './pages/DeviceList';
-import DeviceDetail from './pages/DeviceDetail';
 import { createBrowserRouter, RouterProvider } from 'react-router';
+
+import App from './App.tsx';
+
+import Overview from './pages/overview/Overview.tsx';
+import Health from './pages/health/Health.tsx';
+import Devices from './pages/devices/Devices.tsx';
+import Settings from './pages/settings/Settings.tsx';
 
 import './index.css';
 
@@ -15,10 +17,10 @@ const router = createBrowserRouter(
       path: '/',
       element: <App />,
       children: [
-        { path: '/', element: <PetList /> },
-        { path: '/pets/:id', element: <PetDetail /> },
-        { path: '/devices', element: <DeviceList /> },
-        { path: '/devices/:id', element: <DeviceDetail /> },
+        { path: '/', element: <Overview /> },
+        { path: '/health', element: <Health /> },
+        { path: '/devices', element: <Devices /> },
+        { path: '/settings', element: <Settings /> },
       ],
     },
   ],

@@ -11,7 +11,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "shared": "*",
     "@tanstack/react-query": "^5.82.0",
     "@tanstack/react-router": "^1.125.6",
     "axios": "^1.10.0",
@@ -23,7 +22,8 @@
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",
-    "react-router": "^7.7.1"
+    "react-router": "^7.7.1",
+    "shared": "*"
   },
   "devDependencies": {
     "@types/react": "^19.1.8",

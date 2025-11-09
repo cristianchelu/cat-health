@@ -155,6 +155,7 @@
     var(--color-secondary),
     var(--color-secondary-dark)
   );
+  --gradient-pet: linear-gradient(90deg, #9b8cf2, #6366f1);
 }
 
 /* Dark Theme */

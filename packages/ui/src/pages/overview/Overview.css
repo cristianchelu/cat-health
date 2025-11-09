@@ -1,0 +1,17 @@
+.page-overview {
+  /* padding: var(--space-lg); */
+  max-width: var(--max-width-content);
+  margin: 0 auto;
+
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-lg);
+    align-items: stretch;
+
+    @media (max-width: 767px) {
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
+    }
+  }
+}

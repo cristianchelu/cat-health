@@ -2,12 +2,8 @@
   display: grid;
   height: 100vh;
   width: 100%;
-  grid-template-rows: auto 1fr auto;
-  grid-template-columns: 100%;
-  grid-template-areas:
-    'header'
-    'main'
-    'footer';
+  grid-template-columns: auto 1fr;
+  grid-template-areas: 'sidebar main';
 
   header {
     grid-area: header;
@@ -15,12 +11,23 @@
 
   main {
     grid-area: main;
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-sm) var(--space-xl);
     overflow: auto;
 
     #content {
       max-width: var(--max-width-content);
       margin: 0 auto;
+    }
+  }
+
+  /* Mobile responsiveness */
+  @media (max-width: 767px) {
+    display: flex;
+    flex-direction: column;
+
+    main {
+      padding: var(--space-md);
+      flex: 1;
     }
   }
 }

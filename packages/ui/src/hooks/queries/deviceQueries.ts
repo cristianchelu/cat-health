@@ -1,6 +1,5 @@
 import { getDevice, getDeviceEvents, getDevices } from '@/api/devices';
 import { deleteEvent, updateEvent } from '@/api/pets';
-import { dateToTimeRange } from '@/lib/utils';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export function useDevices() {
@@ -20,13 +19,13 @@ export function useDevice(deviceId: number, enabled: boolean) {
 
 export function useDeviceEvents(
   deviceId: number,
-  currentDate: string,
+  startTime: string,
+  endTime: string,
   enabled: boolean,
 ) {
   return useQuery({
-    queryKey: ['deviceEvents', deviceId, currentDate],
+    queryKey: ['deviceEvents', deviceId, startTime, endTime],
     queryFn: () => {
-      const { startTime, endTime } = dateToTimeRange(currentDate);
       return getDeviceEvents(deviceId, startTime, endTime);
     },
     enabled,
