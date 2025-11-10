@@ -11,7 +11,7 @@ const Overview: React.FC = () => {
 
   return (
     <div className="page-overview">
-      <div className="overview-grid">
+      <section className="widget-grid">
         {selectedPet && <WeightTrendCard petId={selectedPet.id} />}
         <Card>
           <CardHeader>
@@ -31,7 +31,7 @@ const Overview: React.FC = () => {
             <span>3 times</span>
           </CardHeader>
         </Card>
-      </div>
+      </section>
     </div>
   );
 };

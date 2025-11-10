@@ -3,7 +3,7 @@
   max-width: var(--max-width-content);
   margin: 0 auto;
 
-  .overview-grid {
+  section.widget-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: var(--space-lg);

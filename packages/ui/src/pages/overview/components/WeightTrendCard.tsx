@@ -2,6 +2,7 @@ import React from 'react';
 import { usePetWeightTrends } from '@/hooks/queries/petQueries';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { ArrowRight, Loader, Scale } from 'lucide-react';
+import { formatRelative } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 import './WeightTrendCard.css';
@@ -79,8 +80,6 @@ const createAreaPath = (points: { x: number; y: number }[], height: number) => {
   return `${linePath} L ${points[points.length - 1].x} ${height} L 0 ${height} Z`;
 };
 
-const fmt = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-
 const WeightTrendCard: React.FC<WeightTrendCardProps> = ({ petId }) => {
   const { data: weightData, isLoading, error } = usePetWeightTrends(petId, 15);
 
@@ -157,7 +156,10 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({ petId }) => {
     return { x, y, weight: data.weight };
   });
 
-  const latestTime = parseInt(weightData.at(-1)?.timestamp);
+  const timestamp = weightData.at(-1)?.timestamp;
+  const timeLabel = timestamp
+    ? formatRelative(new Date(timestamp), new Date())
+    : '';
 
   return (
     <Card className="weight-trend-card">
@@ -168,10 +170,7 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({ petId }) => {
             <ArrowRight className={cn('trend-icon', trendInfo)} />
             <span className="weight-value">{formatWeight(latestWeight)}</span>
           </div>
-          <div className="weight-time">
-            {/* {latestTime ? fmt.format(-latestTime, 'hours') : 'Unknown'} */}
-            {weightData.at(-1)?.timestamp}
-          </div>
+          <div className="weight-time">{timeLabel}</div>
         </div>
       </CardHeader>
       <CardContent noPadding>

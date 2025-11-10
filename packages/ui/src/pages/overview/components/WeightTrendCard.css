@@ -43,7 +43,7 @@
     }
 
     .weight-time {
-      font-size: var(--text-xs);
+      font-size: var(--text-2xs);
       line-height: 100%;
       color: var(--color-text-light);
     }
