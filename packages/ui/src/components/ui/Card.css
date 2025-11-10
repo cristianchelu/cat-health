@@ -48,6 +48,9 @@
       margin-right: calc(-1 * var(--card-padding));
       margin-bottom: calc(-1 * var(--card-padding));
     }
+    &.no-padding:first-child {
+      margin-top: calc(-1 * var(--card-padding));
+    }
   }
 
   .card-action {

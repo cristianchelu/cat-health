@@ -1,0 +1,17 @@
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-semibold);
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  svg {
+    color: var(--color-primary);
+  }
+}

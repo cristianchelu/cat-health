@@ -1,0 +1,116 @@
+.settings-list {
+  .list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-lg);
+    border-bottom: var(--border-thin);
+    cursor: pointer;
+    transition: var(--transition-normal);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background-color: var(--color-surface-highlight);
+    }
+
+    .item-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      flex: 1;
+
+      .item-icon,
+      .item-avatar {
+        width: 2.75rem;
+        height: 2.75rem;
+        font-size: 2.75rem;
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        &.item-avatar {
+          background-color: var(--color-primary-light);
+          color: var(--color-primary);
+        }
+      }
+
+      .item-content {
+        h3 {
+          font-size: var(--text-base);
+          font-weight: var(--font-medium);
+          color: var(--color-text);
+          margin: 0 0 var(--space-xs) 0;
+        }
+
+        p {
+          font-size: var(--text-sm);
+          color: var(--color-text-light);
+          margin: 0;
+          line-height: var(--line-height-normal);
+        }
+      }
+
+      .item-content-wrapper {
+        h3 {
+          font-size: var(--text-base);
+          font-weight: var(--font-medium);
+          color: var(--color-text);
+          margin: 0;
+        }
+
+        p {
+          font-size: var(--text-sm);
+          color: var(--color-text-muted);
+          margin: 0;
+          line-height: var(--line-height-normal);
+        }
+      }
+    }
+
+    .item-arrow {
+      color: var(--color-text-subtle);
+      flex-shrink: 0;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-list .list-item {
+    padding: var(--space-md);
+
+    .item-left {
+      gap: var(--space-sm);
+
+      .item-icon,
+      .item-avatar {
+        width: 36px;
+        height: 36px;
+      }
+
+      .item-content {
+        h3 {
+          font-size: var(--text-sm);
+        }
+
+        p {
+          font-size: var(--text-xs);
+        }
+      }
+
+      .item-content-wrapper {
+        h3 {
+          font-size: var(--text-sm);
+        }
+
+        p {
+          font-size: var(--text-xs);
+        }
+      }
+    }
+  }
+}
