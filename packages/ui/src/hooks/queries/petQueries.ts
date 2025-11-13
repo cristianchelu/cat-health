@@ -6,7 +6,16 @@ import {
   getPets,
   getPetWeightTrends,
   updateEvent,
+  getPet,
+  createPet,
+  updatePet,
+  deletePet,
 } from '@/api/pets';
+import type {
+  PostPetRequestDTO,
+  PatchPetRequestDTO,
+  PatchEventRequestDTO,
+} from 'shared';
 import { dateRangeToTimeRange, type DateRange } from '@/lib/utils';
 
 export function usePets() {
@@ -20,7 +29,7 @@ export function usePets() {
 export function usePet(petId: number, enabled: boolean) {
   return useQuery({
     queryKey: ['pet', petId],
-    queryFn: () => getPets().then((pets) => pets.find((p) => p.id === petId)),
+    queryFn: () => getPet(petId),
     enabled,
   });
 }
@@ -55,8 +64,13 @@ export function useDeleteEvent(petId: number, currentDateRange: DateRange) {
 export function useUpdateEvent(petId: number, currentDateRange: DateRange) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ eventId, data }: { eventId: number; data: any }) =>
-      updateEvent(eventId, data),
+    mutationFn: ({
+      eventId,
+      data,
+    }: {
+      eventId: number;
+      data: PatchEventRequestDTO;
+    }) => updateEvent(eventId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['petEvents', petId, currentDateRange],
@@ -69,5 +83,39 @@ export function usePetWeightTrends(petId: number, days: number) {
   return useQuery({
     queryKey: ['weightTrends', petId, days],
     queryFn: () => getPetWeightTrends(petId, { days }),
+  });
+}
+
+export function useCreatePet() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PostPetRequestDTO) => createPet(data),
+    onSuccess: (newPet) => {
+      // Invalidate and update cache optimistically
+      queryClient.invalidateQueries({ queryKey: ['pets'] });
+      queryClient.setQueryData(['pet', newPet.id], newPet);
+    },
+  });
+}
+
+export function useUpdatePet(petId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PatchPetRequestDTO) => updatePet(petId, data),
+    onSuccess: (updatedPet) => {
+      queryClient.invalidateQueries({ queryKey: ['pets'] });
+      queryClient.setQueryData(['pet', petId], updatedPet);
+    },
+  });
+}
+
+export function useDeletePet(petId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => deletePet(petId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pets'] });
+      queryClient.removeQueries({ queryKey: ['pet', petId] });
+    },
   });
 }

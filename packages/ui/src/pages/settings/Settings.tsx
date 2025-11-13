@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router';
 import { usePets } from '@/hooks/queries/petQueries';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { CardList, CardListItem, CardListContent } from './components/CardList';
@@ -15,24 +16,34 @@ import './Settings.css';
 
 const Settings: React.FC = () => {
   const { data: pets = [] } = usePets();
+  const navigate = useNavigate();
+
+  const handleAddPet = () => {
+    navigate('/settings/pets/new');
+  };
 
   return (
     <div className="page-settings">
       <div className="settings-container">
         <section>
-          <SectionHeader icon={<Cat size={20} />}>Pets</SectionHeader>
+          <SectionHeader icon={<Cat size="1em" />}>Pets</SectionHeader>
           <CardList>
             {pets.map((pet) => (
-              <CardListItem key={pet.id} icon={<Cat size={20} />}>
+              <CardListItem
+                key={pet.id}
+                icon={<Cat size="1em" />}
+                onClick={() => navigate(`/settings/pets/${pet.id}`)}
+              >
                 <CardListContent title={pet.name} description={pet.breed} />
               </CardListItem>
             ))}
             <CardListItem
               icon={
                 <div className="add-item-icon">
-                  <Plus size={20} />
+                  <Plus size="0.5em" />
                 </div>
               }
+              onClick={handleAddPet}
             >
               <CardListContent
                 title="Add Pet"
@@ -42,12 +53,14 @@ const Settings: React.FC = () => {
           </CardList>
         </section>
         <section>
-          <SectionHeader icon={<Smartphone size={20} />}>Devices</SectionHeader>
+          <SectionHeader icon={<Smartphone size="1em" />}>
+            Devices
+          </SectionHeader>
           <CardList>
             <CardListItem
               icon={
                 <div className="add-item-icon">
-                  <Plus size={20} />
+                  <Plus size="0.5em" />
                 </div>
               }
             >
@@ -59,21 +72,23 @@ const Settings: React.FC = () => {
           </CardList>
         </section>
         <section>
-          <SectionHeader icon={<Globe size={20} />}>App Settings</SectionHeader>
+          <SectionHeader icon={<Globe size="1em" />}>
+            App Settings
+          </SectionHeader>
           <CardList>
-            <CardListItem icon={<Globe size={20} />}>
+            <CardListItem icon={<Globe size="1em" />}>
               <CardListContent
                 title="Language & Region"
                 description="Set your preferred language and regional settings"
               />
             </CardListItem>
-            <CardListItem icon={<Smartphone size={20} />}>
+            <CardListItem icon={<Smartphone size="1em" />}>
               <CardListContent
                 title="Timezone"
                 description="Configure your local timezone for accurate tracking"
               />
             </CardListItem>
-            <CardListItem icon={<SettingsIcon size={20} />}>
+            <CardListItem icon={<SettingsIcon size="1em" />}>
               <CardListContent
                 title="Notifications"
                 description="Manage alerts and reminders for your pets"
@@ -82,17 +97,17 @@ const Settings: React.FC = () => {
           </CardList>
         </section>
         <section>
-          <SectionHeader icon={<Database size={20} />}>
+          <SectionHeader icon={<Database size="1em" />}>
             Data Management
           </SectionHeader>
           <CardList>
-            <CardListItem icon={<Database size={20} />}>
+            <CardListItem icon={<Database size="1em" />}>
               <CardListContent
                 title="Export Data"
                 description="Download your pet health data and reports"
               />
             </CardListItem>
-            <CardListItem icon={<SettingsIcon size={20} />}>
+            <CardListItem icon={<SettingsIcon size="1em" />}>
               <CardListContent
                 title="Reset Options"
                 description="Clear data or reset app settings"

@@ -14,3 +14,11 @@ export type GetPetsResponseDTO = Static<typeof GetPetsResponseSchema>;
 
 export const PostPetRequestSchema = Type.Omit(GetPetResponseSchema, ["id"]);
 export type PostPetRequestDTO = Static<typeof PostPetRequestSchema>;
+
+// Partial update schema – all fields optional to allow targeted PATCH updates
+export const PatchPetRequestSchema = Type.Partial(PostPetRequestSchema);
+export type PatchPetRequestDTO = Static<typeof PatchPetRequestSchema>;
+
+// Delete response – simple success boolean
+export const DeletePetResponseSchema = Type.Object({ success: Type.Boolean() });
+export type DeletePetResponseDTO = Static<typeof DeletePetResponseSchema>;

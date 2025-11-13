@@ -26,7 +26,7 @@
       .item-avatar {
         width: 2.75rem;
         height: 2.75rem;
-        font-size: 2.75rem;
+        font-size: 2rem;
         border-radius: var(--radius-full);
         display: flex;
         align-items: center;

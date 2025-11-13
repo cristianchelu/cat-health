@@ -8,6 +8,9 @@ import type {
   GetPetResponseDTO,
   WeightTrendsResponseDTO,
   WeightTrendQueryDTO,
+  PostPetRequestDTO,
+  PatchPetRequestDTO,
+  DeletePetResponseDTO,
 } from 'shared';
 
 import apiClient from './apiClient';
@@ -24,6 +27,24 @@ export async function getPets() {
 
 export async function getPet(id: number) {
   const { data } = await apiClient.get<GetPetResponseDTO>(`/pets/${id}`);
+  return data;
+}
+
+export async function createPet(input: PostPetRequestDTO) {
+  const { data } = await apiClient.post<GetPetResponseDTO>('/pets', input);
+  return data;
+}
+
+export async function updatePet(id: number, input: PatchPetRequestDTO) {
+  const { data } = await apiClient.patch<GetPetResponseDTO>(
+    `/pets/${id}`,
+    input,
+  );
+  return data;
+}
+
+export async function deletePet(id: number) {
+  const { data } = await apiClient.delete<DeletePetResponseDTO>(`/pets/${id}`);
   return data;
 }
 

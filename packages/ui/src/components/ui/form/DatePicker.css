@@ -1,0 +1,30 @@
+.date-picker {
+  /* WebKit browsers (Chrome, Safari, Edge) */
+  &::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity var(--transition-fast);
+  }
+
+  &:hover::-webkit-calendar-picker-indicator,
+  &:focus::-webkit-calendar-picker-indicator {
+    opacity: 1;
+  }
+
+  /* Firefox */
+  &::-moz-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity var(--transition-fast);
+  }
+
+  &:hover::-moz-calendar-picker-indicator,
+  &:focus::-moz-calendar-picker-indicator {
+    opacity: 1;
+  }
+
+  /* Remove clear button in legacy IE/Edge */
+  &::-ms-clear {
+    display: none;
+  }
+}
