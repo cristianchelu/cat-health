@@ -1,6 +1,7 @@
 import { getDevice, getDeviceEvents, getDevices } from '@/api/devices';
 import { deleteEvent, updateEvent } from '@/api/pets';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { PatchEventRequestDTO } from 'shared';
 
 export function useDevices() {
   return useQuery({
@@ -47,8 +48,13 @@ export function useDeleteEvent(deviceId: number, currentDate: string) {
 export function useUpdateEvent(deviceId: number, currentDate: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ eventId, data }: { eventId: number; data: any }) =>
-      updateEvent(eventId, data),
+    mutationFn: ({
+      eventId,
+      data,
+    }: {
+      eventId: number;
+      data: PatchEventRequestDTO;
+    }) => updateEvent(eventId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['deviceEvents', deviceId, currentDate],

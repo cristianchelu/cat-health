@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router';
 import { usePets } from '@/hooks/queries/petQueries';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import Avatar from '@/components/ui/Avatar';
 import { CardList, CardListItem, CardListContent } from './components/CardList';
 import {
   Plus,
@@ -31,7 +32,13 @@ const Settings: React.FC = () => {
             {pets.map((pet) => (
               <CardListItem
                 key={pet.id}
-                icon={<Cat size="1em" />}
+                icon={
+                  <Avatar
+                    src={pet.avatar_url}
+                    alt={pet.name}
+                    fallbackIcon={<Cat size="1em" />}
+                  />
+                }
                 onClick={() => navigate(`/settings/pets/${pet.id}`)}
               >
                 <CardListContent title={pet.name} description={pet.breed} />

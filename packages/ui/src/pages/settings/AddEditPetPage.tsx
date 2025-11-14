@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router';
 import PetForm from './components/PetForm';
+import { useUploadPetAvatar } from '@/hooks/queries/petQueries';
 import type { PostPetRequestDTO } from 'shared';
 import './AddEditPetPage.css';
 import {
@@ -22,14 +23,32 @@ const AddEditPetPage: React.FC = () => {
   const updatePetMutation = useUpdatePet(petId);
   const deletePetMutation = useDeletePet(petId);
 
-  const handleSubmit = (data: PostPetRequestDTO) => {
+  const uploadAvatarMutation = useUploadPetAvatar(petId);
+
+  const handleSubmit = (data: PostPetRequestDTO, avatarFile: File | null) => {
     if (isEditing) {
       updatePetMutation.mutate(data, {
-        onSuccess: () => navigate('/settings'),
+        onSuccess: async () => {
+          if (avatarFile) {
+            await uploadAvatarMutation.mutateAsync(avatarFile);
+          }
+          navigate('/settings');
+        },
       });
     } else {
       createPetMutation.mutate(data, {
-        onSuccess: () => navigate('/settings'),
+        onSuccess: async (newPet) => {
+          if (avatarFile) {
+            // Use a one-off upload for the new pet id without invoking a hook inside callback
+            const form = new FormData();
+            form.append('avatar', avatarFile);
+            await fetch(`/api/pets/${newPet.id}/avatar`, {
+              method: 'POST',
+              body: form,
+            });
+          }
+          navigate('/settings');
+        },
       });
     }
   };
@@ -58,11 +77,14 @@ const AddEditPetPage: React.FC = () => {
       <PetForm
         title={isEditing ? 'Edit Pet' : 'Add Pet'}
         initialData={pet || undefined}
+        existingAvatarUrl={pet?.avatar_url ?? null}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         onDelete={isEditing ? handleDelete : undefined}
         isSubmitting={
-          createPetMutation.isPending || updatePetMutation.isPending
+          createPetMutation.isPending ||
+          updatePetMutation.isPending ||
+          uploadAvatarMutation.isPending
         }
         isDeleting={deletePetMutation.isPending}
       />

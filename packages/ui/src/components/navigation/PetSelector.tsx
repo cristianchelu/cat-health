@@ -4,6 +4,8 @@ import { usePet } from '@/contexts/PetContext';
 import { cn } from '@/lib/utils';
 
 import { Button } from '../ui/Button';
+import { Cat } from 'lucide-react';
+import Avatar from '@/components/ui/Avatar';
 
 import './PetSelector.css';
 
@@ -39,9 +41,7 @@ const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
     );
   }
 
-  const getPetAvatar = (petName: string) => {
-    return <img src={`/${petName}.png`} alt={petName} />;
-  };
+  // Avatar now handled by shared Avatar component.
 
   return (
     <ul className={cn('pet-selector', variant)}>
@@ -53,7 +53,13 @@ const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
           onClick={() => setSelectedPet(pet)}
           title={pet.name}
         >
-          <div className="avatar">{getPetAvatar(pet.name)}</div>
+          <Avatar
+            src={pet.avatar_url}
+            alt={pet.name}
+            size="sm"
+            fallbackIcon={<Cat size={20} />}
+            className="avatar"
+          />
           <label>{pet.name}</label>
         </Button>
       ))}

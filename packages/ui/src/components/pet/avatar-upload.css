@@ -1,0 +1,71 @@
+.avatar-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  .label {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+  .drop-zone {
+    position: relative;
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: var(--color-bg-elevated);
+    transition:
+      border-color 0.15s,
+      background 0.15s;
+    &.drag {
+      border-color: var(--color-primary);
+      background: var(--color-bg-subtle);
+    }
+    &.disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+  .placeholder {
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    p {
+      margin: var(--space-2) 0 var(--space-1);
+    }
+    small {
+      font-size: var(--font-size-xs);
+    }
+  }
+  .preview {
+    max-width: 100%;
+    max-height: 128px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+  }
+  .clear-btn {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    background: var(--color-bg-overlay);
+  }
+  .file-input {
+    display: none;
+  }
+  .error {
+    color: var(--color-danger);
+    font-size: var(--font-size-xs);
+  }
+  .file-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+  }
+}

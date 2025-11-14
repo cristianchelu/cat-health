@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/Button';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Cat } from 'lucide-react';
 import type { PostPetRequestDTO } from 'shared';
+import AvatarUpload from '@/components/pet/AvatarUpload';
 
 import './PetForm.css';
 
 interface PetFormProps {
   initialData?: Partial<PostPetRequestDTO>;
-  onSubmit: (data: PostPetRequestDTO) => void;
+  existingAvatarUrl?: string | null;
+  onSubmit: (data: PostPetRequestDTO, avatarFile: File | null) => void;
   onCancel: () => void;
   onDelete?: () => void; // optional delete handler when editing
   isSubmitting?: boolean;
@@ -20,6 +22,7 @@ interface PetFormProps {
 
 const PetForm: React.FC<PetFormProps> = ({
   initialData,
+  existingAvatarUrl,
   onSubmit,
   onCancel,
   onDelete,
@@ -44,8 +47,10 @@ const PetForm: React.FC<PetFormProps> = ({
 
   const watchedBirthDate = watch('birth_date');
 
+  const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
+
   const handleFormSubmit = (data: PostPetRequestDTO) => {
-    onSubmit(data);
+    onSubmit(data, avatarFile);
   };
 
   return (
@@ -53,6 +58,13 @@ const PetForm: React.FC<PetFormProps> = ({
       <SectionHeader icon={<Cat size={20} />}>{title}</SectionHeader>
 
       <form onSubmit={handleSubmit(handleFormSubmit)}>
+        <AvatarUpload
+          value={avatarFile}
+          existingUrl={existingAvatarUrl || null}
+          onChange={setAvatarFile}
+          disabled={isSubmitting || isDeleting}
+          className="avatar-section"
+        />
         <FormField
           label="Pet Name"
           error={errors.name?.message as string}

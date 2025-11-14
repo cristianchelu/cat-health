@@ -26,6 +26,7 @@ export function PetProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePet() {
   const context = useContext(PetContext);
   if (context === undefined) {

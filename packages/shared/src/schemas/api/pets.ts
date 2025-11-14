@@ -5,6 +5,7 @@ export const GetPetResponseSchema = Type.Object({
   id: Type.Number(),
   name: Type.String(),
   breed: Type.String(),
+  avatar_url: Type.Optional(Type.String()),
   birth_date: Type.Any(), //TODO: Type.Date()
 });
 export type GetPetResponseDTO = Static<typeof GetPetResponseSchema>;

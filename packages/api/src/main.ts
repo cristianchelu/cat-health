@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import { type TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import path from 'node:path';
 import assert from 'node:assert';
@@ -72,6 +73,14 @@ await fastify.register(cors, {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 });
 
+// Multipart (file upload) support – 2MB avatar limit
+await fastify.register(multipart, {
+  limits: {
+    fileSize: 2_000_000, // 2MB max
+    files: 1,
+  },
+});
+
 // Serve video recordings & snapshots statically
 await fastify.register(fastifyStatic, {
   root: process.env.RECORDING_PATH,
@@ -98,7 +107,7 @@ fastify.post('/api/migrate', async (request, reply) => {
     const syncService = new SyncService(db);
 
     // Extract optional query parameters
-    const query = request.query as any;
+    const query = request.query as { startDate?: string; endDate?: string };
     const startDate = query.startDate ? new Date(query.startDate) : undefined;
     const endDate = query.endDate ? new Date(query.endDate) : undefined;
     // const migratorNames = query.migrators

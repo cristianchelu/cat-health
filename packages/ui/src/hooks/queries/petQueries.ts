@@ -109,6 +109,31 @@ export function useUpdatePet(petId: number) {
   });
 }
 
+// Upload avatar for a pet
+export function useUploadPetAvatar(petId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData();
+      form.append('avatar', file);
+      const res = await fetch(`/api/pets/${petId}/avatar`, {
+        method: 'POST',
+        body: form,
+      });
+      if (!res.ok) {
+        throw new Error('Failed to upload avatar');
+      }
+      return (await res.json()) as {
+        success: boolean;
+        avatar?: { url: string; width: number; height: number };
+      };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pet', petId] });
+    },
+  });
+}
+
 export function useDeletePet(petId: number) {
   const queryClient = useQueryClient();
   return useMutation({
