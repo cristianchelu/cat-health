@@ -1,8 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router';
+import type { DeviceType } from 'shared';
 import { usePets } from '@/hooks/queries/petQueries';
+import { useDevices } from '@/hooks/queries/deviceQueries';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import Avatar from '@/components/ui/Avatar';
+import { LitterboxIcon } from '@/components/icons/LitterboxIcon';
+import { WaterFountainIcon } from '@/components/icons/WaterFountainIcon';
 import { CardList, CardListItem, CardListContent } from './components/CardList';
 import {
   Plus,
@@ -11,12 +15,21 @@ import {
   Smartphone,
   Database,
   Cat,
+  CctvIcon,
 } from 'lucide-react';
 
 import './Settings.css';
 
+const DEVICE_ICON: Record<DeviceType, React.ReactNode> = {
+  litterbox: <LitterboxIcon size="1em" />,
+  water_fountain: <WaterFountainIcon size="1em" />,
+  feeder: <SettingsIcon size="1em" />,
+  camera: <CctvIcon size="1em" />,
+};
+
 const Settings: React.FC = () => {
   const { data: pets = [] } = usePets();
+  const { data: devices = [] } = useDevices();
   const navigate = useNavigate();
 
   const handleAddPet = () => {
@@ -64,6 +77,23 @@ const Settings: React.FC = () => {
             Devices
           </SectionHeader>
           <CardList>
+            {devices.map((device) => {
+              const icon = DEVICE_ICON[device.type] || (
+                <SettingsIcon size="1em" />
+              );
+              return (
+                <CardListItem
+                  key={device.id}
+                  icon={icon}
+                  onClick={() => navigate(`/settings/devices/${device.id}`)}
+                >
+                  <CardListContent
+                    title={device.name}
+                    description={device.type}
+                  />
+                </CardListItem>
+              );
+            })}
             <CardListItem
               icon={
                 <div className="add-item-icon">
