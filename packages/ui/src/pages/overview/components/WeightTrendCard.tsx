@@ -166,10 +166,8 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({ petId }) => {
       <CardHeader>
         <Scale style={{ marginRight: 'auto' }} />
         <div className="weight-trend-info">
-          <div className="weight-value">
-            <ArrowRight className={cn('trend-icon', trendInfo)} />
-            <span className="weight-value">{formatWeight(latestWeight)}</span>
-          </div>
+          <ArrowRight className={cn('trend-icon', trendInfo)} />
+          <div className="weight-value">{formatWeight(latestWeight)}</div>
           <div className="weight-time">{timeLabel}</div>
         </div>
       </CardHeader>

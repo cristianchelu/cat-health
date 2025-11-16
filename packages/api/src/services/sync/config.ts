@@ -1,6 +1,5 @@
 import { config } from 'dotenv';
 import assert from 'node:assert';
-import path from 'path';
 
 // Load environment variables from .env file
 config();
