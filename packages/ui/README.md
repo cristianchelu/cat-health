@@ -67,3 +67,7 @@ export default tseslint.config([
   },
 ]);
 ```
+
+## PWA Support
+
+Run `npm run icons` to generate the necessary icons for the PWA.
