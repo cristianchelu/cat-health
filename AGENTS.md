@@ -299,3 +299,8 @@ The application uses a comprehensive design system defined in `theme.css` with:
 - **Z-index layering** for modals, dropdowns, tooltips
 
 Always reference these variables instead of hardcoding values to maintain design consistency and enable easy theming updates.
+
+# Hygiene rules
+
+- Any summary .md or explanation of changes MUST go in the `{root}/summaries/`
+  folder, so as not to pollute the git history.

@@ -8,3 +8,6 @@ packages/api/.env
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# AGENTS
+summaries
