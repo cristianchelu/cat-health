@@ -10,7 +10,9 @@
     "migrate": "node --experimental-strip-types src/database/migrate.ts",
     "sync": "node --experimental-strip-types src/scripts/migrate.new.ts",
     "reset-db": "rm -f data/database.sqlite && npm run migrate",
-    "format": "prettier --write ."
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "tsc -b --force"
   },
   "author": "Cristian Chelu",
   "license": "MIT",

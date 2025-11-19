@@ -1,14 +1,16 @@
+import { config } from 'dotenv';
+
+config();
+
+import path from 'node:path';
+import assert from 'node:assert';
+import fs from 'node:fs/promises';
+
 import Fastify from 'fastify';
 import { type TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
-import path from 'node:path';
-import assert from 'node:assert';
-import { config } from 'dotenv';
-import fs from 'node:fs/promises';
-
-config();
 
 assert(process.env.RECORDING_PATH, 'RECORDING_PATH is not set in .env');
 assert(process.env.IMAGE_PATH, 'IMAGE_PATH is not set in .env');

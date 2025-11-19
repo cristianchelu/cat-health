@@ -14,8 +14,7 @@ import { Kysely, sql } from 'kysely';
  * - ON DELETE CASCADE from media_link.media_id -> media.id so links are cleaned when media removed.
  * - No FK from media_link.entity_id to target tables (keeps it generic / avoids circular migrations).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function up(db: Kysely<any>): Promise<void> {
+export async function up(db: Kysely<Record<string, never>>): Promise<void> {
   // media table
   await db.schema
     .createTable('media')
@@ -57,8 +56,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .execute();
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function down(db: Kysely<any>): Promise<void> {
+export async function down(db: Kysely<Record<string, never>>): Promise<void> {
   await db.schema.dropIndex('media_link_media_idx').execute();
   await db.schema.dropIndex('media_link_entity_idx').execute();
   await db.schema.dropTable('media_link').execute();

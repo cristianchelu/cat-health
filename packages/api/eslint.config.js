@@ -1,22 +1,17 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
-import { globalIgnores } from 'eslint/config';
 
 export default tseslint.config([
-  globalIgnores(['dist']),
+  {
+    ignores: ['dist', 'node_modules', 'data'],
+  },
   {
     files: ['**/*.ts'],
-    extends: [js.configs.recommended, tseslint.configs.recommended],
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.node,
-      sourceType: 'module',
-    },
-    rules: {
-      // Example: prefer const, no-var, etc.
-      'no-var': 'error',
-      'prefer-const': 'error',
     },
   },
 ]);
