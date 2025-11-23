@@ -115,5 +115,11 @@
         "file_requirements": "PNG, JPG, WEBP până la 2MB",
         "remove_avatar_label": "Elimină avatarul selectat",
         "upload_avatar_label": "Încarcă avatar"
+    },
+    "device_types": {
+        "litterbox": "Litieră",
+        "water_fountain": "Fântână de apă",
+        "feeder": "Hrănitor",
+        "camera": "Cameră"
     }
 }

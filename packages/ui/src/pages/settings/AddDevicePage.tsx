@@ -160,7 +160,9 @@ const AddDevicePage: React.FC = () => {
                     >
                       <div className="device-info">
                         <span className="device-name">{device.name}</span>
-                        <span className="device-type">{device.type}</span>
+                        <span className="device-type">
+                          {t(`device_types.${device.type}`)}
+                        </span>
                         <span className="device-id">{device.externalId}</span>
                       </div>
                       {isAlreadyAdded ? (
@@ -232,7 +234,9 @@ const AddDevicePage: React.FC = () => {
             <div className="device-summary">
               <div className="summary-item">
                 <span className="label">{t('settings.type_label')}</span>
-                <span className="value">{selectedDevice.type}</span>
+                <span className="value">
+                  {t(`device_types.${selectedDevice.type}`)}
+                </span>
               </div>
               <div className="summary-item">
                 <span className="label">{t('settings.external_id_label')}</span>

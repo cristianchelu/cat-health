@@ -115,5 +115,11 @@
         "file_requirements": "PNG, JPG, WEBP up to 2MB",
         "remove_avatar_label": "Remove selected avatar",
         "upload_avatar_label": "Upload avatar"
+    },
+    "device_types": {
+        "litterbox": "Litterbox",
+        "water_fountain": "Water Fountain",
+        "feeder": "Feeder",
+        "camera": "Camera"
     }
 }

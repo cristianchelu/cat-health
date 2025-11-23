@@ -129,7 +129,7 @@ const Settings: React.FC = () => {
                 >
                   <CardListContent
                     title={device.name}
-                    description={device.type}
+                    description={t(`device_types.${device.type}`)}
                   />
                 </CardListItem>
               );
