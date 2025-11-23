@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router';
 
 import { Activity, HeartPulse, Settings, TabletSmartphone } from 'lucide-react';
@@ -14,23 +15,29 @@ interface SidebarProps {
   onToggle?: () => void;
 }
 
-const navigationItems = [
-  { path: '/', label: 'Overview', icon: <Activity /> },
-  { path: '/health', label: 'Health', icon: <HeartPulse /> },
-  { path: '/devices', label: 'Devices', icon: <TabletSmartphone /> },
-  { path: '/settings', label: 'Settings', icon: <Settings /> },
-];
-
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false, onToggle }) => {
+  const { t } = useTranslation();
+
+  const navigationItems = [
+    { path: '/', label: t('navigation.overview'), icon: <Activity /> },
+    { path: '/health', label: t('navigation.health'), icon: <HeartPulse /> },
+    {
+      path: '/devices',
+      label: t('navigation.devices'),
+      icon: <TabletSmartphone />,
+    },
+    { path: '/settings', label: t('navigation.settings'), icon: <Settings /> },
+  ];
+
   return (
     <aside className={cn('sidebar', isCollapsed && 'collapsed')}>
       <div className="content">
         <section>
-          <h4>Pets</h4>
+          <h4>{t('navigation.pets')}</h4>
           <PetSelector />
         </section>
         <nav>
-          <h4>Navigation</h4>
+          <h4>{t('navigation.nav_header')}</h4>
           <ul>
             {navigationItems.map((item) => (
               <li key={item.path}>
@@ -54,7 +61,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false, onToggle }) => {
         <button
           className="toggle"
           onClick={onToggle}
-          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={
+            isCollapsed
+              ? t('navigation.expand_sidebar')
+              : t('navigation.collapse_sidebar')
+          }
         >
           <span className="toggle-icon">{isCollapsed ? '→' : '←'}</span>
         </button>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import {
   useProviders,
@@ -11,6 +12,7 @@ import { Server } from 'lucide-react';
 import './AddEditProviderPage.css';
 
 const AddEditProviderPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: providers = [] } = useProviders();
   const createAccount = useCreateProviderAccount();
@@ -33,7 +35,7 @@ const AddEditProviderPage: React.FC = () => {
       try {
         parsedConfig = JSON.parse(config);
       } catch {
-        setError('Invalid JSON configuration');
+        setError(t('settings.invalid_json'));
         return;
       }
 
@@ -46,37 +48,37 @@ const AddEditProviderPage: React.FC = () => {
       navigate('/settings/providers');
     } catch (err) {
       console.error(err);
-      setError('Failed to create provider account');
+      setError(t('settings.create_provider_error'));
     }
   };
 
   return (
     <div className="add-edit-provider-page">
       <SectionHeader icon={<Server size="1em" />}>
-        Add Provider Account
+        {t('settings.add_provider_title')}
       </SectionHeader>
 
       <form onSubmit={handleSubmit} className="settings-form">
-        <FormField label="Provider">
+        <FormField label={t('settings.provider_label')}>
           <Select
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
             required
-            placeholder="Select a provider"
+            placeholder={t('settings.provider_placeholder')}
             options={providerOptions}
           />
         </FormField>
 
-        <FormField label="Account Name">
+        <FormField label={t('settings.account_name_label')}>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Home Assistant"
+            placeholder={t('settings.account_name_placeholder')}
             required
           />
         </FormField>
 
-        <FormField label="Configuration (JSON)">
+        <FormField label={t('settings.config_label')}>
           <Textarea
             value={config}
             onChange={(e) => setConfig(e.target.value)}
@@ -93,10 +95,12 @@ const AddEditProviderPage: React.FC = () => {
             variant="secondary"
             onClick={() => navigate('/settings')}
           >
-            Cancel
+            {t('settings.cancel')}
           </Button>
           <Button type="submit" disabled={createAccount.isPending}>
-            {createAccount.isPending ? 'Creating...' : 'Create Account'}
+            {createAccount.isPending
+              ? t('settings.creating')
+              : t('settings.create_account')}
           </Button>
         </div>
       </form>

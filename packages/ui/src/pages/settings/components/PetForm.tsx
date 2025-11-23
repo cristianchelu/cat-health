@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { FormField, Input, DatePicker } from '@/components/ui/form';
 import { Button } from '@/components/ui/Button';
@@ -28,8 +29,9 @@ const PetForm: React.FC<PetFormProps> = ({
   onDelete,
   isSubmitting = false,
   isDeleting = false,
-  title = 'Add Pet',
+  title,
 }) => {
+  const { t } = useTranslation();
   const {
     register,
     handleSubmit,
@@ -55,7 +57,9 @@ const PetForm: React.FC<PetFormProps> = ({
 
   return (
     <div className="pet-form">
-      <SectionHeader icon={<Cat size={20} />}>{title}</SectionHeader>
+      <SectionHeader icon={<Cat size={20} />}>
+        {title || t('settings.add_pet_title')}
+      </SectionHeader>
 
       <form onSubmit={handleSubmit(handleFormSubmit)}>
         <AvatarUpload
@@ -66,55 +70,55 @@ const PetForm: React.FC<PetFormProps> = ({
           className="avatar-section"
         />
         <FormField
-          label="Pet Name"
+          label={t('settings.pet_name')}
           error={errors.name?.message as string}
           required
         >
           <Input
             {...register('name', {
-              required: 'Pet name is required',
+              required: t('settings.pet_name_required'),
               minLength: {
                 value: 1,
-                message: 'Pet name must be at least 1 character',
+                message: t('settings.pet_name_min'),
               },
               maxLength: {
                 value: 50,
-                message: 'Pet name must be less than 50 characters',
+                message: t('settings.pet_name_max'),
               },
             })}
             variant={errors.name ? 'error' : 'default'}
-            placeholder="Enter your pet's name"
+            placeholder={t('settings.pet_name_placeholder')}
             disabled={isSubmitting}
           />
         </FormField>
 
         <FormField
-          label="Breed"
+          label={t('settings.breed')}
           error={errors.breed?.message as string}
           required
         >
           <Input
             {...register('breed', {
-              required: 'Breed is required',
+              required: t('settings.breed_required'),
               minLength: {
                 value: 1,
-                message: 'Breed must be at least 1 character',
+                message: t('settings.breed_min'),
               },
               maxLength: {
                 value: 50,
-                message: 'Breed must be less than 50 characters',
+                message: t('settings.breed_max'),
               },
             })}
             variant={errors.breed ? 'error' : 'default'}
-            placeholder="Enter your pet's breed"
+            placeholder={t('settings.breed_placeholder')}
             disabled={isSubmitting}
           />
         </FormField>
 
         <FormField
-          label="Birth Date"
+          label={t('settings.birth_date')}
           error={errors.birth_date?.message as string}
-          description="Optional: Enter your pet's birth date for age tracking"
+          description={t('settings.birth_date_desc')}
         >
           <DatePicker
             {...register('birth_date')}
@@ -133,7 +137,7 @@ const PetForm: React.FC<PetFormProps> = ({
               onClick={onDelete}
               disabled={isDeleting || isSubmitting}
             >
-              {isDeleting ? 'Deleting…' : 'Delete'}
+              {isDeleting ? t('settings.deleting') : t('settings.delete')}
             </Button>
           )}
           <Button
@@ -142,17 +146,17 @@ const PetForm: React.FC<PetFormProps> = ({
             onClick={onCancel}
             disabled={isSubmitting || isDeleting}
           >
-            Cancel
+            {t('settings.cancel')}
           </Button>
           <Button
             type="submit"
             disabled={!isValid || isSubmitting || isDeleting}
           >
             {isSubmitting
-              ? 'Saving...'
-              : title === 'Add Pet'
-                ? 'Add Pet'
-                : 'Save Changes'}
+              ? t('settings.saving')
+              : title === t('settings.add_pet_title') || title === 'Add Pet'
+                ? t('settings.add_pet_title')
+                : t('settings.save_changes')}
           </Button>
         </div>
       </form>

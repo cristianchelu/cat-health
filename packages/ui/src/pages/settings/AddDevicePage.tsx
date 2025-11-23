@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import {
   useProviderAccounts,
@@ -14,15 +15,16 @@ import { Smartphone, Search, Check, Loader2 } from 'lucide-react';
 import type { DiscoveredDeviceDTO } from 'shared';
 import './AddDevicePage.css';
 
-const STEPS = [
-  { label: 'Select Account' },
-  { label: 'Discover Devices' },
-  { label: 'Register Device' },
-];
-
 const AddDevicePage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: accounts = [] } = useProviderAccounts();
+
+  const STEPS = [
+    { label: t('settings.step_select_account') },
+    { label: t('settings.step_discover_devices') },
+    { label: t('settings.step_register_device') },
+  ];
   const { data: existingDevices = [] } = useDevices();
   const addDevice = useAddDevice();
 
@@ -85,14 +87,14 @@ const AddDevicePage: React.FC = () => {
       navigate('/settings');
     } catch (err) {
       console.error(err);
-      setError('Failed to register device. Please check the API key.');
+      setError(t('settings.register_device_error'));
     }
   };
 
   return (
     <div className="add-device-page">
       <SectionHeader icon={<Smartphone size="1em" />}>
-        Add New Device
+        {t('settings.add_device_title')}
       </SectionHeader>
 
       <Stepper steps={STEPS} currentStep={step} />
@@ -101,11 +103,11 @@ const AddDevicePage: React.FC = () => {
       {step === 1 && (
         <div className="step-container">
           <div className="settings-form">
-            <FormField label="Provider Account">
+            <FormField label={t('settings.provider_account_label')}>
               <Select
                 value={selectedAccountId?.toString() || ''}
                 onChange={(e) => handleAccountSelect(e.target.value)}
-                placeholder="Select an account"
+                placeholder={t('settings.select_account_placeholder')}
                 options={accounts.map((acc) => ({
                   value: acc.id.toString(),
                   label: `${acc.name} (${acc.provider})`,
@@ -119,11 +121,11 @@ const AddDevicePage: React.FC = () => {
                 variant="secondary"
                 onClick={() => navigate('/settings')}
               >
-                Cancel
+                {t('settings.cancel')}
               </Button>
               <Button onClick={handleScan} disabled={!selectedAccountId}>
                 <Search size="1em" />
-                Scan for Devices
+                {t('settings.scan_devices')}
               </Button>
             </div>
           </div>
@@ -136,7 +138,7 @@ const AddDevicePage: React.FC = () => {
           {isDiscovering ? (
             <div className="loading-state">
               <Loader2 className="animate-spin" size={32} />
-              <p>Scanning...</p>
+              <p>{t('settings.scanning')}</p>
             </div>
           ) : (
             <div className="device-list">
@@ -162,10 +164,12 @@ const AddDevicePage: React.FC = () => {
                         <span className="device-id">{device.externalId}</span>
                       </div>
                       {isAlreadyAdded ? (
-                        <span className="device-status">Already Added</span>
+                        <span className="device-status">
+                          {t('settings.already_added')}
+                        </span>
                       ) : (
                         <Button size="sm" variant="secondary">
-                          Select
+                          {t('settings.select')}
                         </Button>
                       )}
                     </div>
@@ -173,7 +177,7 @@ const AddDevicePage: React.FC = () => {
                 })
               ) : (
                 <div className="empty-state">
-                  <p>No devices found.</p>
+                  <p>{t('settings.no_devices_found')}</p>
                 </div>
               )}
             </div>
@@ -185,7 +189,7 @@ const AddDevicePage: React.FC = () => {
               variant="secondary"
               onClick={() => setStep(1)}
             >
-              Back
+              {t('settings.back')}
             </Button>
             <Button
               type="button"
@@ -193,7 +197,7 @@ const AddDevicePage: React.FC = () => {
               onClick={() => scanDevices()}
               disabled={isDiscovering}
             >
-              Rescan
+              {t('settings.rescan')}
             </Button>
           </div>
         </div>
@@ -203,11 +207,11 @@ const AddDevicePage: React.FC = () => {
       {step === 3 && selectedDevice && (
         <div className="step-container">
           <p className="step-description">
-            Confirm device details to add it to your system.
+            {t('settings.confirm_device_details')}
           </p>
 
           <form onSubmit={handleRegister} className="settings-form">
-            <FormField label="Device Name">
+            <FormField label={t('settings.device_name_label')}>
               <Input
                 value={deviceName}
                 onChange={(e) => setDeviceName(e.target.value)}
@@ -216,22 +220,22 @@ const AddDevicePage: React.FC = () => {
             </FormField>
 
             {/* Show API Key field for ESPHome devices (or all for now as we don't have a clear way to distinguish auth requirement) */}
-            <FormField label="API Key (Encryption Key)">
+            <FormField label={t('settings.api_key_label')}>
               <Input
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Optional if not configured"
+                placeholder={t('settings.api_key_placeholder')}
               />
             </FormField>
 
             <div className="device-summary">
               <div className="summary-item">
-                <span className="label">Type:</span>
+                <span className="label">{t('settings.type_label')}</span>
                 <span className="value">{selectedDevice.type}</span>
               </div>
               <div className="summary-item">
-                <span className="label">External ID:</span>
+                <span className="label">{t('settings.external_id_label')}</span>
                 <span className="value">{selectedDevice.externalId}</span>
               </div>
             </div>
@@ -244,11 +248,13 @@ const AddDevicePage: React.FC = () => {
                 variant="secondary"
                 onClick={() => setStep(2)}
               >
-                Back
+                {t('settings.back')}
               </Button>
               <Button type="submit" disabled={addDevice.isPending}>
                 <Check size="1em" />
-                {addDevice.isPending ? 'Registering...' : 'Register Device'}
+                {addDevice.isPending
+                  ? t('settings.registering')
+                  : t('settings.register_device')}
               </Button>
             </div>
           </form>

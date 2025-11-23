@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import PetForm from './components/PetForm';
 import { useUploadPetAvatar } from '@/hooks/queries/petQueries';
@@ -12,6 +13,7 @@ import {
 } from '@/hooks/queries/petQueries';
 
 const AddEditPetPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const isEditing = Boolean(id);
@@ -67,7 +69,7 @@ const AddEditPetPage: React.FC = () => {
   if (isEditing && isLoading) {
     return (
       <div className="page-loading">
-        <div>Loading pet data...</div>
+        <div>{t('settings.loading_pet_data')}</div>
       </div>
     );
   }
@@ -75,7 +77,7 @@ const AddEditPetPage: React.FC = () => {
   return (
     <div className="page-add-edit-pet">
       <PetForm
-        title={isEditing ? 'Edit Pet' : 'Add Pet'}
+        title={isEditing ? t('settings.edit_pet') : t('settings.add_pet_title')}
         initialData={pet || undefined}
         existingAvatarUrl={pet?.avatar_url ?? null}
         onSubmit={handleSubmit}

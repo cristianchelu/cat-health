@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { usePets } from '@/hooks/queries/petQueries';
 import { usePet } from '@/contexts/PetContext';
 import { cn } from '@/lib/utils';
@@ -14,13 +15,14 @@ interface PetSelectorProps {
 }
 
 const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
+  const { t } = useTranslation();
   const { data: pets, isLoading, error } = usePets();
   const { selectedPet, setSelectedPet } = usePet();
 
   if (isLoading) {
     return (
       <div className={cn('pet-selector', variant)}>
-        <div className="loading">Loading pets...</div>
+        <div className="loading">{t('common.loading_pets')}</div>
       </div>
     );
   }
@@ -28,7 +30,7 @@ const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
   if (error || !pets) {
     return (
       <div className={cn('pet-selector', variant)}>
-        <div className="error">Error loading pets</div>
+        <div className="error">{t('common.error_loading_pets')}</div>
       </div>
     );
   }
@@ -36,7 +38,7 @@ const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
   if (pets.length === 0) {
     return (
       <div className={cn('pet-selector', variant)}>
-        <div className="empty">No pets found</div>
+        <div className="empty">{t('common.no_pets_found')}</div>
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { ImagePlus, X, UploadCloud } from 'lucide-react';
@@ -21,11 +22,12 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
   existingUrl,
   onChange,
   disabled = false,
-  label = 'Avatar',
+  label,
   maxSizeBytes = 2_000_000,
   className,
   ...props
 }) => {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -33,17 +35,17 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
   const handleFile = useCallback(
     (file: File) => {
       if (!ACCEPTED.includes(file.type)) {
-        setError('Unsupported file type');
+        setError(t('common.unsupported_file_type'));
         return;
       }
       if (file.size > maxSizeBytes) {
-        setError('File too large (>2MB)');
+        setError(t('common.file_too_large'));
         return;
       }
       setError(null);
       onChange(file);
     },
-    [onChange, maxSizeBytes],
+    [onChange, maxSizeBytes, t],
   );
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,7 +66,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
 
   return (
     <div className={cn('avatar-upload', className)} {...props}>
-      <label className="label">{label}</label>
+      <label className="label">{label || t('common.avatar_label')}</label>
       <div
         className={cn(
           'drop-zone',
@@ -90,15 +92,19 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
             inputRef.current?.click();
           }
         }}
-        aria-label="Upload avatar"
+        aria-label={t('common.upload_avatar_label')}
       >
         {previewUrl ? (
-          <img src={previewUrl} alt="avatar preview" className="preview" />
+          <img
+            src={previewUrl}
+            alt={t('common.avatar_preview_alt')}
+            className="preview"
+          />
         ) : (
           <div className="placeholder">
             <ImagePlus size={48} />
-            <p>Drop or click to select</p>
-            <small>PNG, JPG, WEBP up to 2MB</small>
+            <p>{t('common.drop_or_click')}</p>
+            <small>{t('common.file_requirements')}</small>
           </div>
         )}
         {value && (
@@ -112,7 +118,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
               onChange(null);
             }}
             disabled={disabled}
-            aria-label="Remove selected avatar"
+            aria-label={t('common.remove_avatar_label')}
           >
             <X size={16} />
           </Button>

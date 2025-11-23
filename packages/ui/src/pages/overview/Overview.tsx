@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Clock, Drumstick, GlassWater, Toilet } from 'lucide-react';
 
 import { usePet } from '@/contexts/PetContext';
@@ -11,6 +12,7 @@ import WeightTrendCard from '@/pages/overview/components/WeightTrendCard';
 import './Overview.css';
 
 const Overview: React.FC = () => {
+  const { t } = useTranslation();
   const { selectedPet } = usePet();
 
   return (
@@ -32,12 +34,12 @@ const Overview: React.FC = () => {
         <Card>
           <CardHeader>
             <Toilet style={{ marginRight: 'auto' }} />
-            <span>3 times</span>
+            <span>3 {t('overview.times')}</span>
           </CardHeader>
         </Card>
       </section>
       <section>
-        <SectionHeader icon={<Clock />}>Activity</SectionHeader>
+        <SectionHeader icon={<Clock />}>{t('overview.activity')}</SectionHeader>
         <Timeline>
           <Timeline.Item>
             <Timeline.Icon variant="primary">
@@ -45,12 +47,12 @@ const Overview: React.FC = () => {
             </Timeline.Icon>
             <Timeline.Content>
               <Timeline.Header>
-                <Timeline.Title>Water intake</Timeline.Title>
+                <Timeline.Title>{t('overview.water_intake')}</Timeline.Title>
                 <Timeline.Timestamp>07:45</Timeline.Timestamp>
               </Timeline.Header>
               <Timeline.Meta>
                 <Timeline.Badge variant="primary">240 ml</Timeline.Badge>
-                <Timeline.Badge>Auto-tracked</Timeline.Badge>
+                <Timeline.Badge>{t('overview.auto_tracked')}</Timeline.Badge>
               </Timeline.Meta>
             </Timeline.Content>
           </Timeline.Item>
@@ -61,12 +63,12 @@ const Overview: React.FC = () => {
             </Timeline.Icon>
             <Timeline.Content>
               <Timeline.Header>
-                <Timeline.Title>Breakfast</Timeline.Title>
+                <Timeline.Title>{t('overview.breakfast')}</Timeline.Title>
                 <Timeline.Timestamp>08:15</Timeline.Timestamp>
               </Timeline.Header>
               <Timeline.Meta>
                 <Timeline.Badge variant="success">150 kcal</Timeline.Badge>
-                <Timeline.Badge>Chicken pâté</Timeline.Badge>
+                <Timeline.Badge>{t('overview.chicken_pate')}</Timeline.Badge>
               </Timeline.Meta>
             </Timeline.Content>
           </Timeline.Item>
@@ -77,13 +79,17 @@ const Overview: React.FC = () => {
             </Timeline.Icon>
             <Timeline.Content>
               <Timeline.Header>
-                <Timeline.Title>Litterbox visit</Timeline.Title>
+                <Timeline.Title>{t('overview.litterbox_visit')}</Timeline.Title>
                 <Timeline.Timestamp>09:05</Timeline.Timestamp>
               </Timeline.Header>
               <Timeline.Meta>
-                <Timeline.Badge variant="warning">Defecation</Timeline.Badge>
+                <Timeline.Badge variant="warning">
+                  {t('overview.defecation')}
+                </Timeline.Badge>
                 <Timeline.Badge>3m 12s</Timeline.Badge>
-                <Timeline.Badge variant="primary">Verified</Timeline.Badge>
+                <Timeline.Badge variant="primary">
+                  {t('overview.verified')}
+                </Timeline.Badge>
               </Timeline.Meta>
             </Timeline.Content>
           </Timeline.Item>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { usePetWeightTrends } from '@/hooks/queries/petQueries';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { ArrowRight, Loader, Scale } from 'lucide-react';
@@ -81,6 +82,7 @@ const createAreaPath = (points: { x: number; y: number }[], height: number) => {
 };
 
 const WeightTrendCard: React.FC<WeightTrendCardProps> = ({ petId }) => {
+  const { t } = useTranslation();
   const { data: weightData, isLoading, error } = usePetWeightTrends(petId, 15);
 
   if (isLoading) {
@@ -107,7 +109,7 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({ petId }) => {
           <span className="weight-value">-.-- kg</span>
         </CardHeader>
         <CardContent noPadding>
-          <p>No weight data available</p>
+          <p>{t('overview.no_weight_data')}</p>
         </CardContent>
       </Card>
     );

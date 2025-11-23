@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Activity, HeartPulse, Settings, TabletSmartphone } from 'lucide-react';
 import { NavLink } from 'react-router';
 
@@ -6,14 +7,20 @@ import { cn } from '@/lib/utils';
 
 import './MobileNav.css';
 
-const navigationItems = [
-  { path: '/', label: 'Overview', icon: <Activity /> },
-  { path: '/health', label: 'Health', icon: <HeartPulse /> },
-  { path: '/devices', label: 'Devices', icon: <TabletSmartphone /> },
-  { path: '/settings', label: 'Settings', icon: <Settings /> },
-];
-
 const MobileNav: React.FC = () => {
+  const { t } = useTranslation();
+
+  const navigationItems = [
+    { path: '/', label: t('navigation.overview'), icon: <Activity /> },
+    { path: '/health', label: t('navigation.health'), icon: <HeartPulse /> },
+    {
+      path: '/devices',
+      label: t('navigation.devices'),
+      icon: <TabletSmartphone />,
+    },
+    { path: '/settings', label: t('navigation.settings'), icon: <Settings /> },
+  ];
+
   return (
     <nav className="mobile-nav">
       <ul>
