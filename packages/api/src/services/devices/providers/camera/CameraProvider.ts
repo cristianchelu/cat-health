@@ -1,0 +1,22 @@
+import type {
+  DeviceProvider,
+  ProviderAccount,
+  ProviderDeps,
+  AccountManager,
+} from '../../types.ts';
+import { CameraAccountManager } from './CameraAccountManager.ts';
+
+export class CameraProvider implements DeviceProvider {
+  readonly name = 'camera';
+
+  createAccountManager(
+    account: ProviderAccount,
+    deps: ProviderDeps,
+  ): AccountManager {
+    return new CameraAccountManager(account, deps);
+  }
+
+  validateAccountConfig(config: unknown): boolean {
+    return typeof config === 'object' && config !== null;
+  }
+}

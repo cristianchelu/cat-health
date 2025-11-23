@@ -9,6 +9,8 @@ import type { EventTable } from './types/EventTable.ts';
 import type { DeviceTable } from './types/DeviceTable.ts';
 import type { MediaTable } from './types/MediaTable.ts';
 import type { MediaLinkTable } from './types/MediaLinkTable.ts';
+import type { ProviderAccountTable } from './types/ProviderAccountTable.ts';
+import type { DeviceCameraTable } from './types/DeviceCameraTable.ts';
 
 export interface Database {
   pet: PetTable;
@@ -16,6 +18,8 @@ export interface Database {
   device: DeviceTable;
   media: MediaTable;
   media_link: MediaLinkTable;
+  provider_account: ProviderAccountTable;
+  device_camera: DeviceCameraTable;
 }
 
 const dir = dirname(fileURLToPath(import.meta.url));

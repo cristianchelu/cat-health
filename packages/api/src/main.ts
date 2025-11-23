@@ -22,7 +22,11 @@ import { SyncService } from './services/sync/SyncService.ts';
 import petRoutes from './routes/pets.ts';
 import eventRoutes from './routes/events.ts';
 import deviceRoutes from './routes/devices.ts';
-import { FountainClient } from './services/ingest/FountainClient.ts';
+
+import { EventBus } from './services/devices/EventBus.ts';
+import { IntegrationManager } from './services/devices/IntegrationManager.ts';
+import { ESPHomeProvider } from './services/devices/providers/esphome/ESPHomeProvider.ts';
+import { CameraProvider } from './services/devices/providers/camera/CameraProvider.ts';
 
 const fastify = Fastify({
   logger: true,
@@ -225,20 +229,21 @@ fastify.setNotFoundHandler((request, reply) => {
   return reply.sendFile('index.html', spaDistDir);
 });
 
-// Register ingest services
-if (process.env.FOUNTAIN_HOST) {
-  const fountainIngest = new FountainClient({
-    host: process.env.FOUNTAIN_HOST,
-    snapshotUrl: process.env.FOUNTAIN_CAMERA_SNAPSHOT_URL,
-    snapshotAuth: process.env.FOUNTAIN_CAMERA_SNAPSHOT_AUTH,
-    encryptionKey: process.env.FOUNTAIN_PSK,
-  });
-  fountainIngest.connect();
-}
-
 const start = async () => {
   try {
     await migrateToLatest();
+
+    // Initialize Device System
+    const eventBus = new EventBus();
+    const integrationManager = new IntegrationManager(db, eventBus);
+
+    // Register Providers
+    integrationManager.registerProvider(new ESPHomeProvider());
+    integrationManager.registerProvider(new CameraProvider());
+
+    // Start Integration Manager (loads accounts and devices)
+    await integrationManager.initialize();
+
     await fastify.listen({ port: 3000, host: '0.0.0.0' });
   } catch (err) {
     fastify.log.error(err);

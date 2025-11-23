@@ -34,6 +34,7 @@ export async function migrateToLatest() {
   if (error) {
     console.error('failed to migrate');
     console.error(error);
+    await migrator.migrateDown();
     process.exit(1);
   }
 }

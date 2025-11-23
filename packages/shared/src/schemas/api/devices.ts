@@ -2,6 +2,14 @@ import { Type } from "@sinclair/typebox";
 import { type Static } from "@sinclair/typebox";
 import { DeviceTypeSchema } from "../../constants/devices.ts";
 
+export const DeviceStatusSchema = Type.Union([
+  Type.Literal("online"),
+  Type.Literal("offline"),
+  Type.Literal("error"),
+  Type.Literal("unknown"),
+]);
+export type DeviceStatus = Static<typeof DeviceStatusSchema>;
+
 export const GetDeviceParamsSchema = Type.Object({ id: Type.Number() });
 export type GetDeviceParamsDTO = Static<typeof GetDeviceParamsSchema>;
 
