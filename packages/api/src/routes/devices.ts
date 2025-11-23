@@ -11,6 +11,7 @@ import {
   PostProviderAccountRequestSchema,
   GetDiscoveredDevicesResponseSchema,
   ProviderAccountSchema,
+  GetProvidersResponseSchema,
 } from 'shared';
 import { db } from '../database/index.ts';
 
@@ -38,6 +39,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   const mapAccount = (account: any) => ({
     ...account,
     enabled: Boolean(account.enabled),
+    internal: Boolean(account.internal),
     created_at: new Date(account.created_at).toISOString(),
     updated_at: new Date(account.updated_at).toISOString(),
     config:
@@ -53,7 +55,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     {
       schema: {
         response: {
-          '200': Type.Array(Type.String()),
+          '200': GetProvidersResponseSchema,
         },
       },
     },

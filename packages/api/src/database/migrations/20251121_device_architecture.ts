@@ -12,7 +12,8 @@ export async function up(db: Kysely<Record<string, never>>): Promise<void> {
       .addColumn('provider', 'text', (col) => col.notNull())
       .addColumn('name', 'text', (col) => col.notNull())
       .addColumn('config', 'jsonb', (col) => col.notNull())
-      .addColumn('enabled', 'boolean', (col) => col.notNull().defaultTo(true))
+      .addColumn('enabled', 'boolean', (col) => col.notNull().defaultTo(1))
+      .addColumn('internal', 'boolean', (col) => col.notNull().defaultTo(0))
       .addColumn('created_at', 'integer', (col) =>
         col.notNull().defaultTo(sql`(strftime('%s','now'))`),
       )
@@ -28,11 +29,32 @@ export async function up(db: Kysely<Record<string, never>>): Promise<void> {
         provider: 'unknown',
         name: 'Legacy Devices',
         config: JSON.stringify({}),
+        internal: 1,
+        enabled: 0,
       })
       .returning('id')
       .executeTakeFirst();
 
     const defaultAccountId = result?.id ?? 1;
+
+    // Create dummy accounts for internal providers
+    await db
+      .insertInto('provider_account')
+      .values([
+        {
+          provider: 'camera',
+          name: 'Camera Provider',
+          config: JSON.stringify({}),
+          internal: 1,
+        },
+        {
+          provider: 'esphome',
+          name: 'ESPHome Provider',
+          config: JSON.stringify({}),
+          internal: 1,
+        },
+      ])
+      .execute();
 
     // 2. Recreate device table with new schema
     // We create device_new, copy data, drop device, rename device_new -> device
@@ -51,7 +73,7 @@ export async function up(db: Kysely<Record<string, never>>): Promise<void> {
       )
       .addColumn('external_id', 'text', (col) => col.notNull())
       .addColumn('config', 'jsonb')
-      .addColumn('enabled', 'boolean', (col) => col.notNull().defaultTo(true))
+      .addColumn('enabled', 'boolean', (col) => col.notNull().defaultTo(1))
       .addColumn('last_seen', 'integer')
       .addColumn('status', 'text', (col) => col.defaultTo('unknown'))
       .addColumn('created_at', 'integer', (col) =>

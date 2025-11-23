@@ -33,8 +33,11 @@ export class IntegrationManager implements DeviceDirectory {
     this.providers.set(provider.name, provider);
   }
 
-  getProviders(): string[] {
-    return Array.from(this.providers.keys());
+  getProviders(): { name: string; internal: boolean }[] {
+    return Array.from(this.providers.values()).map((p) => ({
+      name: p.name,
+      internal: p.internal ?? false,
+    }));
   }
 
   async initialize() {

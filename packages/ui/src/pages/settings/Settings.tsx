@@ -34,6 +34,8 @@ const Settings: React.FC = () => {
   const { data: accounts = [] } = useProviderAccounts();
   const navigate = useNavigate();
 
+  const visibleAccounts = accounts.filter((a) => !a.internal);
+
   const handleAddPet = () => {
     navigate('/settings/pets/new');
   };
@@ -77,7 +79,7 @@ const Settings: React.FC = () => {
         <section>
           <SectionHeader icon={<Server size="1em" />}>Providers</SectionHeader>
           <CardList>
-            {accounts.map((account) => (
+            {visibleAccounts.map((account) => (
               <CardListItem
                 key={account.id}
                 icon={<Server size="1em" />}

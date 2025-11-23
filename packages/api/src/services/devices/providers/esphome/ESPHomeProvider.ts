@@ -8,6 +8,7 @@ import { ESPHomeAccountManager } from './ESPHomeAccountManager.ts';
 
 export class ESPHomeProvider implements DeviceProvider {
   readonly name = 'esphome';
+  readonly internal = true;
 
   createAccountManager(
     account: ProviderAccount,

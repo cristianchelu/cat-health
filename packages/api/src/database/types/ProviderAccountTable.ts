@@ -6,6 +6,7 @@ export interface ProviderAccountTable {
   name: string;
   config: Record<string, unknown>; // JSON
   enabled: Generated<number>; // boolean
+  internal: Generated<number>; // boolean
 
   created_at: Generated<number>;
   updated_at: Generated<number>;

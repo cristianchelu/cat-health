@@ -7,11 +7,13 @@ import type {
   PostProviderAccountRequestDTO,
   ProviderAccountDTO,
   GetDiscoveredDevicesResponseDTO,
+  GetProvidersResponseDTO,
 } from 'shared';
 import apiClient from './apiClient';
 
 export async function getProviders() {
-  const { data } = await apiClient.get<string[]>('/devices/providers');
+  const { data } =
+    await apiClient.get<GetProvidersResponseDTO>('/devices/providers');
   return data;
 }
 

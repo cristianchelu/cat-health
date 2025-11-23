@@ -15,6 +15,10 @@ const AddEditProviderPage: React.FC = () => {
   const { data: providers = [] } = useProviders();
   const createAccount = useCreateProviderAccount();
 
+  const providerOptions = providers
+    .filter((p) => !p.internal)
+    .map((p) => ({ value: p.name, label: p.name }));
+
   const [provider, setProvider] = useState('');
   const [name, setName] = useState('');
   const [config, setConfig] = useState('{}');
@@ -59,7 +63,7 @@ const AddEditProviderPage: React.FC = () => {
             onChange={(e) => setProvider(e.target.value)}
             required
             placeholder="Select a provider"
-            options={providers.map((p) => ({ value: p, label: p }))}
+            options={providerOptions}
           />
         </FormField>
 

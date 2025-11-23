@@ -9,6 +9,17 @@ export const DeviceStatusSchema = Type.Union([
 ]);
 export type DeviceStatus = Static<typeof DeviceStatusSchema>;
 
+// --- Providers ---
+
+export const ProviderInfoSchema = Type.Object({
+  name: Type.String(),
+  internal: Type.Boolean(),
+});
+export type ProviderInfoDTO = Static<typeof ProviderInfoSchema>;
+
+export const GetProvidersResponseSchema = Type.Array(ProviderInfoSchema);
+export type GetProvidersResponseDTO = Static<typeof GetProvidersResponseSchema>;
+
 // --- Provider Accounts ---
 
 export const ProviderAccountSchema = Type.Object({
@@ -17,6 +28,7 @@ export const ProviderAccountSchema = Type.Object({
   name: Type.String(),
   config: Type.Unknown(), // JSONB
   enabled: Type.Boolean(),
+  internal: Type.Boolean(),
   created_at: Type.String(),
   updated_at: Type.String(),
 });

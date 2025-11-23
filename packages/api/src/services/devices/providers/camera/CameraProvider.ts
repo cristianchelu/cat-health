@@ -8,6 +8,7 @@ import { CameraAccountManager } from './CameraAccountManager.ts';
 
 export class CameraProvider implements DeviceProvider {
   readonly name = 'camera';
+  readonly internal = true;
 
   createAccountManager(
     account: ProviderAccount,

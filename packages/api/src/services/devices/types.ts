@@ -59,6 +59,7 @@ export interface AccountManager {
 
 export interface DeviceProvider {
   readonly name: string;
+  readonly internal?: boolean;
 
   createAccountManager(
     account: ProviderAccount,
