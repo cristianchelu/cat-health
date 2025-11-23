@@ -55,6 +55,10 @@ export interface AccountManager {
 
   discoverDevices(): Promise<DiscoveredDevice[]>;
   getDeviceController(device: Device): DeviceController;
+  validateDeviceConfig?(device: {
+    type: DeviceType;
+    config: unknown;
+  }): Promise<void>;
 }
 
 export interface DeviceProvider {

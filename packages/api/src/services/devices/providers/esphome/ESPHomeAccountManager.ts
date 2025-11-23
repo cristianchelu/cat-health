@@ -1,4 +1,6 @@
 import { Bonjour } from 'bonjour-service';
+import { EspHomeClient } from 'esphome-client';
+import type { DeviceType } from 'shared';
 import type {
   AccountManager,
   DeviceController,
@@ -111,5 +113,49 @@ export class ESPHomeAccountManager implements AccountManager {
     }
     this.controllers.set(device.id, controller);
     return controller;
+  }
+
+  async validateDeviceConfig(device: {
+    type: DeviceType;
+    config: unknown;
+  }): Promise<void> {
+    const config = device.config as {
+      host: string;
+      port?: number;
+      encryptionKey?: string;
+    };
+
+    if (!config.host) {
+      throw new Error('Device host is required');
+    }
+
+    const client = new EspHomeClient({
+      host: config.host,
+      port: config.port ?? 6053,
+      psk: config.encryptionKey,
+      clientId: 'CatHealth Validator',
+    });
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Connection timed out'));
+        }, 5000);
+
+        client.on('connect', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+
+        try {
+          client.connect();
+        } catch (err) {
+          clearTimeout(timeout);
+          reject(err);
+        }
+      });
+    } finally {
+      client.disconnect();
+    }
   }
 }

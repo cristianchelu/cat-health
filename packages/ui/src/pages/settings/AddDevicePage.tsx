@@ -33,6 +33,7 @@ const AddDevicePage: React.FC = () => {
   const [selectedDevice, setSelectedDevice] =
     useState<DiscoveredDeviceDTO | null>(null);
   const [deviceName, setDeviceName] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   // Discovery query
@@ -69,17 +70,22 @@ const AddDevicePage: React.FC = () => {
     if (!selectedAccountId || !selectedDevice) return;
 
     try {
+      const config = {
+        ...(selectedDevice.config as Record<string, unknown>),
+        encryptionKey: apiKey || undefined,
+      };
+
       await addDevice.mutateAsync({
         provider_account_id: selectedAccountId,
         external_id: selectedDevice.externalId,
         name: deviceName,
         type: selectedDevice.type,
-        config: selectedDevice.config,
+        config,
       });
       navigate('/settings');
     } catch (err) {
       console.error(err);
-      setError('Failed to register device');
+      setError('Failed to register device. Please check the API key.');
     }
   };
 
@@ -206,6 +212,16 @@ const AddDevicePage: React.FC = () => {
                 value={deviceName}
                 onChange={(e) => setDeviceName(e.target.value)}
                 required
+              />
+            </FormField>
+
+            {/* Show API Key field for ESPHome devices (or all for now as we don't have a clear way to distinguish auth requirement) */}
+            <FormField label="API Key (Encryption Key)">
+              <Input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Optional if not configured"
               />
             </FormField>
 

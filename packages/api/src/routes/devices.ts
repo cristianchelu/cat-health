@@ -170,6 +170,12 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const { name, type, provider_account_id, external_id, config } =
         request.body;
 
+      // Validate device config if supported by the provider
+      const manager = integrationManager.getAccountManager(provider_account_id);
+      if (manager?.validateDeviceConfig) {
+        await manager.validateDeviceConfig({ type, config });
+      }
+
       const result = await db
         .insertInto('device')
         .values({
