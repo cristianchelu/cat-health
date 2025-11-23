@@ -4,8 +4,6 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import sharp from 'sharp';
 import type { MultipartFile } from '@fastify/multipart';
-import { type FastifyTypeBox } from '../types.ts';
-import { Type } from '@sinclair/typebox';
 import {
   GetPetParamsSchema,
   GetPetResponseSchema,
@@ -14,8 +12,12 @@ import {
   PatchPetRequestSchema,
   type PatchPetRequestDTO,
 } from 'shared';
+import {
+  Type,
+  type FastifyPluginAsyncTypebox,
+} from '@fastify/type-provider-typebox';
 
-export default function petRoutes(fastify: FastifyTypeBox): void {
+export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
     '/',
     {
@@ -397,4 +399,5 @@ export default function petRoutes(fastify: FastifyTypeBox): void {
       metadata: avatar.metadata,
     });
   });
-}
+};
+export default petRoutes;

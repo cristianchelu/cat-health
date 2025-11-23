@@ -33,6 +33,10 @@ export class IntegrationManager implements DeviceDirectory {
     this.providers.set(provider.name, provider);
   }
 
+  getProviders(): string[] {
+    return Array.from(this.providers.keys());
+  }
+
   async initialize() {
     await this.mediaManager.initialize();
 
@@ -63,6 +67,34 @@ export class IntegrationManager implements DeviceDirectory {
         console.error(`Failed to initialize account ${account.id}:`, err);
       }
     }
+  }
+
+  async initializeAccount(accountId: number) {
+    const account = await this.deps.db
+      .selectFrom('provider_account')
+      .selectAll()
+      .where('id', '=', accountId)
+      .executeTakeFirst();
+
+    if (!account) {
+      throw new Error(`Account ${accountId} not found`);
+    }
+
+    const provider = this.providers.get(account.provider);
+    if (!provider) {
+      throw new Error(`Provider ${account.provider} not found`);
+    }
+
+    // Shutdown existing manager if any
+    const existingManager = this.accountManagers.get(accountId);
+    if (existingManager) {
+      await existingManager.shutdown();
+    }
+
+    const manager = provider.createAccountManager(account, this.deps);
+    this.accountManagers.set(account.id, manager);
+    await manager.initialize();
+    console.log(`Initialized account ${account.name} (${account.provider})`);
   }
 
   getAccountManager(accountId: number): AccountManager | undefined {

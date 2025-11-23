@@ -14,10 +14,10 @@ import {
   WeightTrendsResponseSchema,
 } from 'shared';
 
+import { type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import { db } from '../database/index.ts';
-import { type FastifyTypeBox } from '../types.ts';
 
-export default function eventRoutes(fastify: FastifyTypeBox): void {
+const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
     '/weight-trends/:petId',
     {
@@ -222,4 +222,6 @@ export default function eventRoutes(fastify: FastifyTypeBox): void {
       return { success: true };
     },
   );
-}
+};
+
+export default eventRoutes;

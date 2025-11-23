@@ -1,4 +1,4 @@
-import { type Static, Type } from "@sinclair/typebox";
+import { type Static, Type } from "@fastify/type-provider-typebox";
 
 export const DeviceTypeSchema = Type.Union([
   Type.Literal("litterbox"),

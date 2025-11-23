@@ -1,4 +1,4 @@
-import { type Static, Type } from "@sinclair/typebox";
+import { type Static, Type } from "@fastify/type-provider-typebox";
 
 export const GetPetParamsSchema = Type.Object({ id: Type.Number() });
 export const GetPetResponseSchema = Type.Object({

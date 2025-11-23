@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router';
 import type { DeviceType } from 'shared';
 import { usePets } from '@/hooks/queries/petQueries';
-import { useDevices } from '@/hooks/queries/deviceQueries';
+import { useDevices, useProviderAccounts } from '@/hooks/queries/deviceQueries';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import Avatar from '@/components/ui/Avatar';
 import { LitterboxIcon } from '@/components/icons/LitterboxIcon';
@@ -16,6 +16,7 @@ import {
   Database,
   Cat,
   CctvIcon,
+  Server,
 } from 'lucide-react';
 
 import './Settings.css';
@@ -30,6 +31,7 @@ const DEVICE_ICON: Record<DeviceType, React.ReactNode> = {
 const Settings: React.FC = () => {
   const { data: pets = [] } = usePets();
   const { data: devices = [] } = useDevices();
+  const { data: accounts = [] } = useProviderAccounts();
   const navigate = useNavigate();
 
   const handleAddPet = () => {
@@ -73,6 +75,36 @@ const Settings: React.FC = () => {
           </CardList>
         </section>
         <section>
+          <SectionHeader icon={<Server size="1em" />}>Providers</SectionHeader>
+          <CardList>
+            {accounts.map((account) => (
+              <CardListItem
+                key={account.id}
+                icon={<Server size="1em" />}
+                onClick={() => navigate(`/settings/providers/${account.id}`)}
+              >
+                <CardListContent
+                  title={account.name}
+                  description={`${account.provider} - ${account.enabled ? 'Enabled' : 'Disabled'}`}
+                />
+              </CardListItem>
+            ))}
+            <CardListItem
+              icon={
+                <div className="add-item-icon">
+                  <Plus size="0.5em" />
+                </div>
+              }
+              onClick={() => navigate('/settings/providers/new')}
+            >
+              <CardListContent
+                title="Add Provider"
+                description="Connect a new service (e.g. ESPHome)"
+              />
+            </CardListItem>
+          </CardList>
+        </section>
+        <section>
           <SectionHeader icon={<Smartphone size="1em" />}>
             Devices
           </SectionHeader>
@@ -100,6 +132,7 @@ const Settings: React.FC = () => {
                   <Plus size="0.5em" />
                 </div>
               }
+              onClick={() => navigate('/settings/devices/new')}
             >
               <CardListContent
                 title="Add Device"

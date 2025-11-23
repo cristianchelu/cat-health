@@ -141,9 +141,8 @@ export default ComponentName;
 #### Route Structure
 
 ```typescript
-import { Type } from "@sinclair/typebox";
+import { Type, type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import { db } from "../database/index.ts";
-import { type FastifyTypeBox } from "../types.ts";
 
 // Schema definitions
 const GetEntitySchema = Type.Object({
@@ -152,7 +151,7 @@ const GetEntitySchema = Type.Object({
   // ... other properties
 });
 
-export default function entityRoutes(fastify: FastifyTypeBox): void {
+const entityRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
     "/",
     {
@@ -169,6 +168,7 @@ export default function entityRoutes(fastify: FastifyTypeBox): void {
 
   // ... other routes
 }
+export default const entityRoutes;
 ```
 
 #### Database Patterns
@@ -258,11 +258,10 @@ import "./ComponentName.css";
 
 ```typescript
 // External libraries first
-import { Type } from "@sinclair/typebox";
+import { Type } from '@fastify/type-provider-typebox';
 
 // Internal imports with relative paths
 import { db } from "../database/index.ts";
-import { type FastifyTypeBox } from "../types.ts";
 ```
 
 ## Dependencies Overview

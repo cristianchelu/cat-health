@@ -1,4 +1,4 @@
-import { Type, type Static } from "@sinclair/typebox";
+import { Type, type Static } from "@fastify/type-provider-typebox";
 import { getPaginatedResponseSchema } from "./common.ts";
 
 export const GetEventSchema = Type.Object({

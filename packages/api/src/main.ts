@@ -28,6 +28,12 @@ import { IntegrationManager } from './services/devices/IntegrationManager.ts';
 import { ESPHomeProvider } from './services/devices/providers/esphome/ESPHomeProvider.ts';
 import { CameraProvider } from './services/devices/providers/camera/CameraProvider.ts';
 
+declare module 'fastify' {
+  interface FastifyInstance {
+    integrationManager: IntegrationManager;
+  }
+}
+
 const fastify = Fastify({
   logger: true,
   trustProxy: true,
@@ -97,10 +103,6 @@ await fastify.register(fastifyStatic, {
   prefix: '/api/images/',
   decorateReply: false,
 });
-
-fastify.register(petRoutes, { prefix: '/api/pets' });
-fastify.register(eventRoutes, { prefix: '/api/events' });
-fastify.register(deviceRoutes, { prefix: '/api/devices' });
 
 // Healthcheck endpoint
 fastify.get('/api/healthcheck', async (request, reply) => {
@@ -243,6 +245,12 @@ const start = async () => {
 
     // Start Integration Manager (loads accounts and devices)
     await integrationManager.initialize();
+
+    fastify.decorate('integrationManager', integrationManager);
+
+    fastify.register(petRoutes, { prefix: '/api/pets' });
+    fastify.register(eventRoutes, { prefix: '/api/events' });
+    fastify.register(deviceRoutes, { prefix: '/api/devices' });
 
     await fastify.listen({ port: 3000, host: '0.0.0.0' });
   } catch (err) {

@@ -1,0 +1,97 @@
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: var(--space-2xl);
+  position: relative;
+  padding: 0 var(--space-md);
+
+  .step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    flex: 1;
+    z-index: 1;
+
+    .step-indicator {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: transparent;
+      border: 2px solid var(--color-border);
+      color: var(--color-text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: var(--font-weight-bold);
+      font-size: var(--font-size-sm);
+      transition: all 0.3s ease;
+      margin-bottom: var(--space-xs);
+      z-index: 2;
+      position: relative; /* Ensure it sits on top of connector */
+    }
+
+    .step-label {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-secondary);
+      font-weight: var(--font-weight-medium);
+      text-align: center;
+      transition: color 0.3s ease;
+      white-space: nowrap;
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .step-connector {
+      position: absolute;
+      top: 16px;
+      left: calc(50% + 20px);
+      width: calc(100% - 40px);
+      height: 2px;
+      background-color: var(--color-border);
+      z-index: 0;
+      transform: translateY(-50%);
+      transition: background-color 0.3s ease;
+    }
+
+    /* Last item adjustments */
+    &:last-child {
+      .step-connector {
+        display: none;
+      }
+    }
+
+    /* States */
+    &.completed {
+      .step-indicator {
+        background-color: var(--color-primary);
+        border-color: var(--color-primary);
+        color: white;
+      }
+
+      .step-label {
+        color: var(--color-primary);
+      }
+
+      .step-connector {
+        background-color: var(--color-primary);
+      }
+    }
+
+    &.current {
+      .step-indicator {
+        border-color: var(--color-primary);
+        color: var(--color-primary);
+      }
+
+      .step-label {
+        color: var(--color-text-primary);
+        font-weight: var(--font-weight-bold);
+      }
+    }
+  }
+}

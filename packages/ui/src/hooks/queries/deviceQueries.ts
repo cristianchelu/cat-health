@@ -1,7 +1,20 @@
-import { getDevice, getDeviceEvents, getDevices } from '@/api/devices';
+import {
+  getDevice,
+  getDeviceEvents,
+  getDevices,
+  getProviders,
+  getProviderAccounts,
+  createProviderAccount,
+  discoverDevices,
+  addDevice,
+} from '@/api/devices';
 import { deleteEvent, updateEvent } from '@/api/pets';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { PatchEventRequestDTO } from 'shared';
+import type {
+  PatchEventRequestDTO,
+  PostProviderAccountRequestDTO,
+  PostDeviceRequestDTO,
+} from 'shared';
 
 export function useDevices() {
   return useQuery({
@@ -59,6 +72,52 @@ export function useUpdateEvent(deviceId: number, currentDate: string) {
       queryClient.invalidateQueries({
         queryKey: ['deviceEvents', deviceId, currentDate],
       });
+    },
+  });
+}
+
+// --- Providers ---
+
+export function useProviders() {
+  return useQuery({
+    queryKey: ['providers'],
+    queryFn: () => getProviders(),
+  });
+}
+
+export function useProviderAccounts() {
+  return useQuery({
+    queryKey: ['providerAccounts'],
+    queryFn: () => getProviderAccounts(),
+  });
+}
+
+export function useCreateProviderAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PostProviderAccountRequestDTO) =>
+      createProviderAccount(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providerAccounts'] });
+    },
+  });
+}
+
+export function useDiscoverDevices(accountId: number | null) {
+  return useQuery({
+    queryKey: ['discoveredDevices', accountId],
+    queryFn: () =>
+      accountId ? discoverDevices(accountId) : Promise.resolve([]),
+    enabled: !!accountId,
+  });
+}
+
+export function useAddDevice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PostDeviceRequestDTO) => addDevice(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
     },
   });
 }

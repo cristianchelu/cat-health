@@ -1,4 +1,4 @@
-import { type Static, type TAnySchema, Type } from "@sinclair/typebox";
+import { type Static, type TAnySchema, Type } from "@fastify/type-provider-typebox";
 
 export const getPaginatedResponseSchema = <T extends TAnySchema>(
   dataSchema: T,

@@ -3,8 +3,40 @@ import type {
   GetDeviceResponseDTO,
   GetDevicesResponseDTO,
   PostDeviceRequestDTO,
+  GetProviderAccountsResponseDTO,
+  PostProviderAccountRequestDTO,
+  ProviderAccountDTO,
+  GetDiscoveredDevicesResponseDTO,
 } from 'shared';
 import apiClient from './apiClient';
+
+export async function getProviders() {
+  const { data } = await apiClient.get<string[]>('/devices/providers');
+  return data;
+}
+
+export async function getProviderAccounts() {
+  const { data } =
+    await apiClient.get<GetProviderAccountsResponseDTO>('/devices/accounts');
+  return data;
+}
+
+export async function createProviderAccount(
+  input: PostProviderAccountRequestDTO,
+) {
+  const { data } = await apiClient.post<ProviderAccountDTO>(
+    '/devices/accounts',
+    input,
+  );
+  return data;
+}
+
+export async function discoverDevices(accountId: number) {
+  const { data } = await apiClient.get<GetDiscoveredDevicesResponseDTO>(
+    `/devices/accounts/${accountId}/discover`,
+  );
+  return data;
+}
 
 export async function getDevices() {
   const { data } = await apiClient.get<GetDevicesResponseDTO>('/devices');
