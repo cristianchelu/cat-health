@@ -111,6 +111,12 @@ export class ESPHomeAccountManager implements AccountManager {
         `Unsupported device type for ESPHome provider: ${device.type}`,
       );
     }
+
+    // Start connection
+    controller.connect().catch((err) => {
+      console.error(`Failed to connect to device ${device.id}:`, err);
+    });
+
     this.controllers.set(device.id, controller);
     return controller;
   }

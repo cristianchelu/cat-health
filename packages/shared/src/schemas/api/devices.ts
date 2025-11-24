@@ -72,6 +72,7 @@ export const GetDeviceResponseSchema = Type.Object({
   enabled: Type.Boolean(),
   last_seen: Type.Union([Type.String(), Type.Null()]),
   status: Type.Union([DeviceStatusSchema, Type.Null()]),
+  state: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
   created_at: Type.String(),
   updated_at: Type.String(),
 });

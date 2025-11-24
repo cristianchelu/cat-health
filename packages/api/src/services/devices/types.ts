@@ -38,6 +38,7 @@ export interface DeviceController {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   getStatus(): DeviceStatus;
+  getState?(): Record<string, unknown>;
 }
 
 export interface DiscoveredDevice {

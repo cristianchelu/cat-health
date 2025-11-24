@@ -121,5 +121,39 @@
         "water_fountain": "Water Fountain",
         "feeder": "Feeder",
         "camera": "Camera"
+    },
+    "devices": {
+        "loading": "Loading devices...",
+        "error_loading": "Error loading devices",
+        "no_devices_found": "No devices found. Add your first device to get started.",
+        "no_status_data": "No status data available",
+        "status": {
+            "online": "Online",
+            "offline": "Offline",
+            "error": "Error",
+            "unknown": "Unknown"
+        },
+        "water_fountain": {
+            "water_level": "Water Level",
+            "filter": {
+                "replace": "Replace",
+                "soon": "Soon",
+                "ok": "OK",
+                "tooltip": "Filter: {{status}}"
+            },
+            "water": {
+                "change": "Change",
+                "soon": "Soon",
+                "fresh": "Fresh",
+                "tooltip": "Water Quality: {{status}}"
+            },
+            "pump": {
+                "label": "Pump",
+                "ok": "OK",
+                "error": "Error",
+                "err_short": "Err",
+                "tooltip": "Pump: {{status}}"
+            }
+        }
     }
 }

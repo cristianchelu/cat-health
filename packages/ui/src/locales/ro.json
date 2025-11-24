@@ -3,7 +3,7 @@
         "title": "Sănătate Pisici"
     },
     "navigation": {
-        "overview": "Prezentare generală",
+        "overview": "Activitate",
         "health": "Sănătate",
         "devices": "Dispozitive",
         "settings": "Setări",
@@ -80,8 +80,8 @@
         "create_account": "Creează cont",
         "add_device_title": "Adaugă dispozitiv nou",
         "step_select_account": "Selectează cont",
-        "step_discover_devices": "Descoperă dispozitive",
-        "step_register_device": "Înregistrează dispozitiv",
+        "step_discover_devices": "Descoperă",
+        "step_register_device": "Înregistrează",
         "provider_account_label": "Cont furnizor",
         "select_account_placeholder": "Selectează un cont",
         "scan_devices": "Scanează dispozitive",
@@ -121,5 +121,39 @@
         "water_fountain": "Fântână de apă",
         "feeder": "Hrănitor",
         "camera": "Cameră"
+    },
+    "devices": {
+        "loading": "Se încarcă dispozitivele...",
+        "error_loading": "Eroare la încărcarea dispozitivelor",
+        "no_devices_found": "Nu s-au găsit dispozitive. Adaugă primul dispozitiv pentru a începe.",
+        "no_status_data": "Nu există date de stare disponibile",
+        "status": {
+            "online": "Online",
+            "offline": "Offline",
+            "error": "Eroare",
+            "unknown": "Necunoscut"
+        },
+        "water_fountain": {
+            "water_level": "Nivel apă",
+            "filter": {
+                "replace": "Înlocuiește",
+                "soon": "Curând",
+                "ok": "OK",
+                "tooltip": "Filtru: {{status}}"
+            },
+            "water": {
+                "change": "Schimbă",
+                "soon": "Curând",
+                "fresh": "Proaspătă",
+                "tooltip": "Calitate apă: {{status}}"
+            },
+            "pump": {
+                "label": "Pompă",
+                "ok": "OK",
+                "error": "Eroare",
+                "err_short": "Err",
+                "tooltip": "Pompă: {{status}}"
+            }
+        }
     }
 }

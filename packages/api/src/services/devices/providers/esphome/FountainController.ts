@@ -14,6 +14,13 @@ interface FountainConfig {
   clientId?: string;
 }
 
+interface FountainState {
+  waterLevel: number; // %
+  waterDaysRemaining: number;
+  filterDaysRemaining: number;
+  pumpStatus: 'ok' | 'error';
+}
+
 export class FountainController implements DeviceController {
   readonly deviceId: number;
   private client: EspHomeClient;
@@ -23,6 +30,12 @@ export class FountainController implements DeviceController {
   private status: DeviceStatus = 'unknown';
   private device: Device;
   private deps: ProviderDeps;
+  private state: FountainState = {
+    waterLevel: 0,
+    waterDaysRemaining: 0,
+    filterDaysRemaining: 0,
+    pumpStatus: 'ok',
+  };
 
   constructor(device: Device, deps: ProviderDeps) {
     this.device = device;
@@ -62,7 +75,28 @@ export class FountainController implements DeviceController {
       console.error(`Disconnected from fountain ${this.device.name}`);
     });
 
+    this.client.on('sensor', (data) => {
+      if (data.entity === 'Water Level' && data.state !== undefined) {
+        this.state.waterLevel = Math.round(data.state);
+      } else if (
+        data.entity === 'Water Time Remaining' &&
+        data.state !== undefined
+      ) {
+        this.state.waterDaysRemaining = Math.round(data.state);
+      } else if (
+        data.entity === 'Filter Time Remaining' &&
+        data.state !== undefined
+      ) {
+        this.state.filterDaysRemaining = Math.round(data.state);
+      }
+    });
+
     this.client.on('binary_sensor', async (data) => {
+      if (data.entity === 'Pump Status') {
+        this.state.pumpStatus = data.state ? 'error' : 'ok';
+        return;
+      }
+
       if (data.entity !== 'Activity') {
         return;
       }
@@ -212,5 +246,9 @@ export class FountainController implements DeviceController {
 
   getStatus() {
     return this.status;
+  }
+
+  getState() {
+    return this.state as unknown as Record<string, unknown>;
   }
 }

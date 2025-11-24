@@ -21,19 +21,38 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   // --- Helpers ---
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mapDevice = (device: any) => ({
-    ...device,
-    enabled: Boolean(device.enabled),
-    created_at: new Date(device.created_at).toISOString(),
-    updated_at: new Date(device.updated_at).toISOString(),
-    last_seen: device.last_seen
-      ? new Date(device.last_seen).toISOString()
-      : null,
-    config:
-      typeof device.config === 'string'
-        ? JSON.parse(device.config)
-        : device.config,
-  });
+  const mapDevice = (device: any) => {
+    const mapped = {
+      ...device,
+      enabled: Boolean(device.enabled),
+      created_at: new Date(device.created_at).toISOString(),
+      updated_at: new Date(device.updated_at).toISOString(),
+      last_seen: device.last_seen
+        ? new Date(device.last_seen).toISOString()
+        : null,
+      config:
+        typeof device.config === 'string'
+          ? JSON.parse(device.config)
+          : device.config,
+    };
+
+    try {
+      const controller = integrationManager.getDeviceController({
+        ...device,
+        config: mapped.config,
+      });
+      if (controller) {
+        mapped.status = controller.getStatus();
+        if (controller.getState) {
+          mapped.state = controller.getState();
+        }
+      }
+    } catch {
+      // Ignore errors when fetching controller state
+    }
+
+    return mapped;
+  };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapAccount = (account: any) => ({
