@@ -149,10 +149,11 @@ export class FountainController implements DeviceController {
       }
 
       // Once both values are captured, save them
-      if (data.amount && data.duration) {
-        this.saveDrinkEvent();
-        this.currentEvent = null;
+      if (!!this.currentEvent && data.amount && data.duration) {
+        this.saveDrinkEvent(this.currentEvent, this.pendingSnapshot);
         this.client.off('sensor', onSensorUpdate);
+        this.currentEvent = null;
+        this.pendingSnapshot = null;
       }
     };
 
@@ -162,39 +163,44 @@ export class FountainController implements DeviceController {
       if (this.currentEvent) {
         console.warn('Timed out waiting for drink data.');
         this.client.off('sensor', onSensorUpdate);
-        this.currentEvent = null;
 
         if (this.pendingSnapshot) {
           await this.pendingSnapshot.cleanup();
           this.pendingSnapshot = null;
         }
+
+        this.currentEvent = null;
       }
     }, 5000); // Increased timeout to 5s just in case
   }
 
-  private async saveDrinkEvent() {
-    if (!this.currentEvent) return;
+  private async saveDrinkEvent(
+    event: NewEvent<WaterIntakeEventData>,
+    snapshot: PendingMedia | null,
+  ) {
+    const eventData = event.data;
+    const eventTimestamp = event.timestamp;
 
     console.log('--- SAVING DRINK EVENT ---');
     console.log(`Device: ${this.device.name}`);
-    console.log(`Amount: ${this.currentEvent.data.amount}ml`);
-    console.log(`Duration: ${this.currentEvent.data.duration}s`);
+    console.log(`Amount: ${eventData.amount}ml`);
+    console.log(`Duration: ${eventData.duration}s`);
     console.log('--------------------------');
 
     try {
       const result = await this.deps.db
         .insertInto('event')
-        .values(this.currentEvent)
+        .values(event)
         .returning('id')
         .executeTakeFirst();
       console.log('Drink event inserted into DB.');
 
       if (result) {
         // Persist media if exists
-        if (this.pendingSnapshot) {
+        if (snapshot) {
           try {
             const media = await this.deps.mediaManager.persistMedia(
-              this.pendingSnapshot.path,
+              snapshot.path,
               {}, // Metadata if available
               'image/jpeg',
             );
@@ -206,26 +212,24 @@ export class FountainController implements DeviceController {
             console.log(`Linked snapshot ${media.id} to event ${result.id}`);
           } catch (mediaErr) {
             console.error('Failed to persist snapshot:', mediaErr);
-            await this.pendingSnapshot.cleanup();
+            await snapshot.cleanup();
           }
-          this.pendingSnapshot = null;
         }
 
         // Emit completed event
         this.deps.eventBus.publish('device.event', {
           deviceId: this.deviceId,
           type: 'water_intake',
-          data: this.currentEvent.data,
-          timestamp: this.currentEvent.timestamp,
+          data: eventData,
+          timestamp: eventTimestamp,
           eventId: result.id,
         });
       }
     } catch (err) {
       console.error('Failed to insert drink event:', err);
       // Cleanup pending snapshot if event save failed
-      if (this.pendingSnapshot) {
-        await this.pendingSnapshot.cleanup();
-        this.pendingSnapshot = null;
+      if (snapshot) {
+        await snapshot.cleanup();
       }
     }
   }
