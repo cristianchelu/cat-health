@@ -97,7 +97,7 @@ export class ESPHomeAccountManager implements AccountManager {
     });
   }
 
-  getDeviceController(device: Device): DeviceController {
+  instantiateDeviceController(device: Device): DeviceController {
     const existing = this.controllers.get(device.id);
     if (existing) {
       return existing;

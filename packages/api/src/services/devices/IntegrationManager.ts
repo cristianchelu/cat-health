@@ -104,15 +104,17 @@ export class IntegrationManager implements DeviceDirectory {
     return this.accountManagers.get(accountId);
   }
 
-  getDeviceController(device: Device): DeviceController | undefined {
+  instantiateDeviceController(device: Device): DeviceController | undefined {
     const manager = this.accountManagers.get(device.provider_account_id);
     if (!manager) {
       return undefined;
     }
-    return manager.getDeviceController(device);
+    return manager.instantiateDeviceController(device);
   }
 
-  async getController(deviceId: number): Promise<DeviceController | undefined> {
+  async instantiateController(
+    deviceId: number,
+  ): Promise<DeviceController | undefined> {
     const device = await this.deps.db
       .selectFrom('device')
       .selectAll()
@@ -120,7 +122,7 @@ export class IntegrationManager implements DeviceDirectory {
       .executeTakeFirst();
 
     if (!device) return undefined;
-    return this.getDeviceController(device);
+    return this.instantiateDeviceController(device);
   }
 
   async getLinkedCamera(deviceId: number): Promise<Camera | undefined> {
@@ -132,7 +134,7 @@ export class IntegrationManager implements DeviceDirectory {
 
     if (!link) return undefined;
 
-    const controller = await this.getController(link.camera_id);
+    const controller = await this.instantiateController(link.camera_id);
     if (controller && 'captureSnapshot' in controller) {
       const camera = controller as unknown as Camera;
       const config = link.config || {};

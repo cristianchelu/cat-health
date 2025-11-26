@@ -37,7 +37,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     };
 
     try {
-      const controller = integrationManager.getDeviceController({
+      const controller = integrationManager.instantiateDeviceController({
         ...device,
         config: mapped.config,
       });

@@ -35,7 +35,7 @@ export class CameraAccountManager implements AccountManager {
     return [];
   }
 
-  getDeviceController(device: Device): DeviceController {
+  instantiateDeviceController(device: Device): DeviceController {
     const existing = this.controllers.get(device.id);
     if (existing) {
       return existing;

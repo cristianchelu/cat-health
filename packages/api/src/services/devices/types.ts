@@ -19,7 +19,9 @@ export interface Camera extends DeviceController {
 }
 
 export interface DeviceDirectory {
-  getController(deviceId: number): Promise<DeviceController | undefined>;
+  instantiateController(
+    deviceId: number,
+  ): Promise<DeviceController | undefined>;
   getLinkedCamera(deviceId: number): Promise<Camera | undefined>;
 }
 
@@ -55,7 +57,7 @@ export interface AccountManager {
   shutdown(): Promise<void>;
 
   discoverDevices(): Promise<DiscoveredDevice[]>;
-  getDeviceController(device: Device): DeviceController;
+  instantiateDeviceController(device: Device): DeviceController;
   validateDeviceConfig?(device: {
     type: DeviceType;
     config: unknown;
