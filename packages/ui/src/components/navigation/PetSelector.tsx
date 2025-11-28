@@ -1,11 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePets } from '@/hooks/queries/petQueries';
-import { usePet } from '@/contexts/PetContext';
 import { cn } from '@/lib/utils';
-
-import { Button } from '../ui/Button';
 import { Cat } from 'lucide-react';
+
+import { usePetContext } from '@/hooks/context/usePetContext';
+import { Button } from '../ui/Button';
+
 import Avatar from '@/components/ui/Avatar';
 
 import './PetSelector.css';
@@ -16,8 +16,8 @@ interface PetSelectorProps {
 
 const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
   const { t } = useTranslation();
-  const { data: pets, isLoading, error } = usePets();
-  const { selectedPet, setSelectedPet } = usePet();
+  const { pets, isLoading, error, selectedPet, setSelectedPet } =
+    usePetContext();
 
   if (isLoading) {
     return (
@@ -27,7 +27,7 @@ const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
     );
   }
 
-  if (error || !pets) {
+  if (error) {
     return (
       <div className={cn('pet-selector', variant)}>
         <div className="error">{t('common.error_loading_pets')}</div>
@@ -42,8 +42,6 @@ const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
       </div>
     );
   }
-
-  // Avatar now handled by shared Avatar component.
 
   return (
     <ul className={cn('pet-selector', variant)}>

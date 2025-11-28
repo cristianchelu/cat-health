@@ -4,7 +4,7 @@ import { Outlet } from 'react-router';
 import Sidebar from './components/layout/Sidebar';
 import MobileNav from './components/navigation/MobileNav';
 import PetSelector from './components/navigation/PetSelector';
-import { PetProvider } from './contexts/PetContext';
+import { PetProvider } from './contexts/PetProvider';
 
 import './App.css';
 

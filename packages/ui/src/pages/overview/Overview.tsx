@@ -1,8 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Drumstick, GlassWater, Toilet } from 'lucide-react';
-
-import { usePet } from '@/contexts/PetContext';
+import { usePetContext } from '@/hooks/context/usePetContext';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import Timeline from './components/Timeline';
@@ -13,7 +11,7 @@ import './Overview.css';
 
 const Overview: React.FC = () => {
   const { t } = useTranslation();
-  const { selectedPet } = usePet();
+  const { selectedPet } = usePetContext();
 
   return (
     <div className="page-overview">

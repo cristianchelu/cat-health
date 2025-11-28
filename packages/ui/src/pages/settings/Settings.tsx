@@ -2,8 +2,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import type { DeviceType } from 'shared';
-import { usePets } from '@/hooks/queries/petQueries';
 import { useDevices, useProviderAccounts } from '@/hooks/queries/deviceQueries';
+import { usePetContext } from '@/hooks/context/usePetContext';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import Avatar from '@/components/ui/Avatar';
 import { LitterboxIcon } from '@/components/icons/LitterboxIcon';
@@ -31,7 +31,7 @@ const DEVICE_ICON: Record<DeviceType, React.ReactNode> = {
 
 const Settings: React.FC = () => {
   const { t } = useTranslation();
-  const { data: pets = [] } = usePets();
+  const { pets } = usePetContext();
   const { data: devices = [] } = useDevices();
   const { data: accounts = [] } = useProviderAccounts();
   const navigate = useNavigate();
