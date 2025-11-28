@@ -13,16 +13,22 @@
         "collapse_sidebar": "Collapse sidebar"
     },
     "overview": {
-        "activity": "Activity",
+        "activity": "Journal",
         "water_intake": "Water intake",
         "breakfast": "Breakfast",
         "litterbox_visit": "Litterbox visit",
         "auto_tracked": "Auto-tracked",
         "chicken_pate": "Chicken pâté",
         "defecation": "Defecation",
+        "urination": "Urination",
+        "both": "Both",
+        "no_elimination": "No elimination",
         "verified": "Verified",
         "times": "times",
-        "no_weight_data": "No weight data available"
+        "no_weight_data": "No weight data available",
+        "straining_detected": "Straining detected",
+        "loose_stools": "Loose stools",
+        "weight_recorded": "Weight recorded"
     },
     "settings": {
         "pets": "Pets",

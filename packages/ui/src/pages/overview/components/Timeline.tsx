@@ -9,9 +9,15 @@ type TimelineVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger';
 
 type TimelineProps = React.ComponentProps<typeof Card>;
 
-type TimelineItemProps = React.ComponentProps<'li'>;
+interface TimelineItemProps extends React.ComponentProps<'li'> {
+  variant?: 'default' | 'warning' | 'danger';
+}
 
 interface TimelineIconProps extends React.ComponentProps<'div'> {
+  variant?: TimelineVariant;
+}
+
+interface TimelineValueProps extends React.ComponentProps<'span'> {
   variant?: TimelineVariant;
 }
 
@@ -32,9 +38,17 @@ const TimelineRoot = React.forwardRef<HTMLDivElement, TimelineProps>(
 );
 
 const TimelineItem = React.forwardRef<HTMLLIElement, TimelineItemProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, variant = 'default', children, ...props }, ref) => {
     return (
-      <li className={cn('timeline-item', className)} ref={ref} {...props}>
+      <li
+        className={cn(
+          'timeline-item',
+          variant !== 'default' && `timeline-item-${variant}`,
+          className,
+        )}
+        ref={ref}
+        {...props}
+      >
         {children}
       </li>
     );
@@ -99,6 +113,49 @@ const TimelineTimestamp = React.forwardRef<
   );
 });
 
+const TimelineValue = React.forwardRef<HTMLSpanElement, TimelineValueProps>(
+  ({ className, variant = 'default', ...props }, ref) => {
+    return (
+      <span
+        className={cn(
+          'timeline-value',
+          variant !== 'default' && `timeline-value-${variant}`,
+          className,
+        )}
+        ref={ref}
+        {...props}
+      />
+    );
+  },
+);
+
+const TimelineMetaItem = React.forwardRef<
+  HTMLSpanElement,
+  React.ComponentProps<'span'>
+>(({ className, ...props }, ref) => {
+  return (
+    <span
+      className={cn('timeline-meta-item', className)}
+      ref={ref}
+      {...props}
+    />
+  );
+});
+
+const TimelineMetaDivider = React.forwardRef<
+  HTMLSpanElement,
+  React.ComponentProps<'span'>
+>(({ className, ...props }, ref) => {
+  return (
+    <span
+      className={cn('timeline-meta-divider', className)}
+      ref={ref}
+      aria-hidden="true"
+      {...props}
+    />
+  );
+});
+
 const TimelineDescription = React.forwardRef<
   HTMLParagraphElement,
   React.ComponentProps<'p'>
@@ -150,8 +207,11 @@ TimelineContent.displayName = 'Timeline.Content';
 TimelineHeader.displayName = 'Timeline.Header';
 TimelineTitle.displayName = 'Timeline.Title';
 TimelineTimestamp.displayName = 'Timeline.Timestamp';
+TimelineValue.displayName = 'Timeline.Value';
 TimelineDescription.displayName = 'Timeline.Description';
 TimelineMeta.displayName = 'Timeline.Meta';
+TimelineMetaItem.displayName = 'Timeline.MetaItem';
+TimelineMetaDivider.displayName = 'Timeline.MetaDivider';
 TimelineFooter.displayName = 'Timeline.Footer';
 TimelineBadge.displayName = 'Timeline.Badge';
 
@@ -162,8 +222,11 @@ const Timeline = Object.assign(TimelineRoot, {
   Header: TimelineHeader,
   Title: TimelineTitle,
   Timestamp: TimelineTimestamp,
+  Value: TimelineValue,
   Description: TimelineDescription,
   Meta: TimelineMeta,
+  MetaItem: TimelineMetaItem,
+  MetaDivider: TimelineMetaDivider,
   Footer: TimelineFooter,
   Badge: TimelineBadge,
 });
@@ -172,6 +235,7 @@ export {
   type TimelineProps,
   type TimelineItemProps,
   type TimelineIconProps,
+  type TimelineValueProps,
   type TimelineBadgeProps,
   TimelineBadge,
   TimelineContent,
@@ -181,7 +245,10 @@ export {
   TimelineIcon,
   TimelineItem,
   TimelineMeta,
+  TimelineMetaItem,
+  TimelineMetaDivider,
   TimelineTimestamp,
   TimelineTitle,
+  TimelineValue,
 };
 export default Timeline;

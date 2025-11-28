@@ -1,5 +1,13 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  CheckCircle,
+  Clock,
+  Drumstick,
+  GlassWater,
+  Timer,
+  Toilet,
+} from 'lucide-react';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -45,12 +53,19 @@ const Overview: React.FC = () => {
             </Timeline.Icon>
             <Timeline.Content>
               <Timeline.Header>
-                <Timeline.Title>{t('overview.water_intake')}</Timeline.Title>
                 <Timeline.Timestamp>07:45</Timeline.Timestamp>
+                <Timeline.Value variant="primary">240 ml</Timeline.Value>
+                <Timeline.Title>{t('overview.water_intake')}</Timeline.Title>
               </Timeline.Header>
               <Timeline.Meta>
-                <Timeline.Badge variant="primary">240 ml</Timeline.Badge>
-                <Timeline.Badge>{t('overview.auto_tracked')}</Timeline.Badge>
+                <Timeline.MetaItem>
+                  <Timer />
+                  2m 15s
+                </Timeline.MetaItem>
+                <Timeline.MetaDivider />
+                <Timeline.MetaItem>
+                  {t('overview.auto_tracked')}
+                </Timeline.MetaItem>
               </Timeline.Meta>
             </Timeline.Content>
           </Timeline.Item>
@@ -61,12 +76,14 @@ const Overview: React.FC = () => {
             </Timeline.Icon>
             <Timeline.Content>
               <Timeline.Header>
-                <Timeline.Title>{t('overview.breakfast')}</Timeline.Title>
                 <Timeline.Timestamp>08:15</Timeline.Timestamp>
+                <Timeline.Value variant="success">150 kcal</Timeline.Value>
+                <Timeline.Title>{t('overview.breakfast')}</Timeline.Title>
               </Timeline.Header>
               <Timeline.Meta>
-                <Timeline.Badge variant="success">150 kcal</Timeline.Badge>
-                <Timeline.Badge>{t('overview.chicken_pate')}</Timeline.Badge>
+                <Timeline.MetaItem>
+                  {t('overview.chicken_pate')}
+                </Timeline.MetaItem>
               </Timeline.Meta>
             </Timeline.Content>
           </Timeline.Item>
@@ -77,17 +94,67 @@ const Overview: React.FC = () => {
             </Timeline.Icon>
             <Timeline.Content>
               <Timeline.Header>
-                <Timeline.Title>{t('overview.litterbox_visit')}</Timeline.Title>
                 <Timeline.Timestamp>09:05</Timeline.Timestamp>
+                <Timeline.Value variant="warning">
+                  {t('overview.defecation')}
+                </Timeline.Value>
+                <Timeline.Title>{t('overview.litterbox_visit')}</Timeline.Title>
               </Timeline.Header>
               <Timeline.Meta>
-                <Timeline.Badge variant="warning">
-                  {t('overview.defecation')}
-                </Timeline.Badge>
-                <Timeline.Badge>3m 12s</Timeline.Badge>
-                <Timeline.Badge variant="primary">
+                <Timeline.MetaItem>
+                  <Timer />
+                  3m 12s
+                </Timeline.MetaItem>
+                <Timeline.MetaDivider />
+                <Timeline.MetaItem>
+                  <CheckCircle />
                   {t('overview.verified')}
+                </Timeline.MetaItem>
+              </Timeline.Meta>
+            </Timeline.Content>
+          </Timeline.Item>
+
+          <Timeline.Item variant="warning">
+            <Timeline.Icon variant="danger">
+              <Toilet />
+            </Timeline.Icon>
+            <Timeline.Content>
+              <Timeline.Header>
+                <Timeline.Timestamp>14:30</Timeline.Timestamp>
+                <Timeline.Value variant="danger">
+                  {t('overview.no_elimination')}
+                </Timeline.Value>
+                <Timeline.Title>{t('overview.litterbox_visit')}</Timeline.Title>
+              </Timeline.Header>
+              <Timeline.Meta>
+                <Timeline.MetaItem>
+                  <Timer />
+                  5m 45s
+                </Timeline.MetaItem>
+              </Timeline.Meta>
+              <Timeline.Footer>
+                <Timeline.Badge variant="warning">
+                  {t('overview.straining_detected')}
                 </Timeline.Badge>
+              </Timeline.Footer>
+            </Timeline.Content>
+          </Timeline.Item>
+
+          <Timeline.Item>
+            <Timeline.Icon variant="primary">
+              <GlassWater />
+            </Timeline.Icon>
+            <Timeline.Content>
+              <Timeline.Header>
+                <Timeline.Timestamp>16:20</Timeline.Timestamp>
+                <Timeline.Value variant="primary">85 ml</Timeline.Value>
+                <Timeline.Title>{t('overview.water_intake')}</Timeline.Title>
+              </Timeline.Header>
+              <Timeline.Meta>
+                <Timeline.MetaItem>
+                  <Timer />
+                  45s
+                </Timeline.MetaItem>
               </Timeline.Meta>
             </Timeline.Content>
           </Timeline.Item>

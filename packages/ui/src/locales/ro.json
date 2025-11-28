@@ -13,16 +13,22 @@
         "collapse_sidebar": "Restrânge bara laterală"
     },
     "overview": {
-        "activity": "Activitate",
+        "activity": "Jurnal",
         "water_intake": "Consum apă",
         "breakfast": "Mic dejun",
         "litterbox_visit": "Vizită litieră",
         "auto_tracked": "Urmărit automat",
         "chicken_pate": "Pateu de pui",
         "defecation": "Defecare",
+        "urination": "Urinare",
+        "both": "Ambele",
+        "no_elimination": "Fără eliminare",
         "verified": "Verificat",
         "times": "ori",
-        "no_weight_data": "Nu există date despre greutate"
+        "no_weight_data": "Nu există date despre greutate",
+        "straining_detected": "Efort detectat",
+        "loose_stools": "Scaun moale",
+        "weight_recorded": "Greutate înregistrată"
     },
     "settings": {
         "pets": "Animale",

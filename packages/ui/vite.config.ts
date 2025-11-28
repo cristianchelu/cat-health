@@ -9,6 +9,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      manifestFilename: 'manifest.json',
       registerType: 'autoUpdate',
       includeAssets: ['icons/*.png'],
       manifest: {
