@@ -1,7 +1,8 @@
 .timeline {
   --timeline-icon-size: 32px;
   --timeline-line-color: var(--color-border);
-  --timeline-item-padding-x: var(--space-xl);
+  --timeline-item-padding-y: var(--space-sm);
+  --timeline-line-gap: 4px;
 
   .timeline-body {
     display: flex;
@@ -15,16 +16,18 @@
     list-style: none;
     margin: 0;
     padding: 0;
-    /* Offset for full-bleed hover backgrounds */
-    margin-left: calc(-1 * var(--timeline-item-padding-x));
-    margin-right: calc(-1 * var(--timeline-item-padding-x));
+    /* Offset for full-bleed hover backgrounds and edge-to-edge layout */
+    margin-left: calc(-1 * var(--card-padding));
+    margin-right: calc(-1 * var(--card-padding));
+    margin-top: calc(-1 * var(--card-padding));
+    margin-bottom: calc(-1 * var(--card-padding));
   }
 
   .timeline-item {
     display: grid;
     grid-template-columns: var(--timeline-icon-size) 1fr;
     column-gap: var(--space-sm);
-    padding: var(--space-sm) var(--timeline-item-padding-x);
+    padding: var(--timeline-item-padding-y) var(--card-padding);
     position: relative;
     cursor: pointer;
     transition: background-color 0.15s ease;
@@ -33,13 +36,15 @@
       background-color: var(--color-surface-muted);
     }
 
+    /* Line segment from icon bottom to item bottom (with spacing) */
     &:not(:last-child)::after {
       content: '';
       position: absolute;
-      left: calc(
-        var(--timeline-item-padding-x) + var(--timeline-icon-size) / 2
+      left: calc(var(--card-padding) + var(--timeline-icon-size) / 2);
+      top: calc(
+        var(--timeline-item-padding-y) + var(--timeline-icon-size) +
+          var(--timeline-line-gap)
       );
-      top: calc(var(--space-sm) + var(--timeline-icon-size));
       bottom: 0;
       width: 2px;
       background-color: var(--timeline-line-color);
@@ -47,13 +52,64 @@
       transform: translateX(-50%);
     }
 
-    /* Warning state - subtle left border accent */
-    &.timeline-item-warning {
-      border-left: 3px solid var(--color-warning);
+    /* Line segment from item top to icon top (with spacing) */
+    &:not(:first-child)::before {
+      content: '';
+      position: absolute;
+      left: calc(var(--card-padding) + var(--timeline-icon-size) / 2);
+      top: 0;
+      bottom: calc(
+        100% - var(--timeline-item-padding-y) + var(--timeline-line-gap)
+      );
+      width: 2px;
+      background-color: var(--timeline-line-color);
+      opacity: 0.4;
+      transform: translateX(-50%);
     }
 
-    &.timeline-item-danger {
-      border-left: 3px solid var(--color-error);
+    /* First item - add top padding to maintain visual spacing */
+    &:first-child {
+      padding-top: var(--card-padding);
+
+      /* Adjust line segment for first item's larger top padding */
+      &::after {
+        top: calc(
+          var(--card-padding) + var(--timeline-icon-size) +
+            var(--timeline-line-gap)
+        );
+      }
+    }
+
+    /* Last item - add bottom padding to maintain visual spacing */
+    &:last-child {
+      padding-bottom: var(--card-padding);
+    }
+
+    /* Warning state - dot indicator */
+    &.timeline-item-warning .timeline-icon::after {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: var(--radius-full);
+      background-color: var(--color-warning);
+      box-shadow: 0 0 0 2px var(--color-surface);
+    }
+
+    &.timeline-item-danger .timeline-icon::after {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: var(--radius-full);
+      background-color: var(--color-error);
+      box-shadow: 0 0 0 2px var(--color-surface);
     }
   }
 
@@ -67,6 +123,7 @@
     color: var(--color-text-muted);
     font-size: var(--text-base);
     flex-shrink: 0;
+    position: relative;
 
     svg {
       width: 16px;
@@ -233,10 +290,9 @@
 
   @media (max-width: 768px) {
     --timeline-icon-size: 40px;
-    --timeline-item-padding-x: var(--space-sm);
+    --timeline-item-padding-y: var(--space-md);
 
     .timeline-item {
-      padding: var(--space-md) var(--timeline-item-padding-x);
       column-gap: var(--space-sm);
     }
 
