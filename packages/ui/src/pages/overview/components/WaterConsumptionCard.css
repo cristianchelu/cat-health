@@ -1,0 +1,71 @@
+.water-consumption-card {
+  --card-padding: var(--space-sm);
+  gap: 0;
+
+  .consumption-value {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+  }
+
+  .water-chart {
+    position: relative;
+    width: 100%;
+    height: 75px;
+    display: flex;
+    align-items: flex-end;
+    padding: var(--space-xs) var(--space-xs);
+
+    .reference-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      border-top: 1px dashed var(--color-text-muted);
+      opacity: 0.8;
+      z-index: 1;
+      pointer-events: none;
+
+      &.upper {
+        opacity: 0.8;
+      }
+
+      &.lower {
+        opacity: 0.8;
+      }
+    }
+
+    .bars-container {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      width: 100%;
+      height: 100%;
+      gap: var(--space-xs);
+      position: relative;
+      z-index: 0;
+
+      .bar {
+        flex: 1;
+        border-radius: var(--radius-lg);
+        transition: opacity var(--transition-fast);
+        min-height: 2px;
+
+        &:hover {
+          opacity: 0.8;
+        }
+
+        &.untracked {
+          background: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 4px,
+            var(--color-border) 4px,
+            var(--color-border) 6px
+          );
+          opacity: 0.5;
+        }
+      }
+    }
+  }
+}

@@ -33,7 +33,7 @@
     transition: background-color 0.15s ease;
 
     &:hover {
-      background-color: var(--color-surface-muted);
+      background-color: var(--color-surface-highlight);
     }
 
     /* Line segment from icon bottom to item bottom (with spacing) */

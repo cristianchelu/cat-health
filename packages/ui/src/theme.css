@@ -50,6 +50,11 @@
   --color-litterbox-both: rgb(76, 175, 80);
   --color-litterbox-unknown: rgb(158, 158, 158);
 
+  /** Water Colors **/
+  --color-water: #06b6d4;
+  --color-water-light: #67e8f9;
+  --color-water-dark: #0891b2;
+
   /* Border Radius */
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;

@@ -14,6 +14,8 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import Timeline from './components/Timeline';
 
 import WeightTrendCard from '@/pages/overview/components/WeightTrendCard';
+import WaterConsumptionCard from '@/pages/overview/components/WaterConsumptionCard';
+import FoodIntakeCard from '@/pages/overview/components/FoodIntakeCard';
 
 import './Overview.css';
 
@@ -25,18 +27,8 @@ const Overview: React.FC = () => {
     <div className="page-overview">
       <section className="widget-grid">
         {selectedPet && <WeightTrendCard petId={selectedPet.id} />}
-        <Card>
-          <CardHeader>
-            <GlassWater style={{ marginRight: 'auto' }} />
-            <span>240 ml</span>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <Drumstick style={{ marginRight: 'auto' }} />
-            <span>150 kcal</span>
-          </CardHeader>
-        </Card>
+        {selectedPet && <WaterConsumptionCard petId={selectedPet.id} />}
+        {selectedPet && <FoodIntakeCard petId={selectedPet.id} />}
         <Card>
           <CardHeader>
             <Toilet style={{ marginRight: 'auto' }} />
