@@ -3,11 +3,13 @@ import type { DeviceStatus } from 'shared';
 import type { Camera, ProviderDeps, Device } from '../../types.ts';
 import type { EventType } from '../../../../database/types/EventTable.ts';
 import type { PendingMedia } from '../../../media/MediaManager.ts';
+import { type Static, Type } from '@fastify/type-provider-typebox';
 
-interface CameraConfig {
-  snapshotUrl: string;
-  snapshotAuth?: string;
-}
+export const CameraConfigSchema = Type.Object({
+  snapshotUrl: Type.String(),
+  snapshotAuth: Type.Optional(Type.String()),
+});
+export type CameraConfig = Static<typeof CameraConfigSchema>;
 
 export class CameraDeviceController implements Camera {
   readonly deviceId: number;
@@ -26,6 +28,21 @@ export class CameraDeviceController implements Camera {
       snapshotUrl: rawConfig.snapshotUrl,
       snapshotAuth: rawConfig.snapshotAuth,
     };
+
+    // If snapshotUrl contains credentials, extract them and clean the URL
+    try {
+      const url = new URL(this.config.snapshotUrl);
+      if (url.username || url.password) {
+        if (!this.config.snapshotAuth) {
+          this.config.snapshotAuth = `${decodeURIComponent(url.username)}:${decodeURIComponent(url.password)}`;
+        }
+        url.username = '';
+        url.password = '';
+        this.config.snapshotUrl = url.toString();
+      }
+    } catch {
+      // Ignore invalid URLs, they will fail later
+    }
   }
 
   async connect(): Promise<void> {
@@ -90,7 +107,7 @@ export class CameraDeviceController implements Camera {
         `Error capturing snapshot for camera ${this.device.name}:`,
         error,
       );
-      return undefined;
+      throw error;
     }
   }
 }

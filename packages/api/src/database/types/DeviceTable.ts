@@ -7,7 +7,7 @@ export interface DeviceTable {
   external_id: string;
   name: string;
   type: DeviceType;
-  config: string | null; // JSON string or object depending on how Kysely handles jsonb. Usually string or object if using a plugin.
+  config: Record<string, unknown> | null; // JSON string or object depending on how Kysely handles jsonb. Usually string or object if using a plugin.
   // Kysely's ParseJSONResultsPlugin is often used. Assuming it is used or we handle it.
   // In the migration I used 'jsonb'.
   // Let's check other tables. MediaTable uses 'jsonb'.

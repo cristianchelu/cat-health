@@ -28,7 +28,7 @@ const AddDevicePage: React.FC = () => {
   const { data: existingDevices = [] } = useDevices();
   const addDevice = useAddDevice();
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
     null,
   );
@@ -36,6 +36,7 @@ const AddDevicePage: React.FC = () => {
     useState<DiscoveredDeviceDTO | null>(null);
   const [deviceName, setDeviceName] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [snapshotUrl, setSnapshotUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   // Discovery query
@@ -67,6 +68,12 @@ const AddDevicePage: React.FC = () => {
     setStep(3);
   };
 
+  const handleManualSetup = () => {
+    setDeviceName('');
+    setSnapshotUrl('');
+    setStep(4);
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAccountId || !selectedDevice) return;
@@ -82,6 +89,32 @@ const AddDevicePage: React.FC = () => {
         external_id: selectedDevice.externalId,
         name: deviceName,
         type: selectedDevice.type,
+        config,
+      });
+      navigate('/settings');
+    } catch (err) {
+      console.error(err);
+      setError(t('settings.register_device_error'));
+    }
+  };
+
+  const handleManualRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAccountId) return;
+
+    try {
+      const config = {
+        snapshotUrl,
+      };
+
+      // Generate a random external ID for manual devices
+      const externalId = `manual_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+      await addDevice.mutateAsync({
+        provider_account_id: selectedAccountId,
+        external_id: externalId,
+        name: deviceName,
+        type: 'camera',
         config,
       });
       navigate('/settings');
@@ -196,6 +229,13 @@ const AddDevicePage: React.FC = () => {
             <Button
               type="button"
               variant="secondary"
+              onClick={handleManualSetup}
+            >
+              {t('settings.add_manually')}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
               onClick={() => scanDevices()}
               disabled={isDiscovering}
             >
@@ -243,6 +283,52 @@ const AddDevicePage: React.FC = () => {
                 <span className="value">{selectedDevice.externalId}</span>
               </div>
             </div>
+
+            {error && <div className="error-message">{error}</div>}
+
+            <div className="form-actions">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setStep(2)}
+              >
+                {t('settings.back')}
+              </Button>
+              <Button type="submit" disabled={addDevice.isPending}>
+                <Check size="1em" />
+                {addDevice.isPending
+                  ? t('settings.registering')
+                  : t('settings.register_device')}
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Step 4: Manual Setup */}
+      {step === 4 && (
+        <div className="step-container">
+          <p className="step-description">{t('settings.manual_setup_desc')}</p>
+
+          <form onSubmit={handleManualRegister} className="settings-form">
+            <FormField label={t('settings.device_name_label')}>
+              <Input
+                value={deviceName}
+                onChange={(e) => setDeviceName(e.target.value)}
+                required
+                placeholder={t('settings.device_name_placeholder')}
+              />
+            </FormField>
+
+            <FormField label={t('settings.snapshot_url_label')}>
+              <Input
+                value={snapshotUrl}
+                onChange={(e) => setSnapshotUrl(e.target.value)}
+                required
+                placeholder="http://camera-ip/snapshot.jpg"
+              />
+              <p className="help-text">{t('settings.snapshot_url_help')}</p>
+            </FormField>
 
             {error && <div className="error-message">{error}</div>}
 

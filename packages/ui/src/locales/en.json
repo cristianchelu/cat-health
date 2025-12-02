@@ -105,7 +105,12 @@
         "external_id_label": "External ID:",
         "register_device_error": "Failed to register device. Please check the API key.",
         "registering": "Registering...",
-        "register_device": "Register Device"
+        "register_device": "Register Device",
+        "add_manually": "Add Manually",
+        "manual_setup_desc": "Enter the device details manually.",
+        "device_name_placeholder": "e.g. Living Room Camera",
+        "snapshot_url_label": "Snapshot URL",
+        "snapshot_url_help": "The URL to fetch a JPEG snapshot from the camera. Include basic auth credentials if needed (e.g. http://user:pass@ip/snapshot.jpg)."
     },
     "common": {
         "loading_pets": "Loading pets...",

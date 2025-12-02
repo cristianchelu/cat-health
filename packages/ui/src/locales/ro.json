@@ -105,7 +105,12 @@
         "external_id_label": "ID extern:",
         "register_device_error": "Nu s-a putut înregistra dispozitivul. Verifică cheia API.",
         "registering": "Se înregistrează...",
-        "register_device": "Înregistrează dispozitiv"
+        "register_device": "Înregistrează dispozitiv",
+        "add_manually": "Adaugă manual",
+        "manual_setup_desc": "Introdu detaliile dispozitivului manual.",
+        "device_name_placeholder": "ex. Cameră Sufragerie",
+        "snapshot_url_label": "URL Instantaneu",
+        "snapshot_url_help": "URL-ul pentru a prelua un instantaneu JPEG de la cameră. Include credențialele de autentificare de bază dacă este necesar (ex. http://user:pass@ip/snapshot.jpg)."
     },
     "common": {
         "loading_pets": "Se încarcă animalele...",
