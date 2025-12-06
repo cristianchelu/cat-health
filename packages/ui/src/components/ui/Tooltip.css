@@ -1,0 +1,62 @@
+.tooltip-container {
+  position: relative;
+  display: inline-flex;
+
+  .tooltip-content {
+    visibility: hidden;
+    background-color: var(--color-text);
+    color: var(--color-surface);
+    text-align: center;
+    border-radius: var(--radius-sm);
+    padding: var(--space-xs) var(--space-sm);
+    position: absolute;
+    z-index: var(--z-index-tooltip);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: var(--shadow-md);
+
+    /* Position logic */
+    &.tooltip-top {
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: var(--space-xs);
+    }
+
+    &.tooltip-bottom {
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: var(--space-xs);
+    }
+
+    &.tooltip-left {
+      right: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      margin-right: var(--space-xs);
+    }
+
+    &.tooltip-right {
+      left: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      margin-left: var(--space-xs);
+    }
+  }
+
+  &:hover .tooltip-content {
+    visibility: visible;
+    opacity: 1;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .tooltip-container .tooltip-content {
+    background-color: var(--color-surface-highlight);
+    color: var(--color-text);
+  }
+}

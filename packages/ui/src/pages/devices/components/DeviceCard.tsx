@@ -10,8 +10,8 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  CardAction,
 } from '@/components/ui/Card';
+import { Tooltip } from '@/components/ui/Tooltip';
 import WaterFountainStatus, {
   type WaterFountainState,
 } from './WaterFountainStatus';
@@ -75,7 +75,12 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
     <Card className={cn('device-card', className)}>
       <CardHeader>
         <div className="device-header-group">
-          <div className="device-icon-wrapper">{getIcon()}</div>
+          <Tooltip content={getStatusLabel()} position="bottom">
+            <div className="device-icon-wrapper">
+              {getIcon()}
+              <div className={cn('status-indicator', getStatusClass())} />
+            </div>
+          </Tooltip>
           <div className="device-info">
             <CardTitle>{device.name}</CardTitle>
             <CardDescription className="capitalize">
@@ -83,12 +88,6 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
             </CardDescription>
           </div>
         </div>
-        <CardAction>
-          <div className={cn('connection-status', getStatusClass())}>
-            <div className="status-dot" />
-            {getStatusLabel()}
-          </div>
-        </CardAction>
       </CardHeader>
 
       <CardContent>
