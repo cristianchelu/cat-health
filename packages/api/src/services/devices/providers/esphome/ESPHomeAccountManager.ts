@@ -10,6 +10,7 @@ import type {
   ProviderAccount,
 } from '../../types.ts';
 import { FountainController } from './FountainController.ts';
+import { LitterboxController } from './LitterboxController.ts';
 
 export class ESPHomeAccountManager implements AccountManager {
   readonly accountId: number;
@@ -62,6 +63,11 @@ export class ESPHomeAccountManager implements AccountManager {
       {
         type: 'water_fountain',
         check: (name) => name.toLowerCase().includes('petlibro.plwf105'),
+      },
+      {
+        type: 'litterbox',
+        check: (name) =>
+          name.toLowerCase().includes('cristianchelu.litterboxmonitor'),
       },
     ];
 
@@ -126,6 +132,8 @@ export class ESPHomeAccountManager implements AccountManager {
     let controller: DeviceController;
     if (device.type === 'water_fountain') {
       controller = new FountainController(device, this.deps);
+    } else if (device.type === 'litterbox') {
+      controller = new LitterboxController(device, this.deps);
     } else {
       throw new Error(
         `Unsupported device type for ESPHome provider: ${device.type}`,
