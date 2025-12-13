@@ -7,6 +7,9 @@ import {
   createProviderAccount,
   discoverDevices,
   addDevice,
+  linkDeviceCamera,
+  updateDeviceCameraConfig,
+  unlinkDeviceCamera,
 } from '@/api/devices';
 import { deleteEvent, updateEvent } from '@/api/pets';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +17,8 @@ import type {
   PatchEventRequestDTO,
   PostProviderAccountRequestDTO,
   PostDeviceRequestDTO,
+  PutDeviceCameraRequestDTO,
+  PatchDeviceCameraRequestDTO,
 } from 'shared';
 
 export function useDevices() {
@@ -28,6 +33,7 @@ export function useDevice(deviceId: number, enabled: boolean) {
     queryKey: ['device', deviceId],
     queryFn: () => getDevice(deviceId),
     enabled,
+    refetchInterval: 1000,
   });
 }
 
@@ -117,6 +123,41 @@ export function useAddDevice() {
   return useMutation({
     mutationFn: (data: PostDeviceRequestDTO) => addDevice(data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+    },
+  });
+}
+
+export function useLinkDeviceCamera(deviceId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PutDeviceCameraRequestDTO) =>
+      linkDeviceCamera(deviceId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+    },
+  });
+}
+
+export function useUpdateDeviceCameraConfig(deviceId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PatchDeviceCameraRequestDTO) =>
+      updateDeviceCameraConfig(deviceId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+    },
+  });
+}
+
+export function useUnlinkDeviceCamera(deviceId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => unlinkDeviceCamera(deviceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
       queryClient.invalidateQueries({ queryKey: ['devices'] });
     },
   });

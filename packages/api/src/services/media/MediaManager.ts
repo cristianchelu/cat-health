@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import assert from 'node:assert';
 import path from 'path';
 import crypto from 'crypto';
 import type { Kysely } from 'kysely';
@@ -7,6 +8,7 @@ import type { MediaMetadata } from '../../database/types/MediaTable.ts';
 
 export interface PendingMedia {
   path: string;
+  metadata: MediaMetadata;
   cleanup: () => Promise<void>;
 }
 
@@ -16,11 +18,12 @@ export class MediaManager {
   private mediaDir: string;
 
   constructor(db: Kysely<Database>) {
+    assert(process.env.MEDIA_PATH, 'MEDIA_PATH is not set in .env');
+    assert(process.env.MEDIA_TEMP_PATH, 'MEDIA_TEMP_PATH is not set in .env');
+
     this.db = db;
-    this.mediaDir =
-      process.env.MEDIA_PATH || path.join(process.cwd(), 'data', 'media');
-    this.tempDir =
-      process.env.MEDIA_TEMP_PATH || path.join(process.cwd(), 'data', 'temp');
+    this.mediaDir = process.env.MEDIA_PATH;
+    this.tempDir = process.env.MEDIA_TEMP_PATH;
   }
 
   async initialize() {
@@ -28,13 +31,17 @@ export class MediaManager {
     await fs.mkdir(this.mediaDir, { recursive: true });
   }
 
-  async createPendingMedia(extension: string): Promise<PendingMedia> {
+  async createPendingMedia(
+    extension: string,
+    metadata: MediaMetadata,
+  ): Promise<PendingMedia> {
     const id = crypto.randomUUID();
     const filename = `${id}.${extension}`;
     const filePath = path.join(this.tempDir, filename);
 
     return {
       path: filePath,
+      metadata,
       cleanup: async () => {
         try {
           await fs.unlink(filePath);

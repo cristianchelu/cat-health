@@ -12,6 +12,8 @@ import {
   GetDiscoveredDevicesResponseSchema,
   ProviderAccountSchema,
   GetProvidersResponseSchema,
+  PutDeviceCameraRequestSchema,
+  PatchDeviceCameraRequestSchema,
 } from 'shared';
 import { db } from '../database/index.ts';
 
@@ -170,7 +172,16 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       },
     },
     async () => {
-      const devices = await db.selectFrom('device').selectAll().execute();
+      const devices = await db
+        .selectFrom('device')
+        .innerJoin(
+          'provider_account',
+          'device.provider_account_id',
+          'provider_account.id',
+        )
+        .selectAll('device')
+        .select('provider_account.provider as provider')
+        .execute();
       return devices.map(mapDevice);
     },
   );
@@ -202,7 +213,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           type,
           provider_account_id,
           external_id,
-          config: config ? JSON.stringify(config) : null,
+          config: config ? (config as Record<string, unknown>) : null,
           enabled: 1,
           created_at: Date.now(),
           updated_at: Date.now(),
@@ -210,7 +221,13 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      return mapDevice(result);
+      const account = await db
+        .selectFrom('provider_account')
+        .select('provider')
+        .where('id', '=', provider_account_id)
+        .executeTakeFirstOrThrow();
+
+      return mapDevice({ ...result, provider: account.provider });
     },
   );
 
@@ -228,11 +245,168 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const { id } = request.params;
       const device = await db
         .selectFrom('device')
-        .selectAll()
+        .innerJoin(
+          'provider_account',
+          'device.provider_account_id',
+          'provider_account.id',
+        )
+        .leftJoin('device_camera', 'device.id', 'device_camera.device_id')
+        .selectAll('device')
+        .select('provider_account.provider as provider')
+        .select([
+          'device_camera.camera_id as camera_id',
+          'device_camera.config as camera_config',
+        ])
+        .where('device.id', '=', id)
+        .executeTakeFirst();
+      if (!device) throw new Error('Device not found');
+      const mapped = mapDevice(device);
+      if (device.camera_id) {
+        mapped.camera_link = {
+          camera_id: device.camera_id,
+          config:
+            typeof device.camera_config === 'string'
+              ? JSON.parse(device.camera_config)
+              : device.camera_config,
+        };
+      }
+      return mapped;
+    },
+  );
+
+  fastify.get(
+    '/:id/snapshot',
+    {
+      schema: {
+        params: GetDeviceParamsSchema,
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const controller = await integrationManager.instantiateController(id);
+
+      if (!controller) {
+        throw new Error('Device controller not found');
+      }
+
+      // Check if it's a camera with getSnapshotBuffer
+      if (
+        'getSnapshotBuffer' in controller &&
+        typeof controller.getSnapshotBuffer === 'function'
+      ) {
+        const buffer = await controller.getSnapshotBuffer();
+        if (!buffer) {
+          throw new Error('Failed to capture snapshot');
+        }
+
+        reply.header('Content-Type', 'image/jpeg');
+        return buffer;
+      }
+
+      throw new Error('Device does not support snapshots');
+    },
+  );
+
+  // --- Device Camera Link ---
+  fastify.put(
+    '/:id/camera',
+    {
+      schema: {
+        params: GetDeviceParamsSchema,
+        body: PutDeviceCameraRequestSchema,
+        response: {
+          '200': GetDeviceResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params;
+      const { camera_id, config } = request.body;
+
+      // ensure device exists
+      const device = await db
+        .selectFrom('device')
+        .select('id')
         .where('id', '=', id)
         .executeTakeFirst();
       if (!device) throw new Error('Device not found');
-      return mapDevice(device);
+
+      await db
+        .insertInto('device_camera')
+        .values({
+          device_id: id,
+          camera_id,
+          config: config ? (config as Record<string, unknown>) : null,
+        })
+        .onConflict((oc) =>
+          oc
+            .column('device_id')
+            .column('camera_id')
+            .doUpdateSet(() => ({
+              config: config ? (config as Record<string, unknown>) : null,
+            })),
+        )
+        .execute();
+
+      return fastify
+        .inject({ method: 'GET', url: `/devices/${id}` })
+        .then((r) => JSON.parse(r.payload));
+    },
+  );
+
+  fastify.patch(
+    '/:id/camera',
+    {
+      schema: {
+        params: GetDeviceParamsSchema,
+        body: PatchDeviceCameraRequestSchema,
+        response: {
+          '200': GetDeviceResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params;
+      const { config } = request.body;
+
+      const existing = await db
+        .selectFrom('device_camera')
+        .selectAll()
+        .where('device_id', '=', id)
+        .executeTakeFirst();
+      if (!existing) throw new Error('Camera link not found');
+
+      await db
+        .updateTable('device_camera')
+        .set({ config: config ? (config as Record<string, unknown>) : null })
+        .where('device_id', '=', id)
+        .execute();
+
+      return fastify
+        .inject({ method: 'GET', url: `/devices/${id}` })
+        .then((r) => JSON.parse(r.payload));
+    },
+  );
+
+  fastify.delete(
+    '/:id/camera',
+    {
+      schema: {
+        params: GetDeviceParamsSchema,
+        response: {
+          '200': GetDeviceResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params;
+      await db
+        .deleteFrom('device_camera')
+        .where('device_id', '=', id)
+        .execute();
+      return fastify
+        .inject({ method: 'GET', url: `/devices/${id}` })
+        .then((r) => JSON.parse(r.payload));
     },
   );
 };

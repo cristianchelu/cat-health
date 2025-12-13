@@ -8,6 +8,8 @@ import type {
   ProviderAccountDTO,
   GetDiscoveredDevicesResponseDTO,
   GetProvidersResponseDTO,
+  PutDeviceCameraRequestDTO,
+  PatchDeviceCameraRequestDTO,
 } from 'shared';
 import apiClient from './apiClient';
 
@@ -73,5 +75,34 @@ export async function getDeviceEvents(
   const { data } = await apiClient.get<GetEventsResponseDTO>('/events', {
     params,
   });
+  return data;
+}
+
+export async function linkDeviceCamera(
+  deviceId: number,
+  input: PutDeviceCameraRequestDTO,
+) {
+  const { data } = await apiClient.put<GetDeviceResponseDTO>(
+    `/devices/${deviceId}/camera`,
+    input,
+  );
+  return data;
+}
+
+export async function updateDeviceCameraConfig(
+  deviceId: number,
+  input: PatchDeviceCameraRequestDTO,
+) {
+  const { data } = await apiClient.patch<GetDeviceResponseDTO>(
+    `/devices/${deviceId}/camera`,
+    input,
+  );
+  return data;
+}
+
+export async function unlinkDeviceCamera(deviceId: number) {
+  const { data } = await apiClient.delete<GetDeviceResponseDTO>(
+    `/devices/${deviceId}/camera`,
+  );
   return data;
 }

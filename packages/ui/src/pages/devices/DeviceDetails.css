@@ -1,0 +1,16 @@
+.device-details-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--color-background);
+
+  .device-tabs {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .device-content {
+    flex: 1;
+  }
+}

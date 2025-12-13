@@ -12,12 +12,10 @@ import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 
-assert(process.env.RECORDING_PATH, 'RECORDING_PATH is not set in .env');
-assert(process.env.IMAGE_PATH, 'IMAGE_PATH is not set in .env');
+assert(process.env.MEDIA_PATH, 'MEDIA_PATH is not set in .env');
 
 import { migrateToLatest } from './database/migrate.ts';
 import { db } from './database/index.ts';
-import { SyncService } from './services/sync/SyncService.ts';
 
 import petRoutes from './routes/pets.ts';
 import eventRoutes from './routes/events.ts';
@@ -95,76 +93,13 @@ await fastify.register(multipart, {
 
 // Serve video recordings & snapshots statically
 await fastify.register(fastifyStatic, {
-  root: process.env.RECORDING_PATH,
-  prefix: '/api/recordings/',
-});
-await fastify.register(fastifyStatic, {
-  root: process.env.IMAGE_PATH,
-  prefix: '/api/images/',
-  decorateReply: false,
+  root: process.env.MEDIA_PATH,
+  prefix: '/api/media/',
 });
 
 // Healthcheck endpoint
 fastify.get('/api/healthcheck', async (request, reply) => {
   return reply.send({ status: 'ok' });
-});
-
-// Migration endpoint
-fastify.post('/api/migrate', async (request, reply) => {
-  try {
-    const syncService = new SyncService(db);
-
-    // Extract optional query parameters
-    const query = request.query as { startDate?: string; endDate?: string };
-    const startDate = query.startDate ? new Date(query.startDate) : undefined;
-    const endDate = query.endDate ? new Date(query.endDate) : undefined;
-    // const migratorNames = query.migrators
-    //   ? query.migrators.split(',').map((s: string) => s.trim())
-    //   : undefined;
-
-    console.log('Starting migration using SyncService...');
-    if (startDate) console.log(`Start date: ${startDate.toISOString()}`);
-    if (endDate) console.log(`End date: ${endDate.toISOString()}`);
-    // if (migratorNames) console.log(`Migrators: ${migratorNames.join(', ')}`);
-
-    await syncService.migrate(startDate, endDate /* , migratorNames */);
-
-    await syncService.destroy();
-
-    return reply.send({
-      success: true,
-      message: 'Migration completed successfully using SyncService',
-    });
-  } catch (error) {
-    console.error('Migration failed:', error);
-    return reply.status(500).send({
-      success: false,
-      message: 'Migration failed',
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-});
-
-// Get available migrators
-fastify.get('/api/migrate/migrators', async (request, reply) => {
-  try {
-    const syncService = new SyncService(db);
-    const availableMigrators = syncService.getAvailableMigrators();
-
-    await syncService.destroy();
-
-    return reply.send({
-      success: true,
-      migrators: availableMigrators,
-    });
-  } catch (error) {
-    console.error('Failed to get migrators:', error);
-    return reply.status(500).send({
-      success: false,
-      message: 'Failed to get available migrators',
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
 });
 
 const spaDistDir = path.resolve(import.meta.dirname, '../../ui/dist');

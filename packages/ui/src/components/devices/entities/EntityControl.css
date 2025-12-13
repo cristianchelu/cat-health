@@ -1,0 +1,67 @@
+.entity-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-4);
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+
+  .entity-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+
+    .entity-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted-foreground);
+    }
+
+    .entity-label {
+      font-weight: 500;
+    }
+  }
+
+  .entity-value {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+
+    &.is-active {
+      color: var(--primary);
+    }
+
+    &.is-inactive {
+      color: var(--muted-foreground);
+    }
+
+    .unit {
+      margin-left: var(--spacing-1);
+      font-size: var(--font-size-sm);
+      color: var(--muted-foreground);
+    }
+  }
+
+  .entity-input-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+
+    input {
+      width: 96px;
+      text-align: right;
+    }
+
+    .entity-unit {
+      font-size: var(--font-size-sm);
+      color: var(--muted-foreground);
+    }
+  }
+
+  .entity-select {
+    width: 180px;
+  }
+}

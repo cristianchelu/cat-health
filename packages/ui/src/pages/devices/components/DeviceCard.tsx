@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import type { GetDeviceResponseDTO } from 'shared';
 import { Camera, Utensils } from 'lucide-react';
@@ -25,6 +26,7 @@ interface DeviceCardProps {
 
 const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const getIcon = () => {
     switch (device.type) {
@@ -72,7 +74,10 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
     | undefined;
 
   return (
-    <Card className={cn('device-card', className)}>
+    <Card
+      className={cn('device-card', className)}
+      onClick={() => navigate(`/devices/${device.id}`)}
+    >
       <CardHeader>
         <div className="device-header-group">
           <Tooltip content={getStatusLabel()} position="bottom">
@@ -95,9 +100,7 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
           <WaterFountainStatus state={waterFountainState} />
         )}
         {device.type === 'water_fountain' && !waterFountainState && (
-          <div className="text-sm text-muted-foreground p-4 text-center">
-            {t('devices.no_status_data')}
-          </div>
+          <div className="no-status-data">{t('devices.no_status_data')}</div>
         )}
         {/* Add other device status components here */}
       </CardContent>

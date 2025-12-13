@@ -1,0 +1,101 @@
+.device-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+
+  .device-header-main {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    flex: 1;
+    min-width: 0;
+
+    .back-button {
+      flex-shrink: 0;
+      color: var(--color-text-muted);
+
+      &:hover {
+        color: var(--color-text);
+        background-color: var(--color-surface-muted);
+      }
+
+      .icon {
+        height: 1.25rem; /* 20px */
+        width: 1.25rem;
+      }
+    }
+
+    .device-info {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2xs);
+      min-width: 0;
+
+      .device-name {
+        font-size: var(--text-2xl); /* Increased size for page title */
+        font-weight: var(--font-bold);
+        color: var(--color-text);
+        line-height: var(--line-height-tight);
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .device-meta {
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+        flex-wrap: wrap;
+
+        .separator {
+          color: var(--color-text-subtle);
+        }
+
+        .device-type,
+        .device-provider {
+          text-transform: capitalize;
+        }
+
+        .device-status {
+          text-transform: capitalize;
+          font-weight: var(--font-medium);
+
+          &.online {
+            color: var(--color-success);
+          }
+
+          &.offline {
+            color: var(--color-text-muted);
+          }
+
+          &.error {
+            color: var(--color-danger);
+          }
+        }
+      }
+    }
+  }
+
+  .device-last-seen {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
+
+    .device-last-seen {
+      text-align: right;
+    }
+  }
+}

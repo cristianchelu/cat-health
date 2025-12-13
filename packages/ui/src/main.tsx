@@ -10,6 +10,7 @@ import App from './App.tsx';
 import Overview from './pages/overview/Overview.tsx';
 import Health from './pages/health/Health.tsx';
 import Devices from './pages/devices/Devices.tsx';
+import DeviceDetails from './pages/devices/DeviceDetails.tsx';
 import Settings from './pages/settings/Settings.tsx';
 import AddEditPetPage from './pages/settings/AddEditPetPage.tsx';
 import AddEditProviderPage from './pages/settings/AddEditProviderPage.tsx';
@@ -26,6 +27,7 @@ const router = createBrowserRouter(
         { path: '/', element: <Overview /> },
         { path: '/health', element: <Health /> },
         { path: '/devices', element: <Devices /> },
+        { path: '/devices/:id', element: <DeviceDetails /> },
         { path: '/settings', element: <Settings /> },
         { path: '/settings/pets/new', element: <AddEditPetPage /> },
         { path: '/settings/pets/:id', element: <AddEditPetPage /> },

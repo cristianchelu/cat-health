@@ -142,20 +142,6 @@ const TimelineMetaItem = React.forwardRef<
   );
 });
 
-const TimelineMetaDivider = React.forwardRef<
-  HTMLSpanElement,
-  React.ComponentProps<'span'>
->(({ className, ...props }, ref) => {
-  return (
-    <span
-      className={cn('timeline-meta-divider', className)}
-      ref={ref}
-      aria-hidden="true"
-      {...props}
-    />
-  );
-});
-
 const TimelineDescription = React.forwardRef<
   HTMLParagraphElement,
   React.ComponentProps<'p'>
@@ -211,7 +197,6 @@ TimelineValue.displayName = 'Timeline.Value';
 TimelineDescription.displayName = 'Timeline.Description';
 TimelineMeta.displayName = 'Timeline.Meta';
 TimelineMetaItem.displayName = 'Timeline.MetaItem';
-TimelineMetaDivider.displayName = 'Timeline.MetaDivider';
 TimelineFooter.displayName = 'Timeline.Footer';
 TimelineBadge.displayName = 'Timeline.Badge';
 
@@ -226,7 +211,6 @@ const Timeline = Object.assign(TimelineRoot, {
   Description: TimelineDescription,
   Meta: TimelineMeta,
   MetaItem: TimelineMetaItem,
-  MetaDivider: TimelineMetaDivider,
   Footer: TimelineFooter,
   Badge: TimelineBadge,
 });
@@ -246,7 +230,6 @@ export {
   TimelineItem,
   TimelineMeta,
   TimelineMetaItem,
-  TimelineMetaDivider,
   TimelineTimestamp,
   TimelineTitle,
   TimelineValue,

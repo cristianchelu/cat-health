@@ -11,7 +11,7 @@ import {
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import Timeline from './components/Timeline';
+import Timeline from '../../components/ui/Timeline';
 
 import WeightTrendCard from '@/pages/overview/components/WeightTrendCard';
 import WaterConsumptionCard from '@/pages/overview/components/WaterConsumptionCard';
@@ -54,7 +54,6 @@ const Overview: React.FC = () => {
                   <Timer />
                   2m 15s
                 </Timeline.MetaItem>
-                <Timeline.MetaDivider />
                 <Timeline.MetaItem>
                   {t('overview.auto_tracked')}
                 </Timeline.MetaItem>
@@ -97,7 +96,6 @@ const Overview: React.FC = () => {
                   <Timer />
                   3m 12s
                 </Timeline.MetaItem>
-                <Timeline.MetaDivider />
                 <Timeline.MetaItem>
                   <CheckCircle />
                   {t('overview.verified')}

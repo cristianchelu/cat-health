@@ -33,7 +33,7 @@ This is a **Pet Assistant** application focused on cat health monitoring through
 
 ### CSS Architecture
 
-**IMPORTANT**: We prioritize native, semantic CSS with minimal inline styles.
+**IMPORTANT**: We prioritize native, semantic CSS with minimal inline styles. NO FUCKING TAILWIND.
 
 #### CSS File Structure
 
@@ -226,8 +226,6 @@ npm run lint                    # Run ESLint
 npm run preview                 # Preview production build
 ```
 
-- Always assume Both the UI and API are running in the background when you want to run things.
-
 ## File Naming Conventions
 
 - **Components**: PascalCase (`PetSummaryCard.tsx`)
@@ -299,7 +297,10 @@ The application uses a comprehensive design system defined in `theme.css` with:
 
 Always reference these variables instead of hardcoding values to maintain design consistency and enable easy theming updates.
 
-# Hygiene rules
+# General rules
 
 - Any summary .md or explanation of changes MUST go in the `{root}/summaries/`
   folder, so as not to pollute the git history.
+- Always assume Both the UI and API are running in the background when you want to run things.
+  If you want to test something, ask the user.
+- I repeat, no fucking tailwind. anywhere.

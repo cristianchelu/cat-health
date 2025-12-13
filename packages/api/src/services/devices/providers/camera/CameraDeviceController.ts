@@ -69,27 +69,35 @@ export class CameraDeviceController implements Camera {
     }
 
     try {
-      const headers = this.config.snapshotAuth
-        ? {
-            Authorization: `Basic ${Buffer.from(this.config.snapshotAuth).toString('base64')}`,
-          }
-        : undefined;
+      const buffer = await this.getSnapshotBuffer();
+      const image = sharp(buffer);
+      const metadata = await image.metadata();
 
-      const response = await fetch(this.config.snapshotUrl, {
-        headers,
-      });
+      const pendingMedia = await this.deps.mediaManager.createPendingMedia(
+        'jpg',
+        {
+          height: metadata.height,
+          width: metadata.width,
+        },
+      );
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch snapshot: ${response.statusText}`);
-      }
-
-      const pendingMedia =
-        await this.deps.mediaManager.createPendingMedia('jpg');
-
-      let pipeline = sharp(await response.arrayBuffer());
+      let pipeline = sharp(buffer);
 
       if (options.crop) {
-        pipeline = pipeline.extract(options.crop);
+        const { left, top, width, height } = options.crop;
+        let absCrop = { left, top, width, height };
+
+        // If all crop values are <= 1, assume they are normalized (0-1) and convert to absolute pixels
+        if (left <= 1 && top <= 1 && width <= 1 && height <= 1) {
+          absCrop = {
+            left: Math.round(left * metadata.width),
+            top: Math.round(top * metadata.height),
+            width: Math.round(width * metadata.width),
+            height: Math.round(height * metadata.height),
+          };
+        }
+
+        pipeline = pipeline.extract(absCrop);
       }
 
       if (options.rotate) {
@@ -105,6 +113,38 @@ export class CameraDeviceController implements Camera {
     } catch (error) {
       console.error(
         `Error capturing snapshot for camera ${this.device.name}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async getSnapshotBuffer(): Promise<Buffer> {
+    if (!this.config.snapshotUrl) {
+      throw new Error(
+        `No snapshot URL configured for camera ${this.device.name}`,
+      );
+    }
+
+    try {
+      const headers = this.config.snapshotAuth
+        ? {
+            Authorization: `Basic ${Buffer.from(this.config.snapshotAuth).toString('base64')}`,
+          }
+        : undefined;
+
+      const response = await fetch(this.config.snapshotUrl, {
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch snapshot: ${response.statusText}`);
+      }
+
+      return Buffer.from(await response.arrayBuffer());
+    } catch (error) {
+      console.error(
+        `Error fetching snapshot for camera ${this.device.name}:`,
         error,
       );
       throw error;

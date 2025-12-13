@@ -9,6 +9,30 @@ export const DeviceStatusSchema = Type.Union([
 ]);
 export type DeviceStatus = Static<typeof DeviceStatusSchema>;
 
+// TODO: More expressive schema
+export const EntitySchema = Type.Object({
+  id: Type.String(),
+  name: Type.String(),
+  type: Type.Union([
+    Type.Literal("sensor"),
+    Type.Literal("binary_sensor"),
+    Type.Literal("switch"),
+    Type.Literal("number"),
+    Type.Literal("select"),
+    Type.Literal("text_sensor"),
+    Type.Literal("button"),
+  ]),
+  value: Type.Unknown(),
+  unit: Type.Optional(Type.String()),
+  options: Type.Optional(Type.Array(Type.String())),
+  min: Type.Optional(Type.Number()),
+  max: Type.Optional(Type.Number()),
+  step: Type.Optional(Type.Number()),
+  onLabel: Type.Optional(Type.String()),
+  offLabel: Type.Optional(Type.String()),
+});
+export type EntityDTO = Static<typeof EntitySchema>;
+
 // --- Providers ---
 
 export const ProviderInfoSchema = Type.Object({
@@ -62,9 +86,30 @@ export type GetDiscoveredDevicesResponseDTO = Static<typeof GetDiscoveredDevices
 export const GetDeviceParamsSchema = Type.Object({ id: Type.Number() });
 export type GetDeviceParamsDTO = Static<typeof GetDeviceParamsSchema>;
 
+export const DeviceCameraCropSchema = Type.Object({
+  left: Type.Number(),
+  top: Type.Number(),
+  width: Type.Number(),
+  height: Type.Number(),
+});
+export type DeviceCameraCrop = Static<typeof DeviceCameraCropSchema>;
+
+export const DeviceCameraConfigSchema = Type.Object({
+  crop: Type.Optional(DeviceCameraCropSchema),
+  rotate: Type.Optional(Type.Number()),
+});
+export type DeviceCameraConfigDTO = Static<typeof DeviceCameraConfigSchema>;
+
+export const DeviceCameraLinkSchema = Type.Object({
+  camera_id: Type.Number(),
+  config: Type.Optional(DeviceCameraConfigSchema),
+});
+export type DeviceCameraLinkDTO = Static<typeof DeviceCameraLinkSchema>;
+
 export const GetDeviceResponseSchema = Type.Object({
   id: Type.Number(),
   provider_account_id: Type.Number(),
+  provider: Type.String(),
   external_id: Type.String(),
   name: Type.String(),
   type: DeviceTypeSchema,
@@ -73,10 +118,23 @@ export const GetDeviceResponseSchema = Type.Object({
   last_seen: Type.Union([Type.String(), Type.Null()]),
   status: Type.Union([DeviceStatusSchema, Type.Null()]),
   state: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
+  camera_link: Type.Optional(DeviceCameraLinkSchema),
   created_at: Type.String(),
   updated_at: Type.String(),
 });
 export type GetDeviceResponseDTO = Static<typeof GetDeviceResponseSchema>;
+
+export const PutDeviceCameraRequestSchema = DeviceCameraLinkSchema;
+export type PutDeviceCameraRequestDTO = Static<
+  typeof PutDeviceCameraRequestSchema
+>;
+
+export const PatchDeviceCameraRequestSchema = Type.Object({
+  config: Type.Optional(DeviceCameraConfigSchema),
+});
+export type PatchDeviceCameraRequestDTO = Static<
+  typeof PatchDeviceCameraRequestSchema
+>;
 
 export const GetDevicesResponseSchema = Type.Array(GetDeviceResponseSchema);
 export type GetDevicesResponseDTO = Static<typeof GetDevicesResponseSchema>;

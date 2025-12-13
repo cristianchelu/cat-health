@@ -1,5 +1,5 @@
 .device-card {
-  /* Custom styles for device card if needed, mostly handled by Card component */
+  cursor: pointer;
 
   .device-header-group {
     display: flex;
@@ -45,5 +45,12 @@
     &.status-error {
       background-color: var(--color-error);
     }
+  }
+
+  .no-status-data {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    padding: var(--space-md);
+    text-align: center;
   }
 }

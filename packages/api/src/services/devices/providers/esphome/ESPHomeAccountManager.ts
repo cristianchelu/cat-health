@@ -24,7 +24,27 @@ export class ESPHomeAccountManager implements AccountManager {
   }
 
   async initialize(): Promise<void> {
-    // Nothing to do for now
+    const devices = await this.deps.db
+      .selectFrom('device')
+      .selectAll()
+      .where('provider_account_id', '=', this.accountId)
+      .where('enabled', '=', 1)
+      .execute();
+
+    console.log(
+      `Initializing ${devices.length} devices for account ${this.account.name}`,
+    );
+
+    for (const device of devices) {
+      try {
+        this.instantiateDeviceController(device);
+      } catch (err) {
+        console.error(
+          `Failed to instantiate controller for device ${device.id}:`,
+          err,
+        );
+      }
+    }
   }
 
   async shutdown(): Promise<void> {

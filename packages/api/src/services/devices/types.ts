@@ -16,6 +16,7 @@ export interface Camera extends DeviceController {
     crop?: { left: number; top: number; width: number; height: number };
     rotate?: number;
   }): Promise<PendingMedia | undefined>;
+  getSnapshotBuffer(): Promise<Buffer | undefined>;
 }
 
 export interface DeviceDirectory {

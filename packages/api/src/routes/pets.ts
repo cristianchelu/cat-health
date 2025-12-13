@@ -52,7 +52,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         // birth_date is stored as text in SQLite, shared schema currently uses Any
         birth_date: r.birth_date,
         avatar_url: r.avatar_file_path
-          ? `/api/images/${r.avatar_file_path}`
+          ? `/api/media/${r.avatar_file_path}`
           : undefined,
       }));
     },
@@ -269,11 +269,11 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .webp({ quality: 80 })
         .toBuffer();
 
-      const imageRoot = process.env.IMAGE_PATH;
-      if (!imageRoot) {
-        return reply.status(500).send({ error: 'IMAGE_PATH not configured' });
+      const mediaRoot = process.env.MEDIA_PATH;
+      if (!mediaRoot) {
+        return reply.status(500).send({ error: 'MEDIA_PATH not configured' });
       }
-      const petDir = path.join(imageRoot, 'pets', String(id));
+      const petDir = path.join(mediaRoot, 'pets', String(id));
       await fs.mkdir(petDir, { recursive: true });
       const avatarFilename = 'avatar_256.webp';
       const avatarPath = path.join(petDir, avatarFilename);
@@ -303,7 +303,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           .execute();
         try {
           if (existingAvatar.file_path) {
-            await fs.unlink(path.join(imageRoot, existingAvatar.file_path));
+            await fs.unlink(path.join(mediaRoot, existingAvatar.file_path));
           }
         } catch (error: unknown) {
           void error; // swallow unlink errors
@@ -344,7 +344,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       return reply.send({
         success: true,
         avatar: {
-          url: `/api/images/${relFilePath}`,
+          url: `/api/media/${relFilePath}`,
           width: 256,
           height: 256,
         },
@@ -371,9 +371,9 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     await db.deleteFrom('media_link').where('id', '=', link.link_id).execute();
     await db.deleteFrom('media').where('id', '=', link.media_id).execute();
     try {
-      const imageRoot = process.env.IMAGE_PATH;
-      if (imageRoot && link.file_path) {
-        await fs.unlink(path.join(imageRoot, link.file_path));
+      const mediaRoot = process.env.MEDIA_PATH;
+      if (mediaRoot && link.file_path) {
+        await fs.unlink(path.join(mediaRoot, link.file_path));
       }
     } catch (error: unknown) {
       // ignore unlink errors
@@ -395,7 +395,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       .executeTakeFirst();
     if (!avatar) return reply.status(404).send({ error: 'Avatar not found' });
     return reply.send({
-      url: `/api/images/${avatar.file_path}`,
+      url: `/api/media/${avatar.file_path}`,
       metadata: avatar.metadata,
     });
   });
