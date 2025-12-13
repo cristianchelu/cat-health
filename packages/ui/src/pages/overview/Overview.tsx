@@ -1,17 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  CheckCircle,
-  Clock,
-  Drumstick,
-  GlassWater,
-  Timer,
-  Toilet,
-} from 'lucide-react';
+import { Clock, Toilet } from 'lucide-react';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import Timeline from '../../components/ui/Timeline';
+import Timeline from '@/components/ui/Timeline';
+import { WaterEvent, FoodEvent, LitterboxEvent } from '@/components/events';
 
 import WeightTrendCard from '@/pages/overview/components/WeightTrendCard';
 import WaterConsumptionCard from '@/pages/overview/components/WaterConsumptionCard';
@@ -22,6 +16,9 @@ import './Overview.css';
 const Overview: React.FC = () => {
   const { t } = useTranslation();
   const { selectedPet } = usePetContext();
+
+  // Mock date for timeline examples
+  const today = '2023-01-01';
 
   return (
     <div className="page-overview">
@@ -39,115 +36,77 @@ const Overview: React.FC = () => {
       <section>
         <SectionHeader icon={<Clock />}>{t('overview.activity')}</SectionHeader>
         <Timeline>
-          <Timeline.Item>
-            <Timeline.Icon variant="primary">
-              <GlassWater />
-            </Timeline.Icon>
-            <Timeline.Content>
-              <Timeline.Header>
-                <Timeline.Timestamp>07:45</Timeline.Timestamp>
-                <Timeline.Value variant="primary">240 ml</Timeline.Value>
-                <Timeline.Title>{t('overview.water_intake')}</Timeline.Title>
-              </Timeline.Header>
-              <Timeline.Meta>
-                <Timeline.MetaItem>
-                  <Timer />
-                  2m 15s
-                </Timeline.MetaItem>
-                <Timeline.MetaItem>
-                  {t('overview.auto_tracked')}
-                </Timeline.MetaItem>
-              </Timeline.Meta>
-            </Timeline.Content>
-          </Timeline.Item>
+          <WaterEvent
+            event={{
+              id: 1,
+              timestamp: `${today}T07:45:00`,
+              data: { type: 'water_intake', amount: 240, duration: 135000 },
+              pet_id: null,
+              device_id: null,
+              raw_data: null,
+              human_verified: false,
+            }}
+          >
+            <Timeline.MetaItem>{t('overview.auto_tracked')}</Timeline.MetaItem>
+          </WaterEvent>
 
-          <Timeline.Item>
-            <Timeline.Icon variant="success">
-              <Drumstick />
-            </Timeline.Icon>
-            <Timeline.Content>
-              <Timeline.Header>
-                <Timeline.Timestamp>08:15</Timeline.Timestamp>
-                <Timeline.Value variant="success">150 kcal</Timeline.Value>
-                <Timeline.Title>{t('overview.breakfast')}</Timeline.Title>
-              </Timeline.Header>
-              <Timeline.Meta>
-                <Timeline.MetaItem>
-                  {t('overview.chicken_pate')}
-                </Timeline.MetaItem>
-              </Timeline.Meta>
-            </Timeline.Content>
-          </Timeline.Item>
+          <FoodEvent
+            event={{
+              id: 2,
+              timestamp: `${today}T08:15:00`,
+              data: { type: 'food_intake', amount: 150 }, // Note: Showing grams instead of kcal as per component standard
+              pet_id: null,
+              device_id: null,
+              raw_data: null,
+              human_verified: false,
+            }}
+          >
+            <Timeline.MetaItem>{t('overview.chicken_pate')}</Timeline.MetaItem>
+          </FoodEvent>
 
-          <Timeline.Item>
-            <Timeline.Icon variant="warning">
-              <Toilet />
-            </Timeline.Icon>
-            <Timeline.Content>
-              <Timeline.Header>
-                <Timeline.Timestamp>09:05</Timeline.Timestamp>
-                <Timeline.Value variant="warning">
-                  {t('overview.defecation')}
-                </Timeline.Value>
-                <Timeline.Title>{t('overview.litterbox_visit')}</Timeline.Title>
-              </Timeline.Header>
-              <Timeline.Meta>
-                <Timeline.MetaItem>
-                  <Timer />
-                  3m 12s
-                </Timeline.MetaItem>
-                <Timeline.MetaItem>
-                  <CheckCircle />
-                  {t('overview.verified')}
-                </Timeline.MetaItem>
-              </Timeline.Meta>
-            </Timeline.Content>
-          </Timeline.Item>
+          <LitterboxEvent
+            event={{
+              id: 3,
+              timestamp: `${today}T09:05:00`,
+              data: {
+                type: 'litterbox_use',
+                elimination_type: 'defecation',
+                duration: 192000,
+              },
+              pet_id: null,
+              device_id: null,
+              raw_data: null,
+              human_verified: true,
+            }}
+          />
 
-          <Timeline.Item variant="warning">
-            <Timeline.Icon variant="danger">
-              <Toilet />
-            </Timeline.Icon>
-            <Timeline.Content>
-              <Timeline.Header>
-                <Timeline.Timestamp>14:30</Timeline.Timestamp>
-                <Timeline.Value variant="danger">
-                  {t('overview.no_elimination')}
-                </Timeline.Value>
-                <Timeline.Title>{t('overview.litterbox_visit')}</Timeline.Title>
-              </Timeline.Header>
-              <Timeline.Meta>
-                <Timeline.MetaItem>
-                  <Timer />
-                  5m 45s
-                </Timeline.MetaItem>
-              </Timeline.Meta>
-              <Timeline.Footer>
-                <Timeline.Badge variant="warning">
-                  {t('overview.straining_detected')}
-                </Timeline.Badge>
-              </Timeline.Footer>
-            </Timeline.Content>
-          </Timeline.Item>
+          <LitterboxEvent
+            event={{
+              id: 4,
+              timestamp: `${today}T14:30:00`,
+              data: {
+                type: 'litterbox_use',
+                elimination_type: 'no_elimination',
+                duration: 345000,
+              },
+              pet_id: null,
+              device_id: null,
+              raw_data: null,
+              human_verified: false,
+            }}
+          />
 
-          <Timeline.Item>
-            <Timeline.Icon variant="primary">
-              <GlassWater />
-            </Timeline.Icon>
-            <Timeline.Content>
-              <Timeline.Header>
-                <Timeline.Timestamp>16:20</Timeline.Timestamp>
-                <Timeline.Value variant="primary">85 ml</Timeline.Value>
-                <Timeline.Title>{t('overview.water_intake')}</Timeline.Title>
-              </Timeline.Header>
-              <Timeline.Meta>
-                <Timeline.MetaItem>
-                  <Timer />
-                  45s
-                </Timeline.MetaItem>
-              </Timeline.Meta>
-            </Timeline.Content>
-          </Timeline.Item>
+          <WaterEvent
+            event={{
+              id: 5,
+              timestamp: `${today}T16:20:00`,
+              data: { type: 'water_intake', amount: 85, duration: 45000 },
+              pet_id: null,
+              device_id: null,
+              raw_data: null,
+              human_verified: false,
+            }}
+          />
         </Timeline>
       </section>
     </div>

@@ -1,11 +1,6 @@
 .device-timeline {
   margin-top: var(--spacing-4);
 
-  .timeline-list {
-    max-height: 600px;
-    overflow-y: auto;
-  }
-
   .device-timeline-loading,
   .device-timeline-error,
   .device-timeline-empty {
