@@ -28,7 +28,9 @@
         "no_weight_data": "No weight data available",
         "straining_detected": "Straining detected",
         "loose_stools": "Loose stools",
-        "weight_recorded": "Weight recorded"
+        "weight_recorded": "Weight recorded",
+        "no_activity": "No activity recorded today",
+        "today": "Today"
     },
     "settings": {
         "pets": "Pets",

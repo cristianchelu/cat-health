@@ -1,11 +1,22 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Toilet } from 'lucide-react';
+import {
+  Clock,
+  Toilet,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Loader2,
+} from 'lucide-react';
+import { addDays, subDays, format, parseISO } from 'date-fns';
 import { usePetContext } from '@/hooks/context/usePetContext';
+import { usePetEvents } from '@/hooks/queries/petQueries';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Button } from '@/components/ui/Button';
 import Timeline from '@/components/ui/Timeline';
-import { WaterEvent, FoodEvent, LitterboxEvent } from '@/components/events';
+import { EventTimelineItem } from '@/components/events';
+import type { DateRange } from '@/lib/utils';
 
 import WeightTrendCard from '@/pages/overview/components/WeightTrendCard';
 import WaterConsumptionCard from '@/pages/overview/components/WaterConsumptionCard';
@@ -17,8 +28,86 @@ const Overview: React.FC = () => {
   const { t } = useTranslation();
   const { selectedPet } = usePetContext();
 
-  // Mock date for timeline examples
-  const today = '2023-01-01';
+  const getTodayString = () => new Date().toISOString().split('T')[0];
+
+  const [dateRange, setDateRange] = React.useState<DateRange>(() => {
+    const dateStr = getTodayString();
+    return {
+      startDate: dateStr,
+      endDate: dateStr,
+      type: 'day',
+    };
+  });
+
+  const handlePrevDay = () => {
+    const current = parseISO(dateRange.startDate);
+    const prev = subDays(current, 1);
+    const dateStr = format(prev, 'yyyy-MM-dd');
+    setDateRange({
+      startDate: dateStr,
+      endDate: dateStr,
+      type: 'day',
+    });
+  };
+
+  const handleNextDay = () => {
+    const current = parseISO(dateRange.startDate);
+    const next = addDays(current, 1);
+    const dateStr = format(next, 'yyyy-MM-dd');
+    setDateRange({
+      startDate: dateStr,
+      endDate: dateStr,
+      type: 'day',
+    });
+  };
+
+  const handleReset = () => {
+    const dateStr = getTodayString();
+    setDateRange({
+      startDate: dateStr,
+      endDate: dateStr,
+      type: 'day',
+    });
+  };
+
+  const {
+    data: eventsData,
+    isLoading,
+    isFetching,
+  } = usePetEvents(selectedPet?.id ?? 0, dateRange, !!selectedPet);
+
+  const isCurrentDay = dateRange.startDate === getTodayString();
+
+  const dateNavigation = (
+    <div className="overview-date-nav">
+      <Button variant="ghost" size="sm" icon onClick={handlePrevDay}>
+        <ChevronLeft size={20} />
+      </Button>
+      <span className="overview-date-display">
+        {format(parseISO(dateRange.startDate), 'MMM d')}
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon
+        onClick={handleNextDay}
+        disabled={isCurrentDay}
+      >
+        <ChevronRight size={20} />
+      </Button>
+      {!isCurrentDay && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleReset}
+          icon
+          className="overview-today-btn"
+        >
+          <RotateCcw size={16} />
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <div className="page-overview">
@@ -34,80 +123,31 @@ const Overview: React.FC = () => {
         </Card>
       </section>
       <section>
-        <SectionHeader icon={<Clock />}>{t('overview.activity')}</SectionHeader>
-        <Timeline>
-          <WaterEvent
-            event={{
-              id: 1,
-              timestamp: `${today}T07:45:00`,
-              data: { type: 'water_intake', amount: 240, duration: 135000 },
-              pet_id: null,
-              device_id: null,
-              raw_data: null,
-              human_verified: false,
-            }}
-          >
-            <Timeline.MetaItem>{t('overview.auto_tracked')}</Timeline.MetaItem>
-          </WaterEvent>
-
-          <FoodEvent
-            event={{
-              id: 2,
-              timestamp: `${today}T08:15:00`,
-              data: { type: 'food_intake', amount: 150 }, // Note: Showing grams instead of kcal as per component standard
-              pet_id: null,
-              device_id: null,
-              raw_data: null,
-              human_verified: false,
-            }}
-          >
-            <Timeline.MetaItem>{t('overview.chicken_pate')}</Timeline.MetaItem>
-          </FoodEvent>
-
-          <LitterboxEvent
-            event={{
-              id: 3,
-              timestamp: `${today}T09:05:00`,
-              data: {
-                type: 'litterbox_use',
-                elimination_type: 'defecation',
-                duration: 192000,
-              },
-              pet_id: null,
-              device_id: null,
-              raw_data: null,
-              human_verified: true,
-            }}
-          />
-
-          <LitterboxEvent
-            event={{
-              id: 4,
-              timestamp: `${today}T14:30:00`,
-              data: {
-                type: 'litterbox_use',
-                elimination_type: 'no_elimination',
-                duration: 345000,
-              },
-              pet_id: null,
-              device_id: null,
-              raw_data: null,
-              human_verified: false,
-            }}
-          />
-
-          <WaterEvent
-            event={{
-              id: 5,
-              timestamp: `${today}T16:20:00`,
-              data: { type: 'water_intake', amount: 85, duration: 45000 },
-              pet_id: null,
-              device_id: null,
-              raw_data: null,
-              human_verified: false,
-            }}
-          />
-        </Timeline>
+        <SectionHeader icon={<Clock />} actions={dateNavigation}>
+          {t('overview.activity')}
+        </SectionHeader>
+        <div className="overview-timeline-container">
+          {isFetching && !isLoading && (
+            <div className="overview-timeline-overlay">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          )}
+          <Timeline>
+            {isLoading && (
+              <li className="overview-loading-activity">Loading...</li>
+            )}
+            {!isLoading && eventsData?.data.length === 0 && (
+              <li className="overview-empty-activity">
+                {t('overview.no_activity')}
+              </li>
+            )}
+            {eventsData?.data
+              .filter((ev) => ev.data.type !== 'weight_measurement')
+              .map((event) => (
+                <EventTimelineItem key={event.id} event={event} />
+              ))}
+          </Timeline>
+        </div>
       </section>
     </div>
   );

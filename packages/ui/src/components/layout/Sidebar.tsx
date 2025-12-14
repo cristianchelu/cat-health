@@ -32,12 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false, onToggle }) => {
   return (
     <aside className={cn('sidebar', isCollapsed && 'collapsed')}>
       <div className="content">
-        <section>
-          <h4>{t('navigation.pets')}</h4>
-          <PetSelector />
-        </section>
         <nav>
-          <h4>{t('navigation.nav_header')}</h4>
           <ul>
             {navigationItems.map((item) => (
               <li key={item.path}>
@@ -54,6 +49,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false, onToggle }) => {
             ))}
           </ul>
         </nav>
+        <section>
+          <h4>{t('navigation.pets')}</h4>
+          <PetSelector />
+        </section>
       </div>
 
       {/* Collapse Toggle Button */}
