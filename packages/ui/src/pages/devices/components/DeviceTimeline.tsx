@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Clock, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { addDays, subDays, format, parseISO } from 'date-fns';
 import Timeline from '@/components/ui/Timeline';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -56,41 +56,38 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
             onNext={handleNextDay}
             onReset={handleReset}
             isToday={isCurrentDay}
-            dateFormat="MMM d"
-            showTodayLabel={false}
           />
         }
       ></SectionHeader>
 
       <div className="device-timeline-content">
-        {isFetching && !isLoading && (
-          <div className="device-timeline-overlay">
-            <Loader2 className="animate-spin" size={32} />
-          </div>
-        )}
-
-        {isLoading && (
-          <div className="device-timeline-loading">Loading events...</div>
-        )}
-
         {error && (
           <div className="device-timeline-error">Error loading events</div>
         )}
 
-        {!isLoading && !error && (!events || events.data.length === 0) && (
-          <div className="device-timeline-empty">
-            <Clock size="2em" />
-            <p>No events found for this device</p>
-          </div>
-        )}
-
-        {!isLoading && !error && events && events.data.length > 0 && (
+        {!error && (
           <Timeline>
-            {events.data
-              .filter((e) => e.data.type !== 'weight_measurement')
-              .map((event) => (
-                <EventTimelineItem key={event.id} event={event} />
-              ))}
+            {isFetching && !isLoading && (
+              <div className="device-timeline-overlay">
+                <Loader2 className="animate-spin" size={32} />
+              </div>
+            )}
+            {isLoading && (
+              <li className="device-timeline-loading">Loading events...</li>
+            )}
+            {!isLoading && (!events || events.data.length === 0) && (
+              <li className="device-timeline-empty">
+                <p>No events found for this device</p>
+              </li>
+            )}
+            {!isLoading &&
+              events &&
+              events.data.length > 0 &&
+              events.data
+                .filter((e) => e.data.type !== 'weight_measurement')
+                .map((event) => (
+                  <EventTimelineItem key={event.id} event={event} />
+                ))}
           </Timeline>
         )}
       </div>

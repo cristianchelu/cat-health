@@ -23,9 +23,7 @@ export const DateNavigation: React.FC<DateNavigationProps> = ({
   onNext,
   onReset,
   isToday,
-  dateFormat = 'MMM d, yyyy',
-  showTodayLabel = true,
-  todayLabel = 'Today',
+  dateFormat = 'MMM d',
   className,
 }) => {
   return (
@@ -49,16 +47,12 @@ export const DateNavigation: React.FC<DateNavigationProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          icon={!showTodayLabel}
+          icon
           onClick={onReset}
           title="Today"
-          className={showTodayLabel ? 'date-navigation-today-btn' : ''}
+          className={'date-navigation-today-btn'}
         >
-          <RotateCcw
-            size={16}
-            style={showTodayLabel ? { marginRight: '0.5rem' } : undefined}
-          />
-          {showTodayLabel && todayLabel}
+          <RotateCcw size={16} />
         </Button>
       )}
     </div>

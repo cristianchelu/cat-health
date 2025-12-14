@@ -78,7 +78,6 @@ const Overview: React.FC = () => {
       onNext={handleNextDay}
       onReset={handleReset}
       isToday={isCurrentDay}
-      todayLabel={t('overview.today')}
     />
   );
 
@@ -100,12 +99,12 @@ const Overview: React.FC = () => {
           {t('overview.activity')}
         </SectionHeader>
         <div className="overview-timeline-container">
-          {isFetching && !isLoading && (
-            <div className="overview-timeline-overlay">
-              <Loader2 className="animate-spin" size={32} />
-            </div>
-          )}
           <Timeline>
+            {isFetching && !isLoading && (
+              <div className="overview-timeline-overlay">
+                <Loader2 className="animate-spin" size={32} />
+              </div>
+            )}
             {isLoading && (
               <li className="overview-loading-activity">Loading...</li>
             )}
