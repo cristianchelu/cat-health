@@ -12,7 +12,12 @@ import {
   unlinkDeviceCamera,
 } from '@/api/devices';
 import { deleteEvent, updateEvent } from '@/api/pets';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  keepPreviousData,
+} from '@tanstack/react-query';
 import type {
   PatchEventRequestDTO,
   PostProviderAccountRequestDTO,
@@ -49,6 +54,7 @@ export function useDeviceEvents(
       return getDeviceEvents(deviceId, startTime, endTime);
     },
     enabled,
+    placeholderData: keepPreviousData,
   });
 }
 

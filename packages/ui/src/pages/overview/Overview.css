@@ -26,18 +26,6 @@
     color: var(--color-text-muted);
   }
 
-  .overview-date-nav {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-  }
-
-  .overview-date-display {
-    font-variant-numeric: tabular-nums;
-    text-align: center;
-    font-weight: var(--font-medium);
-  }
-
   .overview-timeline-container {
     position: relative;
     min-height: 100px;

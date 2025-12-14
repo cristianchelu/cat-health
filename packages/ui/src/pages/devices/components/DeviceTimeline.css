@@ -1,6 +1,11 @@
 .device-timeline {
   margin-top: var(--spacing-4);
 
+  .device-timeline-content {
+    position: relative;
+    min-height: 200px;
+  }
+
   .device-timeline-loading,
   .device-timeline-error,
   .device-timeline-empty {
@@ -16,5 +21,29 @@
   .device-timeline-empty svg {
     margin-bottom: var(--spacing-2);
     opacity: 0.5;
+  }
+
+  .device-timeline-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: var(--radius-md);
+  }
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }

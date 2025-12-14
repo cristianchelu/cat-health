@@ -1,19 +1,12 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Clock,
-  Toilet,
-  ChevronLeft,
-  ChevronRight,
-  RotateCcw,
-  Loader2,
-} from 'lucide-react';
+import { Clock, Toilet, Loader2 } from 'lucide-react';
 import { addDays, subDays, format, parseISO } from 'date-fns';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetEvents } from '@/hooks/queries/petQueries';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Button } from '@/components/ui/Button';
+import { DateNavigation } from '@/components/ui/DateNavigation';
 import Timeline from '@/components/ui/Timeline';
 import { EventTimelineItem } from '@/components/events';
 import type { DateRange } from '@/lib/utils';
@@ -79,34 +72,14 @@ const Overview: React.FC = () => {
   const isCurrentDay = dateRange.startDate === getTodayString();
 
   const dateNavigation = (
-    <div className="overview-date-nav">
-      <Button variant="ghost" size="sm" icon onClick={handlePrevDay}>
-        <ChevronLeft size={20} />
-      </Button>
-      <span className="overview-date-display">
-        {format(parseISO(dateRange.startDate), 'MMM d')}
-      </span>
-      <Button
-        variant="ghost"
-        size="sm"
-        icon
-        onClick={handleNextDay}
-        disabled={isCurrentDay}
-      >
-        <ChevronRight size={20} />
-      </Button>
-      {!isCurrentDay && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleReset}
-          icon
-          className="overview-today-btn"
-        >
-          <RotateCcw size={16} />
-        </Button>
-      )}
-    </div>
+    <DateNavigation
+      date={dateRange.startDate}
+      onPrev={handlePrevDay}
+      onNext={handleNextDay}
+      onReset={handleReset}
+      isToday={isCurrentDay}
+      todayLabel={t('overview.today')}
+    />
   );
 
   return (

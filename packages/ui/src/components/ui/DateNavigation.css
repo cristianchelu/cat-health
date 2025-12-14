@@ -1,0 +1,12 @@
+.date-navigation {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+
+  .date-navigation-display {
+    font-variant-numeric: tabular-nums;
+    min-width: 100px;
+    text-align: center;
+    font-weight: var(--font-medium);
+  }
+}
