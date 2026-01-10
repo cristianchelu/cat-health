@@ -302,7 +302,7 @@ export class LitterboxController implements DeviceController {
             type: 'litterbox_use',
             elimination_type: eliminationType,
             elimination_weight: Math.round(Math.max(0, eliminationWeight)),
-            duration,
+            duration: Math.round(duration / 1000),
           },
           raw_data: rawData,
           human_verified: false,

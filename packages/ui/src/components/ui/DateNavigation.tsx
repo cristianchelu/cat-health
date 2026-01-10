@@ -28,6 +28,18 @@ export const DateNavigation: React.FC<DateNavigationProps> = ({
 }) => {
   return (
     <div className={cn('date-navigation', className)}>
+      {!isToday && (
+        <Button
+          variant="ghost"
+          size="sm"
+          icon
+          onClick={onReset}
+          title="Today"
+          className={'date-navigation-today-btn'}
+        >
+          <RotateCcw size={16} />
+        </Button>
+      )}
       <Button variant="ghost" size="sm" icon onClick={onPrev}>
         <ChevronLeft size={20} />
       </Button>
@@ -43,18 +55,6 @@ export const DateNavigation: React.FC<DateNavigationProps> = ({
       >
         <ChevronRight size={20} />
       </Button>
-      {!isToday && (
-        <Button
-          variant="ghost"
-          size="sm"
-          icon
-          onClick={onReset}
-          title="Today"
-          className={'date-navigation-today-btn'}
-        >
-          <RotateCcw size={16} />
-        </Button>
-      )}
     </div>
   );
 };
