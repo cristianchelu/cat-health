@@ -18,31 +18,35 @@ export interface WaterIntakeEventData {
   duration?: number;
 }
 
+export type LitterboxUseEliminationType =
+  | 'urination'
+  | 'defecation'
+  | 'both'
+  | 'no_elimination'
+  | 'unknown';
+
 export interface LitterboxUseEventData {
   type: 'litterbox_use';
-  elimination_type:
-    | 'urination'
-    | 'defecation'
-    | 'both'
-    | 'no_elimination'
-    | 'unknown';
+  elimination_type: LitterboxUseEliminationType;
   elimination_weight: number;
   duration: number;
 }
 
+export type FoodIntakeFoodType = 'dry' | 'wet' | 'treat' | 'unknown';
 export interface FoodIntakeEventData {
   type: 'food_intake';
-  food_type: 'dry' | 'wet' | 'treat' | 'unknown';
+  food_type: FoodIntakeFoodType;
   amount: number;
 }
 
+export type LitterboxMaintenanceEventType =
+  | 'scoop'
+  | 'deep_clean'
+  | 'litter_change'
+  | 'litter_addition';
 export interface LitterboxMaintenanceEventData {
   type: 'litterbox_maintenance';
-  maintenance_type:
-    | 'scoop'
-    | 'deep_clean'
-    | 'litter_change'
-    | 'litter_addition';
+  maintenance_type: LitterboxMaintenanceEventType;
   litter_amount?: number; // in grams, for litter_change/litter_addition
 }
 

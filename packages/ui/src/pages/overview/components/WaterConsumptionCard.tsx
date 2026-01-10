@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { GlassWater } from 'lucide-react';
+import MetricBarChart from '@/components/ui/MetricBarChart';
 
 import './WaterConsumptionCard.css';
 
@@ -17,7 +18,6 @@ const WaterConsumptionCard: React.FC<WaterConsumptionCardProps> = () => {
   // Mock data for 7 days
   // Assuming a 5kg cat: lower bound = 200ml (40ml/kg), upper bound = 300ml (60ml/kg)
   const mockData: DayData[] = [
-    { consumption: 180, tracked: true }, // Below spec
     { consumption: 180, tracked: true }, // Below spec
     { consumption: 240, tracked: true }, // Within spec
     { consumption: 20, tracked: false }, // Untracked
@@ -41,12 +41,11 @@ const WaterConsumptionCard: React.FC<WaterConsumptionCardProps> = () => {
   const maxConsumption = Math.max(...mockData.map((d) => d.consumption));
   const chartMax = Math.max(upperBound * 1.2, maxConsumption * 1.1);
 
-  // Determine bar color based on consumption
-  const getBarColor = (consumption: number): string => {
-    if (consumption < lowerBound) return 'var(--color-warning)';
-    if (consumption > upperBound) return 'var(--color-water-light)';
-    return 'var(--color-water)';
-  };
+  // Transform data for MetricBarChart
+  const chartData = mockData.map((day) => ({
+    value: day.consumption,
+    tracked: day.tracked,
+  }));
 
   return (
     <Card className="water-consumption-card">
@@ -54,56 +53,13 @@ const WaterConsumptionCard: React.FC<WaterConsumptionCardProps> = () => {
         <GlassWater style={{ marginRight: 'auto' }} />
         <span className="consumption-value">{todayConsumption} ml</span>
       </CardHeader>
-      <CardContent noPadding>
-        <div className="water-chart">
-          {/* Reference lines */}
-          <div
-            className="reference-line upper"
-            style={{
-              bottom: `${(upperBound / chartMax) * 100}%`,
-            }}
-          />
-          <div
-            className="reference-line lower"
-            style={{
-              bottom: `${(lowerBound / chartMax) * 100}%`,
-            }}
-          />
-
-          {/* Bars */}
-          <div className="bars-container">
-            {mockData.map((day, index) => {
-              const heightPercent = day.tracked
-                ? (day.consumption / chartMax) * 100
-                : 100; // Untracked days show at 100% height
-
-              if (!day.tracked) {
-                // Untracked day - show diagonal stripes
-                return (
-                  <div
-                    key={index}
-                    className="bar untracked"
-                    style={{
-                      height: `${heightPercent}%`,
-                    }}
-                  />
-                );
-              }
-
-              // Normal tracked day
-              return (
-                <div
-                  key={index}
-                  className="bar"
-                  style={{
-                    height: `${heightPercent}%`,
-                    backgroundColor: getBarColor(day.consumption),
-                  }}
-                />
-              );
-            })}
-          </div>
-        </div>
+      <CardContent>
+        <MetricBarChart
+          data={chartData}
+          maxValue={chartMax}
+          lowerBound={lowerBound}
+          upperBound={upperBound}
+        />
       </CardContent>
     </Card>
   );

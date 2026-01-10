@@ -105,10 +105,9 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({ petId }) => {
       <Card className="weight-trend-card">
         <CardHeader>
           <Scale style={{ marginRight: 'auto' }} />
-          <ArrowRight className={cn('trend-icon')} />
           <span className="weight-value">-.-- kg</span>
         </CardHeader>
-        <CardContent noPadding>
+        <CardContent noPadding empty>
           <p>{t('overview.no_weight_data')}</p>
         </CardContent>
       </Card>

@@ -74,14 +74,18 @@ const CardAction = React.forwardRef<
 
 interface CardContentProps extends React.ComponentProps<'div'> {
   noPadding?: boolean;
+  empty?: boolean;
 }
 
 const CardContent = React.forwardRef<HTMLDivElement, CardContentProps>(
-  ({ className, noPadding, ...props }, ref) => {
+  ({ className, noPadding, empty, ...props }, ref) => {
     return (
       <div
         data-slot="card-content"
-        className={cn('card-content', className, { 'no-padding': noPadding })}
+        className={cn('card-content', className, {
+          'no-padding': noPadding,
+          empty,
+        })}
         ref={ref}
         {...props}
       />
