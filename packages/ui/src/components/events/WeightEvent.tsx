@@ -7,12 +7,16 @@ import type { EventComponentProps } from './types';
 import EventPet from './meta/EventPet';
 import EventVerified from './meta/EventVerified';
 
-const WeightEvent: React.FC<EventComponentProps> = ({ event, children }) => {
+const WeightEvent: React.FC<EventComponentProps> = ({
+  event,
+  children,
+  onClick,
+}) => {
   const { t } = useTranslation();
   const { data } = event;
 
   return (
-    <Timeline.Item>
+    <Timeline.Item onClick={onClick}>
       <Timeline.Icon variant="primary">
         <Weight />
       </Timeline.Icon>

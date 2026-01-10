@@ -8,7 +8,11 @@ import EventDuration from './meta/EventDuration';
 import EventPet from './meta/EventPet';
 import EventVerified from './meta/EventVerified';
 
-const LitterboxEvent: React.FC<EventComponentProps> = ({ event, children }) => {
+const LitterboxEvent: React.FC<EventComponentProps> = ({
+  event,
+  children,
+  onClick,
+}) => {
   const { t } = useTranslation();
   const { data } = event;
 
@@ -33,7 +37,10 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({ event, children }) => {
   }, [data.elimination_type, t]);
 
   return (
-    <Timeline.Item variant={variant === 'danger' ? 'warning' : 'default'}>
+    <Timeline.Item
+      onClick={onClick}
+      variant={variant === 'danger' ? 'warning' : 'default'}
+    >
       <Timeline.Icon variant={variant}>
         <Toilet />
       </Timeline.Icon>

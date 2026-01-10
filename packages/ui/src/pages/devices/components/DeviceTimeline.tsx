@@ -99,9 +99,10 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
               events.data
                 .filter((e) => e.data.type !== 'weight_measurement')
                 .map((event) => (
-                  <div onClick={() => handleEventClick(event)} key={event.id}>
-                    <EventTimelineItem event={event} />
-                  </div>
+                  <EventTimelineItem
+                    onClick={() => handleEventClick(event)}
+                    event={event}
+                  />
                 ))}
           </Timeline>
         )}

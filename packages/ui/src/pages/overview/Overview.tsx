@@ -14,12 +14,17 @@ import type { DateRange } from '@/lib/utils';
 import WeightTrendCard from '@/pages/overview/components/WeightTrendCard';
 import WaterConsumptionCard from '@/pages/overview/components/WaterConsumptionCard';
 import FoodIntakeCard from '@/pages/overview/components/FoodIntakeCard';
+import EventDetailsModal from '@/components/events/EventDetailsModal';
 
 import './Overview.css';
+import type { GetEventDTO } from 'shared';
 
 const Overview: React.FC = () => {
   const { t } = useTranslation();
   const { selectedPet } = usePetContext();
+  const [selectedEvent, setSelectedEvent] = React.useState<GetEventDTO | null>(
+    null,
+  );
 
   const getTodayString = () => new Date().toISOString().split('T')[0];
 
@@ -61,6 +66,14 @@ const Overview: React.FC = () => {
       endDate: dateStr,
       type: 'day',
     });
+  };
+
+  const handleEventClick = (event: GetEventDTO) => {
+    setSelectedEvent(event);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedEvent(null);
   };
 
   const {
@@ -116,11 +129,19 @@ const Overview: React.FC = () => {
             {eventsData?.data
               .filter((ev) => ev.data.type !== 'weight_measurement')
               .map((event) => (
-                <EventTimelineItem key={event.id} event={event} />
+                <EventTimelineItem
+                  onClick={() => handleEventClick(event)}
+                  event={event}
+                />
               ))}
           </Timeline>
         </div>
       </section>
+      <EventDetailsModal
+        isOpen={selectedEvent !== null}
+        event={selectedEvent}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };

@@ -7,12 +7,16 @@ import EventDuration from './meta/EventDuration';
 import EventPet from './meta/EventPet';
 import EventVerified from './meta/EventVerified';
 
-const GenericEvent: React.FC<EventComponentProps> = ({ event, children }) => {
+const GenericEvent: React.FC<EventComponentProps> = ({
+  event,
+  children,
+  onClick,
+}) => {
   const { data } = event;
   const hasType = data && data.type;
 
   return (
-    <Timeline.Item>
+    <Timeline.Item onClick={onClick}>
       <Timeline.Icon>{hasType ? <Clock /> : <AlertTriangle />}</Timeline.Icon>
       <Timeline.Content>
         <Timeline.Header>

@@ -4,4 +4,5 @@ import type { ReactNode } from 'react';
 export interface EventComponentProps {
   event: GetEventDTO;
   children?: ReactNode;
+  onClick?: () => void;
 }
