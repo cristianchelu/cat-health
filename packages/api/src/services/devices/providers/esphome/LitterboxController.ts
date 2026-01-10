@@ -3,8 +3,22 @@ import {
   EspHomeClient,
   LogLevel,
 } from 'esphome-client';
+import { sql } from 'kysely';
 import type { DeviceStatus, EntityDTO } from 'shared';
+import type { NewEvent } from '../../../../database/types/EventTable.ts';
 import type { DeviceController, ProviderDeps, Device } from '../../types.ts';
+
+const MAINTENANCE_THRESHOLD = -20;
+const NO_ELIMINATION_THRESHOLD = 10;
+
+const SENSORS = {
+  ACTIVITY: 'activity',
+  TARED_WEIGHT: 'tared_weight',
+  WASTE_WEIGHT: 'waste_weight',
+  LITTER_REMAINING: 'litter_remaining',
+  DEEP_CLEAN_TIMER: 'deep_clean_timer',
+  VISITS: 'visits_since_clean',
+} as const;
 
 interface LitterboxConfig {
   host: string;
@@ -13,8 +27,24 @@ interface LitterboxConfig {
   clientId?: string;
 }
 
-interface LitterboxState {
-  // Add litterbox-specific state properties here
+interface RawMeasurement {
+  timestamp: Date;
+  weight: number;
+}
+
+interface EventSession {
+  startTime: Date;
+  endTime?: Date;
+  measurements: RawMeasurement[];
+}
+
+interface ContextData {
+  wasteWeight: number;
+  litterRemaining: number;
+  deepCleanTimer: number;
+  totalVisits: number;
+  daysSinceLitterReplaced: number;
+  hoursSinceLastScoop: number;
 }
 
 export class LitterboxController implements DeviceController {
@@ -24,11 +54,13 @@ export class LitterboxController implements DeviceController {
   private status: DeviceStatus = 'unknown';
   private device: Device;
   private deps: ProviderDeps;
-  private state: LitterboxState = {
+  private state: Record<string, unknown> = {
     // Initialize state properties
   };
   private sensorValues: Map<string, unknown> = new Map();
   private entityDefinitions: Map<number, EspHomeEntity> = new Map();
+  private nameToId: Map<string, string> = new Map();
+  private currentSession: EventSession | null = null;
 
   constructor(device: Device, deps: ProviderDeps) {
     console.log('Initializing LitterboxController for device:', device.name);
@@ -76,11 +108,25 @@ export class LitterboxController implements DeviceController {
 
       for (const entity of data) {
         this.entityDefinitions.set(entity.key, entity);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ent = entity as any;
+        if (ent.objectId) {
+          const objectId = ent.objectId;
+          this.nameToId.set(ent.name, objectId);
+          console.log(`[Litterbox] Mapped '${ent.name}' to '${objectId}'`);
+        } else {
+          console.log(
+            `[Litterbox] Entity '${ent.name}' has no objectId`,
+            entity,
+          );
+        }
       }
     });
 
     this.client.on('sensor', ({ entity, state }) => {
-      this.sensorValues.set(this.getEntityId(entity), state);
+      const id = this.getEntityId(entity);
+      this.sensorValues.set(id, state);
+      this.handleSensorUpdate(id, state);
     });
 
     this.client.on('number', ({ entity, state }) => {
@@ -92,10 +138,427 @@ export class LitterboxController implements DeviceController {
     });
 
     this.client.on('binary_sensor', ({ entity, state }) => {
-      // Update generic entities map
+      console.log('[Litterbox] Binary sensor update:', entity, state);
       const id = this.getEntityId(entity);
       this.sensorValues.set(id, state);
+      this.handleSensorUpdate(id, state);
     });
+  }
+
+  private handleSensorUpdate(id: string, state: unknown) {
+    // console.log(`[Litterbox] Sensor update: ${id} = ${state}`);
+
+    // Handle activity changes
+    if (id === SENSORS.ACTIVITY) {
+      const isActive = state === true || state === 1;
+      console.log(`[Litterbox] Activity changed: ${isActive}`);
+
+      if (isActive && !this.currentSession) {
+        this.startSession();
+      } else if (!isActive && this.currentSession) {
+        this.endSession();
+      }
+    }
+
+    // Collect measurements during active session
+    if (this.currentSession) {
+      if (id === SENSORS.TARED_WEIGHT) {
+        const taredWeight = this.sensorValues.get(
+          SENSORS.TARED_WEIGHT,
+        ) as number;
+
+        if (typeof taredWeight === 'number') {
+          const weightGrams = taredWeight * 1000;
+          console.log(
+            `[Litterbox] Added measurement: ${weightGrams}g at ${new Date().toISOString()}`,
+          );
+          this.currentSession.measurements.push({
+            timestamp: new Date(),
+            weight: weightGrams,
+          });
+        }
+      }
+    }
+  }
+
+  private startSession() {
+    console.log(`Starting litterbox session for ${this.device.name}`);
+    this.currentSession = {
+      startTime: new Date(),
+      measurements: [],
+    };
+  }
+
+  private async endSession() {
+    if (!this.currentSession) return;
+
+    console.log(`Ending litterbox session for ${this.device.name}`);
+    this.currentSession.endTime = new Date();
+
+    const session = this.currentSession;
+    this.currentSession = null;
+
+    // Process the session
+    await this.processSession(session);
+  }
+
+  private async processSession(session: EventSession) {
+    try {
+      if (!session.endTime) return;
+
+      const duration = session.endTime.getTime() - session.startTime.getTime();
+      console.log(
+        `[Litterbox] Processing session: duration=${duration}ms, measurements=${session.measurements.length}`,
+      );
+
+      if (duration < 10000) {
+        console.log(`[Litterbox] Ignoring short session (${duration}ms)`);
+        return;
+      }
+
+      if (session.measurements.length === 0) {
+        console.log('[Litterbox] No measurements collected during session');
+        return;
+      }
+
+      // Use final tared weight as elimination weight
+      let finalTaredWeightKg = this.sensorValues.get(
+        SENSORS.TARED_WEIGHT,
+      ) as number;
+
+      if (typeof finalTaredWeightKg !== 'number') {
+        if (session.measurements.length > 0) {
+          finalTaredWeightKg =
+            session.measurements[session.measurements.length - 1].weight / 1000;
+          console.log(
+            `[Litterbox] Using last measurement as final weight: ${finalTaredWeightKg}kg`,
+          );
+        } else {
+          console.log('[Litterbox] Missing final weight reading');
+          return;
+        }
+      }
+
+      const finalTared = finalTaredWeightKg * 1000;
+      console.log(`[Litterbox] Final tared weight: ${finalTared}g`);
+
+      const eliminationWeight = finalTared;
+      const measurements = session.measurements;
+
+      // Get context data
+      const contextData = this.getContextData();
+      console.log('[Litterbox] Context data:', contextData);
+
+      // Encode raw data
+      const rawData = this.encodeRawData(
+        session.startTime,
+        measurements,
+        contextData || undefined,
+      );
+
+      if (eliminationWeight < MAINTENANCE_THRESHOLD) {
+        // Maintenance event
+        console.log(
+          `Detected maintenance event at ${session.startTime.toISOString()}: ${eliminationWeight}g`,
+        );
+
+        const event: NewEvent = {
+          pet_id: null,
+          device_id: this.deviceId,
+          timestamp: session.startTime,
+          data: {
+            type: 'litterbox_maintenance',
+            maintenance_type: 'scoop',
+          },
+          raw_data: rawData,
+          human_verified: false,
+        };
+
+        await this.deps.db.insertInto('event').values(event).execute();
+      } else {
+        // Use event
+        const petId = await this.determinePetId(
+          measurements,
+          session.startTime,
+        );
+
+        let eliminationType:
+          | 'urination'
+          | 'defecation'
+          | 'both'
+          | 'no_elimination'
+          | 'unknown';
+        if (eliminationWeight < NO_ELIMINATION_THRESHOLD) {
+          eliminationType = 'no_elimination';
+        } else {
+          eliminationType = 'unknown';
+        }
+
+        const event: NewEvent = {
+          pet_id: petId,
+          device_id: this.deviceId,
+          timestamp: session.startTime,
+          data: {
+            type: 'litterbox_use',
+            elimination_type: eliminationType,
+            elimination_weight: Math.round(Math.max(0, eliminationWeight)),
+            duration,
+          },
+          raw_data: rawData,
+          human_verified: false,
+        };
+
+        await this.deps.db.insertInto('event').values(event).execute();
+        console.log(
+          `Recorded litterbox use event for pet ${petId || 'unknown'}`,
+        );
+      }
+    } catch (error) {
+      console.error('Error processing session:', error);
+    }
+  }
+
+  private getContextData(): ContextData | null {
+    const wasteWeight =
+      (this.sensorValues.get(SENSORS.WASTE_WEIGHT) as number) || 0;
+    const litterRemaining =
+      ((this.sensorValues.get(SENSORS.LITTER_REMAINING) as number) || 0) * 1000; // kg to g
+    const deepCleanTimer =
+      (this.sensorValues.get(SENSORS.DEEP_CLEAN_TIMER) as number) || 0;
+    const totalVisits = (this.sensorValues.get(SENSORS.VISITS) as number) || 0;
+
+    // Derived metrics
+    const daysSinceLitterReplaced = Math.max(
+      0,
+      Math.round(30 - deepCleanTimer),
+    );
+
+    // We don't have easy access to "last scoop time" without querying DB or keeping state.
+    // For now, we'll set hoursSinceLastScoop to 0 or try to estimate if we want.
+    // The migrator queried InfluxDB for last time waste was 0.
+    // We can skip this for now or implement it later.
+    const hoursSinceLastScoop = 0;
+
+    return {
+      wasteWeight,
+      litterRemaining,
+      deepCleanTimer,
+      totalVisits,
+      daysSinceLitterReplaced,
+      hoursSinceLastScoop,
+    };
+  }
+
+  private async determinePetId(
+    measurements: RawMeasurement[],
+    eventTimestamp: Date,
+  ): Promise<number | null> {
+    // Calculate median weight during event
+    const weights = measurements.map((m) => m.weight).sort((a, b) => a - b);
+    const median = weights[Math.floor(weights.length / 2)];
+
+    // Query latest weight measurements for all pets before this event
+    const latestWeights = await this.getLatestPetWeights(eventTimestamp);
+
+    if (latestWeights.size === 0) {
+      console.log(
+        `[Litterbox] No weight measurements found before ${eventTimestamp.toISOString()}, cannot determine pet`,
+      );
+      return null;
+    }
+
+    console.log(`[Litterbox] Determining pet for median weight: ${median}g`);
+    console.log(
+      `[Litterbox] Latest pet weights:`,
+      Object.fromEntries(latestWeights),
+    );
+
+    // Find closest cat weight within 10% margin
+    let closestPetId: number | null = null;
+    let minDiff = Infinity;
+    const marginPercent = 0.1; // 10% margin
+
+    for (const [petId, catWeight] of latestWeights) {
+      const diff = Math.abs(median - catWeight);
+      const margin = catWeight * marginPercent;
+
+      console.log(
+        `[Litterbox] Checking pet ${petId} (weight: ${catWeight}g), diff: ${diff}g, margin: ${margin}g`,
+      );
+
+      // Only consider this pet if within the 10% margin
+      if (diff <= margin && diff < minDiff) {
+        minDiff = diff;
+        closestPetId = petId;
+      }
+    }
+
+    if (closestPetId === null) {
+      console.log(
+        `No cat found within 10% margin for median weight ${median}g`,
+      );
+    } else {
+      const catWeight = latestWeights.get(closestPetId)!;
+      console.log(
+        `Identified cat ${closestPetId} (weight: ${catWeight}g) for median ${median}g`,
+      );
+    }
+
+    return closestPetId;
+  }
+
+  private async getLatestPetWeights(
+    beforeTimestamp: Date,
+  ): Promise<Map<number, number>> {
+    const latestWeights = new Map<number, number>();
+
+    // Query latest weight measurement for each pet before the given timestamp
+    const weightEvents = await this.deps.db
+      .selectFrom('event')
+      .select(['pet_id', 'data', 'timestamp'])
+      .where('timestamp', '<', beforeTimestamp)
+      .where('pet_id', 'is not', null)
+      .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+      .orderBy('timestamp', 'desc')
+      .execute();
+
+    // Group by pet_id and take the latest weight for each pet
+    const petLatestWeights = new Map<
+      number,
+      { weight: number; timestamp: Date }
+    >();
+
+    for (const event of weightEvents) {
+      if (event.pet_id !== null) {
+        const petId = event.pet_id;
+        const eventData = event.data;
+
+        if (
+          eventData.type === 'weight_measurement' &&
+          typeof eventData.weight === 'number'
+        ) {
+          // Only keep this weight if we haven't seen a more recent one for this pet
+          if (
+            !petLatestWeights.has(petId) ||
+            event.timestamp > petLatestWeights.get(petId)!.timestamp
+          ) {
+            petLatestWeights.set(petId, {
+              weight: eventData.weight,
+              timestamp: event.timestamp,
+            });
+          }
+        }
+      }
+    }
+
+    // Convert to simple pet_id -> weight mapping
+    for (const [petId, data] of petLatestWeights) {
+      latestWeights.set(petId, data.weight);
+    }
+
+    return latestWeights;
+  }
+
+  private encodeRawData(
+    startTime: Date,
+    measurements: RawMeasurement[],
+    context?: ContextData,
+  ): Buffer {
+    // Binary encoding format v1: [version:1byte][startTimestamp:8bytes][context:10bytes][count:4bytes][weights:count*2bytes]
+    // Context format: [wasteWeight:2bytes][litterRemaining:2bytes][deepCleanTimer:1byte][totalVisits:1byte][daysSinceLitterReplaced:1byte][hoursSinceLastScoop:1byte][reserved:2bytes]
+    const version = 1;
+    const count = measurements.length;
+    const buffer = Buffer.allocUnsafe(1 + 8 + 10 + 4 + count * 2);
+
+    let offset = 0;
+    buffer.writeUInt8(version, offset);
+    offset += 1;
+
+    buffer.writeBigUInt64BE(BigInt(startTime.getTime()), offset);
+    offset += 8;
+
+    // Context data (10 bytes total) - use max values to indicate null
+    if (context) {
+      // Waste weight: 0-2048g fits in uint16
+      const wasteWeight = Math.min(
+        65534,
+        Math.max(0, Math.round(context.wasteWeight)),
+      );
+      buffer.writeUInt16BE(wasteWeight, offset);
+      offset += 2;
+
+      // Litter remaining: 0-50kg (50000g) fits in uint16
+      const litterRemaining = Math.min(
+        65534,
+        Math.max(0, Math.round(context.litterRemaining)),
+      );
+      buffer.writeUInt16BE(litterRemaining, offset);
+      offset += 2;
+
+      // Deep clean timer: 0-255 hours fits in uint8
+      const deepCleanTimer = Math.min(
+        254,
+        Math.max(0, Math.round(context.deepCleanTimer)),
+      );
+      buffer.writeUInt8(deepCleanTimer, offset);
+      offset += 1;
+
+      // Total visits: 0-255 fits in uint8
+      const totalVisits = Math.min(
+        254,
+        Math.max(0, Math.round(context.totalVisits)),
+      );
+      buffer.writeUInt8(totalVisits, offset);
+      offset += 1;
+
+      // Days since litter replaced: 0-254 days fits in uint8
+      const daysSinceLitterReplaced = Math.min(
+        254,
+        Math.max(0, Math.round(context.daysSinceLitterReplaced)),
+      );
+      buffer.writeUInt8(daysSinceLitterReplaced, offset);
+      offset += 1;
+
+      // Hours since last scoop: 0-254 hours fits in uint8
+      const hoursSinceLastScoop = Math.min(
+        254,
+        Math.max(0, Math.round(context.hoursSinceLastScoop)),
+      );
+      buffer.writeUInt8(hoursSinceLastScoop, offset);
+      offset += 1;
+    } else {
+      // No context - fill with max values (null indicators)
+      buffer.writeUInt16BE(65535, offset); // wasteWeight null
+      offset += 2;
+      buffer.writeUInt16BE(65535, offset); // litterRemaining null
+      offset += 2;
+      buffer.writeUInt8(255, offset); // deepCleanTimer null
+      offset += 1;
+      buffer.writeUInt8(255, offset); // totalVisits null
+      offset += 1;
+      buffer.writeUInt8(255, offset); // daysSinceLitterReplaced null
+      offset += 1;
+      buffer.writeUInt8(255, offset); // hoursSinceLastScoop null
+      offset += 1;
+    }
+
+    // Reserved space for future use
+    buffer.writeUInt16BE(0, offset);
+    offset += 2;
+
+    buffer.writeUInt32BE(count, offset);
+    offset += 4;
+
+    // Store tared weights
+    for (const measurement of measurements) {
+      const weight = Math.round(measurement.weight);
+      // Clamp to int16 range
+      const clampedWeight = Math.max(-32768, Math.min(32767, weight));
+      buffer.writeInt16BE(clampedWeight, offset);
+      offset += 2;
+    }
+
+    return buffer;
   }
 
   async connect(): Promise<void> {
@@ -117,7 +580,14 @@ export class LitterboxController implements DeviceController {
   }
 
   private getEntityId(name: string): string {
-    return name.toLowerCase().replace(/\s+/g, '_');
+    if (this.nameToId.has(name)) {
+      return this.nameToId.get(name)!;
+    }
+    const normalized = name.toLowerCase().replace(/\s+/g, '_');
+    console.log(
+      `[Litterbox] ID lookup failed for '${name}', using normalized '${normalized}'`,
+    );
+    return normalized;
   }
 
   private mapToEntityDTO(def: EspHomeEntity): EntityDTO {

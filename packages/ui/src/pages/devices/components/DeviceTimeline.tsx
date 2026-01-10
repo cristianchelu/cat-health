@@ -8,6 +8,8 @@ import { useDeviceEvents } from '@/hooks/queries/deviceQueries';
 import { EventTimelineItem } from '@/components/events';
 import { dateToTimeRange } from '@/lib/utils';
 import './DeviceTimeline.css';
+import EventDetailsModal from '@/components/events/EventDetailsModal';
+import type { GetEventDTO } from 'shared';
 
 interface DeviceTimelineProps {
   deviceId: number;
@@ -16,6 +18,9 @@ interface DeviceTimelineProps {
 const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
   const getTodayString = () => new Date().toISOString().split('T')[0];
   const [currentDate, setCurrentDate] = React.useState<string>(getTodayString);
+  const [selectedEvent, setSelectedEvent] = React.useState<GetEventDTO | null>(
+    null,
+  );
 
   const { startTime, endTime } = React.useMemo(() => {
     return dateToTimeRange(currentDate);
@@ -35,6 +40,14 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
 
   const handleReset = () => {
     setCurrentDate(getTodayString());
+  };
+
+  const handleEventClick = (event: GetEventDTO) => {
+    setSelectedEvent(event);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedEvent(null);
   };
 
   const {
@@ -86,11 +99,18 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
               events.data
                 .filter((e) => e.data.type !== 'weight_measurement')
                 .map((event) => (
-                  <EventTimelineItem key={event.id} event={event} />
+                  <div onClick={() => handleEventClick(event)} key={event.id}>
+                    <EventTimelineItem event={event} />
+                  </div>
                 ))}
           </Timeline>
         )}
       </div>
+      <EventDetailsModal
+        isOpen={selectedEvent !== null}
+        event={selectedEvent}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };

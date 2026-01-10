@@ -12,6 +12,7 @@ import {
   WeightTrendParamsSchema,
   WeightTrendQuerySchema,
   WeightTrendsResponseSchema,
+  GetEventMediaResponseSchema,
 } from 'shared';
 
 import { type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
@@ -59,6 +60,43 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       });
 
       return trends;
+    },
+  );
+
+  fastify.get(
+    '/:eventId/media',
+    {
+      schema: {
+        params: PatchEventParamsSchema,
+        response: {
+          '200': GetEventMediaResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { eventId } = request.params;
+
+      const media = await db
+        .selectFrom('media_link')
+        .innerJoin('media', 'media.id', 'media_link.media_id')
+        .where('media_link.entity_type', '=', 'event')
+        .where('media_link.entity_id', '=', String(eventId))
+        .select([
+          'media.id',
+          'media.created_at',
+          'media.file_path',
+          'media.mime_type',
+          'media.file_size',
+          'media.description',
+          'media.metadata',
+        ])
+        .execute();
+
+      return media.map((m) => ({
+        ...m,
+        metadata:
+          typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata,
+      }));
     },
   );
 
