@@ -7,7 +7,6 @@ import { format } from 'date-fns';
 
 import { EventEmitter } from 'events';
 import { createWriteStream } from 'fs';
-import type { MediaService } from '../types.ts';
 import { type EventType } from '../../../database/types/EventTable.ts';
 import { generateOutputFilename } from '../../../helpers/events.ts';
 
@@ -55,10 +54,7 @@ interface QueuedEvent extends EventRequest {
  * This simplified version assumes the Node.js server and the camera
  * are operating in the SAME timezone.
  */
-export class CameraEventDownloader
-  extends EventEmitter
-  implements MediaService
-{
+export class CameraEventDownloader extends EventEmitter {
   private ssh: NodeSSH;
   private config: Required<CameraConfig>;
   private isConnected: boolean = false;
