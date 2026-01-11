@@ -7,8 +7,8 @@ import { format } from 'date-fns';
 
 import { EventEmitter } from 'events';
 import { createWriteStream } from 'fs';
-import { type EventType } from '../../../database/types/EventTable.ts';
 import { generateOutputFilename } from '../../../helpers/events.ts';
+import { type EventType } from 'shared';
 
 const execAsync = promisify(exec);
 

@@ -1,11 +1,5 @@
 import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
-
-export type EventType =
-  | 'weight_measurement'
-  | 'water_intake'
-  | 'litterbox_use'
-  | 'food_intake'
-  | 'litterbox_maintenance';
+import { LitterboxUseEliminationType } from 'shared';
 
 export interface WeightMeasurementEventData {
   type: 'weight_measurement';
@@ -17,13 +11,6 @@ export interface WaterIntakeEventData {
   amount: number;
   duration?: number;
 }
-
-export type LitterboxUseEliminationType =
-  | 'urination'
-  | 'defecation'
-  | 'both'
-  | 'no_elimination'
-  | 'unknown';
 
 export interface LitterboxUseEventData {
   type: 'litterbox_use';

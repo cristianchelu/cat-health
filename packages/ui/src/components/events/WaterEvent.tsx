@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Droplets } from 'lucide-react';
+import { GlassWater } from 'lucide-react';
 import { format } from 'date-fns';
 import Timeline from '@/components/ui/Timeline';
 import type { EventComponentProps } from './types';
@@ -17,9 +17,16 @@ const WaterEvent: React.FC<EventComponentProps> = ({
   const { data } = event;
 
   return (
-    <Timeline.Item onClick={onClick}>
+    <Timeline.Item
+      onClick={onClick}
+      style={
+        {
+          '--timeline-icon-color': 'var(--color-primary)',
+        } as React.CSSProperties
+      }
+    >
       <Timeline.Icon variant="primary">
-        <Droplets />
+        <GlassWater />
       </Timeline.Icon>
       <Timeline.Content>
         <Timeline.Header>

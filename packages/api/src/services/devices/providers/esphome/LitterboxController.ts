@@ -4,7 +4,11 @@ import {
   LogLevel,
 } from 'esphome-client';
 import { sql } from 'kysely';
-import type { DeviceStatus, EntityDTO } from 'shared';
+import type {
+  DeviceStatus,
+  EntityDTO,
+  LitterboxUseEliminationType,
+} from 'shared';
 import type { NewEvent } from '../../../../database/types/EventTable.ts';
 import type { DeviceController, ProviderDeps, Device } from '../../types.ts';
 
@@ -282,12 +286,7 @@ export class LitterboxController implements DeviceController {
           session.startTime,
         );
 
-        let eliminationType:
-          | 'urination'
-          | 'defecation'
-          | 'both'
-          | 'no_elimination'
-          | 'unknown';
+        let eliminationType: LitterboxUseEliminationType;
         if (eliminationWeight < NO_ELIMINATION_THRESHOLD) {
           eliminationType = 'no_elimination';
         } else {

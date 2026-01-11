@@ -3,6 +3,7 @@
   --timeline-line-color: var(--color-border);
   --timeline-item-padding-y: var(--space-sm);
   --timeline-line-gap: 4px;
+  --timeline-icon-color: var(--color-text-muted);
 
   .timeline-body {
     display: flex;
@@ -84,33 +85,6 @@
     &:last-child {
       padding-bottom: var(--card-padding);
     }
-
-    /* Warning state - dot indicator */
-    &.timeline-item-warning .timeline-icon::after {
-      content: '';
-      position: absolute;
-      left: -6px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 8px;
-      height: 8px;
-      border-radius: var(--radius-full);
-      background-color: var(--color-warning);
-      box-shadow: 0 0 0 2px var(--color-surface);
-    }
-
-    &.timeline-item-danger .timeline-icon::after {
-      content: '';
-      position: absolute;
-      left: -6px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 8px;
-      height: 8px;
-      border-radius: var(--radius-full);
-      background-color: var(--color-error);
-      box-shadow: 0 0 0 2px var(--color-surface);
-    }
   }
 
   .timeline-icon {
@@ -119,8 +93,8 @@
     width: var(--timeline-icon-size);
     height: var(--timeline-icon-size);
     border-radius: var(--radius-full);
-    background-color: var(--color-surface-muted);
-    color: var(--color-text-muted);
+    background-color: rgba(from var(--timeline-icon-color) r g b / 0.15);
+    color: var(--timeline-icon-color);
     font-size: var(--text-base);
     flex-shrink: 0;
     position: relative;
@@ -129,26 +103,6 @@
       width: 16px;
       height: 16px;
     }
-  }
-
-  .timeline-icon-primary {
-    background-color: rgba(from var(--color-primary) r g b / 0.15);
-    color: var(--color-primary);
-  }
-
-  .timeline-icon-success {
-    background-color: rgba(from var(--color-success) r g b / 0.15);
-    color: var(--color-success);
-  }
-
-  .timeline-icon-warning {
-    background-color: rgba(from var(--color-warning) r g b / 0.15);
-    color: var(--color-warning);
-  }
-
-  .timeline-icon-danger {
-    background-color: rgba(from var(--color-error) r g b / 0.15);
-    color: var(--color-error);
   }
 
   .timeline-content {

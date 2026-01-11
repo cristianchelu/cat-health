@@ -1,12 +1,30 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Toilet } from 'lucide-react';
+import { Droplets, Gift, Toilet } from 'lucide-react';
 import { format } from 'date-fns';
 import Timeline from '@/components/ui/Timeline';
 import type { EventComponentProps } from './types';
 import EventDuration from './meta/EventDuration';
 import EventPet from './meta/EventPet';
 import EventVerified from './meta/EventVerified';
+import PoopIcon from '../icons/PoopIcon';
+import type { LitterboxUseEliminationType } from 'shared';
+
+const ICON_MAP: Record<LitterboxUseEliminationType, React.ElementType> = {
+  urination: Droplets,
+  defecation: PoopIcon,
+  both: Gift,
+  no_elimination: Toilet,
+  unknown: Toilet,
+};
+
+const COLOR_MAP: Record<LitterboxUseEliminationType, string> = {
+  urination: '#FFA500',
+  defecation: '#8B4513',
+  both: 'var(--color-warning)',
+  no_elimination: 'var(--color-error)',
+  unknown: 'var(--color-text-muted)',
+};
 
 const LitterboxEvent: React.FC<EventComponentProps> = ({
   event,
@@ -36,13 +54,15 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
     }
   }, [data.elimination_type, t]);
 
+  const Icon = ICON_MAP[data.elimination_type] || Toilet;
+  const style: React.CSSProperties = {
+    '--timeline-icon-color': COLOR_MAP[data.elimination_type],
+  };
+
   return (
-    <Timeline.Item
-      onClick={onClick}
-      variant={variant === 'danger' ? 'warning' : 'default'}
-    >
+    <Timeline.Item onClick={onClick} style={style}>
       <Timeline.Icon variant={variant}>
-        <Toilet />
+        <Icon />
       </Timeline.Icon>
       <Timeline.Content>
         <Timeline.Header>

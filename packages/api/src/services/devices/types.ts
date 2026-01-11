@@ -1,11 +1,10 @@
 import type { Kysely } from 'kysely';
-import type { DeviceStatus, DeviceType } from 'shared';
+import type { DeviceStatus, DeviceType, EventType } from 'shared';
 import type { Database } from '../../database/index.ts';
 import type { Device } from '../../database/types/DeviceTable.ts';
 import type { ProviderAccount } from '../../database/types/ProviderAccountTable.ts';
 import type { MediaManager, PendingMedia } from '../media/MediaManager.ts';
 import type { EventBus } from './EventBus.ts';
-import type { EventType } from '../../database/types/EventTable.ts';
 
 export type { Device, ProviderAccount };
 

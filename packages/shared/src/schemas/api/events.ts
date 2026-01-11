@@ -1,6 +1,28 @@
 import { Type, type Static } from "@fastify/type-provider-typebox";
 import { getPaginatedResponseSchema } from "./common.ts";
 
+export const EventTypeSchema = Type.Union([
+  Type.Literal("weight_measurement"),
+  Type.Literal("water_intake"),
+  Type.Literal("litterbox_use"),
+  Type.Literal("food_intake"),
+  Type.Literal("litterbox_maintenance"),
+]);
+export type EventType = Static<typeof EventTypeSchema>;
+
+export const LitterboxUseEliminationTypeSchema = Type.Union([
+  Type.Literal("urination"),
+  Type.Literal("defecation"),
+  Type.Literal("both"),
+  Type.Literal("no_elimination"),
+  Type.Literal("unknown"),
+]);
+
+export type LitterboxUseEliminationType =
+  Static<typeof LitterboxUseEliminationTypeSchema>;
+
+
+
 export const GetEventSchema = Type.Object({
   id: Type.Number(),
   pet_id: Type.Union([Type.Number(), Type.Null()]),
@@ -75,3 +97,24 @@ export const WeightTrendsResponseSchema = Type.Array(
   }),
 );
 export type WeightTrendsResponseDTO = Static<typeof WeightTrendsResponseSchema>;
+
+// Water trends
+export const WaterTrendParamsSchema = Type.Object({ petId: Type.Number() });
+export type WaterTrendParamsDTO = Static<typeof WaterTrendParamsSchema>;
+
+export const WaterTrendQuerySchema = Type.Object({
+  days: Type.Optional(Type.Number({ minimum: 1 })),
+});
+export type WaterTrendQueryDTO = Static<typeof WaterTrendQuerySchema>;
+
+export const WaterTrendsResponseSchema = Type.Array(
+  Type.Object({
+    date: Type.String(),
+    amount: Type.Number(),
+    tracked: Type.Boolean(),
+    lowerBound: Type.Number(),
+    upperBound: Type.Number(),
+    averageWeight: Type.Number(),
+  }),
+);
+export type WaterTrendsResponseDTO = Static<typeof WaterTrendsResponseSchema>;

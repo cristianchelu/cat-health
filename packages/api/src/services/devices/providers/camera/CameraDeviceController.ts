@@ -1,7 +1,6 @@
 import sharp from 'sharp';
-import type { DeviceStatus } from 'shared';
+import type { DeviceStatus, EventType } from 'shared';
 import type { Camera, ProviderDeps, Device } from '../../types.ts';
-import type { EventType } from '../../../../database/types/EventTable.ts';
 import type { PendingMedia } from '../../../media/MediaManager.ts';
 import { type Static, Type } from '@fastify/type-provider-typebox';
 
