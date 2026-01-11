@@ -10,6 +10,7 @@ import {
   getPetEvents,
   getPets,
   getPetWeightTrends,
+  getPetWaterTrends,
   updateEvent,
   getPet,
   createPet,
@@ -89,6 +90,13 @@ export function usePetWeightTrends(petId: number, days: number) {
   return useQuery({
     queryKey: ['weightTrends', petId, days],
     queryFn: () => getPetWeightTrends(petId, { days }),
+  });
+}
+
+export function usePetWaterTrends(petId: number, days: number) {
+  return useQuery({
+    queryKey: ['waterTrends', petId, days],
+    queryFn: () => getPetWaterTrends(petId, { days }),
   });
 }
 

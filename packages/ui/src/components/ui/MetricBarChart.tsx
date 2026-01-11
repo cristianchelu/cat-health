@@ -7,6 +7,8 @@ interface MetricBarChartProps extends React.ComponentProps<'div'> {
   data: Array<{
     value: number;
     tracked: boolean;
+    lowerBound?: number;
+    upperBound?: number;
   }>;
   maxValue: number;
   lowerBound?: number;
@@ -30,15 +32,18 @@ const MetricBarChart = React.forwardRef<HTMLDivElement, MetricBarChartProps>(
               );
             }
 
+            const currentLowerBound = day.lowerBound ?? lowerBound;
+            const currentUpperBound = day.upperBound ?? upperBound;
+
             // Calculate fill percentage relative to max value
             const fillPercent = (day.value / maxValue) * 100;
 
             // Calculate reference line positions if bounds are provided
-            const lowerLinePercent = lowerBound
-              ? (lowerBound / maxValue) * 100
+            const lowerLinePercent = currentLowerBound
+              ? (currentLowerBound / maxValue) * 100
               : undefined;
-            const upperLinePercent = upperBound
-              ? (upperBound / maxValue) * 100
+            const upperLinePercent = currentUpperBound
+              ? (currentUpperBound / maxValue) * 100
               : undefined;
 
             // Determine if fill is above each reference line
@@ -49,10 +54,13 @@ const MetricBarChart = React.forwardRef<HTMLDivElement, MetricBarChartProps>(
 
             // Calculate status based on bounds
             let status: 'below' | 'within' | 'above' | undefined;
-            if (lowerBound !== undefined && upperBound !== undefined) {
-              if (day.value < lowerBound) {
+            if (
+              currentLowerBound !== undefined &&
+              currentUpperBound !== undefined
+            ) {
+              if (day.value < currentLowerBound) {
                 status = 'below';
-              } else if (day.value > upperBound) {
+              } else if (day.value > currentUpperBound) {
                 status = 'above';
               } else {
                 status = 'within';

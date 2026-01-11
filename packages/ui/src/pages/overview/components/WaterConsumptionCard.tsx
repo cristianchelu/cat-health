@@ -1,50 +1,67 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { GlassWater } from 'lucide-react';
+import { GlassWater, Loader } from 'lucide-react';
 import MetricBarChart from '@/components/ui/MetricBarChart';
+import { usePetWaterTrends } from '@/hooks/queries/petQueries';
 
 import './WaterConsumptionCard.css';
-
-interface DayData {
-  consumption: number; // ml consumed
-  tracked: boolean; // false for untracked days
-}
 
 interface WaterConsumptionCardProps {
   petId: number;
 }
 
-const WaterConsumptionCard: React.FC<WaterConsumptionCardProps> = () => {
-  // Mock data for 7 days
-  // Assuming a 5kg cat: lower bound = 200ml (40ml/kg), upper bound = 300ml (60ml/kg)
-  const mockData: DayData[] = [
-    { consumption: 180, tracked: true }, // Below spec
-    { consumption: 240, tracked: true }, // Within spec
-    { consumption: 20, tracked: false }, // Untracked
-    { consumption: 220, tracked: true }, // Within spec
-    { consumption: 280, tracked: true }, // Within spec
-    { consumption: 250, tracked: true }, // Within spec
-    { consumption: 240, tracked: true }, // Within spec (today)
-  ];
+const WaterConsumptionCard: React.FC<WaterConsumptionCardProps> = ({
+  petId,
+}) => {
+  const { t } = useTranslation();
+  const { data: waterData, isLoading, error } = usePetWaterTrends(petId, 7);
 
-  // Mock cat weight (kg) - in real implementation, this would come from petId
-  const catWeight = 5;
-  const lowerBound = catWeight * 40; // 200ml
-  const upperBound = catWeight * 60; // 300ml
+  if (isLoading) {
+    return (
+      <Card className="water-consumption-card">
+        <CardHeader>
+          <GlassWater style={{ marginRight: 'auto' }} />
+          <span className="consumption-value">--- ml</span>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-full">
+            <Loader className="animate-spin" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  // Calculate today's total
-  const todayConsumption = mockData[mockData.length - 1].tracked
-    ? mockData[mockData.length - 1].consumption
-    : 0;
+  if (error || !waterData || waterData.length === 0) {
+    return (
+      <Card className="water-consumption-card">
+        <CardHeader>
+          <GlassWater style={{ marginRight: 'auto' }} />
+          <span className="consumption-value">--- ml</span>
+        </CardHeader>
+        <CardContent empty>
+          <p>{t('overview.no_water_data')}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Calculate today's total (last item)
+  const todayData = waterData[waterData.length - 1];
+  const todayConsumption = todayData.tracked ? todayData.amount : 0;
 
   // Calculate max value for scaling (add 20% padding)
-  const maxConsumption = Math.max(...mockData.map((d) => d.consumption));
-  const chartMax = Math.max(upperBound * 1.2, maxConsumption * 1.1);
+  const maxConsumption = Math.max(...waterData.map((d) => d.amount));
+  const maxUpperBound = Math.max(...waterData.map((d) => d.upperBound));
+  const chartMax = Math.max(maxUpperBound * 1.2, maxConsumption * 1.1);
 
   // Transform data for MetricBarChart
-  const chartData = mockData.map((day) => ({
-    value: day.consumption,
+  const chartData = waterData.map((day) => ({
+    value: day.amount,
     tracked: day.tracked,
+    lowerBound: day.lowerBound,
+    upperBound: day.upperBound,
   }));
 
   return (
@@ -54,12 +71,7 @@ const WaterConsumptionCard: React.FC<WaterConsumptionCardProps> = () => {
         <span className="consumption-value">{todayConsumption} ml</span>
       </CardHeader>
       <CardContent>
-        <MetricBarChart
-          data={chartData}
-          maxValue={chartMax}
-          lowerBound={lowerBound}
-          upperBound={upperBound}
-        />
+        <MetricBarChart data={chartData} maxValue={chartMax} />
       </CardContent>
     </Card>
   );

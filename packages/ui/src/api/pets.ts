@@ -8,6 +8,8 @@ import type {
   GetPetResponseDTO,
   WeightTrendsResponseDTO,
   WeightTrendQueryDTO,
+  WaterTrendsResponseDTO,
+  WaterTrendQueryDTO,
   PostPetRequestDTO,
   PatchPetRequestDTO,
   DeletePetResponseDTO,
@@ -94,6 +96,19 @@ export async function getPetWeightTrends(
 ) {
   const { data } = await apiClient.get<WeightTrendsResponseDTO>(
     `/events/weight-trends/${petId}`,
+    {
+      params: query,
+    },
+  );
+  return data;
+}
+
+export async function getPetWaterTrends(
+  petId: number,
+  query: WaterTrendQueryDTO,
+) {
+  const { data } = await apiClient.get<WaterTrendsResponseDTO>(
+    `/events/water-trends/${petId}`,
     {
       params: query,
     },
