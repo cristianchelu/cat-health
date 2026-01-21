@@ -126,35 +126,60 @@ export class IntegrationManager implements DeviceDirectory {
   }
 
   async getLinkedCamera(deviceId: number): Promise<Camera | undefined> {
+    // Check for external linked camera first
     const link = await this.deps.db
       .selectFrom('device_camera')
       .where('device_id', '=', deviceId)
       .select(['camera_id', 'config'])
       .executeTakeFirst();
 
-    if (!link) return undefined;
+    if (link) {
+      // Use external linked camera
+      const controller = await this.instantiateController(link.camera_id);
+      if (controller && 'captureSnapshot' in controller) {
+        const camera = controller as unknown as Camera;
+        const config = link.config || {};
 
-    const controller = await this.instantiateController(link.camera_id);
-    if (controller && 'captureSnapshot' in controller) {
-      const camera = controller as unknown as Camera;
-      const config = link.config || {};
-
-      // Return a proxy that injects the config
-      return {
-        ...camera,
-        deviceId: camera.deviceId,
-        connect: camera.connect.bind(camera),
-        disconnect: camera.disconnect.bind(camera),
-        getStatus: camera.getStatus.bind(camera),
-        captureSnapshot: async (options) => {
-          return camera.captureSnapshot({
-            ...options,
-            crop: config.crop,
-            rotate: config.rotate,
-          });
-        },
-      };
+        // Return a proxy that injects the config
+        return {
+          ...camera,
+          deviceId: camera.deviceId,
+          connect: camera.connect.bind(camera),
+          disconnect: camera.disconnect.bind(camera),
+          getStatus: camera.getStatus.bind(camera),
+          captureSnapshot: async (options) => {
+            return camera.captureSnapshot({
+              ...options,
+              crop: config.crop,
+              rotate: config.rotate,
+            });
+          },
+        };
+      }
+      return undefined;
     }
+
+    // Fall back to integrated camera if no external link
+    const requestingController = await this.instantiateController(deviceId);
+    if (
+      requestingController &&
+      'captureSnapshot' in requestingController &&
+      'getSnapshotBuffer' in requestingController
+    ) {
+      const integratedCamera = requestingController as unknown as Camera;
+      // Check if integrated camera is available and enabled
+      const state = requestingController.getState?.();
+      if (
+        state &&
+        'hasCamera' in state &&
+        state.hasCamera &&
+        state.cameraStatus !== 'disabled' &&
+        state.cameraStatus !== 'none'
+      ) {
+        return integratedCamera;
+      }
+    }
+
     return undefined;
   }
 

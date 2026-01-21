@@ -331,25 +331,24 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .executeTakeFirst();
       if (!device) throw new Error('Device not found');
 
-      await db
-        .insertInto('device_camera')
-        .values({
-          device_id: id,
-          camera_id,
-          config: config ? (config as Record<string, unknown>) : null,
-        })
-        .onConflict((oc) =>
-          oc
-            .column('device_id')
-            .column('camera_id')
-            .doUpdateSet(() => ({
-              config: config ? (config as Record<string, unknown>) : null,
-            })),
-        )
-        .execute();
+      await db.transaction().execute(async (trx) => {
+        await trx
+          .deleteFrom('device_camera')
+          .where('device_id', '=', id)
+          .execute();
+
+        await trx
+          .insertInto('device_camera')
+          .values({
+            device_id: id,
+            camera_id,
+            config: config ? (config as Record<string, unknown>) : null,
+          })
+          .execute();
+      });
 
       return fastify
-        .inject({ method: 'GET', url: `/devices/${id}` })
+        .inject({ method: 'GET', url: `/api/devices/${id}` })
         .then((r) => JSON.parse(r.payload));
     },
   );
@@ -383,7 +382,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .execute();
 
       return fastify
-        .inject({ method: 'GET', url: `/devices/${id}` })
+        .inject({ method: 'GET', url: `/api/devices/${id}` })
         .then((r) => JSON.parse(r.payload));
     },
   );
@@ -405,7 +404,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('device_id', '=', id)
         .execute();
       return fastify
-        .inject({ method: 'GET', url: `/devices/${id}` })
+        .inject({ method: 'GET', url: `/api/devices/${id}` })
         .then((r) => JSON.parse(r.payload));
     },
   );

@@ -4,8 +4,14 @@ import {
   LogLevel,
   type SensorEvent,
 } from 'esphome-client';
-import type { DeviceStatus, EntityDTO } from 'shared';
-import type { DeviceController, ProviderDeps, Device } from '../../types.ts';
+import sharp from 'sharp';
+import type { DeviceStatus, EntityDTO, EventType } from 'shared';
+import type {
+  Camera,
+  DeviceController,
+  ProviderDeps,
+  Device,
+} from '../../types.ts';
 import type { PendingMedia } from '../../../media/MediaManager.ts';
 import type {
   NewEvent,
@@ -17,6 +23,7 @@ interface FountainConfig {
   port?: number;
   encryptionKey?: string;
   clientId?: string;
+  cameraEnabled?: boolean;
 }
 
 interface FountainState {
@@ -24,9 +31,11 @@ interface FountainState {
   waterDaysRemaining: number;
   filterDaysRemaining: number;
   pumpStatus: 'ok' | 'error';
+  cameraStatus: 'ok' | 'error' | 'disabled' | 'none';
+  hasCamera: boolean;
 }
 
-export class FountainController implements DeviceController {
+export class FountainController implements DeviceController, Camera {
   readonly deviceId: number;
   private client: EspHomeClient;
   private config: FountainConfig;
@@ -40,9 +49,14 @@ export class FountainController implements DeviceController {
     waterDaysRemaining: 0,
     filterDaysRemaining: 0,
     pumpStatus: 'ok',
+    cameraStatus: 'none',
+    hasCamera: false,
   };
   private sensorValues: Map<string, unknown> = new Map();
   private entityDefinitions: Map<number, EspHomeEntity> = new Map();
+  private entityNameIdMap: Map<string, string> = new Map();
+  private captureInProgress = false;
+  private consecutiveCameraFailures = 0;
 
   constructor(device: Device, deps: ProviderDeps) {
     console.log('Initializing FountainController for device:', device.name);
@@ -90,7 +104,19 @@ export class FountainController implements DeviceController {
 
       for (const entity of data) {
         this.entityDefinitions.set(entity.key, entity);
+        this.entityNameIdMap.set(entity.objectId, entity.name);
+        this.entityNameIdMap.set(entity.name, entity.objectId);
+        console.log(entity);
+
+        // Detect camera entities
+        if ('type' in entity && entity.type === 'camera') {
+          this.state.hasCamera = true;
+          this.state.cameraStatus =
+            this.config.cameraEnabled === false ? 'disabled' : 'ok';
+          console.log(`Detected camera in ${this.device.name}`);
+        }
       }
+      console.log(this.entityNameIdMap);
     });
 
     // this.client.on('deviceInfo', (info) => {
@@ -99,6 +125,18 @@ export class FountainController implements DeviceController {
 
     this.client.on('sensor', ({ entity, state }) => {
       this.sensorValues.set(this.getEntityId(entity), state);
+
+      // Capture drink data whenever it arrives if we have an active event
+      if (this.currentEvent && state) {
+        if (entity === this.entityNameIdMap.get('last_drink_amount')) {
+          console.log(`Last drink amount updated: ${state}ml`);
+          this.currentEvent.data.amount = Math.round(state);
+        }
+        if (entity === this.entityNameIdMap.get('last_drink_duration')) {
+          console.log(`Last drink duration updated: ${state}s`);
+          this.currentEvent.data.duration = Math.round(state);
+        }
+      }
     });
 
     this.client.on('number', ({ entity, state }) => {
@@ -114,12 +152,12 @@ export class FountainController implements DeviceController {
       const id = this.getEntityId(entity);
       this.sensorValues.set(id, state);
 
-      if (entity === 'Pump Status') {
+      if (entity === this.entityNameIdMap.get('pump_status')) {
         this.state.pumpStatus = state ? 'error' : 'ok';
         return;
       }
 
-      if (entity !== 'Activity') {
+      if (entity !== this.entityNameIdMap.get('activity')) {
         return;
       }
 
@@ -138,7 +176,7 @@ export class FountainController implements DeviceController {
           raw_data: null,
         };
 
-        // Direct camera capture
+        // Get linked camera (which could be itself) and take a snapshot
         const camera = await this.deps.directory.getLinkedCamera(this.deviceId);
         if (camera) {
           this.pendingSnapshot =
@@ -148,9 +186,27 @@ export class FountainController implements DeviceController {
             })) || null;
         }
       } else {
-        // Activity just ended, the next sensor updates will be what we want
-        console.log('Activity detected. Waiting for drink data...');
-        this.captureNextDrinkData();
+        // Activity just ended
+        console.log('Activity ended. Checking for drink data...');
+
+        // Check if we already have the data (arrived before activity ended)
+        if (
+          this.currentEvent &&
+          this.currentEvent.data.amount > 0 &&
+          this.currentEvent.data.duration &&
+          this.currentEvent.data.duration > 0
+        ) {
+          console.log('Drink data already captured, saving immediately.');
+          const eventToSave = this.currentEvent;
+          const snapshotToSave = this.pendingSnapshot;
+          this.currentEvent = null;
+          this.pendingSnapshot = null;
+          this.saveDrinkEvent(eventToSave, snapshotToSave);
+        } else {
+          // Data not yet available, wait for it
+          console.log('Waiting for drink data...');
+          this.captureNextDrinkData();
+        }
       }
     });
   }
@@ -162,11 +218,18 @@ export class FountainController implements DeviceController {
     }
 
     const onSensorUpdate = (event: SensorEvent) => {
+      console.debug('Sensor update during drink event:', event);
       const { data } = this.currentEvent!;
 
-      if (event.entity === 'Last drink amount' && !!event.state) {
+      if (
+        event.entity === this.entityNameIdMap.get('last_drink_amount') &&
+        !!event.state
+      ) {
         data.amount = Math.round(event.state);
-      } else if (event.entity === 'Last drink duration' && !!event.state) {
+      } else if (
+        event.entity === this.entityNameIdMap.get('last_drink_duration') &&
+        !!event.state
+      ) {
         data.duration = Math.round(event.state);
       }
 
@@ -193,7 +256,7 @@ export class FountainController implements DeviceController {
 
         this.currentEvent = null;
       }
-    }, 5000); // Increased timeout to 5s just in case
+    }, 1000);
   }
 
   private async saveDrinkEvent(
@@ -257,6 +320,159 @@ export class FountainController implements DeviceController {
     }
   }
 
+  async getSnapshotBuffer(): Promise<Buffer | undefined> {
+    if (
+      !this.state.hasCamera ||
+      this.state.cameraStatus === 'disabled' ||
+      this.state.cameraStatus === 'none' ||
+      this.config.cameraEnabled === false
+    ) {
+      return undefined;
+    }
+
+    if (this.captureInProgress) {
+      console.warn(
+        `Camera capture already in progress for ${this.device.name}`,
+      );
+      return undefined;
+    }
+
+    this.captureInProgress = true;
+
+    return new Promise<Buffer | undefined>((resolve) => {
+      const timeout = setTimeout(() => {
+        this.client.off('camera', onCameraImage);
+        this.captureInProgress = false;
+        this.consecutiveCameraFailures++;
+
+        if (this.consecutiveCameraFailures >= 3) {
+          this.state.cameraStatus = 'error';
+          console.error(
+            `Camera failed 3 times, marking as errored for ${this.device.name}`,
+          );
+        }
+
+        console.error(`Camera snapshot timed out for ${this.device.name}`);
+        resolve(undefined);
+      }, 5000); // 5 second timeout
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const onCameraImage = (payload: any) => {
+        // Actual payload is { image: Buffer; name: string } not what types say
+        if (
+          !payload.image ||
+          !Buffer.isBuffer(payload.image) ||
+          payload.image.length === 0
+        ) {
+          return;
+        }
+
+        clearTimeout(timeout);
+        this.client.off('camera', onCameraImage);
+        this.captureInProgress = false;
+        this.consecutiveCameraFailures = 0;
+        this.state.cameraStatus = 'ok';
+        resolve(payload.image);
+      };
+
+      this.client.on('camera', onCameraImage);
+
+      try {
+        this.client.sendCameraImageRequest(true);
+      } catch (error) {
+        clearTimeout(timeout);
+        this.client.off('camera', onCameraImage);
+        this.captureInProgress = false;
+        this.consecutiveCameraFailures++;
+
+        if (this.consecutiveCameraFailures >= 3) {
+          this.state.cameraStatus = 'error';
+        }
+
+        console.error(
+          `Failed to request camera image for ${this.device.name}:`,
+          error,
+        );
+        resolve(undefined);
+      }
+    });
+  }
+
+  async captureSnapshot(options: {
+    timestamp: Date;
+    eventType: EventType;
+    crop?: { left: number; top: number; width: number; height: number };
+    rotate?: number;
+  }): Promise<PendingMedia | undefined> {
+    if (
+      !this.state.hasCamera ||
+      this.state.cameraStatus === 'disabled' ||
+      this.state.cameraStatus === 'none'
+    ) {
+      return undefined;
+    }
+
+    try {
+      const buffer = await this.getSnapshotBuffer();
+      if (!buffer) {
+        return undefined;
+      }
+
+      const image = sharp(buffer);
+      const metadata = await image.metadata();
+
+      const pendingMedia = await this.deps.mediaManager.createPendingMedia(
+        'jpg',
+        {
+          height: metadata.height,
+          width: metadata.width,
+        },
+      );
+
+      let pipeline = sharp(buffer);
+
+      if (options.crop) {
+        const { left, top, width, height } = options.crop;
+        let absCrop = { left, top, width, height };
+
+        // If all crop values are <= 1, assume they are normalized (0-1) and convert to absolute pixels
+        if (left <= 1 && top <= 1 && width <= 1 && height <= 1) {
+          absCrop = {
+            left: Math.round(left * metadata.width!),
+            top: Math.round(top * metadata.height!),
+            width: Math.round(width * metadata.width!),
+            height: Math.round(height * metadata.height!),
+          };
+        }
+
+        pipeline = pipeline.extract(absCrop);
+      }
+
+      if (options.rotate) {
+        pipeline = pipeline.rotate(options.rotate);
+      }
+
+      await pipeline.toFile(pendingMedia.path);
+
+      console.log(
+        `Snapshot saved to ${pendingMedia.path} for event ${options.eventType}`,
+      );
+      return pendingMedia;
+    } catch (error) {
+      console.error(
+        `Error capturing snapshot for fountain ${this.device.name}:`,
+        error,
+      );
+      this.consecutiveCameraFailures++;
+
+      if (this.consecutiveCameraFailures >= 3) {
+        this.state.cameraStatus = 'error';
+      }
+
+      return undefined;
+    }
+  }
+
   async connect(): Promise<void> {
     try {
       this.client.connect();
@@ -276,7 +492,7 @@ export class FountainController implements DeviceController {
   }
 
   private getEntityId(name: string): string {
-    return name.toLowerCase().replace(/\s+/g, '_');
+    return this.entityNameIdMap.get(name)!;
   }
 
   private mapToEntityDTO(def: EspHomeEntity): EntityDTO {

@@ -62,7 +62,9 @@ export class ESPHomeAccountManager implements AccountManager {
     }> = [
       {
         type: 'water_fountain',
-        check: (name) => name.toLowerCase().includes('petlibro.plwf105'),
+        check: (name) =>
+          name.toLowerCase().includes('petlibro.plwf105') ||
+          name.toLowerCase().includes('cristianchelu.petbowlmonitor'),
       },
       {
         type: 'litterbox',

@@ -29,9 +29,7 @@ const DEFAULT_CROP: DeviceCameraConfigDTO['crop'] = {
   height: 1,
 };
 
-const ASPECT_RATIO = 16 / 9;
 const VIEWBOX_WIDTH = 100;
-const VIEWBOX_HEIGHT = VIEWBOX_WIDTH / ASPECT_RATIO;
 
 function clamp01(value: number) {
   return Math.min(1, Math.max(0, value));
@@ -68,14 +66,14 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
   const updateConfigMutation = useUpdateDeviceCameraConfig(device.id);
 
   const linkedCamera = device.camera_link?.camera_id ?? '';
+  const hasIntegratedCamera = device.state?.hasCamera ?? false;
+  const cameraStatus =
+    (device.state?.cameraStatus as 'ok' | 'error' | 'disabled' | 'none') ??
+    'none';
+
   const normalizedCrop = React.useMemo(
     () => ensureCrop(device.camera_link?.config?.crop),
-    [
-      device.camera_link?.config?.crop?.left,
-      device.camera_link?.config?.crop?.top,
-      device.camera_link?.config?.crop?.width,
-      device.camera_link?.config?.crop?.height,
-    ],
+    [device.camera_link?.config?.crop],
   );
   const normalizedRotate = device.camera_link?.config?.rotate;
 
@@ -88,6 +86,15 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
     normalizedRotate,
   );
   const [snapshotKey, setSnapshotKey] = React.useState(0);
+  const [aspectRatio, setAspectRatio] = React.useState(16 / 9);
+
+  const snapshotUrl = React.useMemo(
+    () =>
+      selectedCameraId
+        ? `/api/devices/${selectedCameraId}/snapshot?t=${snapshotKey}`
+        : undefined,
+    [selectedCameraId, snapshotKey],
+  );
 
   React.useEffect(() => {
     setSelectedCameraId(linkedCamera);
@@ -108,7 +115,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
   }, [allDevices, device.id]);
 
   const handleLink = () => {
-    if (!selectedCameraId || typeof selectedCameraId !== 'number') return;
+    if (typeof selectedCameraId !== 'number') return;
     const config: DeviceCameraConfigDTO = { crop, rotate };
     linkMutation.mutate({ camera_id: selectedCameraId, config });
   };
@@ -120,6 +127,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
 
   const handleUnlink = () => {
     unlinkMutation.mutate();
+    setSelectedCameraId('');
   };
 
   const handleRefreshSnapshot = () => {
@@ -237,37 +245,35 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
   };
 
   const renderROI = () => {
+    const viewboxHeight = VIEWBOX_WIDTH / aspectRatio;
     const x = crop.left * VIEWBOX_WIDTH;
-    const y = crop.top * VIEWBOX_HEIGHT;
+    const y = crop.top * viewboxHeight;
     const w = crop.width * VIEWBOX_WIDTH;
-    const h = crop.height * VIEWBOX_HEIGHT;
-
-    const snapshotUrl = selectedCameraId
-      ? `/api/devices/${selectedCameraId}/snapshot?t=${snapshotKey}`
-      : undefined;
+    const h = crop.height * viewboxHeight;
 
     return (
       <div className="roi-container" ref={containerRef}>
+        {snapshotUrl && (
+          <img
+            src={snapshotUrl}
+            className="roi-image"
+            alt="Camera snapshot"
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              if (img.naturalWidth && img.naturalHeight) {
+                setAspectRatio(img.naturalWidth / img.naturalHeight);
+              }
+            }}
+          />
+        )}
         <svg
           className="roi-svg"
-          viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
-          style={{ aspectRatio: '16/9' }}
+          viewBox={`0 0 ${VIEWBOX_WIDTH} ${viewboxHeight}`}
           onTouchStart={(e) => handleInteractionStart(e, 'move')}
         >
-          {snapshotUrl && (
-            <image
-              href={snapshotUrl}
-              x="0"
-              y="0"
-              width={VIEWBOX_WIDTH}
-              height={VIEWBOX_HEIGHT}
-              preserveAspectRatio="none"
-            />
-          )}
-
           {/* Dimmed overlay */}
           <path
-            d={`M 0 0 H ${VIEWBOX_WIDTH} V ${VIEWBOX_HEIGHT} H 0 Z M ${x} ${y} h ${w} v ${h} h ${-w} Z`}
+            d={`M 0 0 H ${VIEWBOX_WIDTH} V ${viewboxHeight} H 0 Z M ${x} ${y} h ${w} v ${h} h ${-w} Z`}
             fill="rgba(0, 0, 0, 0.6)"
             fillRule="evenodd"
             style={{ pointerEvents: 'none' }}
@@ -350,7 +356,10 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
                 setSelectedCameraId(value === '' ? '' : Number(value));
               }}
               options={[
-                { value: '', label: 'No camera linked' },
+                { value: '', label: 'No camera' },
+                ...(hasIntegratedCamera && cameraStatus === 'ok'
+                  ? [{ value: String(device.id), label: 'Integrated Camera' }]
+                  : []),
                 ...cameras.map((cam) => ({
                   value: String(cam.id),
                   label: cam.name,
@@ -409,7 +418,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
                   className="rotation-button"
                   variant="primary"
                   onClick={handleSaveROI}
-                  disabled={!linkedCamera || updateConfigMutation.isPending}
+                  disabled={updateConfigMutation.isPending}
                 >
                   Save ROI & Rotation
                 </Button>
