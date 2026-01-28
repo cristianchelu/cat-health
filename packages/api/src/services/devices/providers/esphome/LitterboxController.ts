@@ -1,16 +1,12 @@
-import {
-  type Entity as EspHomeEntity,
-  EspHomeClient,
-  LogLevel,
-} from 'esphome-client';
+import { type Entity as EspHomeEntity } from 'esphome-client';
 import { sql } from 'kysely';
-import type {
-  DeviceStatus,
-  EntityDTO,
-  LitterboxUseEliminationType,
-} from 'shared';
+import type { LitterboxUseEliminationType } from 'shared';
 import type { NewEvent } from '../../../../database/types/EventTable.ts';
-import type { DeviceController, ProviderDeps, Device } from '../../types.ts';
+import type { ProviderDeps, Device } from '../../types.ts';
+import {
+  BaseESPHomeController,
+  type ReconnectConfig,
+} from './BaseESPHomeController.ts';
 
 const MAINTENANCE_THRESHOLD = -20;
 const NO_ELIMINATION_THRESHOLD = 10;
@@ -18,18 +14,12 @@ const NO_ELIMINATION_THRESHOLD = 10;
 const SENSORS = {
   ACTIVITY: 'activity',
   TARED_WEIGHT: 'tared_weight',
+  UNFILTERED_WEIGHT: 'unfiltered_weight',
   WASTE_WEIGHT: 'waste_weight',
   LITTER_REMAINING: 'litter_remaining',
   DEEP_CLEAN_TIMER: 'deep_clean_timer',
   VISITS: 'visits_since_clean',
 } as const;
-
-interface LitterboxConfig {
-  host: string;
-  port?: number;
-  encryptionKey?: string;
-  clientId?: string;
-}
 
 interface RawMeasurement {
   timestamp: Date;
@@ -51,109 +41,33 @@ interface ContextData {
   hoursSinceLastScoop: number;
 }
 
-export class LitterboxController implements DeviceController {
-  readonly deviceId: number;
-  private client: EspHomeClient;
-  private config: LitterboxConfig;
-  private status: DeviceStatus = 'unknown';
-  private device: Device;
-  private deps: ProviderDeps;
-  private state: Record<string, unknown> = {
-    // Initialize state properties
-  };
-  private sensorValues: Map<string, unknown> = new Map();
-  private entityDefinitions: Map<number, EspHomeEntity> = new Map();
-  private nameToId: Map<string, string> = new Map();
+export class LitterboxController extends BaseESPHomeController {
   private currentSession: EventSession | null = null;
 
   constructor(device: Device, deps: ProviderDeps) {
-    console.log('Initializing LitterboxController for device:', device.name);
-    this.device = device;
-    this.deps = deps;
-    this.deviceId = device.id;
+    super(device, deps);
+  }
 
-    // Parse config
-    const rawConfig = device.config as unknown as LitterboxConfig;
-    this.config = {
-      host: rawConfig.host,
-      port: rawConfig.port ?? 6053,
-      encryptionKey: rawConfig.encryptionKey,
-      clientId: rawConfig.clientId ?? `cat-health-${device.id}`,
+  protected get deviceTypeName(): string {
+    return 'litterbox';
+  }
+
+  protected get reconnectConfig(): ReconnectConfig {
+    return {
+      baseDelay: 1000,
+      maxDelay: 30000,
+      heartbeatTimeout: 30000,
+      pingInterval: 15000,
     };
-
-    this.client = new EspHomeClient({
-      host: this.config.host,
-      port: this.config.port,
-      psk: this.config.encryptionKey,
-      clientId: this.config.clientId,
-    });
-
-    this.setupListeners();
   }
 
-  private setupListeners() {
-    this.client.on('connect', () => {
-      this.status = 'online';
-      console.log(
-        `Connected to litterbox ${this.device.name} (${this.config.host})`,
-      );
-      this.client.subscribeToLogs(LogLevel.INFO);
-    });
+  protected onConnected(): void { }
 
-    this.client.on('disconnect', () => {
-      this.status = 'offline';
-      console.error(`Disconnected from litterbox ${this.device.name}`);
-    });
+  protected onEntitiesReceived(): void { }
 
-    this.client.on('entities', (data) => {
-      console.log(
-        `Received ${data.length} entities from litterbox ${this.device.name}`,
-      );
-
-      for (const entity of data) {
-        this.entityDefinitions.set(entity.key, entity);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ent = entity as any;
-        if (ent.objectId) {
-          const objectId = ent.objectId;
-          this.nameToId.set(ent.name, objectId);
-          console.log(`[Litterbox] Mapped '${ent.name}' to '${objectId}'`);
-        } else {
-          console.log(
-            `[Litterbox] Entity '${ent.name}' has no objectId`,
-            entity,
-          );
-        }
-      }
-    });
-
-    this.client.on('sensor', ({ entity, state }) => {
-      const id = this.getEntityId(entity);
-      this.sensorValues.set(id, state);
-      this.handleSensorUpdate(id, state);
-    });
-
-    this.client.on('number', ({ entity, state }) => {
-      this.sensorValues.set(this.getEntityId(entity), state);
-    });
-
-    this.client.on('switch', ({ entity, state }) => {
-      this.sensorValues.set(this.getEntityId(entity), state);
-    });
-
-    this.client.on('binary_sensor', ({ entity, state }) => {
-      console.log('[Litterbox] Binary sensor update:', entity, state);
-      const id = this.getEntityId(entity);
-      this.sensorValues.set(id, state);
-      this.handleSensorUpdate(id, state);
-    });
-  }
-
-  private handleSensorUpdate(id: string, state: unknown) {
-    // console.log(`[Litterbox] Sensor update: ${id} = ${state}`);
-
-    // Handle activity changes
-    if (id === SENSORS.ACTIVITY) {
+  protected handleSensorUpdate(key: number, state: unknown): void {
+    const activityKey = this.getEntityKey(SENSORS.ACTIVITY);
+    if (activityKey !== null && key === activityKey) {
       const isActive = state === true || state === 1;
       console.log(`[Litterbox] Activity changed: ${isActive}`);
 
@@ -166,13 +80,10 @@ export class LitterboxController implements DeviceController {
 
     // Collect measurements during active session
     if (this.currentSession) {
-      if (id === SENSORS.TARED_WEIGHT) {
-        const taredWeight = this.sensorValues.get(
-          SENSORS.TARED_WEIGHT,
-        ) as number;
-
-        if (typeof taredWeight === 'number') {
-          const weightGrams = taredWeight * 1000;
+      const unfilteredWeightKey = this.getEntityKey(SENSORS.UNFILTERED_WEIGHT);
+      if (unfilteredWeightKey !== null && key === unfilteredWeightKey) {
+        if (typeof state === 'number') {
+          const weightGrams = state * 1000;
           console.log(
             `[Litterbox] Added measurement: ${weightGrams}g at ${new Date().toISOString()}`,
           );
@@ -226,9 +137,10 @@ export class LitterboxController implements DeviceController {
       }
 
       // Use final tared weight as elimination weight
-      let finalTaredWeightKg = this.sensorValues.get(
-        SENSORS.TARED_WEIGHT,
-      ) as number;
+      const taredWeightKey = this.getEntityKey(SENSORS.TARED_WEIGHT);
+      let finalTaredWeightKg = taredWeightKey !== null
+        ? this.sensorValues.get(taredWeightKey) as number
+        : undefined;
 
       if (typeof finalTaredWeightKg !== 'number') {
         if (session.measurements.length > 0) {
@@ -318,13 +230,23 @@ export class LitterboxController implements DeviceController {
   }
 
   private getContextData(): ContextData | null {
-    const wasteWeight =
-      (this.sensorValues.get(SENSORS.WASTE_WEIGHT) as number) || 0;
-    const litterRemaining =
-      ((this.sensorValues.get(SENSORS.LITTER_REMAINING) as number) || 0) * 1000; // kg to g
-    const deepCleanTimer =
-      (this.sensorValues.get(SENSORS.DEEP_CLEAN_TIMER) as number) || 0;
-    const totalVisits = (this.sensorValues.get(SENSORS.VISITS) as number) || 0;
+    const wasteWeightKey = this.getEntityKey(SENSORS.WASTE_WEIGHT);
+    const litterRemainingKey = this.getEntityKey(SENSORS.LITTER_REMAINING);
+    const deepCleanTimerKey = this.getEntityKey(SENSORS.DEEP_CLEAN_TIMER);
+    const visitsKey = this.getEntityKey(SENSORS.VISITS);
+
+    const wasteWeight = wasteWeightKey !== null
+      ? (this.sensorValues.get(wasteWeightKey) as number) || 0
+      : 0;
+    const litterRemaining = litterRemainingKey !== null
+      ? ((this.sensorValues.get(litterRemainingKey) as number) || 0) * 1000 // kg to g
+      : 0;
+    const deepCleanTimer = deepCleanTimerKey !== null
+      ? (this.sensorValues.get(deepCleanTimerKey) as number) || 0
+      : 0;
+    const totalVisits = visitsKey !== null
+      ? (this.sensorValues.get(visitsKey) as number) || 0
+      : 0;
 
     // Derived metrics
     const daysSinceLitterReplaced = Math.max(
@@ -560,56 +482,4 @@ export class LitterboxController implements DeviceController {
     return buffer;
   }
 
-  async connect(): Promise<void> {
-    try {
-      this.client.connect();
-    } catch (error) {
-      console.error(`Failed to connect to ${this.config.host}:`, error);
-      this.status = 'error';
-    }
-  }
-
-  async disconnect(): Promise<void> {
-    this.client.disconnect();
-    this.status = 'offline';
-  }
-
-  getStatus() {
-    return this.status;
-  }
-
-  private getEntityId(name: string): string {
-    if (this.nameToId.has(name)) {
-      return this.nameToId.get(name)!;
-    }
-    const normalized = name.toLowerCase().replace(/\s+/g, '_');
-    console.log(
-      `[Litterbox] ID lookup failed for '${name}', using normalized '${normalized}'`,
-    );
-    return normalized;
-  }
-
-  private mapToEntityDTO(def: EspHomeEntity): EntityDTO {
-    const id = this.getEntityId(def.name);
-
-    // @ts-expect-error: TODO: Fix type mismatch after EntityDTO updated
-    const dto: EntityDTO = {
-      ...def,
-      id,
-      value: this.sensorValues.get(id),
-      unit: 'unitOfMeasurement' in def ? def.unitOfMeasurement : undefined,
-    };
-
-    return dto;
-  }
-
-  getState() {
-    return {
-      ...this.state,
-      entities: Array.from(this.entityDefinitions.values()).map((def) =>
-        this.mapToEntityDTO(def),
-      ),
-      sensors: Object.fromEntries(this.sensorValues),
-    };
-  }
 }

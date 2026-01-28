@@ -169,13 +169,7 @@ export class IntegrationManager implements DeviceDirectory {
       const integratedCamera = requestingController as unknown as Camera;
       // Check if integrated camera is available and enabled
       const state = requestingController.getState?.();
-      if (
-        state &&
-        'hasCamera' in state &&
-        state.hasCamera &&
-        state.cameraStatus !== 'disabled' &&
-        state.cameraStatus !== 'none'
-      ) {
+      if (state && 'hasCamera' in state && state.hasCamera) {
         return integratedCamera;
       }
     }

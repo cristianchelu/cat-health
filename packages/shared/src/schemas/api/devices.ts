@@ -21,6 +21,7 @@ export const EntitySchema = Type.Object({
     Type.Literal("select"),
     Type.Literal("text_sensor"),
     Type.Literal("button"),
+    Type.String(),
   ]),
   value: Type.Unknown(),
   unit: Type.Optional(Type.String()),
@@ -147,3 +148,20 @@ export const PostDeviceRequestSchema = Type.Object({
   config: Type.Optional(Type.Unknown()),
 });
 export type PostDeviceRequestDTO = Static<typeof PostDeviceRequestSchema>;
+
+export const WaterFountainStateSchema = Type.Object({
+  /** Water Level Percentage */
+  waterLevel: Type.Number(),
+  /** Days remaining until water needs to be replaced (optional - not all devices track this) */
+  waterDaysRemaining: Type.Optional(Type.Number()),
+  /** Days remaining until water filter needs to be replaced (optional - not all devices have filters) */
+  filterDaysRemaining: Type.Optional(Type.Number()),
+  /** Pump Status (optional - not all devices have pumps) */
+  pumpStatus: Type.Optional(Type.Union([
+    Type.Literal('ok'),
+    Type.Literal('error'),
+  ])),
+  /** Whether the device has an integrated camera */
+  hasCamera: Type.Optional(Type.Boolean()),
+});
+export type WaterFountainState = Static<typeof WaterFountainStateSchema>;

@@ -67,9 +67,6 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
 
   const linkedCamera = device.camera_link?.camera_id ?? '';
   const hasIntegratedCamera = device.state?.hasCamera ?? false;
-  const cameraStatus =
-    (device.state?.cameraStatus as 'ok' | 'error' | 'disabled' | 'none') ??
-    'none';
 
   const normalizedCrop = React.useMemo(
     () => ensureCrop(device.camera_link?.config?.crop),
@@ -357,7 +354,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
               }}
               options={[
                 { value: '', label: 'No camera' },
-                ...(hasIntegratedCamera && cameraStatus === 'ok'
+                ...(hasIntegratedCamera
                   ? [{ value: String(device.id), label: 'Integrated Camera' }]
                   : []),
                 ...cameras.map((cam) => ({

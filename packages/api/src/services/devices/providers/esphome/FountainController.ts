@@ -1,211 +1,199 @@
-import {
-  type Entity as EspHomeEntity,
-  EspHomeClient,
-  LogLevel,
-  type SensorEvent,
-} from 'esphome-client';
+import { type Entity as EspHomeEntity } from 'esphome-client';
 import sharp from 'sharp';
-import type { DeviceStatus, EntityDTO, EventType } from 'shared';
-import type {
-  Camera,
-  DeviceController,
-  ProviderDeps,
-  Device,
-} from '../../types.ts';
+import type { EventType, WaterFountainState } from 'shared';
+import type { Camera, ProviderDeps, Device } from '../../types.ts';
 import type { PendingMedia } from '../../../media/MediaManager.ts';
 import type {
   NewEvent,
   WaterIntakeEventData,
 } from '../../../../database/types/EventTable.ts';
+import {
+  BaseESPHomeController,
+  type ReconnectConfig,
+} from './BaseESPHomeController.ts';
 
 interface FountainConfig {
   host: string;
   port?: number;
   encryptionKey?: string;
   clientId?: string;
-  cameraEnabled?: boolean;
 }
 
-interface FountainState {
-  waterLevel: number; // %
-  waterDaysRemaining: number;
-  filterDaysRemaining: number;
-  pumpStatus: 'ok' | 'error';
-  cameraStatus: 'ok' | 'error' | 'disabled' | 'none';
-  hasCamera: boolean;
-}
+const SENSORS = {
+  ACTIVITY: 'activity',
+  PUMP_STATUS: 'pump_status',
+  WATER_LEVEL: 'water_level',
+  LAST_DRINK_AMOUNT: 'last_drink_amount',
+  LAST_DRINK_DURATION: 'last_drink_duration',
+  // Optional sensors for fountain-specific features
+  WATER_CHANGE_DAYS_REMAINING: 'water_change_days_remaining',
+  FILTER_CHANGE_DAYS_REMAINING: 'filter_change_days_remaining',
+} as const;
 
-export class FountainController implements DeviceController, Camera {
-  readonly deviceId: number;
-  private client: EspHomeClient;
-  private config: FountainConfig;
+export class FountainController
+  extends BaseESPHomeController
+  implements Camera {
   private currentEvent: NewEvent<WaterIntakeEventData> | null = null;
   private pendingSnapshot: PendingMedia | null = null;
-  private status: DeviceStatus = 'unknown';
-  private device: Device;
-  private deps: ProviderDeps;
-  private state: FountainState = {
+  private state: WaterFountainState = {
     waterLevel: 0,
-    waterDaysRemaining: 0,
-    filterDaysRemaining: 0,
-    pumpStatus: 'ok',
-    cameraStatus: 'none',
-    hasCamera: false,
   };
-  private sensorValues: Map<string, unknown> = new Map();
-  private entityDefinitions: Map<number, EspHomeEntity> = new Map();
-  private entityNameIdMap: Map<string, string> = new Map();
   private captureInProgress = false;
-  private consecutiveCameraFailures = 0;
 
   constructor(device: Device, deps: ProviderDeps) {
-    console.log('Initializing FountainController for device:', device.name);
-    this.device = device;
-    this.deps = deps;
-    this.deviceId = device.id;
-
-    // Parse config
-    const rawConfig = device.config as unknown as FountainConfig;
-    this.config = {
-      host: rawConfig.host,
-      port: rawConfig.port ?? 6053,
-      encryptionKey: rawConfig.encryptionKey,
-      clientId: rawConfig.clientId ?? `cat-health-${device.id}`,
-    };
-
-    this.client = new EspHomeClient({
-      host: this.config.host,
-      port: this.config.port,
-      psk: this.config.encryptionKey,
-      clientId: this.config.clientId,
-    });
-
-    this.setupListeners();
+    super(device, deps);
   }
 
-  private setupListeners() {
-    this.client.on('connect', () => {
-      this.status = 'online';
-      console.log(
-        `Connected to fountain ${this.device.name} (${this.config.host})`,
-      );
-      this.client.subscribeToLogs(LogLevel.INFO);
-    });
+  protected get deviceTypeName(): string {
+    return 'fountain';
+  }
 
-    this.client.on('disconnect', () => {
-      this.status = 'offline';
-      console.error(`Disconnected from fountain ${this.device.name}`);
-    });
+  protected get reconnectConfig(): ReconnectConfig {
+    return {
+      baseDelay: 1000,
+      maxDelay: 5000,
+      heartbeatTimeout: 3000,
+      pingInterval: 1000,
+    };
+  }
 
-    this.client.on('entities', (data) => {
-      console.log(
-        `Received ${data.length} entities from fountain ${this.device.name}`,
-      );
+  protected onConnected(): void {
+    // No additional setup needed on connect
+  }
 
-      for (const entity of data) {
-        this.entityDefinitions.set(entity.key, entity);
-        this.entityNameIdMap.set(entity.objectId, entity.name);
-        this.entityNameIdMap.set(entity.name, entity.objectId);
-        console.log(entity);
-
-        // Detect camera entities
-        if ('type' in entity && entity.type === 'camera') {
-          this.state.hasCamera = true;
-          this.state.cameraStatus =
-            this.config.cameraEnabled === false ? 'disabled' : 'ok';
-          console.log(`Detected camera in ${this.device.name}`);
-        }
+  protected onEntitiesReceived(entities: EspHomeEntity[]): void {
+    // Detect camera entities
+    for (const entity of entities) {
+      if ('type' in entity && entity.type === 'camera') {
+        this.state.hasCamera = true;
+        console.log(`Detected camera in ${this.device.name}`);
       }
-      console.log(this.entityNameIdMap);
-    });
+    }
 
-    // this.client.on('deviceInfo', (info) => {
-    // console.dir(info);
-    // });
+    // Detect fountain-specific features and initialize state for sensors that exist
+    const pumpStatusKey = this.getEntityKey(SENSORS.PUMP_STATUS);
+    if (pumpStatusKey !== null) {
+      this.state.pumpStatus = 'ok';
+      console.log(`Detected pump_status sensor in ${this.device.name}`);
+    }
 
-    this.client.on('sensor', ({ entity, state }) => {
-      this.sensorValues.set(this.getEntityId(entity), state);
+    const waterDaysKey = this.getEntityKey(SENSORS.WATER_CHANGE_DAYS_REMAINING);
+    if (waterDaysKey !== null) {
+      this.state.waterDaysRemaining = 0;
+      console.log(`Detected water_change_days_remaining sensor in ${this.device.name}`);
+    }
 
-      // Capture drink data whenever it arrives if we have an active event
-      if (this.currentEvent && state) {
-        if (entity === this.entityNameIdMap.get('last_drink_amount')) {
-          console.log(`Last drink amount updated: ${state}ml`);
-          this.currentEvent.data.amount = Math.round(state);
-        }
-        if (entity === this.entityNameIdMap.get('last_drink_duration')) {
-          console.log(`Last drink duration updated: ${state}s`);
-          this.currentEvent.data.duration = Math.round(state);
-        }
+    const filterDaysKey = this.getEntityKey(SENSORS.FILTER_CHANGE_DAYS_REMAINING);
+    if (filterDaysKey !== null) {
+      this.state.filterDaysRemaining = 0;
+      console.log(`Detected filter_change_days_remaining sensor in ${this.device.name}`);
+    }
+  }
+
+  protected handleSensorUpdate(key: number, state: unknown): void {
+    const waterLevelKey = this.getEntityKey(SENSORS.WATER_LEVEL);
+    if (waterLevelKey !== null && key === waterLevelKey) {
+      this.state.waterLevel = Math.round(state as number);
+      return;
+    }
+
+    // Handle pump status (optional entity - some fountains don't have it)
+    const pumpStatusKey = this.getEntityKey(SENSORS.PUMP_STATUS);
+    if (pumpStatusKey !== null && key === pumpStatusKey) {
+      this.state.pumpStatus = state ? 'error' : 'ok';
+      return;
+    }
+
+    // Handle water change days remaining (optional)
+    const waterDaysKey = this.getEntityKey(SENSORS.WATER_CHANGE_DAYS_REMAINING);
+    if (waterDaysKey !== null && key === waterDaysKey) {
+      this.state.waterDaysRemaining = Math.round(state as number);
+      return;
+    }
+
+    // Handle filter change days remaining (optional)
+    const filterDaysKey = this.getEntityKey(SENSORS.FILTER_CHANGE_DAYS_REMAINING);
+    if (filterDaysKey !== null && key === filterDaysKey) {
+      this.state.filterDaysRemaining = Math.round(state as number);
+      return;
+    }
+
+    // Capture drink data whenever it arrives if we have an active event
+    if (this.currentEvent && state) {
+      const drinkAmountKey = this.getEntityKey(SENSORS.LAST_DRINK_AMOUNT);
+      const drinkDurationKey = this.getEntityKey(SENSORS.LAST_DRINK_DURATION);
+      if (drinkAmountKey !== null && key === drinkAmountKey) {
+        console.log(`Last drink amount updated: ${state}ml`);
+        this.currentEvent.data.amount = Math.round(state as number);
       }
-    });
-
-    this.client.on('number', ({ entity, state }) => {
-      this.sensorValues.set(this.getEntityId(entity), state);
-    });
-
-    this.client.on('switch', ({ entity, state }) => {
-      this.sensorValues.set(this.getEntityId(entity), state);
-    });
-
-    this.client.on('binary_sensor', async ({ entity, state }) => {
-      // Update generic entities map
-      const id = this.getEntityId(entity);
-      this.sensorValues.set(id, state);
-
-      if (entity === this.entityNameIdMap.get('pump_status')) {
-        this.state.pumpStatus = state ? 'error' : 'ok';
-        return;
+      if (drinkDurationKey !== null && key === drinkDurationKey) {
+        console.log(`Last drink duration updated: ${state}s`);
+        this.currentEvent.data.duration = Math.round(state as number);
       }
+    }
+  }
 
-      if (entity !== this.entityNameIdMap.get('activity')) {
-        return;
-      }
+  protected setupListeners() {
+    super.setupListeners();
 
-      if (state === true) {
-        const date = new Date();
-        this.currentEvent = {
-          data: {
-            type: 'water_intake',
-            amount: 0,
-            duration: 0,
-          },
-          timestamp: date,
-          human_verified: false,
-          pet_id: null,
-          device_id: this.deviceId,
-          raw_data: null,
-        };
+    // Override binary_sensor handler to add activity tracking
+    this.client.on('binary_sensor', async (data) => {
+      const { key, state } = data;
+      this.sensorValues.set(key, state);
+      this.handleSensorUpdate(key, state);
 
-        // Get linked camera (which could be itself) and take a snapshot
-        const camera = await this.deps.directory.getLinkedCamera(this.deviceId);
-        if (camera) {
-          this.pendingSnapshot =
-            (await camera.captureSnapshot({
-              timestamp: date,
-              eventType: 'water_intake',
-            })) || null;
-        }
-      } else {
-        // Activity just ended
-        console.log('Activity ended. Checking for drink data...');
+      // Handle activity sensor for water intake events
+      const activityKey = this.getEntityKey(SENSORS.ACTIVITY);
+      if (activityKey !== null && key === activityKey) {
+        if (state === true) {
+          const date = new Date();
+          this.currentEvent = {
+            data: {
+              type: 'water_intake',
+              amount: 0,
+              duration: 0,
+            },
+            timestamp: date,
+            human_verified: false,
+            pet_id: null,
+            device_id: this.deviceId,
+            raw_data: null,
+          };
 
-        // Check if we already have the data (arrived before activity ended)
-        if (
-          this.currentEvent &&
-          this.currentEvent.data.amount > 0 &&
-          this.currentEvent.data.duration &&
-          this.currentEvent.data.duration > 0
-        ) {
-          console.log('Drink data already captured, saving immediately.');
-          const eventToSave = this.currentEvent;
-          const snapshotToSave = this.pendingSnapshot;
-          this.currentEvent = null;
-          this.pendingSnapshot = null;
-          this.saveDrinkEvent(eventToSave, snapshotToSave);
+          // Get linked camera (which could be itself) and take a snapshot
+          const camera = await this.deps.directory.getLinkedCamera(
+            this.deviceId,
+          );
+          if (camera) {
+            this.pendingSnapshot =
+              (await camera.captureSnapshot({
+                timestamp: date,
+                eventType: 'water_intake',
+              })) || null;
+
+          }
         } else {
-          // Data not yet available, wait for it
-          console.log('Waiting for drink data...');
-          this.captureNextDrinkData();
+          // Activity just ended
+          console.log('Activity ended. Checking for drink data...');
+
+          // Check if we already have the data (arrived before activity ended)
+          if (
+            this.currentEvent &&
+            this.currentEvent.data.amount > 0 &&
+            this.currentEvent.data.duration &&
+            this.currentEvent.data.duration > 0
+          ) {
+            console.log('Drink data already captured, saving immediately.');
+            const eventToSave = this.currentEvent;
+            const snapshotToSave = this.pendingSnapshot;
+            this.currentEvent = null;
+            this.pendingSnapshot = null;
+            this.saveDrinkEvent(eventToSave, snapshotToSave);
+          } else {
+            // Data not yet available, wait for it
+            console.log('Waiting for drink data...');
+            this.captureNextDrinkData();
+          }
         }
       }
     });
@@ -217,18 +205,19 @@ export class FountainController implements DeviceController, Camera {
       return;
     }
 
-    const onSensorUpdate = (event: SensorEvent) => {
+    const drinkAmountKey = this.getEntityKey(SENSORS.LAST_DRINK_AMOUNT);
+    const drinkDurationKey = this.getEntityKey(SENSORS.LAST_DRINK_DURATION);
+
+    const onSensorUpdate = (event: { key: number; state?: number }) => {
       console.debug('Sensor update during drink event:', event);
       const { data } = this.currentEvent!;
 
-      if (
-        event.entity === this.entityNameIdMap.get('last_drink_amount') &&
-        !!event.state
-      ) {
+      if (drinkAmountKey !== null && event.key === drinkAmountKey && event.state != null) {
         data.amount = Math.round(event.state);
       } else if (
-        event.entity === this.entityNameIdMap.get('last_drink_duration') &&
-        !!event.state
+        drinkDurationKey !== null &&
+        event.key === drinkDurationKey &&
+        event.state != null
       ) {
         data.duration = Math.round(event.state);
       }
@@ -321,12 +310,7 @@ export class FountainController implements DeviceController, Camera {
   }
 
   async getSnapshotBuffer(): Promise<Buffer | undefined> {
-    if (
-      !this.state.hasCamera ||
-      this.state.cameraStatus === 'disabled' ||
-      this.state.cameraStatus === 'none' ||
-      this.config.cameraEnabled === false
-    ) {
+    if (!this.state.hasCamera) {
       return undefined;
     }
 
@@ -343,15 +327,6 @@ export class FountainController implements DeviceController, Camera {
       const timeout = setTimeout(() => {
         this.client.off('camera', onCameraImage);
         this.captureInProgress = false;
-        this.consecutiveCameraFailures++;
-
-        if (this.consecutiveCameraFailures >= 3) {
-          this.state.cameraStatus = 'error';
-          console.error(
-            `Camera failed 3 times, marking as errored for ${this.device.name}`,
-          );
-        }
-
         console.error(`Camera snapshot timed out for ${this.device.name}`);
         resolve(undefined);
       }, 5000); // 5 second timeout
@@ -370,8 +345,6 @@ export class FountainController implements DeviceController, Camera {
         clearTimeout(timeout);
         this.client.off('camera', onCameraImage);
         this.captureInProgress = false;
-        this.consecutiveCameraFailures = 0;
-        this.state.cameraStatus = 'ok';
         resolve(payload.image);
       };
 
@@ -383,12 +356,6 @@ export class FountainController implements DeviceController, Camera {
         clearTimeout(timeout);
         this.client.off('camera', onCameraImage);
         this.captureInProgress = false;
-        this.consecutiveCameraFailures++;
-
-        if (this.consecutiveCameraFailures >= 3) {
-          this.state.cameraStatus = 'error';
-        }
-
         console.error(
           `Failed to request camera image for ${this.device.name}:`,
           error,
@@ -404,11 +371,7 @@ export class FountainController implements DeviceController, Camera {
     crop?: { left: number; top: number; width: number; height: number };
     rotate?: number;
   }): Promise<PendingMedia | undefined> {
-    if (
-      !this.state.hasCamera ||
-      this.state.cameraStatus === 'disabled' ||
-      this.state.cameraStatus === 'none'
-    ) {
+    if (!this.state.hasCamera) {
       return undefined;
     }
 
@@ -463,59 +426,14 @@ export class FountainController implements DeviceController, Camera {
         `Error capturing snapshot for fountain ${this.device.name}:`,
         error,
       );
-      this.consecutiveCameraFailures++;
-
-      if (this.consecutiveCameraFailures >= 3) {
-        this.state.cameraStatus = 'error';
-      }
-
       return undefined;
     }
-  }
-
-  async connect(): Promise<void> {
-    try {
-      this.client.connect();
-    } catch (error) {
-      console.error(`Failed to connect to ${this.config.host}:`, error);
-      this.status = 'error';
-    }
-  }
-
-  async disconnect(): Promise<void> {
-    this.client.disconnect();
-    this.status = 'offline';
-  }
-
-  getStatus() {
-    return this.status;
-  }
-
-  private getEntityId(name: string): string {
-    return this.entityNameIdMap.get(name)!;
-  }
-
-  private mapToEntityDTO(def: EspHomeEntity): EntityDTO {
-    const id = this.getEntityId(def.name);
-
-    // @ts-expect-error: TODO: Fix type mismatch after EntityDTO updated
-    const dto: EntityDTO = {
-      ...def,
-      id,
-      value: this.sensorValues.get(id),
-      unit: 'unitOfMeasurement' in def ? def.unitOfMeasurement : undefined,
-    };
-
-    return dto;
   }
 
   getState() {
     return {
       ...this.state,
-      entities: Array.from(this.entityDefinitions.values()).map((def) =>
-        this.mapToEntityDTO(def),
-      ),
-      sensors: Object.fromEntries(this.sensorValues),
+      ...super.getState(),
     };
   }
 }

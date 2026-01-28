@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import type { GetDeviceResponseDTO } from 'shared';
+import type { GetDeviceResponseDTO, WaterFountainState } from 'shared';
 import { Camera, Utensils } from 'lucide-react';
 import { WaterFountainIcon } from '@/components/icons/WaterFountainIcon';
 import { LitterboxIcon } from '@/components/icons/LitterboxIcon';
@@ -13,9 +13,7 @@ import {
   CardContent,
 } from '@/components/ui/Card';
 import { Tooltip } from '@/components/ui/Tooltip';
-import WaterFountainStatus, {
-  type WaterFountainState,
-} from './WaterFountainStatus';
+import WaterFountainStatus from './WaterFountainStatus';
 import { cn } from '@/lib/utils';
 import './DeviceCard.css';
 
