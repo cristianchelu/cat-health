@@ -1,0 +1,76 @@
+.weight-signal-chart {
+  --color-state-entering: rgba(99, 102, 241, 0.35);
+  --color-state-occupied: rgba(148, 163, 184, 0.25);
+  --color-state-eliminating: rgba(34, 197, 94, 0.4);
+  --color-state-gap: rgba(249, 115, 22, 0.3);
+  --color-signal-line: rgba(255, 255, 255, 0.9);
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+
+  svg {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    background: #000;
+  }
+
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    background: var(--color-surface-muted);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+  }
+
+  .legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-sm);
+
+    &.entering {
+      background: var(--color-state-entering);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+    }
+
+    &.occupied {
+      background: var(--color-state-occupied);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    &.eliminating {
+      background: var(--color-state-eliminating);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+    }
+
+    &.gap {
+      background: var(--color-state-gap);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+    }
+  }
+
+  .chart-duration {
+    position: absolute;
+    top: var(--space-xs);
+    right: var(--space-xs);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    background: var(--color-surface);
+    padding: var(--space-3xs) var(--space-xs);
+    border-radius: var(--radius-sm);
+    opacity: 0.8;
+  }
+}

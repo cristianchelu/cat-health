@@ -5,9 +5,12 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/form/Select';
 import type { GetEventDTO } from 'shared';
+import WeightSignalChart from './WeightSignalChart';
+import { LitterboxStateTracker } from './litterboxStateTracker';
+import { decodeLitterboxRawData } from './decodeLitterboxRawData';
 
 import './EventDetailsModal.css';
-import { Loader2, Trash2, Download, Info } from 'lucide-react';
+import { Loader2, Trash2, Download, Info, Image, Activity } from 'lucide-react';
 
 interface EventDetailsModalProps {
   event: GetEventDTO | null;
@@ -42,8 +45,10 @@ const getEventTitle = (event: GetEventDTO) => {
   switch (event.data?.type) {
     case 'water_intake':
       return 'Water Intake';
-    case 'litterbox_usage':
+    case 'litterbox_use':
       return 'Litterbox Usage';
+    case 'litterbox_maintenance':
+      return 'Litterbox Maintenance';
     default:
       return 'Event Detected';
   }
@@ -74,12 +79,32 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const { mutate: updateEvent, isPending: isUpdating } = useUpdateEvent();
 
   const [selectedPetId, setSelectedPetId] = React.useState<string | null>(null);
+  const [activeTab, setActiveTab] = React.useState<'media' | 'analysis'>('media');
 
   React.useEffect(() => {
     if (event) {
       setSelectedPetId(event.pet_id ? String(event.pet_id) : 'null');
+      // Reset to media tab when event changes
+      setActiveTab('media');
     }
   }, [event]);
+
+  const decodedRawData = React.useMemo(() => {
+    if (event?.data?.type !== 'litterbox_use') return null;
+    return decodeLitterboxRawData(event?.raw_data);
+  }, [event?.data?.type, event?.raw_data]);
+
+  // Check if event has analysis data
+  const hasAnalysisData =
+    event?.data?.type === 'litterbox_use' &&
+    (decodedRawData?.weights?.length ?? 0) > 0;
+
+  // Compute analysis result when needed
+  const analysisResult = React.useMemo(() => {
+    if (!hasAnalysisData || !decodedRawData?.weights) return null;
+    const tracker = new LitterboxStateTracker();
+    return tracker.processEvent(decodedRawData.weights);
+  }, [hasAnalysisData, decodedRawData?.weights]);
 
   if (!event) {
     return null;
@@ -109,30 +134,60 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="event-details-modal-content">
+        {/* Tab buttons - only show if analysis data exists */}
+        {hasAnalysisData && (
+          <div className="event-tabs">
+            <button
+              className={`tab-button ${activeTab === 'media' ? 'active' : ''}`}
+              onClick={() => setActiveTab('media')}
+            >
+              <Image size={16} />
+              Media
+            </button>
+            <button
+              className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
+              onClick={() => setActiveTab('analysis')}
+            >
+              <Activity size={16} />
+              Analysis
+            </button>
+          </div>
+        )}
+
         <div className="event-details-media-section">
-          {isLoadingMedia && (
-            <div className="media-loading">
-              <Loader2 className="animate-spin" />
-            </div>
-          )}
-          {!isLoadingMedia && !hasMedia && (
-            <div className="media-placeholder">
-              <p>No media available</p>
-            </div>
-          )}
-          {!isLoadingMedia && hasMedia && (
-            <div className="media-gallery">
-              {media.map((m) => (
-                <div key={m.id} className="media-item">
-                  {m.mime_type.startsWith('image/') && (
-                    <img src={`/api/media/${m.file_path}`} alt="Event media" />
-                  )}
-                  {m.mime_type.startsWith('video/') && (
-                    <video controls src={`/api/media/${m.file_path}`} />
-                  )}
+          {activeTab === 'media' && (
+            <>
+              {isLoadingMedia && (
+                <div className="media-loading">
+                  <Loader2 className="animate-spin" />
                 </div>
-              ))}
-            </div>
+              )}
+              {!isLoadingMedia && !hasMedia && (
+                <div className="media-placeholder">
+                  <p>No media available</p>
+                </div>
+              )}
+              {!isLoadingMedia && hasMedia && (
+                <div className="media-gallery">
+                  {media.map((m) => (
+                    <div key={m.id} className="media-item">
+                      {m.mime_type.startsWith('image/') && (
+                        <img src={`/api/media/${m.file_path}`} alt="Event media" />
+                      )}
+                      {m.mime_type.startsWith('video/') && (
+                        <video controls src={`/api/media/${m.file_path}`} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+          {activeTab === 'analysis' && analysisResult && decodedRawData && (
+            <WeightSignalChart
+              weights={decodedRawData.weights}
+              periods={analysisResult.periods}
+            />
           )}
         </div>
 
