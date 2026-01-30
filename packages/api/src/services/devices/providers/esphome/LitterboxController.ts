@@ -13,7 +13,6 @@ const NO_ELIMINATION_THRESHOLD = 10;
 
 const SENSORS = {
   ACTIVITY: 'activity',
-  TARED_WEIGHT: 'tared_weight',
   UNFILTERED_WEIGHT: 'unfiltered_weight',
   WASTE_WEIGHT: 'waste_weight',
   LITTER_REMAINING: 'litter_remaining',
@@ -136,29 +135,23 @@ export class LitterboxController extends BaseESPHomeController {
         return;
       }
 
-      // Use final tared weight as elimination weight
-      const taredWeightKey = this.getEntityKey(SENSORS.TARED_WEIGHT);
-      let finalTaredWeightKg = taredWeightKey !== null
-        ? this.sensorValues.get(taredWeightKey) as number
-        : undefined;
+      // Use final weight as elimination weight
+      let finalWeightKg: number | undefined;
 
-      if (typeof finalTaredWeightKg !== 'number') {
-        if (session.measurements.length > 0) {
-          finalTaredWeightKg =
-            session.measurements[session.measurements.length - 1].weight / 1000;
-          console.log(
-            `[Litterbox] Using last measurement as final weight: ${finalTaredWeightKg}kg`,
-          );
-        } else {
-          console.log('[Litterbox] Missing final weight reading');
-          return;
-        }
+      if (session.measurements.length > 0) {
+        finalWeightKg =
+          session.measurements[session.measurements.length - 1].weight / 1000;
+        console.log(
+          `[Litterbox] Using last measurement as final weight: ${finalWeightKg}kg`,
+        );
+      } else {
+        console.log('[Litterbox] Missing final weight reading');
+        return;
       }
 
-      const finalTared = finalTaredWeightKg * 1000;
-      console.log(`[Litterbox] Final tared weight: ${finalTared}g`);
+      const eliminationWeight = finalWeightKg * 1000;
+      console.log(`[Litterbox] Final weight: ${eliminationWeight}g`);
 
-      const eliminationWeight = finalTared;
       const measurements = session.measurements;
 
       // Get context data
