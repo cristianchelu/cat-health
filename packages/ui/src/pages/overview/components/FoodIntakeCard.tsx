@@ -1,63 +1,130 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { subDays, format } from 'date-fns';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { Drumstick } from 'lucide-react';
+import { Drumstick, Loader } from 'lucide-react';
 import MetricBarChart from '@/components/ui/MetricBarChart';
+import { useQuery } from '@tanstack/react-query';
+import { getPetEvents } from '@/api/pets';
 
 import './FoodIntakeCard.css';
 
 interface DayData {
-  intake: number; // kcal consumed
-  target: number; // kcal target for this day
-  tracked: boolean; // false for untracked days
+  value: number;
+  tracked: boolean;
+  lowerBound?: number;
+  upperBound?: number;
 }
 
 interface FoodIntakeCardProps {
   petId: number;
 }
 
-const FoodIntakeCard: React.FC<FoodIntakeCardProps> = () => {
-  // Mock data for 7 days
-  // Assuming a 5kg cat: typical target = 220 kcal/day
-  const dailyTarget = 220;
-  const dailyMin = dailyTarget * 0.8; // 176 kcal
-  const dailyMax = dailyTarget * 1.2; // 264 kcal
+const DAYS = 7;
+const DEFAULT_DAILY_TARGET_KCAL = 220;
+const TARGET_MIN = DEFAULT_DAILY_TARGET_KCAL * 0.8;
+const TARGET_MAX = DEFAULT_DAILY_TARGET_KCAL * 1.2;
 
-  const mockData: DayData[] = [
-    { intake: 180, target: dailyTarget, tracked: true }, // Below target
-    { intake: 240, target: dailyTarget, tracked: true }, // Above target
-    { intake: 0, target: dailyTarget, tracked: false }, // Untracked
-    { intake: 210, target: dailyTarget, tracked: true }, // Near target
-    { intake: 230, target: dailyTarget, tracked: true }, // Slightly above
-    { intake: 200, target: dailyTarget * 0.8, tracked: true }, // Below target
-    { intake: 150, target: dailyTarget * 0.9, tracked: true }, // Today - below target
-  ];
+const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
+  const { t } = useTranslation();
+  const today = new Date();
+  const startDate = subDays(today, DAYS - 1);
+  const startTime = new Date(
+    format(startDate, 'yyyy-MM-dd') + 'T00:00:00.000Z',
+  ).toISOString();
+  const endTime = new Date(
+    format(today, 'yyyy-MM-dd') + 'T23:59:59.999Z',
+  ).toISOString();
 
-  const maxTarget =
-    mockData.reduce((a, v) => (v.target > a ? v.target : a), 0) * 1.4;
+  const { data: eventsResponse, isLoading, error } = useQuery({
+    queryKey: ['petEvents', petId, 'foodTrends', startTime, endTime],
+    queryFn: () => getPetEvents(petId, startTime, endTime, 500),
+    enabled: petId > 0,
+  });
 
-  // Calculate today's total
-  const todayIntake = mockData[mockData.length - 1].tracked
-    ? mockData[mockData.length - 1].intake
-    : 0;
+  if (isLoading) {
+    return (
+      <Card className="food-intake-card">
+        <CardHeader>
+          <Drumstick style={{ marginRight: 'auto' }} />
+          <span className="intake-value">--- kcal</span>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-full">
+            <Loader className="animate-spin" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  // Transform data for MetricBarChart
-  const chartData = mockData.map((day) => ({
-    value: day.intake,
-    tracked: day.tracked,
-  }));
+  const events = eventsResponse?.data ?? [];
+  const foodEvents = events.filter(
+    (ev) => ev.data && (ev.data as { type: string }).type === 'food_intake',
+  );
+
+  const dailyCalories = new Map<string, number>();
+  for (let i = 0; i < DAYS; i++) {
+    const d = subDays(today, DAYS - 1 - i);
+    const dateStr = format(d, 'yyyy-MM-dd');
+    dailyCalories.set(dateStr, 0);
+  }
+  for (const ev of foodEvents) {
+    const dateStr = format(new Date(ev.timestamp), 'yyyy-MM-dd');
+    const data = ev.data as { nutrients?: { calories?: number } };
+    const kcal = data.nutrients?.calories ?? 0;
+    dailyCalories.set(
+      dateStr,
+      (dailyCalories.get(dateStr) ?? 0) + kcal,
+    );
+  }
+
+  const chartData: DayData[] = [];
+  for (let i = 0; i < DAYS; i++) {
+    const d = subDays(today, DAYS - 1 - i);
+    const dateStr = format(d, 'yyyy-MM-dd');
+    const value = dailyCalories.get(dateStr) ?? 0;
+    chartData.push({
+      value,
+      tracked: value > 0,
+      lowerBound: TARGET_MIN,
+      upperBound: TARGET_MAX,
+    });
+  }
+
+  const todayStr = format(today, 'yyyy-MM-dd');
+  const todayKcal = dailyCalories.get(todayStr) ?? 0;
+  const maxValue = Math.max(
+    ...chartData.map((d) => d.value),
+    TARGET_MAX,
+  ) * 1.2;
+
+  if (error) {
+    return (
+      <Card className="food-intake-card">
+        <CardHeader>
+          <Drumstick style={{ marginRight: 'auto' }} />
+          <span className="intake-value">--- kcal</span>
+        </CardHeader>
+        <CardContent empty>
+          <p>{t('overview.no_activity')}</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="food-intake-card">
       <CardHeader>
         <Drumstick style={{ marginRight: 'auto' }} />
-        <span className="intake-value">{todayIntake} kcal</span>
+        <span className="intake-value">{todayKcal} kcal</span>
       </CardHeader>
       <CardContent>
         <MetricBarChart
           data={chartData}
-          maxValue={maxTarget}
-          lowerBound={dailyMin}
-          upperBound={dailyMax}
+          maxValue={maxValue}
+          lowerBound={TARGET_MIN}
+          upperBound={TARGET_MAX}
         />
       </CardContent>
     </Card>

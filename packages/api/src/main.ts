@@ -20,6 +20,7 @@ import { db } from './database/index.ts';
 import petRoutes from './routes/pets.ts';
 import eventRoutes from './routes/events.ts';
 import deviceRoutes from './routes/devices.ts';
+import foodRoutes from './routes/foods.ts';
 
 import { EventBus } from './services/devices/EventBus.ts';
 import { IntegrationManager } from './services/devices/IntegrationManager.ts';
@@ -186,6 +187,7 @@ const start = async () => {
     fastify.register(petRoutes, { prefix: '/api/pets' });
     fastify.register(eventRoutes, { prefix: '/api/events' });
     fastify.register(deviceRoutes, { prefix: '/api/devices' });
+    fastify.register(foodRoutes, { prefix: '/api/foods' });
 
     await fastify.listen({ port: 3000, host: '0.0.0.0' });
   } catch (err) {

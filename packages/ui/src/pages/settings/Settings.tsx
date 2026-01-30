@@ -18,7 +18,9 @@ import {
   Cat,
   CctvIcon,
   Server,
+  Drumstick,
 } from 'lucide-react';
+import { useFoods } from '@/hooks/queries/foodQueries';
 
 import './Settings.css';
 
@@ -34,6 +36,7 @@ const Settings: React.FC = () => {
   const { pets } = usePetContext();
   const { data: devices = [] } = useDevices();
   const { data: accounts = [] } = useProviderAccounts();
+  const { data: foods = [] } = useFoods();
   const navigate = useNavigate();
 
   const visibleAccounts = accounts.filter((a) => !a.internal);
@@ -145,6 +148,42 @@ const Settings: React.FC = () => {
               <CardListContent
                 title={t('settings.add_device')}
                 description={t('settings.add_device_desc')}
+              />
+            </CardListItem>
+          </CardList>
+        </section>
+        <section>
+          <SectionHeader icon={<Drumstick size="1em" />}>
+            {t('settings.foods')}
+          </SectionHeader>
+          <CardList>
+            {foods.map((food) => (
+              <CardListItem
+                key={food.id}
+                icon={<Drumstick size="1em" />}
+                onClick={() => navigate(`/settings/foods/${food.id}`)}
+              >
+                <CardListContent
+                  title={food.name}
+                  description={
+                    food.brand
+                      ? `${food.brand} · ${t(`settings.food_type_${food.food_type}`)}`
+                      : t(`settings.food_type_${food.food_type}`)
+                  }
+                />
+              </CardListItem>
+            ))}
+            <CardListItem
+              icon={
+                <div className="add-item-icon">
+                  <Plus size="0.5em" />
+                </div>
+              }
+              onClick={() => navigate('/settings/foods/new')}
+            >
+              <CardListContent
+                title={t('settings.add_food')}
+                description={t('settings.add_food_desc')}
               />
             </CardListItem>
           </CardList>

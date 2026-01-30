@@ -25,6 +25,7 @@ export type LitterboxUseEliminationType =
 
 export const GetEventSchema = Type.Object({
   id: Type.Number(),
+  parent_event_id: Type.Union([Type.Number(), Type.Null()]),
   pet_id: Type.Union([Type.Number(), Type.Null()]),
   device_id: Type.Union([Type.Null(), Type.Number()]),
   timestamp: Type.Any(), // TODO: Type.Date(),
@@ -44,6 +45,7 @@ export const PostEventRequestSchema = Type.Composite([
     raw_data: Type.Optional(
       Type.Union([Type.Null(), Type.Array(Type.Number())]),
     ),
+    parent_event_id: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
   }),
 ]);
 export type PostEventRequestDTO = Static<typeof PostEventRequestSchema>;
@@ -65,6 +67,7 @@ export const GetEventsQuerySchema = Type.Object({
   endTime: Type.Optional(Type.String({ format: "date-time" })), // ISO 8601 format
   limit: Type.Optional(Type.Number({ minimum: 1, maximum: 5000 })),
   offset: Type.Optional(Type.Number({ minimum: 0 })),
+  includeChildren: Type.Optional(Type.Boolean()),
 });
 export type GetEventsQueryDTO = Static<typeof GetEventsQuerySchema>;
 

@@ -1,0 +1,96 @@
+.log-food-modal-content {
+  max-width: 420px;
+
+  .log-food-modal-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: 0;
+  }
+
+  .log-food-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    padding-top: var(--space-sm);
+  }
+
+  .log-food-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .log-food-loading {
+    display: flex;
+    justify-content: center;
+    padding: var(--space-xl);
+  }
+
+  .log-food-empty {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    padding: var(--space-md);
+
+    a {
+      color: var(--color-primary);
+    }
+  }
+
+  .log-food-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    text-align: left;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    cursor: pointer;
+    transition: var(--transition-fast);
+
+    &:hover {
+      border-color: var(--color-border-hover);
+      background: var(--color-surface-muted);
+    }
+
+    &.selected {
+      border-color: var(--color-primary);
+      background: var(--color-primary-lightest);
+    }
+
+    .log-food-item-name {
+      font-weight: var(--font-medium);
+      color: var(--color-text);
+    }
+
+    .log-food-item-brand {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
+
+    .log-food-item-type {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-subtle);
+      margin-left: auto;
+    }
+  }
+
+  .log-food-error {
+    color: var(--color-error);
+    font-size: var(--font-size-sm);
+    padding: var(--space-sm);
+    background-color: var(--color-error-light);
+    border-radius: var(--radius-sm);
+  }
+
+  .log-food-actions {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: flex-end;
+    padding-top: var(--space-sm);
+  }
+}

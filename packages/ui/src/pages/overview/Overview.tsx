@@ -1,20 +1,22 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Toilet, Loader2 } from 'lucide-react';
+import { Clock, Toilet, Loader2, Plus } from 'lucide-react';
 import { addDays, subDays, format, parseISO } from 'date-fns';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetEvents } from '@/hooks/queries/petQueries';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DateNavigation } from '@/components/ui/DateNavigation';
+import { Button } from '@/components/ui/Button';
 import Timeline from '@/components/ui/Timeline';
 import { EventTimelineItem } from '@/components/events';
+import EventDetailsModal from '@/components/events/EventDetailsModal';
+import LogFoodModal from '@/components/events/LogFoodModal';
 import type { DateRange } from '@/lib/utils';
 
 import WeightTrendCard from '@/pages/overview/components/WeightTrendCard';
 import WaterConsumptionCard from '@/pages/overview/components/WaterConsumptionCard';
 import FoodIntakeCard from '@/pages/overview/components/FoodIntakeCard';
-import EventDetailsModal from '@/components/events/EventDetailsModal';
 
 import './Overview.css';
 import type { GetEventDTO } from 'shared';
@@ -25,6 +27,7 @@ const Overview: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = React.useState<GetEventDTO | null>(
     null,
   );
+  const [showFoodModal, setShowFoodModal] = React.useState(false);
 
   const getTodayString = () => new Date().toISOString().split('T')[0];
 
@@ -94,6 +97,23 @@ const Overview: React.FC = () => {
     />
   );
 
+  const activityActions = (
+    <>
+      {selectedPet && (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => setShowFoodModal(true)}
+        >
+          <Plus size={16} />
+          {t('overview.log_food')}
+        </Button>
+      )}
+      {dateNavigation}
+    </>
+  );
+
   return (
     <div className="page-overview">
       <section className="widget-grid">
@@ -108,7 +128,7 @@ const Overview: React.FC = () => {
         </Card>
       </section>
       <section>
-        <SectionHeader icon={<Clock />} actions={dateNavigation}>
+        <SectionHeader icon={<Clock />} actions={activityActions}>
           {t('overview.activity')}
         </SectionHeader>
         <div className="overview-timeline-container">
@@ -142,6 +162,14 @@ const Overview: React.FC = () => {
         event={selectedEvent}
         onClose={handleCloseModal}
       />
+      {selectedPet && (
+        <LogFoodModal
+          isOpen={showFoodModal}
+          onClose={() => setShowFoodModal(false)}
+          petId={selectedPet.id}
+          dateRange={dateRange}
+        />
+      )}
     </div>
   );
 };

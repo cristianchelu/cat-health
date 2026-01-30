@@ -22,6 +22,42 @@ import {
 
 import { type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import { db } from '../database/index.ts';
+import type { Food } from '../database/types/FoodTable.ts';
+import type { EventData } from '../database/types/EventTable.ts';
+
+function calculateNutrientsFromFood(
+  amount: number,
+  food: Food,
+): Record<string, number> {
+  const nutrients: Record<string, number> = {};
+  const nutrientsJson =
+    typeof food.nutrients === 'string'
+      ? (JSON.parse(food.nutrients) as Record<string, number>)
+      : food.nutrients;
+
+  if (food.moisture_percent != null) {
+    nutrients.moisture_ml = amount * (food.moisture_percent / 100);
+  }
+  if (food.calories_per_100g != null) {
+    nutrients.calories = amount * (food.calories_per_100g / 100);
+  }
+  if (nutrientsJson && typeof nutrientsJson === 'object') {
+    for (const [key, value] of Object.entries(nutrientsJson)) {
+      if (value == null || typeof value !== 'number') continue;
+      if (key.endsWith('_percent')) {
+        const nutrientKey = key.replace('_percent', '_g');
+        nutrients[nutrientKey] = amount * (value / 100);
+      } else if (key.endsWith('_per_kg')) {
+        const nutrientKey = key.replace('_per_kg', '');
+        nutrients[nutrientKey] = amount * (value / 1000);
+      } else if (key.endsWith('_per_100g')) {
+        const nutrientKey = key.replace('_per_100g', '');
+        nutrients[nutrientKey] = amount * (value / 100);
+      }
+    }
+  }
+  return nutrients;
+}
 
 const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
@@ -244,12 +280,18 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         endTime,
         limit = 100,
         offset = 0,
+        includeChildren = false,
       } = request.query;
 
       let query = db.selectFrom('event').selectAll();
       let countQuery = db
         .selectFrom('event')
         .select(db.fn.count<number>('id').as('count'));
+
+      if (!includeChildren) {
+        query = query.where('parent_event_id', 'is', null);
+        countQuery = countQuery.where('parent_event_id', 'is', null);
+      }
 
       if (pet_id !== undefined) {
         query = query.where('pet_id', '=', pet_id);
@@ -311,20 +353,69 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       },
     },
     async (request) => {
-      const { pet_id, device_id, timestamp, data, raw_data } = request.body;
+      const {
+        pet_id,
+        device_id,
+        timestamp,
+        data,
+        raw_data,
+        parent_event_id,
+      } = request.body;
+
+      let eventData = data as Record<string, unknown>;
+      let nutrients: Record<string, number> | undefined;
+
+      if (
+        eventData?.type === 'food_intake' &&
+        typeof eventData.food_id === 'number'
+      ) {
+        const food = await db
+          .selectFrom('food')
+          .selectAll()
+          .where('id', '=', eventData.food_id)
+          .executeTakeFirst();
+        if (food && typeof eventData.amount === 'number') {
+          nutrients = calculateNutrientsFromFood(eventData.amount, food);
+          eventData = { ...eventData, nutrients };
+        }
+      }
 
       const result = await db
         .insertInto('event')
         .values({
+          parent_event_id: parent_event_id || null,
           pet_id,
           device_id,
           timestamp: timestamp ? new Date(timestamp) : new Date(),
-          data,
+          data: eventData as EventData,
           raw_data: raw_data ? Buffer.from(raw_data) : null,
-          human_verified: false, // Default to false for new events
+          human_verified: eventData?.type === 'food_intake' ? true : false,
         })
         .returningAll()
         .executeTakeFirstOrThrow();
+
+      if (
+        nutrients?.moisture_ml != null &&
+        result.data &&
+        (result.data as { type: string }).type === 'food_intake'
+      ) {
+        await db
+          .insertInto('event')
+          .values({
+            parent_event_id: result.id,
+            pet_id: result.pet_id,
+            device_id: null,
+            timestamp: result.timestamp,
+            data: {
+              type: 'water_intake',
+              amount: nutrients.moisture_ml,
+              source: 'food',
+            },
+            raw_data: null,
+            human_verified: true,
+          })
+          .execute();
+      }
 
       return {
         ...result,

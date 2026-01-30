@@ -10,6 +10,7 @@ export interface WaterIntakeEventData {
   type: 'water_intake';
   amount: number;
   duration?: number;
+  source?: 'drinking' | 'food';
 }
 
 export interface LitterboxUseEventData {
@@ -24,6 +25,23 @@ export interface FoodIntakeEventData {
   type: 'food_intake';
   food_type: FoodIntakeFoodType;
   amount: number;
+  food_id?: number;
+  nutrients?: {
+    calories?: number;
+    moisture_ml?: number;
+    protein_g?: number;
+    fat_g?: number;
+    fiber_g?: number;
+    ash_g?: number;
+    carbs_g?: number;
+    calcium_mg?: number;
+    phosphorus_mg?: number;
+    taurine_mg?: number;
+    sodium_mg?: number;
+    omega3_g?: number;
+    omega6_g?: number;
+    [key: string]: number | undefined;
+  };
 }
 
 export type LitterboxMaintenanceEventType =
@@ -46,6 +64,7 @@ export type EventData =
 
 export type EventTable<TData = EventData> = {
   id: Generated<number>;
+  parent_event_id: number | null;
   // TODO: Migrate type to root once kysely gets discriminated union support
   //       https://github.com/kysely-org/kysely/issues/577
   // type: string;
