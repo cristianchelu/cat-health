@@ -4,7 +4,10 @@ import { useEventMedia, useUpdateEvent } from '@/hooks/queries/eventQueries';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/form/Select';
-import type { GetEventDTO } from 'shared';
+import type {
+  GetEventDTO,
+  LitterboxUseEliminationType,
+} from 'shared';
 import WeightSignalChart from './WeightSignalChart';
 import { LitterboxStateTracker } from './litterboxStateTracker';
 import { decodeLitterboxRawData } from './decodeLitterboxRawData';
@@ -66,6 +69,17 @@ const formatEventTime = (timestamp: string | number | Date) => {
   }).format(date);
 };
 
+const ELIMINATION_TYPE_OPTIONS: {
+  value: LitterboxUseEliminationType;
+  label: string;
+}[] = [
+  { value: 'urination', label: 'Urination' },
+  { value: 'defecation', label: 'Defecation' },
+  { value: 'both', label: 'Both' },
+  { value: 'no_elimination', label: 'No Elimination' },
+  { value: 'unknown', label: 'Unknown' },
+];
+
 const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   event,
   isOpen,
@@ -79,11 +93,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const { mutate: updateEvent, isPending: isUpdating } = useUpdateEvent();
 
   const [selectedPetId, setSelectedPetId] = React.useState<string | null>(null);
+  const [selectedEliminationType, setSelectedEliminationType] =
+    React.useState<LitterboxUseEliminationType>('unknown');
   const [activeTab, setActiveTab] = React.useState<'media' | 'analysis'>('media');
 
   React.useEffect(() => {
     if (event) {
       setSelectedPetId(event.pet_id ? String(event.pet_id) : 'null');
+      if (event.data?.type === 'litterbox_use' && event.data.elimination_type) {
+        setSelectedEliminationType(event.data.elimination_type);
+      } else if (event.data?.type === 'litterbox_use') {
+        setSelectedEliminationType('unknown');
+      }
       // Reset to media tab when event changes
       setActiveTab('media');
     }
@@ -119,6 +140,26 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     updateEvent({
       eventId: event.id,
       data: { pet_id: petId },
+    });
+  };
+
+  const handleEliminationTypeChange = (
+    e: React.ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const newValue = e.target.value as LitterboxUseEliminationType;
+    setSelectedEliminationType(newValue);
+
+    if (event.data?.type !== 'litterbox_use') return;
+
+    updateEvent({
+      eventId: event.id,
+      data: {
+        pet_id: event.pet_id ?? null,
+        data: {
+          ...event.data,
+          elimination_type: newValue,
+        },
+      },
     });
   };
 
@@ -245,6 +286,24 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               />
             </div>
           </div>
+
+          {event.data?.type === 'litterbox_use' && (
+            <div className="event-section elimination-type-section">
+              <div className="section-label">
+                <Info size={14} className="info-icon" />
+                <span>Event Type</span>
+              </div>
+              <div className="elimination-type-selector-wrapper">
+                <Select
+                  options={ELIMINATION_TYPE_OPTIONS}
+                  value={selectedEliminationType}
+                  onChange={handleEliminationTypeChange}
+                  className="elimination-type-select"
+                  disabled={isUpdating}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="event-section details-section">
             <EventDetailsRenderer event={event} />

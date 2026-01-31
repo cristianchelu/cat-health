@@ -12,13 +12,6 @@ import {
   type ReconnectConfig,
 } from './BaseESPHomeController.ts';
 
-interface FountainConfig {
-  host: string;
-  port?: number;
-  encryptionKey?: string;
-  clientId?: string;
-}
-
 const SENSORS = {
   ACTIVITY: 'activity',
   PUMP_STATUS: 'pump_status',
