@@ -154,7 +154,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     updateEvent({
       eventId: event.id,
       data: {
-        pet_id: event.pet_id ?? null,
         data: {
           ...event.data,
           elimination_type: newValue,

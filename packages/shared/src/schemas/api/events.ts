@@ -54,7 +54,7 @@ export const PatchEventParamsSchema = Type.Object({ eventId: Type.Number() });
 export type PatchEventParamsDTO = Static<typeof PatchEventParamsSchema>;
 
 export const PatchEventRequestSchema = Type.Object({
-  pet_id: Type.Union([Type.Number(), Type.Null()]),
+  pet_id: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
   data: Type.Optional(Type.Any()),
   human_verified: Type.Optional(Type.Boolean()),
 });

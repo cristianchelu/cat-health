@@ -362,7 +362,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         parent_event_id,
       } = request.body;
 
-      let eventData = data as Record<string, unknown>;
+      let eventData = data;
       let nutrients: Record<string, number> | undefined;
 
       if (
@@ -387,7 +387,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           pet_id,
           device_id,
           timestamp: timestamp ? new Date(timestamp) : new Date(),
-          data: eventData as EventData,
+          data: eventData,
           raw_data: raw_data ? Buffer.from(raw_data) : null,
           human_verified: eventData?.type === 'food_intake' ? true : false,
         })
@@ -441,10 +441,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const result = await db
         .updateTable('event')
-        .set({
-          ...body,
-          pet_id: body.pet_id === 0 ? null : body.pet_id,
-        })
+        .set(body)
         .where('id', '=', eventId)
         .returningAll()
         .executeTakeFirstOrThrow();
