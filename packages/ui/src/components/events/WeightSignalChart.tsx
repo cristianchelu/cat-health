@@ -108,7 +108,7 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
     );
     // const displayWeights = weights;
 
-    const scaleFactor = 1; // weights.length / displayWeights.length;
+    const scaleFactor = weights.length / displayWeights.length;
 
     // Calculate bounds with padding
     const minWeight = Math.min(...weights);
@@ -160,7 +160,7 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
             d={linePath}
             fill="none"
             stroke="var(--color-signal-line)"
-            strokeWidth="1.5"
+            strokeWidth="2.5"
             vectorEffect="non-scaling-stroke"
           />
         </svg>

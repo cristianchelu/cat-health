@@ -122,6 +122,7 @@
 
   .action-btn {
     color: var(--color-text-muted);
+
     &:hover {
       color: var(--color-text);
       background-color: var(--color-surface-muted);
