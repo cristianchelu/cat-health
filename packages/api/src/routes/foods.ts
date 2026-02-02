@@ -30,7 +30,9 @@ const foodRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       return rows.map((r) => ({
         ...r,
         nutrients:
-          typeof r.nutrients === 'string' ? JSON.parse(r.nutrients) : r.nutrients,
+          typeof r.nutrients === 'string'
+            ? (JSON.parse(r.nutrients) as typeof r.nutrients)
+            : r.nutrients,
       }));
     },
   );
@@ -56,9 +58,8 @@ const foodRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           barcode_ean13: body.barcode_ean13 ?? null,
           moisture_percent: body.moisture_percent ?? null,
           calories_per_100g: body.calories_per_100g ?? null,
-          nutrients: body.nutrients
-            ? JSON.stringify(body.nutrients)
-            : null,
+          nutrients:
+            body.nutrients != null ? JSON.stringify(body.nutrients) : null,
           serving_size_g: body.serving_size_g ?? null,
           notes: body.notes ?? null,
         })
@@ -68,7 +69,7 @@ const foodRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         ...result,
         nutrients:
           typeof result.nutrients === 'string'
-            ? JSON.parse(result.nutrients)
+            ? (JSON.parse(result.nutrients) as typeof result.nutrients)
             : result.nutrients,
       };
     },
@@ -96,7 +97,7 @@ const foodRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         ...row,
         nutrients:
           typeof row.nutrients === 'string'
-            ? JSON.parse(row.nutrients)
+            ? (JSON.parse(row.nutrients) as typeof row.nutrients)
             : row.nutrients,
       };
     },
@@ -133,9 +134,7 @@ const foodRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         const value = data[key];
         if (value !== undefined) {
           update[key] =
-            key === 'nutrients' && value != null
-              ? JSON.stringify(value)
-              : value;
+            key === 'nutrients' && value != null ? JSON.stringify(value) : value;
         }
       }
 
@@ -150,7 +149,7 @@ const foodRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           ...existing,
           nutrients:
             typeof existing.nutrients === 'string'
-              ? JSON.parse(existing.nutrients)
+              ? (JSON.parse(existing.nutrients) as typeof existing.nutrients)
               : existing.nutrients,
         };
       }
@@ -167,7 +166,7 @@ const foodRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         ...result,
         nutrients:
           typeof result.nutrients === 'string'
-            ? JSON.parse(result.nutrients)
+            ? (JSON.parse(result.nutrients) as typeof result.nutrients)
             : result.nutrients,
       };
     },

@@ -16,7 +16,34 @@ export const BarcodeEan13Schema = Type.Union([
 ]);
 export type BarcodeEan13DTO = Static<typeof BarcodeEan13Schema>;
 
-export const FoodNutrientsSchema = Type.Record(Type.String(), Type.Number());
+export const NutrientNameSchema = Type.Union([
+  Type.Literal("protein"),
+  Type.Literal("fat"),
+  Type.Literal("fiber"),
+  Type.Literal("ash"),
+  Type.Literal("carbs"),
+  Type.Literal("calcium"),
+  Type.Literal("phosphorus"),
+  Type.Literal("taurine"),
+  Type.Literal("sodium"),
+  Type.Literal("omega3"),
+  Type.Literal("omega6"),
+]);
+export type NutrientNameDTO = Static<typeof NutrientNameSchema>;
+
+export const NutrientUnitSchema = Type.Union([
+  Type.Literal("percent"),
+  Type.Literal("g"),
+  Type.Literal("mg"),
+]);
+export type NutrientUnitDTO = Static<typeof NutrientUnitSchema>;
+
+const FoodNutrientItemSchema = Type.Object({
+  nutrient: NutrientNameSchema,
+  unit: NutrientUnitSchema,
+  value: Type.Number(),
+});
+export const FoodNutrientsSchema = Type.Array(FoodNutrientItemSchema);
 export type FoodNutrientsDTO = Static<typeof FoodNutrientsSchema>;
 
 export const GetFoodParamsSchema = Type.Object({ id: Type.Number() });

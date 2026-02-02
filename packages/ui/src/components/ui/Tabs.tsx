@@ -77,6 +77,7 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
 
     return (
       <button
+        type="button"
         className={cn(
           'tabs-trigger',
           isActive && 'tabs-trigger-active',

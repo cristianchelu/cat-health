@@ -25,14 +25,16 @@ import { db } from '../database/index.ts';
 import type { Food } from '../database/types/FoodTable.ts';
 import type { EventData } from '../database/types/EventTable.ts';
 
+type FoodNutrientItem = { nutrient: string; unit: string; value: number };
+
 function calculateNutrientsFromFood(
   amount: number,
   food: Food,
 ): Record<string, number> {
   const nutrients: Record<string, number> = {};
-  const nutrientsJson =
+  const nutrientsArray: FoodNutrientItem[] | null =
     typeof food.nutrients === 'string'
-      ? (JSON.parse(food.nutrients) as Record<string, number>)
+      ? (JSON.parse(food.nutrients) as FoodNutrientItem[])
       : food.nutrients;
 
   if (food.moisture_percent != null) {
@@ -41,18 +43,16 @@ function calculateNutrientsFromFood(
   if (food.calories_per_100g != null) {
     nutrients.calories = amount * (food.calories_per_100g / 100);
   }
-  if (nutrientsJson && typeof nutrientsJson === 'object') {
-    for (const [key, value] of Object.entries(nutrientsJson)) {
+  if (nutrientsArray && Array.isArray(nutrientsArray)) {
+    for (const item of nutrientsArray) {
+      const { nutrient, unit, value } = item;
       if (value == null || typeof value !== 'number') continue;
-      if (key.endsWith('_percent')) {
-        const nutrientKey = key.replace('_percent', '_g');
-        nutrients[nutrientKey] = amount * (value / 100);
-      } else if (key.endsWith('_per_kg')) {
-        const nutrientKey = key.replace('_per_kg', '');
-        nutrients[nutrientKey] = amount * (value / 1000);
-      } else if (key.endsWith('_per_100g')) {
-        const nutrientKey = key.replace('_per_100g', '');
-        nutrients[nutrientKey] = amount * (value / 100);
+      if (unit === 'percent') {
+        nutrients[`${nutrient}_g`] = amount * (value / 100);
+      } else if (unit === 'g') {
+        nutrients[`${nutrient}_g`] = amount * (value / 100);
+      } else if (unit === 'mg') {
+        nutrients[`${nutrient}_mg`] = amount * (value / 100);
       }
     }
   }

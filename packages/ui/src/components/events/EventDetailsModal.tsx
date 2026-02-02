@@ -73,12 +73,12 @@ const ELIMINATION_TYPE_OPTIONS: {
   value: LitterboxUseEliminationType;
   label: string;
 }[] = [
-  { value: 'urination', label: 'Urination' },
-  { value: 'defecation', label: 'Defecation' },
-  { value: 'both', label: 'Both' },
-  { value: 'no_elimination', label: 'No Elimination' },
-  { value: 'unknown', label: 'Unknown' },
-];
+    { value: 'urination', label: 'Urination' },
+    { value: 'defecation', label: 'Defecation' },
+    { value: 'both', label: 'Both' },
+    { value: 'no_elimination', label: 'No Elimination' },
+    { value: 'unknown', label: 'Unknown' },
+  ];
 
 const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   event,
@@ -164,9 +164,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   const petOptions = pets
     ? [
-        { value: 'null', label: 'Unknown' },
-        ...pets.map((p) => ({ value: String(p.id), label: p.name })),
-      ]
+      { value: 'null', label: 'Unknown' },
+      ...pets.map((p) => ({ value: String(p.id), label: p.name })),
+    ]
     : [{ value: 'null', label: 'Unknown' }];
 
   const hasMedia = media && media.length > 0;

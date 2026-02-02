@@ -27,11 +27,66 @@
     border-radius: var(--radius-sm);
   }
 
+  .add-edit-food-tabs {
+    width: 100%;
+  }
+
+  .add-edit-food-tab-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .nutrients-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .nutrients-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .nutrient-entry {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .nutrient-label {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text);
+  }
+
+  .nutrient-entry .nutrient-value-input {
+    flex: 0 0 10rem;
+    width: 10rem;
+  }
+
+  .nutrient-entry .select {
+    flex: 0 0 10rem;
+    min-width: 10rem;
+  }
+
   @media (max-width: 768px) {
     padding: var(--space-sm);
 
     .section-header {
       margin-bottom: var(--space-xl);
+    }
+
+    .nutrient-entry {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .nutrient-entry .nutrient-value-input {
+      max-width: none;
     }
 
     .form-actions {
