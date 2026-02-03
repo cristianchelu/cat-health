@@ -1,0 +1,36 @@
+# Development compose - standalone, run with:
+# docker compose -f docker-compose.dev.yml up -d --build
+services:
+  cat-health-dev:
+    container_name: cat-health-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+      network: host
+    ports:
+      - "3001:3000"  # API - different port to avoid conflict with prod
+      - "5173:5173"  # Vite dev server (proxies /api to localhost:3000)
+      - "9229:9229"  # Node.js debugger
+    volumes:
+      - ./:/app:Z
+      - /app/node_modules
+      - /app/packages/api/node_modules
+      - /app/packages/ui/node_modules
+      - /app/packages/shared/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      # Override SQLite database path
+      - SQLITE_PATH=/app/data/database.sqlite
+      # Override video recording storage path
+      - MEDIA_PATH=/app/data/media
+      # Override temporary media storage path
+      - MEDIA_TEMP_PATH=/app/data/temp
+    restart: unless-stopped
+    # Run both API (with debugger) and UI dev servers
+    command: >
+      sh -c "node --watch --inspect=0.0.0.0:9229 --experimental-strip-types packages/api/src/main.ts &
+             npm run start -w ui &
+             wait"
+

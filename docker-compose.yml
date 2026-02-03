@@ -12,6 +12,12 @@ services:
       - ./data:/app/data:Z
       - ./recordings:/app/recordings:Z
       - ./images:/app/images:Z
-    env_file:
-      - ./packages/api/.env
+    environment:
+      - NODE_ENV=production
+      # Override SQLite database path
+      - SQLITE_PATH=/app/data/database.sqlite
+      # Override video recording storage path
+      - MEDIA_PATH=/app/data/media
+      # Override temporary media storage path
+      - MEDIA_TEMP_PATH=/app/data/temp
     restart: unless-stopped
