@@ -11,6 +11,7 @@ import {
   getPets,
   getPetWeightTrends,
   getPetWaterTrends,
+  getPetLitterboxTrends,
   updateEvent,
   getPet,
   createPet,
@@ -97,6 +98,14 @@ export function usePetWaterTrends(petId: number, days: number) {
   return useQuery({
     queryKey: ['waterTrends', petId, days],
     queryFn: () => getPetWaterTrends(petId, { days }),
+  });
+}
+
+export function usePetLitterboxTrends(petId: number, days: number) {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return useQuery({
+    queryKey: ['litterboxTrends', petId, days, timezone],
+    queryFn: () => getPetLitterboxTrends(petId, { days, timezone }),
   });
 }
 

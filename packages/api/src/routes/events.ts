@@ -18,6 +18,9 @@ import {
   WaterTrendParamsSchema,
   WaterTrendQuerySchema,
   WaterTrendsResponseSchema,
+  LitterboxTrendParamsSchema,
+  LitterboxTrendQuerySchema,
+  LitterboxTrendsResponseSchema,
 } from 'shared';
 
 import { type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
@@ -179,6 +182,92 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       }
 
       return result;
+    },
+  );
+
+  fastify.get(
+    '/litterbox-trends/:petId',
+    {
+      schema: {
+        params: LitterboxTrendParamsSchema,
+        querystring: LitterboxTrendQuerySchema,
+        response: {
+          '200': LitterboxTrendsResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { petId } = request.params;
+      const { days = 7, timezone = 'UTC' } = request.query;
+
+      const today = new Date();
+      const startDate = startOfDay(subDays(today, days - 1));
+
+      // Fetch litterbox events
+      const litterboxEvents = await db
+        .selectFrom('event')
+        .selectAll()
+        .where('pet_id', '=', petId)
+        .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_use')
+        .where('timestamp', '>=', startDate)
+        .orderBy('timestamp', 'asc')
+        .execute();
+
+      // Group events by local date in the specified timezone
+      const dailyEvents = new Map<string, Array<{ type: string; timestamp: string }>>();
+
+      // Initialize days
+      for (let i = 0; i < days; i++) {
+        const d = subDays(today, days - 1 - i);
+        const dateStr = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
+        dailyEvents.set(dateStr, []);
+      }
+
+      // Track last pee and poop timestamps
+      let lastPee: Date | null = null;
+      let lastPoop: Date | null = null;
+
+      // Process events
+      for (const event of litterboxEvents) {
+        const dateStr = formatInTimeZone(event.timestamp, timezone, 'yyyy-MM-dd');
+        const eventData = event.data as { elimination_type?: string };
+        const eliminationType = eventData.elimination_type || 'unknown';
+
+        if (dailyEvents.has(dateStr)) {
+          dailyEvents.get(dateStr)!.push({
+            type: eliminationType,
+            timestamp: event.timestamp.toISOString(),
+          });
+        }
+
+        // Track last pee/poop
+        if (eliminationType === 'urination' || eliminationType === 'both') {
+          if (!lastPee || event.timestamp > lastPee) {
+            lastPee = event.timestamp;
+          }
+        }
+        if (eliminationType === 'defecation' || eliminationType === 'both') {
+          if (!lastPoop || event.timestamp > lastPoop) {
+            lastPoop = event.timestamp;
+          }
+        }
+      }
+
+      const result = [];
+      for (let i = 0; i < days; i++) {
+        const d = subDays(today, days - 1 - i);
+        const dateStr = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
+        result.push({
+          date: dateStr,
+          events: dailyEvents.get(dateStr) || [],
+        });
+      }
+
+      return {
+        days: result,
+        lastPee: lastPee?.toISOString() ?? null,
+        lastPoop: lastPoop?.toISOString() ?? null,
+      };
     },
   );
 

@@ -1,10 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Toilet, Loader2, Plus } from 'lucide-react';
+import { Clock, Loader2, Plus } from 'lucide-react';
 import { addDays, subDays, format, parseISO } from 'date-fns';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetEvents } from '@/hooks/queries/petQueries';
-import { Card, CardHeader } from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { Button } from '@/components/ui/Button';
@@ -17,6 +16,7 @@ import type { DateRange } from '@/lib/utils';
 import WeightTrendCard from '@/pages/overview/components/WeightTrendCard';
 import WaterConsumptionCard from '@/pages/overview/components/WaterConsumptionCard';
 import FoodIntakeCard from '@/pages/overview/components/FoodIntakeCard';
+import LitterboxVisitsCard from '@/pages/overview/components/LitterboxVisitsCard';
 
 import './Overview.css';
 import type { GetEventDTO } from 'shared';
@@ -120,12 +120,7 @@ const Overview: React.FC = () => {
         {selectedPet && <WeightTrendCard petId={selectedPet.id} />}
         {selectedPet && <WaterConsumptionCard petId={selectedPet.id} />}
         {selectedPet && <FoodIntakeCard petId={selectedPet.id} />}
-        <Card>
-          <CardHeader>
-            <Toilet style={{ marginRight: 'auto' }} />
-            <span>3 {t('overview.times')}</span>
-          </CardHeader>
-        </Card>
+        {selectedPet && <LitterboxVisitsCard petId={selectedPet.id} />}
       </section>
       <section>
         <SectionHeader icon={<Clock />} actions={activityActions}>

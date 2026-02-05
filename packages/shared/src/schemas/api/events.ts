@@ -121,3 +121,30 @@ export const WaterTrendsResponseSchema = Type.Array(
   }),
 );
 export type WaterTrendsResponseDTO = Static<typeof WaterTrendsResponseSchema>;
+
+// Litterbox trends
+export const LitterboxTrendParamsSchema = Type.Object({ petId: Type.Number() });
+export type LitterboxTrendParamsDTO = Static<typeof LitterboxTrendParamsSchema>;
+
+export const LitterboxTrendQuerySchema = Type.Object({
+  days: Type.Optional(Type.Number({ minimum: 1 })),
+  timezone: Type.Optional(Type.String()),
+});
+export type LitterboxTrendQueryDTO = Static<typeof LitterboxTrendQuerySchema>;
+
+export const LitterboxTrendsResponseSchema = Type.Object({
+  days: Type.Array(
+    Type.Object({
+      date: Type.String(),
+      events: Type.Array(
+        Type.Object({
+          type: LitterboxUseEliminationTypeSchema,
+          timestamp: Type.String(),
+        }),
+      ),
+    }),
+  ),
+  lastPee: Type.Union([Type.String(), Type.Null()]),
+  lastPoop: Type.Union([Type.String(), Type.Null()]),
+});
+export type LitterboxTrendsResponseDTO = Static<typeof LitterboxTrendsResponseSchema>;

@@ -72,11 +72,8 @@ const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
   for (const ev of foodEvents) {
     const dateStr = format(new Date(ev.timestamp), 'yyyy-MM-dd');
     const data = ev.data as { nutrients?: { calories?: number } };
-    const kcal = data.nutrients?.calories ?? 0;
-    dailyCalories.set(
-      dateStr,
-      (dailyCalories.get(dateStr) ?? 0) + kcal,
-    );
+    const kcal = Math.round(data.nutrients?.calories ?? 0);
+    dailyCalories.set(dateStr, (dailyCalories.get(dateStr) ?? 0) + kcal);
   }
 
   const chartData: DayData[] = [];

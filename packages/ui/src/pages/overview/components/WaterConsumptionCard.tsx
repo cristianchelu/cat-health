@@ -49,7 +49,7 @@ const WaterConsumptionCard: React.FC<WaterConsumptionCardProps> = ({
 
   // Calculate today's total (last item)
   const todayData = waterData[waterData.length - 1];
-  const todayConsumption = todayData.tracked ? todayData.amount : 0;
+  const todayConsumption = Math.round(todayData.tracked ? todayData.amount : 0);
 
   // Calculate max value for scaling (add 20% padding)
   const maxConsumption = Math.max(...waterData.map((d) => d.amount));
