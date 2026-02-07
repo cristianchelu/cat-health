@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { fromZonedTime } from 'date-fns-tz';
 
 export const cn = clsx;
 

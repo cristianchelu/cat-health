@@ -27,13 +27,7 @@ const foodRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .selectAll()
         .orderBy('name', 'asc')
         .execute();
-      return rows.map((r) => ({
-        ...r,
-        nutrients:
-          typeof r.nutrients === 'string'
-            ? (JSON.parse(r.nutrients) as typeof r.nutrients)
-            : r.nutrients,
-      }));
+      return rows;
     },
   );
 
@@ -58,10 +52,11 @@ const foodRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           barcode_ean13: body.barcode_ean13 ?? null,
           moisture_percent: body.moisture_percent ?? null,
           calories_per_100g: body.calories_per_100g ?? null,
-          nutrients:
-            body.nutrients != null ? JSON.stringify(body.nutrients) : null,
+          nutrients: body.nutrients ?? null,
           serving_size_g: body.serving_size_g ?? null,
           notes: body.notes ?? null,
+          created_at: Math.floor(Date.now() / 1000),
+          updated_at: Math.floor(Date.now() / 1000),
         })
         .returningAll()
         .executeTakeFirstOrThrow();

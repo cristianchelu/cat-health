@@ -109,5 +109,5 @@
     "skipLibCheck": true /* Skip type checking all .d.ts files. */,
     "erasableSyntaxOnly": true
   },
-  "references": [{ "path": "../shared" }]
+  "references": []
 }

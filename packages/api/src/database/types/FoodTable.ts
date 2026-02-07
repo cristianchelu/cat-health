@@ -1,4 +1,5 @@
 import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
+import { NutrientNameDTO, NutrientUnitDTO } from 'shared';
 
 export type FoodType =
   | 'drink'           // Flavoured water (complementary)
@@ -16,7 +17,7 @@ export interface FoodTable {
   barcode_ean13: string | null;
   moisture_percent: number | null;
   calories_per_100g: number | null;
-  nutrients: Array<{ nutrient: string; unit: string; value: number }> | null;
+  nutrients: Array<{ nutrient: NutrientNameDTO; unit: NutrientUnitDTO; value: number }> | null;
   serving_size_g: number | null;
   notes: string | null;
   created_at: number;

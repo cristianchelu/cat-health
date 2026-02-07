@@ -70,6 +70,7 @@ const STATES = {
   GAP: 'gap',
   ENDED: 'ended',
 } as const;
+export type LitterboxState = (typeof STATES)[keyof typeof STATES];
 
 export class LitterboxStateTracker {
   private states = STATES;
@@ -87,7 +88,7 @@ export class LitterboxStateTracker {
   private knownPresenceTol = 0.1;
   private windowSize = 10;
 
-  private currentState = this.states.EMPTY;
+  private currentState: LitterboxState = this.states.EMPTY;
   private knownCatWeights: number[];
 
   private window = new Ring(this.windowSize);
@@ -386,7 +387,7 @@ export class LitterboxStateTracker {
     this.transitions = [];
   }
 
-  private transitionTo(newState: string, offset?: number): void {
+  private transitionTo(newState: LitterboxState, offset?: number): void {
     if (this.currentState !== newState) {
       if (this.sessionActive && newState === this.states.EMPTY) {
         this.currentState = newState;

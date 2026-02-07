@@ -34,13 +34,15 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
   const { t } = useTranslation();
   const { data } = event;
 
+  const eliminationType = data.elimination_type as LitterboxUseEliminationType;
+
   const variant = React.useMemo(() => {
-    if (data.elimination_type === 'no_elimination') return 'danger';
+    if (eliminationType === 'no_elimination') return 'danger';
     return 'warning';
-  }, [data.elimination_type]);
+  }, [eliminationType]);
 
   const title = React.useMemo(() => {
-    switch (data.elimination_type) {
+    switch (eliminationType) {
       case 'urination':
         return t('overview.urination');
       case 'defecation':
@@ -52,12 +54,12 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
       default:
         return t('overview.litterbox_visit');
     }
-  }, [data.elimination_type, t]);
+  }, [eliminationType, t]);
 
-  const Icon = ICON_MAP[data.elimination_type] || Toilet;
-  const style: React.CSSProperties = {
-    '--timeline-icon-color': COLOR_MAP[data.elimination_type],
-  };
+  const Icon = ICON_MAP[eliminationType] || Toilet;
+  const style = {
+    '--timeline-icon-color': COLOR_MAP[eliminationType],
+  } as React.CSSProperties;
 
   return (
     <Timeline.Item onClick={onClick} style={style}>

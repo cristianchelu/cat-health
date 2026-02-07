@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "preview": "vite preview",
     "icons": "node scripts/generate-icons.js",
-    "typecheck": "tsc -b --force"
+    "typecheck": "tsc -b --force --noEmit"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.82.0",

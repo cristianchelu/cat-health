@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { type EventType } from '../database/types/EventTable.ts';
+import { type EventType } from 'shared';
 
 export const generateOutputFilename = (
   timestamp: Date,
