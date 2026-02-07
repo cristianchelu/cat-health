@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Loader2, Plus } from 'lucide-react';
+import { Clock, Plus } from 'lucide-react';
 import { addDays, subDays, format, parseISO } from 'date-fns';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetEvents } from '@/hooks/queries/petQueries';
@@ -127,12 +127,7 @@ const Overview: React.FC = () => {
           {t('overview.activity')}
         </SectionHeader>
         <div className="overview-timeline-container">
-          <Timeline>
-            {isFetching && !isLoading && (
-              <div className="overview-timeline-overlay">
-                <Loader2 className="animate-spin" size={32} />
-              </div>
-            )}
+          <Timeline isLoading={isFetching || isLoading}>
             {isLoading && (
               <li className="overview-loading-activity">Loading...</li>
             )}
@@ -145,6 +140,7 @@ const Overview: React.FC = () => {
               .filter((ev) => ev.data.type !== 'weight_measurement')
               .map((event) => (
                 <EventTimelineItem
+                  key={event.id}
                   onClick={() => handleEventClick(event)}
                   event={event}
                 />

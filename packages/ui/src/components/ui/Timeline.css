@@ -1,4 +1,5 @@
 .timeline {
+  position: relative;
   --timeline-icon-size: 32px;
   --timeline-line-color: var(--color-border);
   --timeline-item-padding-y: var(--space-sm);

@@ -79,12 +79,7 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
         )}
 
         {!error && (
-          <Timeline>
-            {isFetching && !isLoading && (
-              <div className="device-timeline-overlay">
-                <Loader2 className="animate-spin" size={32} />
-              </div>
-            )}
+          <Timeline isLoading={isFetching && !isLoading}>
             {isLoading && (
               <li className="device-timeline-loading">Loading events...</li>
             )}
@@ -100,6 +95,7 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
                 .filter((e) => e.data.type !== 'weight_measurement')
                 .map((event) => (
                   <EventTimelineItem
+                    key={event.id}
                     onClick={() => handleEventClick(event)}
                     event={event}
                   />

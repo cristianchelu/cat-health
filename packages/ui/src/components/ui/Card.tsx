@@ -1,18 +1,30 @@
 import * as React from 'react';
+import { Loader2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
 import './Card.css';
 
-const Card = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
-  ({ className, ...props }, ref) => {
+interface CardProps extends React.ComponentProps<'div'> {
+  isLoading?: boolean;
+}
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, isLoading, children, ...props }, ref) => {
     return (
       <div
         data-slot="card"
         className={cn('card', className)}
         ref={ref}
         {...props}
-      />
+      >
+        {children}
+        {isLoading && (
+          <div className="card-loading-overlay">
+            <Loader2 className="animate-spin" size={32} />
+          </div>
+        )}
+      </div>
     );
   },
 );

@@ -445,9 +445,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const {
         pet_id,
         device_id,
-        timestamp,
         data,
-        raw_data,
         parent_event_id,
       } = request.body;
 
@@ -475,9 +473,9 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           parent_event_id: parent_event_id || null,
           pet_id,
           device_id,
-          timestamp: timestamp ? new Date(timestamp) : new Date(),
+          timestamp: new Date(),
           data: eventData,
-          raw_data: raw_data ? Buffer.from(raw_data) : null,
+          raw_data: null,
           human_verified: eventData?.type === 'food_intake' ? true : false,
         })
         .returningAll()
