@@ -1,13 +1,11 @@
-import { type Static, Type } from '@sinclair/typebox';
+import { type Static, Type } from '@fastify/type-provider-typebox';
 
 // TODO: Remove from here; use real schema
-export const MediaMetadataSchema = Type.Object(
-  {
-    width: Type.Optional(Type.Number()),
-    height: Type.Optional(Type.Number()),
-    duration: Type.Optional(Type.Number()),
-  },
-);
+export const MediaMetadataSchema = Type.Object({
+  width: Type.Optional(Type.Number()),
+  height: Type.Optional(Type.Number()),
+  duration: Type.Optional(Type.Number()),
+});
 
 // TODO: Remove from here; use real schema
 export const MediaSchema = Type.Object({

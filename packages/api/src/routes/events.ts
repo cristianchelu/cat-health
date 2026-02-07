@@ -21,7 +21,7 @@ import {
   LitterboxTrendParamsSchema,
   LitterboxTrendQuerySchema,
   LitterboxTrendsResponseSchema,
-  LitterboxUseEliminationType,
+  type LitterboxUseEliminationType,
 } from 'shared';
 
 import { type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';

@@ -1,3 +1,4 @@
+import Compile from 'typebox/compile';
 import type {
   AccountManager,
   DeviceController,
@@ -10,7 +11,6 @@ import {
   CameraConfigSchema,
   CameraDeviceController,
 } from './CameraDeviceController.ts';
-import { TypeCompiler } from '@sinclair/typebox/compiler';
 
 export class CameraAccountManager implements AccountManager {
   readonly accountId: number;
@@ -47,7 +47,7 @@ export class CameraAccountManager implements AccountManager {
       throw new Error(`Unsupported device type: ${device.type}`);
     }
 
-    const validator = TypeCompiler.Compile(CameraConfigSchema);
+    const validator = Compile(CameraConfigSchema);
     if (!validator.Check(device.config)) {
       const errors = [...validator.Errors(device.config)];
       throw new Error(

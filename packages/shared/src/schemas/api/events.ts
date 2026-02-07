@@ -38,16 +38,18 @@ export type GetEventDTO = Static<typeof GetEventSchema>;
 export const GetEventsSchema = Type.Array(GetEventSchema);
 export type GetEventsDTO = Static<typeof GetEventsSchema>;
 
-export const PostEventRequestSchema = Type.Composite([
-  Type.Omit(GetEventSchema, ["id", "timestamp", "raw_data"]),
-  Type.Object({
-    timestamp: Type.Optional(Type.String()),
-    raw_data: Type.Optional(
-      Type.Union([Type.Null(), Type.Array(Type.Number())]),
-    ),
-    parent_event_id: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
-  }),
-]);
+export const PostEventRequestSchema = Type.Evaluate(
+  Type.Intersect([
+    Type.Omit(GetEventSchema, ["id", "timestamp", "raw_data"]),
+    Type.Object({
+      timestamp: Type.Optional(Type.String()),
+      raw_data: Type.Optional(
+        Type.Union([Type.Null(), Type.Array(Type.Number())]),
+      ),
+      parent_event_id: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
+    }),
+  ]),
+);
 export type PostEventRequestDTO = Static<typeof PostEventRequestSchema>;
 
 export const PatchEventParamsSchema = Type.Object({ eventId: Type.Number() });

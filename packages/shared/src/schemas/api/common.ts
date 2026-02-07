@@ -1,6 +1,6 @@
-import { type Static, type TAnySchema, Type } from "@fastify/type-provider-typebox";
+import { type Static, type TSchema, Type } from "@fastify/type-provider-typebox";
 
-export const getPaginatedResponseSchema = <T extends TAnySchema>(
+export const getPaginatedResponseSchema = <T extends TSchema>(
   dataSchema: T,
 ) =>
   Type.Object({
@@ -10,6 +10,6 @@ export const getPaginatedResponseSchema = <T extends TAnySchema>(
     offset: Type.Number(),
     hasMore: Type.Boolean(),
   });
-export type PaginatedResponseDTO<T extends TAnySchema> = Static<
+export type PaginatedResponseDTO<T extends TSchema> = Static<
   ReturnType<typeof getPaginatedResponseSchema<T>>
 >;
