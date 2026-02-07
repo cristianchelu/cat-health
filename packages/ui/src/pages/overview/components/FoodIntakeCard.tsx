@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { subDays, format } from 'date-fns';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Drumstick, Loader } from 'lucide-react';
 import MetricBarChart from '@/components/ui/MetricBarChart';
@@ -27,17 +28,27 @@ const TARGET_MAX = DEFAULT_DAILY_TARGET_KCAL * 1.2;
 
 const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
   const { t } = useTranslation();
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const today = new Date();
   const startDate = subDays(today, DAYS - 1);
-  const startTime = new Date(
-    format(startDate, 'yyyy-MM-dd') + 'T00:00:00.000Z',
-  ).toISOString();
-  const endTime = new Date(
-    format(today, 'yyyy-MM-dd') + 'T23:59:59.999Z',
-  ).toISOString();
+  
+  // Use timezone-aware date conversion
+  const { dateToTimeRange } = React.useMemo(() => {
+    return {
+      dateToTimeRange: (date: Date) => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const start = fromZonedTime(`${dateStr}T00:00:00.000`, timezone);
+        const end = fromZonedTime(`${dateStr}T23:59:59.999`, timezone);
+        return { start: start.toISOString(), end: end.toISOString() };
+      }
+    };
+  }, [timezone]);
+  
+  const startTime = dateToTimeRange(startDate).start;
+  const endTime = dateToTimeRange(today).end;
 
   const { data: eventsResponse, isLoading, error } = useQuery({
-    queryKey: ['petEvents', petId, 'foodTrends', startTime, endTime],
+    queryKey: ['petEvents', petId, 'foodTrends', startTime, endTime, timezone],
     queryFn: () => getPetEvents(petId, startTime, endTime, 500),
     enabled: petId > 0,
   });
@@ -66,11 +77,11 @@ const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
   const dailyCalories = new Map<string, number>();
   for (let i = 0; i < DAYS; i++) {
     const d = subDays(today, DAYS - 1 - i);
-    const dateStr = format(d, 'yyyy-MM-dd');
+    const dateStr = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
     dailyCalories.set(dateStr, 0);
   }
   for (const ev of foodEvents) {
-    const dateStr = format(new Date(ev.timestamp), 'yyyy-MM-dd');
+    const dateStr = formatInTimeZone(new Date(ev.timestamp), timezone, 'yyyy-MM-dd');
     const data = ev.data as { nutrients?: { calories?: number } };
     const kcal = Math.round(data.nutrients?.calories ?? 0);
     dailyCalories.set(dateStr, (dailyCalories.get(dateStr) ?? 0) + kcal);
@@ -79,7 +90,7 @@ const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
   const chartData: DayData[] = [];
   for (let i = 0; i < DAYS; i++) {
     const d = subDays(today, DAYS - 1 - i);
-    const dateStr = format(d, 'yyyy-MM-dd');
+    const dateStr = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
     const value = dailyCalories.get(dateStr) ?? 0;
     chartData.push({
       value,
@@ -89,7 +100,7 @@ const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
     });
   }
 
-  const todayStr = format(today, 'yyyy-MM-dd');
+  const todayStr = formatInTimeZone(today, timezone, 'yyyy-MM-dd');
   const todayKcal = dailyCalories.get(todayStr) ?? 0;
   const maxValue = Math.max(
     ...chartData.map((d) => d.value),

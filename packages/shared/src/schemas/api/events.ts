@@ -89,6 +89,7 @@ export type WeightTrendParamsDTO = Static<typeof WeightTrendParamsSchema>;
 
 export const WeightTrendQuerySchema = Type.Object({
   days: Type.Optional(Type.Number({ minimum: 1 })),
+  timezone: Type.Optional(Type.String()),
 });
 export type WeightTrendQueryDTO = Static<typeof WeightTrendQuerySchema>;
 
@@ -107,6 +108,7 @@ export type WaterTrendParamsDTO = Static<typeof WaterTrendParamsSchema>;
 
 export const WaterTrendQuerySchema = Type.Object({
   days: Type.Optional(Type.Number({ minimum: 1 })),
+  timezone: Type.Optional(Type.String()),
 });
 export type WaterTrendQueryDTO = Static<typeof WaterTrendQuerySchema>;
 

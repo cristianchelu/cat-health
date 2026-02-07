@@ -88,16 +88,18 @@ export function useUpdateEvent(petId: number, currentDateRange: DateRange) {
 }
 
 export function usePetWeightTrends(petId: number, days: number) {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return useQuery({
-    queryKey: ['weightTrends', petId, days],
-    queryFn: () => getPetWeightTrends(petId, { days }),
+    queryKey: ['weightTrends', petId, days, timezone],
+    queryFn: () => getPetWeightTrends(petId, { days, timezone }),
   });
 }
 
 export function usePetWaterTrends(petId: number, days: number) {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return useQuery({
-    queryKey: ['waterTrends', petId, days],
-    queryFn: () => getPetWaterTrends(petId, { days }),
+    queryKey: ['waterTrends', petId, days, timezone],
+    queryFn: () => getPetWaterTrends(petId, { days, timezone }),
   });
 }
 

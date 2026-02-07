@@ -21,12 +21,12 @@ import {
   LitterboxTrendParamsSchema,
   LitterboxTrendQuerySchema,
   LitterboxTrendsResponseSchema,
+  LitterboxUseEliminationType,
 } from 'shared';
 
 import { type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import { db } from '../database/index.ts';
 import type { Food } from '../database/types/FoodTable.ts';
-import type { EventData } from '../database/types/EventTable.ts';
 
 type FoodNutrientItem = { nutrient: string; unit: string; value: number };
 
@@ -76,7 +76,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     },
     async (request) => {
       const { petId } = request.params;
-      const { days = 7 } = request.query;
+      const { days = 7, timezone = 'UTC' } = request.query;
 
       const startDate = startOfDay(subDays(new Date(), days - 1));
       const today = new Date();
@@ -126,13 +126,13 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       // Initialize days
       for (let i = 0; i < days; i++) {
         const d = subDays(today, days - 1 - i);
-        const dateStr = formatInTimeZone(d, 'UTC', 'yyyy-MM-dd');
+        const dateStr = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
         dailyStats.set(dateStr, { amount: 0 });
       }
 
       // Process water events
       for (const event of waterEvents) {
-        const dateStr = formatInTimeZone(event.timestamp, 'UTC', 'yyyy-MM-dd');
+        const dateStr = formatInTimeZone(event.timestamp, timezone, 'yyyy-MM-dd');
         if (dailyStats.has(dateStr)) {
           const stats = dailyStats.get(dateStr)!;
           const amount = (event.data as { amount: number }).amount || 0;
@@ -145,7 +145,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       for (let i = 0; i < days; i++) {
         const d = subDays(today, days - 1 - i);
-        const dateStr = formatInTimeZone(d, 'UTC', 'yyyy-MM-dd');
+        const dateStr = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
         const dayStart = new Date(`${dateStr}T00:00:00Z`);
         const nextDay = addDays(dayStart, 1);
 
@@ -214,7 +214,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .execute();
 
       // Group events by local date in the specified timezone
-      const dailyEvents = new Map<string, Array<{ type: string; timestamp: string }>>();
+      const dailyEvents = new Map<string, Array<{ type: LitterboxUseEliminationType; timestamp: string }>>();
 
       // Initialize days
       for (let i = 0; i < days; i++) {
@@ -230,7 +230,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       // Process events
       for (const event of litterboxEvents) {
         const dateStr = formatInTimeZone(event.timestamp, timezone, 'yyyy-MM-dd');
-        const eventData = event.data as { elimination_type?: string };
+        const eventData = event.data as { elimination_type?: LitterboxUseEliminationType };
         const eliminationType = eventData.elimination_type || 'unknown';
 
         if (dailyEvents.has(dateStr)) {
@@ -284,7 +284,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     },
     async (request) => {
       const { petId } = request.params;
-      const { days = 30 } = request.query;
+      const { days = 30, timezone = 'UTC' } = request.query;
 
       let query = db
         .selectFrom('event')
@@ -304,7 +304,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const trends = weightEvents.map((event) => {
         const data = event.data as { type: string; weight: number };
         return {
-          date: formatInTimeZone(event.timestamp, 'UTC', 'yyyy-MM-dd'),
+          date: formatInTimeZone(event.timestamp, timezone, 'yyyy-MM-dd'),
           weight: data.weight,
           timestamp: event.timestamp.toISOString(),
         };
