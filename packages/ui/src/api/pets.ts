@@ -15,6 +15,7 @@ import type {
   PostPetRequestDTO,
   PatchPetRequestDTO,
   DeletePetResponseDTO,
+  GetEventMediaResponseDTO,
 } from 'shared';
 
 import apiClient from './apiClient';
@@ -129,4 +130,38 @@ export async function getPetLitterboxTrends(
     },
   );
   return data;
+}
+
+export async function getVerifiedEventMedia(
+  deviceId: number,
+  petId: number,
+) {
+  // Fetch events filtered by device, pet, and human_verified
+  const { data: eventsResponse } = await apiClient.get<GetEventsResponseDTO>(
+    '/events',
+    {
+      params: {
+        device_id: deviceId,
+        pet_id: petId,
+        human_verified: true,
+        limit: 100,
+      },
+    },
+  );
+
+  // For each event, fetch its media
+  const allMedia: GetEventMediaResponseDTO = [];
+  for (const event of eventsResponse.data) {
+    try {
+      const { data: media } = await apiClient.get<GetEventMediaResponseDTO>(
+        `/events/${event.id}/media`,
+      );
+      allMedia.push(...media);
+    } catch (error) {
+      console.error(`Failed to fetch media for event ${event.id}:`, error);
+    }
+  }
+
+  console.log('Total media found:', allMedia.length);
+  return allMedia;
 }

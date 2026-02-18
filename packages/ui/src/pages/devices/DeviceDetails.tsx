@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
@@ -6,10 +7,12 @@ import { DeviceHeader } from './components/DeviceHeader';
 import { ProviderDeviceView } from './components/ProviderDeviceView';
 import { DeviceTimeline } from './components/DeviceTimeline';
 import CameraLinkSection from './components/CameraLinkSection';
+import ReferenceImagesTab from './components/ReferenceImagesTab';
 import './DeviceDetails.css';
 import { useDevice } from '@/hooks/queries/deviceQueries';
 
 const DeviceDetails: React.FC = () => {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const deviceId = id ? parseInt(id, 10) : null;
@@ -36,6 +39,9 @@ const DeviceDetails: React.FC = () => {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
+          {device.type === 'pet_recognizer' && (
+            <TabsTrigger value="reference-images">{t('pet_recognizer.tab_label')}</TabsTrigger>
+          )}
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
@@ -46,6 +52,11 @@ const DeviceDetails: React.FC = () => {
         <TabsContent value="history">
           <DeviceTimeline deviceId={device.id} />
         </TabsContent>
+        {device.type === 'pet_recognizer' && (
+          <TabsContent value="reference-images">
+            <ReferenceImagesTab device={device} />
+          </TabsContent>
+        )}
         <TabsContent value="settings">
           <div className="device-content">
             <CameraLinkSection device={device} />

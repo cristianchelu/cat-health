@@ -7,6 +7,7 @@ import {
   createProviderAccount,
   discoverDevices,
   addDevice,
+  updateDevice,
   linkDeviceCamera,
   updateDeviceCameraConfig,
   unlinkDeviceCamera,
@@ -22,6 +23,7 @@ import type {
   PatchEventRequestDTO,
   PostProviderAccountRequestDTO,
   PostDeviceRequestDTO,
+  PatchDeviceRequestDTO,
   PutDeviceCameraRequestDTO,
   PatchDeviceCameraRequestDTO,
 } from 'shared';
@@ -129,6 +131,17 @@ export function useAddDevice() {
   return useMutation({
     mutationFn: (data: PostDeviceRequestDTO) => addDevice(data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+    },
+  });
+}
+
+export function useUpdateDevice(deviceId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PatchDeviceRequestDTO) => updateDevice(deviceId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
       queryClient.invalidateQueries({ queryKey: ['devices'] });
     },
   });

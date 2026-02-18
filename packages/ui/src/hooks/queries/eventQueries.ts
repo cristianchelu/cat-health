@@ -4,7 +4,7 @@ import {
   type GetEventMediaResponseDTO,
   type PatchEventRequestDTO,
 } from 'shared';
-import { updateEvent } from '@/api/pets';
+import { updateEvent, getVerifiedEventMedia } from '@/api/pets';
 
 export const useEventMedia = (eventId: number, enabled: boolean = true) => {
   return useQuery({
@@ -35,3 +35,15 @@ export function useUpdateEvent() {
     },
   });
 }
+
+export const useVerifiedEventMedia = (
+  deviceId: number,
+  petId: number,
+  enabled: boolean = true,
+) => {
+  return useQuery({
+    queryKey: ['verifiedEventMedia', deviceId, petId],
+    queryFn: () => getVerifiedEventMedia(deviceId, petId),
+    enabled,
+  });
+};

@@ -370,6 +370,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         limit = 100,
         offset = 0,
         includeChildren = false,
+        human_verified,
       } = request.query;
 
       let query = db.selectFrom('event').selectAll();
@@ -390,6 +391,11 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       if (device_id !== undefined) {
         query = query.where('device_id', '=', device_id);
         countQuery = countQuery.where('device_id', '=', device_id);
+      }
+
+      if (human_verified !== undefined) {
+        query = query.where('human_verified', '=', human_verified);
+        countQuery = countQuery.where('human_verified', '=', human_verified);
       }
 
       if (startTime !== undefined) {

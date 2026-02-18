@@ -119,6 +119,10 @@ export const GetDeviceResponseSchema = Type.Object({
   last_seen: Type.Union([Type.String(), Type.Null()]),
   status: Type.Union([DeviceStatusSchema, Type.Null()]),
   state: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
+  reference_media: Type.Optional(Type.Record(
+    Type.String(),
+    Type.Array(Type.Object({ id: Type.Number(), file_path: Type.String() })),
+  )),
   camera_link: Type.Optional(DeviceCameraLinkSchema),
   created_at: Type.String(),
   updated_at: Type.String(),
@@ -149,6 +153,13 @@ export const PostDeviceRequestSchema = Type.Object({
 });
 export type PostDeviceRequestDTO = Static<typeof PostDeviceRequestSchema>;
 
+export const PatchDeviceRequestSchema = Type.Object({
+  name: Type.Optional(Type.String()),
+  enabled: Type.Optional(Type.Boolean()),
+  config: Type.Optional(Type.Unknown()),
+});
+export type PatchDeviceRequestDTO = Static<typeof PatchDeviceRequestSchema>;
+
 export const WaterFountainStateSchema = Type.Object({
   /** Water Level Percentage */
   waterLevel: Type.Number(),
@@ -165,3 +176,17 @@ export const WaterFountainStateSchema = Type.Object({
   hasCamera: Type.Optional(Type.Boolean()),
 });
 export type WaterFountainState = Static<typeof WaterFountainStateSchema>;
+
+// --- Pet Recognition Testing ---
+
+export const PostDeviceTestIdentifyRequestSchema = Type.Object({
+  media_id: Type.Number(),
+});
+export type PostDeviceTestIdentifyRequestDTO = Static<typeof PostDeviceTestIdentifyRequestSchema>;
+
+export const PostDeviceTestIdentifyResponseSchema = Type.Object({
+  pet_id: Type.Union([Type.Number(), Type.Null()]),
+  pet_name: Type.String(),
+  raw_response: Type.String(),
+});
+export type PostDeviceTestIdentifyResponseDTO = Static<typeof PostDeviceTestIdentifyResponseSchema>;

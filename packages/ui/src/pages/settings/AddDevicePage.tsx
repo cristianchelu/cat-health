@@ -9,7 +9,8 @@ import {
 } from '@/hooks/queries/deviceQueries';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Button } from '@/components/ui/Button';
-import { FormField, Input, Select } from '@/components/ui/form';
+import { FormField, Input, Select, Textarea } from '@/components/ui/form';
+import { Switch } from '@/components/ui/Switch';
 import Stepper from '@/components/ui/Stepper';
 import { Smartphone, Search, Check, Loader2 } from 'lucide-react';
 import type { DiscoveredDeviceDTO } from 'shared';
@@ -39,6 +40,14 @@ const AddDevicePage: React.FC = () => {
   const [snapshotUrl, setSnapshotUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  // Pet recognizer fields
+  const [sourceDeviceId, setSourceDeviceId] = useState<number | null>(null);
+  const [model, setModel] = useState('openai/gpt-4o-mini');
+  const [promptTemplate, setPromptTemplate] = useState(
+    'You are identifying cats. Here are reference photos:\n\n{{reference_images}}\n\nWho is the cat in this new image? Reply with ONLY the cat\'s name, or \'unknown\'.',
+  );
+  const [autoIdentify, setAutoIdentify] = useState(true);
+
   // Discovery query
   const {
     data: devices,
@@ -55,11 +64,15 @@ const AddDevicePage: React.FC = () => {
 
   const handleScan = async () => {
     if (!selectedAccountId) return;
-    setStep(2);
-    // The query will automatically run because selectedAccountId is set
-    // But we might want to force refetch if we go back and forth
-    // Actually useDiscoverDevices is enabled when selectedAccountId is set.
-    // So it will fetch.
+
+    // Check if this is an inference provider
+    const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
+    if (selectedAccount?.provider === 'inference') {
+      // Skip discovery step and go directly to config
+      setStep(3);
+    } else {
+      setStep(2);
+    }
   };
 
   const handleDeviceSelect = (device: DiscoveredDeviceDTO) => {
@@ -115,6 +128,36 @@ const AddDevicePage: React.FC = () => {
         external_id: externalId,
         name: deviceName,
         type: 'camera',
+        config,
+      });
+      navigate('/settings');
+    } catch (err) {
+      console.error(err);
+      setError(t('settings.register_device_error'));
+    }
+  };
+
+  const handleRecognizerRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAccountId || !sourceDeviceId) return;
+
+    try {
+      const config = {
+        model,
+        source_device_id: sourceDeviceId,
+        prompt_template: promptTemplate,
+        auto_identify: autoIdentify,
+        reference_images: {},
+      };
+
+      // Generate a random external ID for recognizer
+      const externalId = `recognizer_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+      await addDevice.mutateAsync({
+        provider_account_id: selectedAccountId,
+        external_id: externalId,
+        name: deviceName,
+        type: 'pet_recognizer',
         config,
       });
       navigate('/settings');
@@ -245,14 +288,92 @@ const AddDevicePage: React.FC = () => {
         </div>
       )}
 
-      {/* Step 3: Register Device */}
-      {step === 3 && selectedDevice && (
+      {/* Step 3: Register Device or Configure Recognizer */}
+      {step === 3 && (selectedDevice || accounts.find((a) => a.id === selectedAccountId)?.provider === 'inference') && (
         <div className="step-container">
-          <p className="step-description">
-            {t('settings.confirm_device_details')}
-          </p>
+          {accounts.find((a) => a.id === selectedAccountId)?.provider === 'inference' ? (
+            <>
+              <p className="step-description">Configure Pet Recognizer</p>
 
-          <form onSubmit={handleRegister} className="settings-form">
+              <form onSubmit={handleRecognizerRegister} className="settings-form">
+                <FormField label="Recognizer Name">
+                  <Input
+                    value={deviceName}
+                    onChange={(e) => setDeviceName(e.target.value)}
+                    placeholder="Fountain Cat ID"
+                    required
+                  />
+                </FormField>
+
+                <FormField label="Source Device">
+                  <Select
+                    value={sourceDeviceId?.toString() || ''}
+                    onChange={(e) => setSourceDeviceId(Number(e.target.value))}
+                    required
+                    placeholder="Select device to monitor"
+                    options={existingDevices
+                      .filter((d) => d.type !== 'pet_recognizer')
+                      .map((d) => ({
+                        value: d.id.toString(),
+                        label: `${d.name} (${d.type})`,
+                      }))}
+                  />
+                </FormField>
+
+                <FormField label="Model">
+                  <Input
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    placeholder="openai/gpt-4o-mini"
+                    required
+                  />
+                </FormField>
+
+                <FormField label="Prompt Template">
+                  <Textarea
+                    value={promptTemplate}
+                    onChange={(e) => setPromptTemplate(e.target.value)}
+                    rows={6}
+                    required
+                  />
+                </FormField>
+
+                <FormField label="Auto-identify">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Switch
+                      checked={autoIdentify}
+                      onCheckedChange={setAutoIdentify}
+                    />
+                    <span>{autoIdentify ? 'Enabled' : 'Disabled'}</span>
+                  </div>
+                </FormField>
+
+                {error && <div className="error-message">{error}</div>}
+
+                <div className="form-actions">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setStep(1)}
+                  >
+                    {t('settings.back')}
+                  </Button>
+                  <Button type="submit" disabled={addDevice.isPending}>
+                    <Check size="1em" />
+                    {addDevice.isPending
+                      ? t('settings.registering')
+                      : 'Create Recognizer'}
+                  </Button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <>
+              <p className="step-description">
+                {t('settings.confirm_device_details')}
+              </p>
+
+              <form onSubmit={handleRegister} className="settings-form">
             <FormField label={t('settings.device_name_label')}>
               <Input
                 value={deviceName}
@@ -302,6 +423,8 @@ const AddDevicePage: React.FC = () => {
               </Button>
             </div>
           </form>
+            </>
+          )}
         </div>
       )}
 

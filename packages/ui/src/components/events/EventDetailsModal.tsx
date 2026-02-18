@@ -139,7 +139,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
     updateEvent({
       eventId: event.id,
-      data: { pet_id: petId },
+      data: { pet_id: petId, human_verified: true },
     });
   };
 
@@ -158,6 +158,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           ...event.data,
           elimination_type: newValue,
         },
+        human_verified: true,
       },
     });
   };

@@ -12,7 +12,7 @@
   transform: translate(-50%, -50%);
   z-index: var(--z-index-modal);
   display: grid;
-  width: 100%;
+  width: calc(100% - var(--space-lg) * 2);
   max-width: 520px;
   gap: var(--space-lg);
   border: 1px solid var(--color-border);
@@ -21,6 +21,9 @@
   box-shadow: var(--shadow-lg);
   border-radius: var(--radius-lg);
   animation: contentShow var(--transition-fast) ease-out;
+  max-height: calc(100vh - var(--space-lg) * 2);
+  max-height: calc(100dvh - var(--space-lg) * 2);
+  overflow: hidden;
 }
 
 .dialog-close {

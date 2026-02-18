@@ -19,6 +19,7 @@ import {
   CctvIcon,
   Server,
   Drumstick,
+  Sparkles,
 } from 'lucide-react';
 import { useFoods } from '@/hooks/queries/foodQueries';
 
@@ -29,6 +30,7 @@ const DEVICE_ICON: Record<DeviceType, React.ReactNode> = {
   water_fountain: <WaterFountainIcon size="1em" />,
   feeder: <SettingsIcon size="1em" />,
   camera: <CctvIcon size="1em" />,
+  pet_recognizer: <Sparkles size="1em" />,
 };
 
 const Settings: React.FC = () => {

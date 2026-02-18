@@ -3,6 +3,7 @@ import type {
   GetDeviceResponseDTO,
   GetDevicesResponseDTO,
   PostDeviceRequestDTO,
+  PatchDeviceRequestDTO,
   GetProviderAccountsResponseDTO,
   PostProviderAccountRequestDTO,
   ProviderAccountDTO,
@@ -10,6 +11,8 @@ import type {
   GetProvidersResponseDTO,
   PutDeviceCameraRequestDTO,
   PatchDeviceCameraRequestDTO,
+  PostDeviceTestIdentifyRequestDTO,
+  PostDeviceTestIdentifyResponseDTO,
 } from 'shared';
 import apiClient from './apiClient';
 
@@ -60,6 +63,17 @@ export async function addDevice(input: PostDeviceRequestDTO) {
   return data;
 }
 
+export async function updateDevice(
+  deviceId: number,
+  input: PatchDeviceRequestDTO,
+) {
+  const { data } = await apiClient.patch<GetDeviceResponseDTO>(
+    `/devices/${deviceId}`,
+    input,
+  );
+  return data;
+}
+
 export async function getDeviceEvents(
   deviceId: number,
   startTime?: string,
@@ -103,6 +117,17 @@ export async function updateDeviceCameraConfig(
 export async function unlinkDeviceCamera(deviceId: number) {
   const { data } = await apiClient.delete<GetDeviceResponseDTO>(
     `/devices/${deviceId}/camera`,
+  );
+  return data;
+}
+
+export async function testDeviceIdentification(
+  deviceId: number,
+  input: PostDeviceTestIdentifyRequestDTO,
+) {
+  const { data } = await apiClient.post<PostDeviceTestIdentifyResponseDTO>(
+    `/devices/${deviceId}/test-identify`,
+    input,
   );
   return data;
 }

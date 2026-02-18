@@ -34,6 +34,7 @@ import { EventBus } from './services/devices/EventBus.ts';
 import { IntegrationManager } from './services/devices/IntegrationManager.ts';
 import { ESPHomeProvider } from './services/devices/providers/esphome/ESPHomeProvider.ts';
 import { CameraProvider } from './services/devices/providers/camera/CameraProvider.ts';
+import { InferenceProvider } from './services/devices/providers/inference/InferenceProvider.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -193,6 +194,7 @@ const start = async () => {
     // Register Providers
     integrationManager.registerProvider(new ESPHomeProvider());
     integrationManager.registerProvider(new CameraProvider());
+    integrationManager.registerProvider(new InferenceProvider());
 
     // Start Integration Manager (loads accounts and devices)
     await integrationManager.initialize();

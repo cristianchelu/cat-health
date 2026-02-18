@@ -7,6 +7,7 @@ import {
   GetDeviceResponseSchema,
   GetDevicesResponseSchema,
   PostDeviceRequestSchema,
+  PatchDeviceRequestSchema,
   GetProviderAccountsResponseSchema,
   PostProviderAccountRequestSchema,
   GetDiscoveredDevicesResponseSchema,
@@ -14,6 +15,8 @@ import {
   GetProvidersResponseSchema,
   PutDeviceCameraRequestSchema,
   PatchDeviceCameraRequestSchema,
+  PostDeviceTestIdentifyRequestSchema,
+  PostDeviceTestIdentifyResponseSchema,
 } from 'shared';
 import { db } from '../database/index.ts';
 
@@ -55,6 +58,52 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
     return mapped;
   };
+
+  /**
+   * Resolve reference_images IDs to { id, file_path } for pet_recognizer
+   * devices. Mutates `mapped.reference_media` in place.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function enrichReferenceMedia(devices: any[]) {
+    const allIds: number[] = [];
+    const petRecognizers: Array<{ mapped: Record<string, unknown>; refImages: Record<string, number[]> }> = [];
+
+    for (const mapped of devices) {
+      if (mapped.type !== 'pet_recognizer') continue;
+      const refImages = (mapped.config as Record<string, unknown>)?.reference_images as Record<string, number[]> | undefined;
+      if (!refImages) continue;
+
+      const ids = Object.values(refImages).flat();
+      if (ids.length === 0) continue;
+
+      allIds.push(...ids);
+      petRecognizers.push({ mapped, refImages });
+    }
+
+    if (allIds.length === 0) return;
+
+    const uniqueIds = [...new Set(allIds)];
+    const mediaRows = await db
+      .selectFrom('media')
+      .select(['id', 'file_path'])
+      .where('id', 'in', uniqueIds)
+      .execute();
+
+    const mediaById = new Map(mediaRows.map((m) => [m.id, m]));
+
+    for (const { mapped, refImages } of petRecognizers) {
+      const referenceMedia: Record<string, Array<{ id: number; file_path: string }>> = {};
+      for (const [petId, ids] of Object.entries(refImages)) {
+        const resolved = ids
+          .map((id) => mediaById.get(id))
+          .filter((m): m is { id: number; file_path: string } => m !== undefined);
+        if (resolved.length > 0) {
+          referenceMedia[petId] = resolved;
+        }
+      }
+      mapped.reference_media = referenceMedia;
+    }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapAccount = (account: any) => ({
@@ -182,7 +231,9 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .selectAll('device')
         .select('provider_account.provider as provider')
         .execute();
-      return devices.map(mapDevice);
+      const mapped = devices.map(mapDevice);
+      await enrichReferenceMedia(mapped);
+      return mapped;
     },
   );
 
@@ -270,7 +321,112 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
               : device.camera_config,
         };
       }
+      await enrichReferenceMedia([mapped]);
       return mapped;
+    },
+  );
+
+  fastify.patch(
+    '/:id',
+    {
+      schema: {
+        params: GetDeviceParamsSchema,
+        body: PatchDeviceRequestSchema,
+        response: {
+          '200': GetDeviceResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params;
+      const updates = request.body;
+
+      // Build update query
+      const updateData: Record<string, unknown> = {
+        updated_at: Math.floor(Date.now() / 1000),
+      };
+
+      if (updates.name !== undefined) {
+        updateData.name = updates.name;
+      }
+      if (updates.enabled !== undefined) {
+        updateData.enabled = updates.enabled ? 1 : 0;
+      }
+      if (updates.config !== undefined) {
+        updateData.config = JSON.stringify(updates.config);
+      }
+
+      await db
+        .updateTable('device')
+        .set(updateData)
+        .where('id', '=', id)
+        .execute();
+
+      // Fetch updated device
+      const device = await db
+        .selectFrom('device')
+        .innerJoin(
+          'provider_account',
+          'device.provider_account_id',
+          'provider_account.id',
+        )
+        .leftJoin('device_camera', 'device.id', 'device_camera.device_id')
+        .selectAll('device')
+        .select('provider_account.provider as provider')
+        .select([
+          'device_camera.camera_id as camera_id',
+          'device_camera.config as camera_config',
+        ])
+        .where('device.id', '=', id)
+        .executeTakeFirst();
+
+      if (!device) throw new Error('Device not found');
+
+      const mapped = mapDevice(device);
+      if (device.camera_id) {
+        mapped.camera_link = {
+          camera_id: device.camera_id,
+          config:
+            typeof device.camera_config === 'string'
+              ? JSON.parse(device.camera_config)
+              : device.camera_config,
+        };
+      }
+
+      await enrichReferenceMedia([mapped]);
+      return mapped;
+    },
+  );
+
+  fastify.post(
+    '/:id/test-identify',
+    {
+      schema: {
+        params: GetDeviceParamsSchema,
+        body: PostDeviceTestIdentifyRequestSchema,
+        response: {
+          '200': PostDeviceTestIdentifyResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { id: deviceId } = request.params;
+      const { media_id } = request.body;
+
+      const controller = integrationManager.instantiateDeviceController(
+        await db
+          .selectFrom('device')
+          .selectAll()
+          .where('id', '=', deviceId)
+          .executeTakeFirstOrThrow(),
+      );
+
+      if (!controller || !('identifyPetFromMedia' in controller)) {
+        throw new Error('Device is not a pet recognizer');
+      }
+
+      const result = await (controller as any).identifyPetFromMedia(media_id);
+      return result;
     },
   );
 

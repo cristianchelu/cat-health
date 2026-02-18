@@ -59,6 +59,7 @@ export const GetEventsQuerySchema = Type.Object({
   limit: Type.Optional(Type.Number({ minimum: 1, maximum: 5000 })),
   offset: Type.Optional(Type.Number({ minimum: 0 })),
   includeChildren: Type.Optional(Type.Boolean()),
+  human_verified: Type.Optional(Type.Boolean()),
 });
 export type GetEventsQueryDTO = Static<typeof GetEventsQuerySchema>;
 

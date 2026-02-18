@@ -1,0 +1,122 @@
+.reference-images-tab {
+  .tab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+
+    .tab-description {
+      flex: 1;
+      color: var(--text-muted);
+      font-size: var(--text-sm);
+
+      p {
+        margin: 0;
+      }
+    }
+
+    .test-button {
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 600px) {
+      flex-direction: column;
+
+      .test-button {
+        align-self: center;
+      }
+    }
+  }
+
+  .pets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-xl);
+  }
+
+  .pet-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+
+    .pet-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+
+      .pet-info {
+        flex: 1;
+        min-width: 0;
+
+        h3 {
+          margin: 0;
+          font-size: var(--text-lg);
+          font-weight: 600;
+          color: var(--text);
+        }
+
+        .image-count {
+          font-size: var(--text-sm);
+          color: var(--text-muted);
+        }
+      }
+
+      .add-images-button {
+        flex-shrink: 0;
+      }
+    }
+
+    .images-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: var(--space-sm);
+
+      .image-item {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: var(--radius-md);
+        background: var(--surface-muted);
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: inherit;
+        }
+
+        .image-placeholder {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: var(--text-xs);
+          color: var(--text-subtle);
+        }
+
+        .remove-button {
+          position: absolute;
+          top: -6px;
+          right: -6px;
+          background: var(--color-error);
+          color: white;
+          border: 2px solid var(--color-surface, #1e293b);
+          border-radius: var(--radius-full);
+          width: 22px;
+          height: 22px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+          &:hover {
+            filter: brightness(0.85);
+            transform: scale(1.1);
+          }
+        }
+      }
+    }
+  }
+}
