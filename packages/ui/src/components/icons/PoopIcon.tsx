@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 export interface PoopIconProps extends React.SVGProps<SVGSVGElement> {
@@ -7,6 +8,7 @@ export interface PoopIconProps extends React.SVGProps<SVGSVGElement> {
 
 const PoopIcon = React.forwardRef<SVGSVGElement, PoopIconProps>(
   ({ size = 24, className, strokeWidth = 2, ...props }, ref) => {
+    const { t } = useTranslation();
     const dimension = size;
     return (
       <svg
@@ -21,7 +23,7 @@ const PoopIcon = React.forwardRef<SVGSVGElement, PoopIconProps>(
         strokeLinecap="round"
         strokeLinejoin="round"
         className={cn('poop-icon', className)}
-        aria-label="Poop icon"
+        aria-label={t('common.poop_icon_alt')}
         role="img"
         {...props}
       >

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { StatePeriod } from './litterboxStateTracker';
 
@@ -100,6 +101,7 @@ function createPath(
 
 const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProps>(
   ({ className, weights, periods, sampleRate = 10, ...props }, ref) => {
+    const { t } = useTranslation();
     // Downsampling disabled for debugging
     const maxPoints = 800;
     const displayWeights = React.useMemo(
@@ -169,19 +171,19 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
         <div className="chart-legend">
           <div className="legend-item">
             <span className="legend-color entering" />
-            <span>Entering</span>
+            <span>{t('event_details.legend_entering')}</span>
           </div>
           <div className="legend-item">
             <span className="legend-color occupied" />
-            <span>Occupied</span>
+            <span>{t('event_details.legend_occupied')}</span>
           </div>
           <div className="legend-item">
             <span className="legend-color eliminating" />
-            <span>Eliminating</span>
+            <span>{t('event_details.legend_eliminating')}</span>
           </div>
           <div className="legend-item">
             <span className="legend-color gap" />
-            <span>Gap</span>
+            <span>{t('event_details.legend_gap')}</span>
           </div>
         </div>
 

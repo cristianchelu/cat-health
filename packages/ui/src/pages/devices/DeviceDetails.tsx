@@ -20,14 +20,14 @@ const DeviceDetails: React.FC = () => {
   const { data: device, isLoading, error } = useDevice(deviceId!, !!deviceId);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div>{t('devices.loading_device')}</div>;
   }
 
   if (error || !device) {
     return (
       <div>
-        <div>Error loading device</div>
-        <Button onClick={() => navigate('/devices')}>Back to Devices</Button>
+        <div>{t('devices.error_loading_device')}</div>
+        <Button onClick={() => navigate('/devices')}>{t('devices.back_to_devices')}</Button>
       </div>
     );
   }
@@ -37,12 +37,12 @@ const DeviceDetails: React.FC = () => {
       <DeviceHeader device={device} />
       <Tabs defaultValue="overview" className="device-tabs">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="overview">{t('devices.tab_overview')}</TabsTrigger>
+          <TabsTrigger value="history">{t('devices.tab_history')}</TabsTrigger>
           {device.type === 'pet_recognizer' && (
             <TabsTrigger value="reference-images">{t('pet_recognizer.tab_label')}</TabsTrigger>
           )}
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="settings">{t('devices.tab_settings')}</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
           <div className="device-content">

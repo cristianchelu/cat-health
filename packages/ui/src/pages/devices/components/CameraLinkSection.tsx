@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import {
   Card,
@@ -60,6 +61,7 @@ function ensureCrop(
 }
 
 const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
+  const { t } = useTranslation();
   const { data: allDevices } = useDevices();
   const linkMutation = useLinkDeviceCamera(device.id);
   const unlinkMutation = useUnlinkDeviceCamera(device.id);
@@ -254,7 +256,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
           <img
             src={snapshotUrl}
             className="roi-image"
-            alt="Camera snapshot"
+            alt={t('camera_link.snapshot_alt')}
             onLoad={(e) => {
               const img = e.currentTarget;
               if (img.naturalWidth && img.naturalHeight) {
@@ -327,7 +329,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
   return (
     <Card className="camera-link-section">
       <CardHeader>
-        <CardTitle>Camera Linking</CardTitle>
+        <CardTitle>{t('camera_link.title')}</CardTitle>
         {linkedCamera && (
           <CardAction>
             <Button
@@ -336,7 +338,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
               onClick={handleUnlink}
               disabled={unlinkMutation.isPending}
             >
-              Unlink
+              {t('camera_link.unlink')}
             </Button>
           </CardAction>
         )}
@@ -345,7 +347,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
       <CardContent className="content">
         <div className="camera-selector">
           <div className="camera-selector-group">
-            <label className="label">Select camera</label>
+            <label className="label">{t('camera_link.select_camera')}</label>
             <Select
               value={selectedCameraId}
               onChange={(e) => {
@@ -353,9 +355,9 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
                 setSelectedCameraId(value === '' ? '' : Number(value));
               }}
               options={[
-                { value: '', label: 'No camera' },
+                { value: '', label: t('camera_link.no_camera') },
                 ...(hasIntegratedCamera
-                  ? [{ value: String(device.id), label: 'Integrated Camera' }]
+                  ? [{ value: String(device.id), label: t('camera_link.integrated_camera') }]
                   : []),
                 ...cameras.map((cam) => ({
                   value: String(cam.id),
@@ -368,7 +370,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
             onClick={handleLink}
             disabled={!selectedCameraId || linkMutation.isPending}
           >
-            {linkedCamera ? 'Update link' : 'Link camera'}
+            {linkedCamera ? t('camera_link.update_link') : t('camera_link.link_camera')}
           </Button>
         </div>
 
@@ -376,25 +378,25 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
           <div className="roi-section">
             <div className="roi-header">
               <label className="roi-header-label">
-                Region of Interest (ROI)
+                {t('camera_link.roi_label')}
               </label>
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={handleRefreshSnapshot}
               >
-                Refresh Snapshot
+                {t('camera_link.refresh_snapshot')}
               </Button>
             </div>
 
             <div className="roi-wrapper">{renderROI()}</div>
             <div className="roi-instructions">
-              Drag the rectangle to move. Drag the corner handles to resize.
+              {t('camera_link.roi_instructions')}
             </div>
 
             <div className="rotation-grid">
               <div className="rotation-group">
-                <label className="label">Rotate (degrees)</label>
+                <label className="label">{t('camera_link.rotate_degrees')}</label>
                 <Input
                   type="number"
                   value={rotate ?? ''}
@@ -417,7 +419,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
                   onClick={handleSaveROI}
                   disabled={updateConfigMutation.isPending}
                 >
-                  Save ROI & Rotation
+                  {t('camera_link.save_roi_rotation')}
                 </Button>
               </div>
             </div>

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
@@ -59,7 +60,7 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
         new Map(prev).set(mediaId, {
           mediaId,
           petName: 'error',
-          rawResponse: error instanceof Error ? error.message : 'Unknown error',
+          rawResponse: error instanceof Error ? error.message : t('pet_recognizer.unknown_error'),
           isCorrect: false,
         }),
       );
@@ -101,7 +102,7 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
             allMedia.push({
               ...m,
               actualPetId: event.pet_id,
-              actualPetName: event.pet_id ? 'Known' : 'Unknown',
+              actualPetName: event.pet_id ? i18n.t('pet_recognizer.known') : i18n.t('pet_recognizer.unknown'),
             });
           }
         } catch (error) {
@@ -176,7 +177,9 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
                         ) : (
                           <XCircle size={20} />
                         )}
-                        <span className="result-name">{result.petName}</span>
+                        <span className="result-name">
+                          {result.petName === 'error' ? t('pet_recognizer.unknown_error') : result.petName}
+                        </span>
                       </div>
                     )}
                   </div>

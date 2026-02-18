@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/Button';
@@ -26,6 +27,7 @@ export const DateNavigation: React.FC<DateNavigationProps> = ({
   dateFormat = 'MMM d',
   className,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className={cn('date-navigation', className)}>
       {!isToday && (
@@ -34,7 +36,7 @@ export const DateNavigation: React.FC<DateNavigationProps> = ({
           size="sm"
           icon
           onClick={onReset}
-          title="Today"
+          title={t('overview.today')}
           className={'date-navigation-today-btn'}
         >
           <RotateCcw size={16} />

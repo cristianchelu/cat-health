@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { addDays, subDays, format, parseISO } from 'date-fns';
 import Timeline from '@/components/ui/Timeline';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -16,6 +16,7 @@ interface DeviceTimelineProps {
 }
 
 const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
+  const { t } = useTranslation();
   const getTodayString = () => new Date().toISOString().split('T')[0];
   const [currentDate, setCurrentDate] = React.useState<string>(getTodayString);
   const [selectedEvent, setSelectedEvent] = React.useState<GetEventDTO | null>(
@@ -75,17 +76,17 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
 
       <div className="device-timeline-content">
         {error && (
-          <div className="device-timeline-error">Error loading events</div>
+          <div className="device-timeline-error">{t('devices.error_loading_events')}</div>
         )}
 
         {!error && (
           <Timeline isLoading={isFetching && !isLoading}>
             {isLoading && (
-              <li className="device-timeline-loading">Loading events...</li>
+              <li className="device-timeline-loading">{t('devices.loading_events')}</li>
             )}
             {!isLoading && (!events || events.data.length === 0) && (
               <li className="device-timeline-empty">
-                <p>No events found for this device</p>
+                <p>{t('devices.no_events_for_device')}</p>
               </li>
             )}
             {!isLoading &&

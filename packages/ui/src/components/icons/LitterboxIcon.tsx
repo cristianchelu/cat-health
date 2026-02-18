@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 export interface LitterboxIconProps extends React.SVGProps<SVGSVGElement> {
@@ -7,6 +8,7 @@ export interface LitterboxIconProps extends React.SVGProps<SVGSVGElement> {
 
 const LitterboxIcon = React.forwardRef<SVGSVGElement, LitterboxIconProps>(
   ({ size = 24, className, strokeWidth = 2, ...props }, ref) => {
+    const { t } = useTranslation();
     const dimension = typeof size === 'number' ? size : size;
     return (
       <svg
@@ -21,7 +23,7 @@ const LitterboxIcon = React.forwardRef<SVGSVGElement, LitterboxIconProps>(
         strokeLinecap="round"
         strokeLinejoin="round"
         className={cn('litterbox-icon', className)}
-        aria-label="Litterbox icon"
+        aria-label={t('common.litterbox_icon_alt')}
         role="img"
         {...props}
       >

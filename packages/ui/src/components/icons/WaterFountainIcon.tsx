@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 export interface WaterFountainIconProps extends React.SVGProps<SVGSVGElement> {
@@ -9,6 +10,7 @@ const WaterFountainIcon = React.forwardRef<
   SVGSVGElement,
   WaterFountainIconProps
 >(({ size = 24, className, strokeWidth = 2, ...props }, ref) => {
+  const { t } = useTranslation();
   const dimension = size;
   return (
     <svg
@@ -23,7 +25,7 @@ const WaterFountainIcon = React.forwardRef<
       strokeLinecap="round"
       strokeLinejoin="round"
       className={cn('water-fountain-icon', className)}
-      aria-label="Water fountain icon"
+      aria-label={t('common.water_fountain_icon_alt')}
       role="img"
       {...props}
     >

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import type { GetDeviceResponseDTO } from 'shared';
@@ -15,11 +16,19 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
   device,
   className,
 }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const formatType = (type: string) => {
     return type.replace(/_/g, ' ');
   };
+
+  const statusLabel =
+    device.status === 'offline'
+      ? device.last_seen
+        ? t('devices.last_seen', { date: new Date(device.last_seen).toLocaleString() })
+        : t('devices.never_seen')
+      : t(`devices.status.${device.status}`);
 
   return (
     <div className={cn('device-header', className)}>
@@ -29,7 +38,7 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
           size="sm"
           onClick={() => navigate('/devices')}
           className="back-button"
-          aria-label="Go back"
+          aria-label={t('devices.go_back')}
         >
           <ArrowLeft className="icon" />
         </Button>
@@ -43,11 +52,7 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
             <span className="device-provider">{device.provider}</span>
             <span className="separator">•</span>
             <span className={cn('device-status', device.status)}>
-              {device.status === 'offline'
-                ? device.last_seen
-                  ? `Last seen ${new Date(device.last_seen).toLocaleString()}`
-                  : 'Never seen'
-                : device.status}
+              {statusLabel}
             </span>
           </div>
         </div>

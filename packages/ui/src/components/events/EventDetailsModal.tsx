@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { usePets } from '@/hooks/queries/petQueries';
 import { useEventMedia, useUpdateEvent } from '@/hooks/queries/eventQueries';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
@@ -22,40 +23,42 @@ interface EventDetailsModalProps {
 }
 
 const WaterIntakeDetails: React.FC<{ event: GetEventDTO }> = ({ event }) => {
+  const { t } = useTranslation();
   const data = event.data as { duration?: number; amount?: number };
   return (
     <div className="event-specific-details">
-      {data.duration && (
-        <span className="detail-item">Duration: {data.duration}s</span>
+      {data.duration != null && (
+        <span className="detail-item">{t('event_details.duration_seconds', { seconds: data.duration })}</span>
       )}
-      {data.amount && (
-        <span className="detail-item">Amount: {data.amount}ml</span>
+      {data.amount != null && (
+        <span className="detail-item">{t('event_details.amount_ml', { amount: data.amount })}</span>
       )}
     </div>
   );
 };
 
 const EventDetailsRenderer: React.FC<{ event: GetEventDTO }> = ({ event }) => {
+  const { t } = useTranslation();
   switch (event.data.type) {
     case 'water_intake':
       return <WaterIntakeDetails event={event} />;
     default:
-      return <p className="text-muted">No additional details available.</p>;
+      return <p className="text-muted">{t('event_details.no_additional_details')}</p>;
   }
 };
 
-const getEventTitle = (event: GetEventDTO) => {
+function getEventTitle(event: GetEventDTO, t: (key: string) => string): string {
   switch (event.data?.type) {
     case 'water_intake':
-      return 'Water Intake';
+      return t('event_details.water_intake');
     case 'litterbox_use':
-      return 'Litterbox Usage';
+      return t('event_details.litterbox_usage');
     case 'litterbox_maintenance':
-      return 'Litterbox Maintenance';
+      return t('event_details.litterbox_maintenance');
     default:
-      return 'Event Detected';
+      return t('event_details.event_detected');
   }
-};
+}
 
 const formatEventTime = (timestamp: string | number | Date) => {
   if (!timestamp) return '';
@@ -69,23 +72,21 @@ const formatEventTime = (timestamp: string | number | Date) => {
   }).format(date);
 };
 
-const ELIMINATION_TYPE_OPTIONS: {
-  value: LitterboxUseEliminationType;
-  label: string;
-}[] = [
-    { value: 'urination', label: 'Urination' },
-    { value: 'defecation', label: 'Defecation' },
-    { value: 'both', label: 'Both' },
-    { value: 'no_elimination', label: 'No Elimination' },
-    { value: 'unknown', label: 'Unknown' },
-  ];
-
 const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   event,
   isOpen,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const { data: pets } = usePets();
+
+  const eliminationTypeOptions: { value: LitterboxUseEliminationType; label: string }[] = [
+    { value: 'urination', label: t('overview.urination') },
+    { value: 'defecation', label: t('overview.defecation') },
+    { value: 'both', label: t('overview.both') },
+    { value: 'no_elimination', label: t('overview.no_elimination') },
+    { value: 'unknown', label: t('common.unknown') },
+  ];
   const { data: media, isLoading: isLoadingMedia } = useEventMedia(
     event?.id ?? 0,
     isOpen && event !== null,
@@ -165,10 +166,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   const petOptions = pets
     ? [
-      { value: 'null', label: 'Unknown' },
+      { value: 'null', label: t('common.unknown') },
       ...pets.map((p) => ({ value: String(p.id), label: p.name })),
     ]
-    : [{ value: 'null', label: 'Unknown' }];
+    : [{ value: 'null', label: t('common.unknown') }];
 
   const hasMedia = media && media.length > 0;
 
@@ -183,14 +184,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               onClick={() => setActiveTab('media')}
             >
               <Image size={16} />
-              Media
+              {t('event_details.media')}
             </button>
             <button
               className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
               onClick={() => setActiveTab('analysis')}
             >
               <Activity size={16} />
-              Analysis
+              {t('event_details.analysis')}
             </button>
           </div>
         )}
@@ -205,7 +206,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               )}
               {!isLoadingMedia && !hasMedia && (
                 <div className="media-placeholder">
-                  <p>No media available</p>
+                  <p>{t('event_details.no_media_available')}</p>
                 </div>
               )}
               {!isLoadingMedia && hasMedia && (
@@ -213,7 +214,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   {media.map((m) => (
                     <div key={m.id} className="media-item">
                       {m.mime_type.startsWith('image/') && (
-                        <img src={`/api/media/${m.file_path}`} alt="Event media" />
+                        <img src={`/api/media/${m.file_path}`} alt={t('event_details.event_media_alt')} />
                       )}
                       {m.mime_type.startsWith('video/') && (
                         <video controls src={`/api/media/${m.file_path}`} />
@@ -236,7 +237,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           <div className="event-header-row">
             <div className="event-info">
               <DialogTitle className="event-title">
-                {getEventTitle(event)}
+                {getEventTitle(event, t)}
               </DialogTitle>
               <span className="event-time">
                 {formatEventTime(event.timestamp)}
@@ -247,7 +248,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 variant="ghost"
                 icon
                 className="action-btn"
-                title="Delete Event"
+                title={t('event_details.delete_event')}
               >
                 <Trash2 size={20} />
               </Button>
@@ -256,7 +257,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   variant="ghost"
                   icon
                   className="action-btn"
-                  title="Download Media"
+                  title={t('event_details.download_media')}
                   onClick={() => {
                     const link = document.createElement('a');
                     link.href = `/api/media/${media[0].file_path}`;
@@ -274,7 +275,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           <div className="event-section pet-identification-section">
             <div className="section-label">
               <Info size={14} className="info-icon" />
-              <span>Pet Identification</span>
+              <span>{t('event_details.pet_identification')}</span>
             </div>
             <div className="pet-selector-wrapper">
               <Select
@@ -291,11 +292,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             <div className="event-section elimination-type-section">
               <div className="section-label">
                 <Info size={14} className="info-icon" />
-                <span>Event Type</span>
+                <span>{t('event_details.event_type')}</span>
               </div>
               <div className="elimination-type-selector-wrapper">
                 <Select
-                  options={ELIMINATION_TYPE_OPTIONS}
+                  options={eliminationTypeOptions}
                   value={selectedEliminationType}
                   onChange={handleEliminationTypeChange}
                   className="elimination-type-select"

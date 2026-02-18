@@ -154,7 +154,7 @@ const PetForm: React.FC<PetFormProps> = ({
           >
             {isSubmitting
               ? t('settings.saving')
-              : title === t('settings.add_pet_title') || title === 'Add Pet'
+              : title === t('settings.add_pet_title')
                 ? t('settings.add_pet_title')
                 : t('settings.save_changes')}
           </Button>

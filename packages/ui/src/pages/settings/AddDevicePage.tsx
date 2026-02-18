@@ -293,24 +293,24 @@ const AddDevicePage: React.FC = () => {
         <div className="step-container">
           {accounts.find((a) => a.id === selectedAccountId)?.provider === 'inference' ? (
             <>
-              <p className="step-description">Configure Pet Recognizer</p>
+              <p className="step-description">{t('settings.configure_recognizer')}</p>
 
               <form onSubmit={handleRecognizerRegister} className="settings-form">
-                <FormField label="Recognizer Name">
+                <FormField label={t('settings.recognizer_name_label')}>
                   <Input
                     value={deviceName}
                     onChange={(e) => setDeviceName(e.target.value)}
-                    placeholder="Fountain Cat ID"
+                    placeholder={t('settings.recognizer_name_placeholder')}
                     required
                   />
                 </FormField>
 
-                <FormField label="Source Device">
+                <FormField label={t('settings.source_device_label')}>
                   <Select
                     value={sourceDeviceId?.toString() || ''}
                     onChange={(e) => setSourceDeviceId(Number(e.target.value))}
                     required
-                    placeholder="Select device to monitor"
+                    placeholder={t('settings.source_device_placeholder')}
                     options={existingDevices
                       .filter((d) => d.type !== 'pet_recognizer')
                       .map((d) => ({
@@ -320,16 +320,16 @@ const AddDevicePage: React.FC = () => {
                   />
                 </FormField>
 
-                <FormField label="Model">
+                <FormField label={t('settings.model_label')}>
                   <Input
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    placeholder="openai/gpt-4o-mini"
+                    placeholder={t('settings.model_placeholder')}
                     required
                   />
                 </FormField>
 
-                <FormField label="Prompt Template">
+                <FormField label={t('settings.prompt_template_label')}>
                   <Textarea
                     value={promptTemplate}
                     onChange={(e) => setPromptTemplate(e.target.value)}
@@ -338,13 +338,13 @@ const AddDevicePage: React.FC = () => {
                   />
                 </FormField>
 
-                <FormField label="Auto-identify">
+                <FormField label={t('settings.auto_identify_label')}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Switch
                       checked={autoIdentify}
                       onCheckedChange={setAutoIdentify}
                     />
-                    <span>{autoIdentify ? 'Enabled' : 'Disabled'}</span>
+                    <span>{autoIdentify ? t('settings.enabled') : t('settings.disabled')}</span>
                   </div>
                 </FormField>
 
@@ -362,7 +362,7 @@ const AddDevicePage: React.FC = () => {
                     <Check size="1em" />
                     {addDevice.isPending
                       ? t('settings.registering')
-                      : 'Create Recognizer'}
+                      : t('settings.create_recognizer')}
                   </Button>
                 </div>
               </form>
@@ -392,6 +392,7 @@ const AddDevicePage: React.FC = () => {
               />
             </FormField>
 
+            {selectedDevice && (
             <div className="device-summary">
               <div className="summary-item">
                 <span className="label">{t('settings.type_label')}</span>
@@ -404,6 +405,7 @@ const AddDevicePage: React.FC = () => {
                 <span className="value">{selectedDevice.externalId}</span>
               </div>
             </div>
+            )}
 
             {error && <div className="error-message">{error}</div>}
 
@@ -448,7 +450,7 @@ const AddDevicePage: React.FC = () => {
                 value={snapshotUrl}
                 onChange={(e) => setSnapshotUrl(e.target.value)}
                 required
-                placeholder="http://camera-ip/snapshot.jpg"
+                placeholder={t('settings.snapshot_url_placeholder')}
               />
               <p className="help-text">{t('settings.snapshot_url_help')}</p>
             </FormField>
