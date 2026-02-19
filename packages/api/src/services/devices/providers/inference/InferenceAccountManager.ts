@@ -52,6 +52,14 @@ export class InferenceAccountManager implements AccountManager {
     this.controllers.clear();
   }
 
+  async invalidateDeviceController(deviceId: number): Promise<void> {
+    const controller = this.controllers.get(deviceId);
+    if (controller) {
+      await controller.disconnect();
+      this.controllers.delete(deviceId);
+    }
+  }
+
   async discoverDevices(): Promise<DiscoveredDevice[]> {
     // No auto-discovery for inference devices - manual setup only
     return [];

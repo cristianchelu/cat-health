@@ -55,6 +55,14 @@ export class ESPHomeAccountManager implements AccountManager {
     this.controllers.clear();
   }
 
+  async invalidateDeviceController(deviceId: number): Promise<void> {
+    const controller = this.controllers.get(deviceId);
+    if (controller) {
+      await controller.disconnect();
+      this.controllers.delete(deviceId);
+    }
+  }
+
   private inferDeviceType(name: string): DiscoveredDevice['type'] | null {
     const matchers: Array<{
       type: DiscoveredDevice['type'];

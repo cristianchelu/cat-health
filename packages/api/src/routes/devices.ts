@@ -422,6 +422,8 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('id', '=', id)
         .execute();
 
+      await integrationManager.invalidateDeviceController(id);
+
       // Fetch updated device
       const device = await db
         .selectFrom('device')
@@ -481,11 +483,11 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           .executeTakeFirstOrThrow(),
       );
 
-      if (!controller || !('identifyPetFromMedia' in controller)) {
+      if (!controller || !('identifyPetFromMedia' in controller) || typeof controller.identifyPetFromMedia !== 'function') {
         throw new Error('Device is not a pet recognizer');
       }
 
-      const result = await (controller as any).identifyPetFromMedia(media_id);
+      const result = await controller.identifyPetFromMedia(media_id);
       return result;
     },
   );

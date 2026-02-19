@@ -104,6 +104,20 @@ export class IntegrationManager implements DeviceDirectory {
     return this.accountManagers.get(accountId);
   }
 
+  /** Teardown cached controller for a device so next use gets fresh config (e.g. after PATCH device). */
+  async invalidateDeviceController(deviceId: number): Promise<void> {
+    const device = await this.deps.db
+      .selectFrom('device')
+      .select(['provider_account_id'])
+      .where('id', '=', deviceId)
+      .executeTakeFirst();
+    if (!device) return;
+    const manager = this.accountManagers.get(device.provider_account_id);
+    if (manager?.invalidateDeviceController) {
+      await manager.invalidateDeviceController(deviceId);
+    }
+  }
+
   instantiateDeviceController(device: Device): DeviceController | undefined {
     const manager = this.accountManagers.get(device.provider_account_id);
     if (!manager) {

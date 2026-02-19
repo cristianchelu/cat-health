@@ -58,6 +58,8 @@ export interface AccountManager {
 
   discoverDevices(): Promise<DiscoveredDevice[]>;
   instantiateDeviceController(device: Device): DeviceController;
+  /** Teardown and clear cached controller for a device (e.g. after config update). */
+  invalidateDeviceController?(deviceId: number): Promise<void>;
   validateDeviceConfig?(device: {
     type: DeviceType;
     config: unknown;

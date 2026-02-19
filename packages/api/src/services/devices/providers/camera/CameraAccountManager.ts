@@ -35,6 +35,14 @@ export class CameraAccountManager implements AccountManager {
     this.controllers.clear();
   }
 
+  async invalidateDeviceController(deviceId: number): Promise<void> {
+    const controller = this.controllers.get(deviceId);
+    if (controller) {
+      await controller.disconnect();
+      this.controllers.delete(deviceId);
+    }
+  }
+
   async discoverDevices(): Promise<DiscoveredDevice[]> {
     return [];
   }
