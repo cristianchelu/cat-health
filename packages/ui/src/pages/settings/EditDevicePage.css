@@ -1,4 +1,4 @@
-.add-edit-provider-page {
+.edit-device-page {
   max-width: var(--max-width-sm);
   margin: 0 auto;
 
@@ -10,6 +10,38 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
+    margin-top: var(--space-md);
+  }
+
+  .switch-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .device-summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: var(--font-size-sm);
+
+      .label {
+        color: var(--color-text-secondary);
+      }
+
+      .value {
+        font-weight: var(--font-weight-medium);
+        color: var(--color-text-primary);
+        font-family: monospace;
+      }
+    }
   }
 
   .form-actions {
@@ -20,6 +52,9 @@
   }
 
   .loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: var(--space-2xl);
     color: var(--color-text-secondary);
   }
@@ -33,12 +68,6 @@
     color: var(--color-text-secondary);
   }
 
-  .switch-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-  }
-
   .error-message {
     color: var(--color-error);
     font-size: var(--font-size-sm);
@@ -47,25 +76,10 @@
     border-radius: var(--radius-sm);
   }
 
-  .api-key-field {
-    position: relative;
-
-    .api-key-input {
-      padding-right: 40px;
-    }
-
-    .api-key-toggle {
-      position: absolute;
-      right: var(--space-xs);
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: var(--space-2xs);
-      display: flex;
-      align-items: center;
-    }
+  .help-text {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-xs);
   }
 
   @media (max-width: 768px) {

@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import {
   useProviders,
+  useProviderAccount,
   useCreateProviderAccount,
+  useUpdateProviderAccount,
 } from '@/hooks/queries/deviceQueries';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Button } from '@/components/ui/Button';
 import { FormField, Input, Select, Textarea } from '@/components/ui/form';
+import { Switch } from '@/components/ui/Switch';
 import { Server, Eye, EyeOff } from 'lucide-react';
 import './AddEditProviderPage.css';
 
@@ -27,8 +30,17 @@ function isValidHttpUrl(value: string): boolean {
 const AddEditProviderPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEditing = Boolean(id);
+  const accountId = parseInt(id || '0', 10);
+
   const { data: providers = [] } = useProviders();
+  const { data: account, isLoading, error: loadError } = useProviderAccount(
+    accountId,
+    isEditing,
+  );
   const createAccount = useCreateProviderAccount();
+  const updateAccount = useUpdateProviderAccount(accountId);
 
   const providerOptions = providers
     .filter((p) => !p.internal)
@@ -37,6 +49,7 @@ const AddEditProviderPage: React.FC = () => {
   const [provider, setProvider] = useState('');
   const [name, setName] = useState('');
   const [config, setConfig] = useState('{}');
+  const [enabled, setEnabled] = useState(true);
   const [error, setError] = useState<string | undefined>(undefined);
 
   // Inference-specific fields
@@ -46,6 +59,34 @@ const AddEditProviderPage: React.FC = () => {
   const [apiKeyError, setApiKeyError] = useState<string | undefined>(undefined);
   const [baseUrlError, setBaseUrlError] = useState<string | undefined>(undefined);
 
+  useEffect(() => {
+    if (!account) return;
+    setProvider(account.provider);
+    setName(account.name);
+    setEnabled(account.enabled);
+    const cfg = account.config as Record<string, unknown> | undefined;
+    if (account.provider === 'inference' && cfg) {
+      setApiKey((cfg.api_key as string) || '');
+      setBaseUrl((cfg.base_url as string) || 'https://openrouter.ai/api/v1');
+    } else {
+      setConfig(
+        typeof cfg === 'object' && cfg !== null
+          ? JSON.stringify(cfg, null, 2)
+          : '{}',
+      );
+    }
+  }, [account]);
+
+  const buildParsedConfig = (): Record<string, unknown> => {
+    if (provider === 'inference') {
+      return {
+        api_key: apiKey.trim(),
+        base_url: baseUrl.trim(),
+      };
+    }
+    return JSON.parse(config) as Record<string, unknown>;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(undefined);
@@ -53,10 +94,7 @@ const AddEditProviderPage: React.FC = () => {
     setBaseUrlError(undefined);
 
     try {
-      let parsedConfig = {};
-
       if (provider === 'inference') {
-        // Validate API key: required, trimmed, minimum length
         const trimmedApiKey = apiKey.trim();
         if (!trimmedApiKey) {
           setApiKeyError(t('settings.inference_api_key_required'));
@@ -66,8 +104,6 @@ const AddEditProviderPage: React.FC = () => {
           setApiKeyError(t('settings.inference_api_key_invalid'));
           return;
         }
-
-        // Validate base URL: required, valid http(s) URL
         const trimmedBaseUrl = baseUrl.trim();
         if (!trimmedBaseUrl) {
           setBaseUrlError(t('settings.inference_base_url_required'));
@@ -77,38 +113,69 @@ const AddEditProviderPage: React.FC = () => {
           setBaseUrlError(t('settings.inference_base_url_invalid'));
           return;
         }
-
-        parsedConfig = {
-          api_key: trimmedApiKey,
-          base_url: trimmedBaseUrl,
-        };
       } else {
-        // Use JSON textarea for other providers
         try {
-          parsedConfig = JSON.parse(config);
+          JSON.parse(config);
         } catch {
           setError(t('settings.invalid_json'));
           return;
         }
       }
 
-      await createAccount.mutateAsync({
-        provider,
-        name,
-        config: parsedConfig,
-      });
+      const parsedConfig = buildParsedConfig();
+
+      if (isEditing) {
+        await updateAccount.mutateAsync({
+          name,
+          config: parsedConfig,
+          enabled,
+        });
+      } else {
+        await createAccount.mutateAsync({
+          provider,
+          name,
+          config: parsedConfig,
+        });
+      }
 
       navigate('/settings');
     } catch (err) {
       console.error(err);
-      setError(t('settings.create_provider_error'));
+      setError(
+        isEditing
+          ? t('settings.update_provider_error')
+          : t('settings.create_provider_error'),
+      );
     }
   };
+
+  if (isEditing && isLoading) {
+    return (
+      <div className="add-edit-provider-page">
+        <div className="loading-state">{t('settings.loading_provider_data')}</div>
+      </div>
+    );
+  }
+
+  if (isEditing && (loadError || !account)) {
+    return (
+      <div className="add-edit-provider-page">
+        <div className="error-state">
+          <p>{t('settings.error_loading_provider')}</p>
+          <Button onClick={() => navigate('/settings')}>
+            {t('settings.back')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="add-edit-provider-page">
       <SectionHeader icon={<Server size="1em" />}>
-        {t('settings.add_provider_title')}
+        {isEditing
+          ? t('settings.edit_provider_title')
+          : t('settings.add_provider_title')}
       </SectionHeader>
 
       <form onSubmit={handleSubmit} className="settings-form">
@@ -119,6 +186,7 @@ const AddEditProviderPage: React.FC = () => {
             required
             placeholder={t('settings.provider_placeholder')}
             options={providerOptions}
+            disabled={isEditing}
           />
         </FormField>
 
@@ -130,6 +198,17 @@ const AddEditProviderPage: React.FC = () => {
             required
           />
         </FormField>
+
+        {isEditing && (
+          <FormField label={t('settings.enabled')}>
+            <div className="switch-row">
+              <Switch checked={enabled} onCheckedChange={setEnabled} />
+              <span>
+                {enabled ? t('settings.enabled') : t('settings.disabled')}
+              </span>
+            </div>
+          </FormField>
+        )}
 
         {provider === 'inference' ? (
           <>
@@ -200,10 +279,17 @@ const AddEditProviderPage: React.FC = () => {
           >
             {t('settings.cancel')}
           </Button>
-          <Button type="submit" disabled={createAccount.isPending}>
-            {createAccount.isPending
-              ? t('settings.creating')
-              : t('settings.create_account')}
+          <Button
+            type="submit"
+            disabled={createAccount.isPending || updateAccount.isPending}
+          >
+            {isEditing
+              ? updateAccount.isPending
+                ? t('settings.saving')
+                : t('settings.save_changes')
+              : createAccount.isPending
+                ? t('settings.creating')
+                : t('settings.create_account')}
           </Button>
         </div>
       </form>

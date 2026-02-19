@@ -16,6 +16,7 @@ import AddEditPetPage from './pages/settings/AddEditPetPage.tsx';
 import AddEditProviderPage from './pages/settings/AddEditProviderPage.tsx';
 import AddDevicePage from './pages/settings/AddDevicePage.tsx';
 import AddEditFoodPage from './pages/settings/AddEditFoodPage.tsx';
+import EditDevicePage from './pages/settings/EditDevicePage.tsx';
 
 import './index.css';
 
@@ -35,6 +36,7 @@ const router = createBrowserRouter(
         { path: '/settings/providers/new', element: <AddEditProviderPage /> },
         { path: '/settings/providers/:id', element: <AddEditProviderPage /> },
         { path: '/settings/devices/new', element: <AddDevicePage /> },
+        { path: '/settings/devices/:id', element: <EditDevicePage /> },
         { path: '/settings/foods/new', element: <AddEditFoodPage /> },
         { path: '/settings/foods/:id', element: <AddEditFoodPage /> },
       ],

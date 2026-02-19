@@ -129,6 +129,10 @@
         "saving": "Saving...",
         "save_changes": "Save Changes",
         "add_provider_title": "Add Provider Account",
+        "edit_provider_title": "Edit Provider Account",
+        "update_provider_error": "Failed to update provider account",
+        "loading_provider_data": "Loading provider data...",
+        "error_loading_provider": "Error loading provider account",
         "provider_label": "Provider",
         "provider_placeholder": "Select a provider",
         "account_name_label": "Account Name",
@@ -183,7 +187,10 @@
         "prompt_template_label": "Prompt Template",
         "auto_identify_label": "Auto-identify",
         "create_recognizer": "Create Recognizer",
-        "snapshot_url_placeholder": "http://camera-ip/snapshot.jpg"
+        "snapshot_url_placeholder": "http://camera-ip/snapshot.jpg",
+        "edit_device_title": "Edit Device",
+        "edit_device_error": "Failed to update device",
+        "loading_device_data": "Loading device data..."
     },
     "common": {
         "loading_pets": "Loading pets...",

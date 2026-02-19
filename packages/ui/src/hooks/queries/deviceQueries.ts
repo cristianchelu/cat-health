@@ -4,7 +4,9 @@ import {
   getDevices,
   getProviders,
   getProviderAccounts,
+  getProviderAccount,
   createProviderAccount,
+  updateProviderAccount,
   discoverDevices,
   addDevice,
   updateDevice,
@@ -22,6 +24,7 @@ import {
 import type {
   PatchEventRequestDTO,
   PostProviderAccountRequestDTO,
+  PatchProviderAccountRequestDTO,
   PostDeviceRequestDTO,
   PatchDeviceRequestDTO,
   PutDeviceCameraRequestDTO,
@@ -35,12 +38,22 @@ export function useDevices() {
   });
 }
 
-export function useDevice(deviceId: number, enabled: boolean) {
+export type UseDeviceOptions = {
+  /** Set to false to disable polling (e.g. on edit form). Default 1000ms for live overview. */
+  refetchInterval?: number | false;
+};
+
+export function useDevice(
+  deviceId: number,
+  enabled: boolean,
+  options?: UseDeviceOptions,
+) {
   return useQuery({
     queryKey: ['device', deviceId],
     queryFn: () => getDevice(deviceId),
     enabled,
-    refetchInterval: 1000,
+    refetchInterval:
+      options?.refetchInterval === false ? false : (options?.refetchInterval ?? 1000),
   });
 }
 
@@ -106,6 +119,14 @@ export function useProviderAccounts() {
   });
 }
 
+export function useProviderAccount(accountId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['providerAccount', accountId],
+    queryFn: () => getProviderAccount(accountId),
+    enabled,
+  });
+}
+
 export function useCreateProviderAccount() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -113,6 +134,20 @@ export function useCreateProviderAccount() {
       createProviderAccount(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['providerAccounts'] });
+    },
+  });
+}
+
+export function useUpdateProviderAccount(accountId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PatchProviderAccountRequestDTO) =>
+      updateProviderAccount(accountId, data),
+    onSuccess: (_, __, ___) => {
+      queryClient.invalidateQueries({ queryKey: ['providerAccounts'] });
+      queryClient.invalidateQueries({
+        queryKey: ['providerAccount', accountId],
+      });
     },
   });
 }

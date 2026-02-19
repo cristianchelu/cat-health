@@ -69,6 +69,18 @@ export const PostProviderAccountRequestSchema = Type.Object({
 });
 export type PostProviderAccountRequestDTO = Static<typeof PostProviderAccountRequestSchema>;
 
+export const PatchProviderAccountRequestSchema = Type.Object({
+  name: Type.Optional(Type.String()),
+  config: Type.Optional(Type.Unknown()),
+  enabled: Type.Optional(Type.Boolean()),
+});
+export type PatchProviderAccountRequestDTO = Static<typeof PatchProviderAccountRequestSchema>;
+
+export const GetProviderAccountParamsSchema = Type.Object({
+  id: Type.Number(),
+});
+export type GetProviderAccountParamsDTO = Static<typeof GetProviderAccountParamsSchema>;
+
 // --- Discovery ---
 
 export const DiscoveredDeviceSchema = Type.Object({

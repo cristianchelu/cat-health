@@ -10,6 +10,8 @@ import {
   PatchDeviceRequestSchema,
   GetProviderAccountsResponseSchema,
   PostProviderAccountRequestSchema,
+  PatchProviderAccountRequestSchema,
+  GetProviderAccountParamsSchema,
   GetDiscoveredDevicesResponseSchema,
   ProviderAccountSchema,
   GetProvidersResponseSchema,
@@ -183,6 +185,64 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       // Initialize the account in IntegrationManager
       await integrationManager.initializeAccount(result.id);
 
+      return mapAccount(result);
+    },
+  );
+
+  fastify.get(
+    '/accounts/:id',
+    {
+      schema: {
+        params: GetProviderAccountParamsSchema,
+        response: {
+          '200': ProviderAccountSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params;
+      const account = await db
+        .selectFrom('provider_account')
+        .selectAll()
+        .where('id', '=', id)
+        .executeTakeFirst();
+      if (!account) {
+        throw new Error('Account not found');
+      }
+      return mapAccount(account);
+    },
+  );
+
+  fastify.patch(
+    '/accounts/:id',
+    {
+      schema: {
+        params: GetProviderAccountParamsSchema,
+        body: PatchProviderAccountRequestSchema,
+        response: {
+          '200': ProviderAccountSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params;
+      const updates = request.body;
+      const updateData: Record<string, unknown> = {
+        updated_at: Math.floor(Date.now() / 1000),
+      };
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.config !== undefined) updateData.config = JSON.stringify(updates.config);
+      if (updates.enabled !== undefined) updateData.enabled = updates.enabled ? 1 : 0;
+      const result = await db
+        .updateTable('provider_account')
+        .set(updateData)
+        .where('id', '=', id)
+        .returningAll()
+        .executeTakeFirst();
+      if (!result) {
+        throw new Error('Account not found');
+      }
+      await integrationManager.initializeAccount(id);
       return mapAccount(result);
     },
   );

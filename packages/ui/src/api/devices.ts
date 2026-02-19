@@ -6,6 +6,7 @@ import type {
   PatchDeviceRequestDTO,
   GetProviderAccountsResponseDTO,
   PostProviderAccountRequestDTO,
+  PatchProviderAccountRequestDTO,
   ProviderAccountDTO,
   GetDiscoveredDevicesResponseDTO,
   GetProvidersResponseDTO,
@@ -33,6 +34,24 @@ export async function createProviderAccount(
 ) {
   const { data } = await apiClient.post<ProviderAccountDTO>(
     '/devices/accounts',
+    input,
+  );
+  return data;
+}
+
+export async function getProviderAccount(id: number) {
+  const { data } = await apiClient.get<ProviderAccountDTO>(
+    `/devices/accounts/${id}`,
+  );
+  return data;
+}
+
+export async function updateProviderAccount(
+  id: number,
+  input: PatchProviderAccountRequestDTO,
+) {
+  const { data } = await apiClient.patch<ProviderAccountDTO>(
+    `/devices/accounts/${id}`,
     input,
   );
   return data;

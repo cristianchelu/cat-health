@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Pencil } from 'lucide-react';
 import type { GetDeviceResponseDTO } from 'shared';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -57,6 +57,15 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
           </div>
         </div>
       </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate(`/settings/devices/${device.id}`)}
+        className="edit-button"
+        aria-label={t('settings.edit_device_title')}
+      >
+        <Pencil className="icon" />
+      </Button>
     </div>
   );
 };

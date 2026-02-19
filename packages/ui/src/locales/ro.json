@@ -75,6 +75,10 @@
         "saving": "Se salvează...",
         "save_changes": "Salvează modificările",
         "add_provider_title": "Adaugă cont furnizor",
+        "edit_provider_title": "Editează cont furnizor",
+        "update_provider_error": "Nu s-a putut actualiza contul de furnizor",
+        "loading_provider_data": "Se încarcă datele furnizorului...",
+        "error_loading_provider": "Eroare la încărcarea contului de furnizor",
         "provider_label": "Furnizor",
         "provider_placeholder": "Selectează un furnizor",
         "account_name_label": "Nume cont",
@@ -129,7 +133,10 @@
         "prompt_template_label": "Șablon prompt",
         "auto_identify_label": "Auto-identificare",
         "create_recognizer": "Creează recunoaștere",
-        "snapshot_url_placeholder": "http://ip-camera/snapshot.jpg"
+        "snapshot_url_placeholder": "http://ip-camera/snapshot.jpg",
+        "edit_device_title": "Editează dispozitiv",
+        "edit_device_error": "Nu s-a putut actualiza dispozitivul",
+        "loading_device_data": "Se încarcă datele dispozitivului..."
     },
     "common": {
         "loading_pets": "Se încarcă animalele...",
