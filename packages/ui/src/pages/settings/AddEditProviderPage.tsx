@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import {
@@ -27,6 +28,54 @@ function isValidHttpUrl(value: string): boolean {
   }
 }
 
+interface ProviderFormValues {
+  provider: string;
+  name: string;
+  enabled: boolean;
+  config: string;
+  apiKey: string;
+  baseUrl: string;
+}
+
+const DEFAULT_FORM_VALUES: ProviderFormValues = {
+  provider: '',
+  name: '',
+  enabled: true,
+  config: '{}',
+  apiKey: '',
+  baseUrl: 'https://openrouter.ai/api/v1',
+};
+
+function accountToFormValues(account: {
+  provider: string;
+  name: string;
+  enabled: boolean;
+  config?: unknown;
+}): ProviderFormValues {
+  const cfg = account.config as Record<string, unknown> | undefined;
+  if (account.provider === 'inference' && cfg) {
+    return {
+      provider: account.provider,
+      name: account.name,
+      enabled: account.enabled,
+      config: '{}',
+      apiKey: (cfg.api_key as string) || '',
+      baseUrl: (cfg.base_url as string) || 'https://openrouter.ai/api/v1',
+    };
+  }
+  return {
+    provider: account.provider,
+    name: account.name,
+    enabled: account.enabled,
+    config:
+      typeof cfg === 'object' && cfg !== null
+        ? JSON.stringify(cfg, null, 2)
+        : '{}',
+    apiKey: '',
+    baseUrl: 'https://openrouter.ai/api/v1',
+  };
+}
+
 const AddEditProviderPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -46,94 +95,84 @@ const AddEditProviderPage: React.FC = () => {
     .filter((p) => !p.internal)
     .map((p) => ({ value: p.name, label: p.name }));
 
-  const [provider, setProvider] = useState('');
-  const [name, setName] = useState('');
-  const [config, setConfig] = useState('{}');
-  const [enabled, setEnabled] = useState(true);
-  const [error, setError] = useState<string | undefined>(undefined);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    control,
+    setError,
+    formState: { errors },
+  } = useForm<ProviderFormValues>({
+    defaultValues: DEFAULT_FORM_VALUES,
+    values: account ? accountToFormValues(account) : undefined,
+  });
 
-  // Inference-specific fields
-  const [apiKey, setApiKey] = useState('');
-  const [baseUrl, setBaseUrl] = useState('https://openrouter.ai/api/v1');
+  const [error, setErrorState] = useState<string | undefined>(undefined);
   const [showApiKey, setShowApiKey] = useState(false);
-  const [apiKeyError, setApiKeyError] = useState<string | undefined>(undefined);
-  const [baseUrlError, setBaseUrlError] = useState<string | undefined>(undefined);
 
-  useEffect(() => {
-    if (!account) return;
-    setProvider(account.provider);
-    setName(account.name);
-    setEnabled(account.enabled);
-    const cfg = account.config as Record<string, unknown> | undefined;
-    if (account.provider === 'inference' && cfg) {
-      setApiKey((cfg.api_key as string) || '');
-      setBaseUrl((cfg.base_url as string) || 'https://openrouter.ai/api/v1');
-    } else {
-      setConfig(
-        typeof cfg === 'object' && cfg !== null
-          ? JSON.stringify(cfg, null, 2)
-          : '{}',
-      );
-    }
-  }, [account]);
+  // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch() for conditional provider config UI
+  const provider = watch('provider');
 
-  const buildParsedConfig = (): Record<string, unknown> => {
-    if (provider === 'inference') {
-      return {
-        api_key: apiKey.trim(),
-        base_url: baseUrl.trim(),
-      };
-    }
-    return JSON.parse(config) as Record<string, unknown>;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(undefined);
-    setApiKeyError(undefined);
-    setBaseUrlError(undefined);
+  const onFormSubmit = async (data: ProviderFormValues) => {
+    setErrorState(undefined);
+    setError('apiKey', { message: '' });
+    setError('baseUrl', { message: '' });
 
     try {
-      if (provider === 'inference') {
-        const trimmedApiKey = apiKey.trim();
+      if (data.provider === 'inference') {
+        const trimmedApiKey = data.apiKey.trim();
         if (!trimmedApiKey) {
-          setApiKeyError(t('settings.inference_api_key_required'));
+          setError('apiKey', {
+            message: t('settings.inference_api_key_required'),
+          });
           return;
         }
         if (trimmedApiKey.length < MIN_API_KEY_LENGTH) {
-          setApiKeyError(t('settings.inference_api_key_invalid'));
+          setError('apiKey', {
+            message: t('settings.inference_api_key_invalid'),
+          });
           return;
         }
-        const trimmedBaseUrl = baseUrl.trim();
+        const trimmedBaseUrl = data.baseUrl.trim();
         if (!trimmedBaseUrl) {
-          setBaseUrlError(t('settings.inference_base_url_required'));
+          setError('baseUrl', {
+            message: t('settings.inference_base_url_required'),
+          });
           return;
         }
         if (!isValidHttpUrl(trimmedBaseUrl)) {
-          setBaseUrlError(t('settings.inference_base_url_invalid'));
+          setError('baseUrl', {
+            message: t('settings.inference_base_url_invalid'),
+          });
           return;
         }
       } else {
         try {
-          JSON.parse(config);
+          JSON.parse(data.config);
         } catch {
-          setError(t('settings.invalid_json'));
+          setError('config', { message: t('settings.invalid_json') });
           return;
         }
       }
 
-      const parsedConfig = buildParsedConfig();
+      const parsedConfig =
+        data.provider === 'inference'
+          ? {
+              api_key: data.apiKey.trim(),
+              base_url: data.baseUrl.trim(),
+            }
+          : (JSON.parse(data.config) as Record<string, unknown>);
 
       if (isEditing) {
         await updateAccount.mutateAsync({
-          name,
+          name: data.name,
           config: parsedConfig,
-          enabled,
+          enabled: data.enabled,
         });
       } else {
         await createAccount.mutateAsync({
-          provider,
-          name,
+          provider: data.provider,
+          name: data.name,
           config: parsedConfig,
         });
       }
@@ -141,7 +180,7 @@ const AddEditProviderPage: React.FC = () => {
       navigate('/settings');
     } catch (err) {
       console.error(err);
-      setError(
+      setErrorState(
         isEditing
           ? t('settings.update_provider_error')
           : t('settings.create_provider_error'),
@@ -178,12 +217,10 @@ const AddEditProviderPage: React.FC = () => {
           : t('settings.add_provider_title')}
       </SectionHeader>
 
-      <form onSubmit={handleSubmit} className="settings-form">
+      <form onSubmit={handleSubmit(onFormSubmit)} className="settings-form">
         <FormField label={t('settings.provider_label')}>
           <Select
-            value={provider}
-            onChange={(e) => setProvider(e.target.value)}
-            required
+            {...register('provider', { required: true })}
             placeholder={t('settings.provider_placeholder')}
             options={providerOptions}
             disabled={isEditing}
@@ -192,20 +229,26 @@ const AddEditProviderPage: React.FC = () => {
 
         <FormField label={t('settings.account_name_label')}>
           <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            {...register('name', { required: true })}
             placeholder={t('settings.account_name_placeholder')}
-            required
           />
         </FormField>
 
         {isEditing && (
           <FormField label={t('settings.enabled')}>
             <div className="switch-row">
-              <Switch checked={enabled} onCheckedChange={setEnabled} />
-              <span>
-                {enabled ? t('settings.enabled') : t('settings.disabled')}
-              </span>
+              <Controller
+                name="enabled"
+                control={control}
+                render={({ field }) => (
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    ref={field.ref}
+                  />
+                )}
+              />
+              <span>{watch('enabled') ? t('settings.enabled') : t('settings.disabled')}</span>
             </div>
           </FormField>
         )}
@@ -214,21 +257,16 @@ const AddEditProviderPage: React.FC = () => {
           <>
             <FormField
               label={t('settings.inference_api_key_label')}
-              error={apiKeyError}
+              error={errors.apiKey?.message}
             >
               <div className="api-key-field">
                 <Input
                   type={showApiKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={(e) => {
-                    setApiKey(e.target.value);
-                    setApiKeyError(undefined);
-                  }}
+                  {...register('apiKey')}
                   placeholder={t('settings.inference_api_key_placeholder')}
-                  required
                   className="api-key-input"
-                  variant={apiKeyError ? 'error' : 'default'}
-                  aria-invalid={!!apiKeyError}
+                  variant={errors.apiKey ? 'error' : 'default'}
+                  aria-invalid={!!errors.apiKey}
                 />
                 <button
                   type="button"
@@ -242,29 +280,27 @@ const AddEditProviderPage: React.FC = () => {
 
             <FormField
               label={t('settings.inference_base_url_label')}
-              error={baseUrlError}
+              error={errors.baseUrl?.message}
             >
               <Input
                 type="text"
-                value={baseUrl}
-                onChange={(e) => {
-                  setBaseUrl(e.target.value);
-                  setBaseUrlError(undefined);
-                }}
+                {...register('baseUrl', { required: true })}
                 placeholder={t('settings.inference_base_url_placeholder')}
-                required
-                variant={baseUrlError ? 'error' : 'default'}
-                aria-invalid={!!baseUrlError}
+                variant={errors.baseUrl ? 'error' : 'default'}
+                aria-invalid={!!errors.baseUrl}
               />
             </FormField>
           </>
         ) : (
-          <FormField label={t('settings.config_label')}>
+          <FormField
+            label={t('settings.config_label')}
+            error={errors.config?.message}
+          >
             <Textarea
-              value={config}
-              onChange={(e) => setConfig(e.target.value)}
+              {...register('config')}
               rows={5}
               className="font-mono"
+              variant={errors.config ? 'error' : 'default'}
             />
           </FormField>
         )}

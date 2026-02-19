@@ -47,6 +47,7 @@ const PetForm: React.FC<PetFormProps> = ({
     mode: 'onChange',
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch() is safe here for derived UI
   const watchedBirthDate = watch('birth_date');
 
   const [avatarFile, setAvatarFile] = React.useState<File | null>(null);

@@ -54,7 +54,7 @@ const LogFoodModal: React.FC<LogFoodModalProps> = ({
     if (selectedFood?.serving_size_g != null && amount === '') {
       setAmount(String(selectedFood.serving_size_g));
     }
-  }, [selectedFood?.id, selectedFood?.serving_size_g]);
+  }, [selectedFood?.id, selectedFood?.serving_size_g, amount]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

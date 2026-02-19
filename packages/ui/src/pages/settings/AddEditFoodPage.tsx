@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { useFood, useCreateFood, useUpdateFood } from '@/hooks/queries/foodQueries';
@@ -8,6 +9,7 @@ import { FormField, Input, Select, Textarea } from '@/components/ui/form';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Drumstick } from 'lucide-react';
 import type { FoodTypeDTO, NutrientNameDTO, NutrientUnitDTO } from 'shared';
+import type { GetFoodDTO } from 'shared';
 
 import './AddEditFoodPage.css';
 
@@ -44,6 +46,57 @@ const DEFAULT_NUTRIENTS: NutrientEntry[] = NUTRIENT_NAMES.map((nutrient) => ({
   value: 0,
 }));
 
+interface FoodFormValues {
+  name: string;
+  brand: string;
+  food_type: FoodTypeDTO;
+  barcode_ean13: string;
+  moisture_percent: string;
+  calories_per_100g: string;
+  serving_size_g: string;
+  notes: string;
+  nutrients: NutrientEntry[];
+}
+
+const DEFAULT_FORM_VALUES: FoodFormValues = {
+  name: '',
+  brand: '',
+  food_type: 'complete_wet',
+  barcode_ean13: '',
+  moisture_percent: '',
+  calories_per_100g: '',
+  serving_size_g: '',
+  notes: '',
+  nutrients: DEFAULT_NUTRIENTS,
+};
+
+function foodToFormValues(food: GetFoodDTO): FoodFormValues {
+  const existing = Array.isArray(food.nutrients) ? food.nutrients : [];
+  return {
+    name: food.name,
+    brand: food.brand ?? '',
+    food_type: food.food_type,
+    barcode_ean13: food.barcode_ean13 ?? '',
+    moisture_percent:
+      food.moisture_percent != null ? String(food.moisture_percent) : '',
+    calories_per_100g:
+      food.calories_per_100g != null ? String(food.calories_per_100g) : '',
+    serving_size_g:
+      food.serving_size_g != null ? String(food.serving_size_g) : '',
+    notes: food.notes ?? '',
+    nutrients: NUTRIENT_NAMES.map((nutrient) => {
+      const found = existing.find((n) => n.nutrient === nutrient);
+      return found
+        ? {
+            nutrient: found.nutrient as NutrientNameDTO,
+            unit: found.unit as NutrientUnitDTO,
+            value: found.value,
+          }
+        : { nutrient, unit: 'percent' as NutrientUnitDTO, value: 0 };
+    }),
+  };
+}
+
 const AddEditFoodPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -55,76 +108,42 @@ const AddEditFoodPage: React.FC = () => {
   const createFood = useCreateFood();
   const updateFoodMutation = useUpdateFood(foodId);
 
-  const [name, setName] = useState('');
-  const [brand, setBrand] = useState('');
-  const [foodType, setFoodType] = useState<FoodTypeDTO>('complete_wet');
-  const [barcodeEan13, setBarcodeEan13] = useState('');
-  const [moisturePercent, setMoisturePercent] = useState('');
-  const [caloriesPer100g, setCaloriesPer100g] = useState('');
-  const [servingSizeG, setServingSizeG] = useState('');
-  const [notes, setNotes] = useState('');
-  const [nutrients, setNutrients] = useState<NutrientEntry[]>(DEFAULT_NUTRIENTS);
+  const { register, handleSubmit, watch, setValue } = useForm<FoodFormValues>({
+    defaultValues: DEFAULT_FORM_VALUES,
+    values: food ? foodToFormValues(food) : undefined,
+  });
+
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (food) {
-      setName(food.name);
-      setBrand(food.brand ?? '');
-      setFoodType(food.food_type);
-      setBarcodeEan13(food.barcode_ean13 ?? '');
-      setMoisturePercent(
-        food.moisture_percent != null ? String(food.moisture_percent) : '',
-      );
-      setCaloriesPer100g(
-        food.calories_per_100g != null ? String(food.calories_per_100g) : '',
-      );
-      setServingSizeG(
-        food.serving_size_g != null ? String(food.serving_size_g) : '',
-      );
-      setNotes(food.notes ?? '');
-      const existing = Array.isArray(food.nutrients) ? food.nutrients : [];
-      setNutrients(
-        NUTRIENT_NAMES.map((nutrient) => {
-          const found = existing.find((n) => n.nutrient === nutrient);
-          return found
-            ? {
-                nutrient: found.nutrient as NutrientNameDTO,
-                unit: found.unit as NutrientUnitDTO,
-                value: found.value,
-              }
-            : { nutrient, unit: 'percent' as NutrientUnitDTO, value: 0 };
-        }),
-      );
-    }
-  }, [food]);
+  // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch() for derived form UI (nutrients list, barcode)
+  const nutrients = watch('nutrients');
+  const barcodeEan13 = watch('barcode_ean13');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onFormSubmit = async (data: FoodFormValues) => {
     setError(null);
-
     try {
       const barcode =
-        barcodeEan13.replace(/\D/g, '').length === 13
-          ? barcodeEan13.replace(/\D/g, '')
+        data.barcode_ean13.replace(/\D/g, '').length === 13
+          ? data.barcode_ean13.replace(/\D/g, '')
           : null;
       const payload = {
-        name,
-        brand: brand || null,
-        food_type: foodType,
+        name: data.name,
+        brand: data.brand || null,
+        food_type: data.food_type,
         barcode_ean13: barcode,
         moisture_percent:
-          moisturePercent !== ''
-            ? parseFloat(moisturePercent)
+          data.moisture_percent !== ''
+            ? parseFloat(data.moisture_percent)
             : null,
         calories_per_100g:
-          caloriesPer100g !== ''
-            ? parseFloat(caloriesPer100g)
+          data.calories_per_100g !== ''
+            ? parseFloat(data.calories_per_100g)
             : null,
         serving_size_g:
-          servingSizeG !== '' ? parseFloat(servingSizeG) : null,
-        notes: notes || null,
-        nutrients: nutrients.some((n) => n.value > 0)
-          ? nutrients.filter((n) => n.value > 0)
+          data.serving_size_g !== '' ? parseFloat(data.serving_size_g) : null,
+        notes: data.notes || null,
+        nutrients: data.nutrients.some((n) => n.value > 0)
+          ? data.nutrients.filter((n) => n.value > 0)
           : null,
       };
 
@@ -161,7 +180,7 @@ const AddEditFoodPage: React.FC = () => {
         {isNew ? t('settings.add_food_title') : t('settings.edit_food_title')}
       </SectionHeader>
 
-      <form onSubmit={handleSubmit} className="settings-form">
+      <form onSubmit={handleSubmit(onFormSubmit)} className="settings-form">
         <Tabs defaultValue="basic" className="add-edit-food-tabs">
           <TabsList>
             <TabsTrigger value="basic">{t('settings.food_tab_basic')}</TabsTrigger>
@@ -171,8 +190,7 @@ const AddEditFoodPage: React.FC = () => {
           <TabsContent value="basic" className="add-edit-food-tab-content">
             <FormField label={t('settings.food_name_label')}>
               <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                {...register('name', { required: true })}
                 placeholder={t('settings.food_name_placeholder')}
                 required
               />
@@ -180,16 +198,14 @@ const AddEditFoodPage: React.FC = () => {
 
             <FormField label={t('settings.food_brand_label')}>
               <Input
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
+                {...register('brand')}
                 placeholder={t('settings.food_brand_placeholder')}
               />
             </FormField>
 
             <FormField label={t('settings.food_type_label')}>
               <Select
-                value={foodType}
-                onChange={(e) => setFoodType(e.target.value as FoodTypeDTO)}
+                {...register('food_type', { required: true })}
                 options={FOOD_TYPE_VALUES.map((value) => ({
                   value,
                   label: t(`settings.food_type_${value}`),
@@ -200,8 +216,16 @@ const AddEditFoodPage: React.FC = () => {
 
             <FormField label={t('settings.food_barcode_label')}>
               <Input
+                ref={register('barcode_ean13').ref}
+                onBlur={register('barcode_ean13').onBlur}
+                name={register('barcode_ean13').name}
                 value={barcodeEan13}
-                onChange={(e) => setBarcodeEan13(e.target.value.replace(/\D/g, '').slice(0, 13))}
+                onChange={(e) => {
+                  const next = e.target.value
+                    .replace(/\D/g, '')
+                    .slice(0, 13);
+                  setValue('barcode_ean13', next, { shouldValidate: true });
+                }}
                 placeholder={t('settings.food_barcode_placeholder')}
                 inputMode="numeric"
                 maxLength={13}
@@ -214,8 +238,7 @@ const AddEditFoodPage: React.FC = () => {
                 min={0}
                 max={100}
                 step={0.1}
-                value={moisturePercent}
-                onChange={(e) => setMoisturePercent(e.target.value)}
+                {...register('moisture_percent')}
                 placeholder={t('settings.food_moisture_placeholder')}
               />
             </FormField>
@@ -225,8 +248,7 @@ const AddEditFoodPage: React.FC = () => {
                 type="number"
                 min={0}
                 step={0.1}
-                value={caloriesPer100g}
-                onChange={(e) => setCaloriesPer100g(e.target.value)}
+                {...register('calories_per_100g')}
                 placeholder={t('settings.food_calories_placeholder')}
               />
             </FormField>
@@ -236,16 +258,14 @@ const AddEditFoodPage: React.FC = () => {
                 type="number"
                 min={0}
                 step={1}
-                value={servingSizeG}
-                onChange={(e) => setServingSizeG(e.target.value)}
+                {...register('serving_size_g')}
                 placeholder={t('settings.food_serving_size_placeholder')}
               />
             </FormField>
 
             <FormField label={t('settings.food_notes_label')}>
               <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                {...register('notes')}
                 rows={2}
                 placeholder={t('settings.food_notes_placeholder')}
               />
@@ -265,21 +285,13 @@ const AddEditFoodPage: React.FC = () => {
                         type="number"
                         min={0}
                         step={0.1}
-                        value={entry.value}
-                        onChange={(e) => {
-                          const next = [...nutrients];
-                          next[index] = { ...entry, value: parseFloat(e.target.value) || 0 };
-                          setNutrients(next);
-                        }}
+                        {...register(`nutrients.${index}.value`, {
+                          valueAsNumber: true,
+                        })}
                         className="nutrient-value-input"
                       />
                       <Select
-                        value={entry.unit}
-                        onChange={(e) => {
-                          const next = [...nutrients];
-                          next[index] = { ...entry, unit: e.target.value as NutrientUnitDTO };
-                          setNutrients(next);
-                        }}
+                        {...register(`nutrients.${index}.unit`)}
                         options={NUTRIENT_UNITS.map((value) => ({
                           value,
                           label: t(`settings.nutrient_unit_${value}`),

@@ -23,11 +23,6 @@ const ReferenceImagePicker: React.FC<ReferenceImagePickerProps> = ({
   onSelect,
 }) => {
   const { t } = useTranslation();
-  React.useEffect(() => {
-    if (isOpen) {
-      console.log('ReferenceImagePicker opened with:', { petId, sourceDeviceId });
-    }
-  }, [isOpen, petId, sourceDeviceId]);
 
   const { data: pet } = usePet(petId, isOpen);
   const { data: candidateMedia, isLoading } = useVerifiedEventMedia(
@@ -37,12 +32,6 @@ const ReferenceImagePicker: React.FC<ReferenceImagePickerProps> = ({
   );
   const [selectedIds, setSelectedIds] = React.useState<Set<number>>(new Set());
   const [displayCount, setDisplayCount] = React.useState(50); // Show 50 at a time
-
-  React.useEffect(() => {
-    if (candidateMedia) {
-      console.log('Candidate media loaded:', candidateMedia);
-    }
-  }, [candidateMedia]);
 
   // Reset display count when modal opens
   React.useEffect(() => {

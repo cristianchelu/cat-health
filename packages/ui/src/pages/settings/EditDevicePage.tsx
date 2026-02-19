@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import {
@@ -8,11 +9,64 @@ import {
 } from '@/hooks/queries/deviceQueries';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Button } from '@/components/ui/Button';
-import { FormField, Input, Textarea } from '@/components/ui/form';
+import { FormField, Input, Textarea, Select } from '@/components/ui/form';
 import { Switch } from '@/components/ui/Switch';
-import { Select } from '@/components/ui/form';
 import { Smartphone, Check } from 'lucide-react';
 import './EditDevicePage.css';
+
+interface DeviceFormValues {
+  name: string;
+  enabled: boolean;
+  snapshotUrl: string;
+  model: string;
+  sourceDeviceId: string;
+  promptTemplate: string;
+  autoIdentify: boolean;
+}
+
+const DEFAULT_FORM_VALUES: DeviceFormValues = {
+  name: '',
+  enabled: true,
+  snapshotUrl: '',
+  model: '',
+  sourceDeviceId: '',
+  promptTemplate: '',
+  autoIdentify: true,
+};
+
+function deviceToFormValues(device: {
+  name: string;
+  enabled: boolean;
+  type: string;
+  config?: unknown;
+}): DeviceFormValues {
+  const cfg = device.config as Record<string, unknown> | undefined;
+  const base = {
+    name: device.name,
+    enabled: device.enabled,
+    snapshotUrl: '',
+    model: '',
+    sourceDeviceId: '',
+    promptTemplate: '',
+    autoIdentify: true,
+  };
+  if (!cfg) return base;
+  if (device.type === 'camera') {
+    return { ...base, snapshotUrl: (cfg.snapshotUrl as string) || '' };
+  }
+  if (device.type === 'pet_recognizer') {
+    const sid = cfg.source_device_id;
+    return {
+      ...base,
+      model: (cfg.model as string) || '',
+      sourceDeviceId:
+        sid != null && sid !== '' ? String(sid) : '',
+      promptTemplate: (cfg.prompt_template as string) || '',
+      autoIdentify: cfg.auto_identify !== false,
+    };
+  }
+  return base;
+}
 
 const EditDevicePage: React.FC = () => {
   const { t } = useTranslation();
@@ -26,62 +80,37 @@ const EditDevicePage: React.FC = () => {
   const { data: allDevices = [] } = useDevices();
   const updateDevice = useUpdateDevice(deviceId);
 
-  const [name, setName] = useState('');
-  const [enabled, setEnabled] = useState(true);
+  const { register, handleSubmit, control } = useForm<DeviceFormValues>({
+    defaultValues: DEFAULT_FORM_VALUES,
+    values: device ? deviceToFormValues(device) : undefined,
+  });
+
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Camera fields
-  const [snapshotUrl, setSnapshotUrl] = useState('');
-
-  // Pet recognizer fields
-  const [model, setModel] = useState('');
-  const [sourceDeviceId, setSourceDeviceId] = useState<number | null>(null);
-  const [promptTemplate, setPromptTemplate] = useState('');
-  const [autoIdentify, setAutoIdentify] = useState(true);
-
-  useEffect(() => {
+  const onFormSubmit = async (data: DeviceFormValues) => {
     if (!device) return;
-    setName(device.name);
-    setEnabled(device.enabled);
-
-    const cfg = device.config as Record<string, unknown> | undefined;
-    if (!cfg) return;
-
-    if (device.type === 'camera') {
-      setSnapshotUrl((cfg.snapshotUrl as string) || '');
-    }
-
-    if (device.type === 'pet_recognizer') {
-      setModel((cfg.model as string) || '');
-      setSourceDeviceId((cfg.source_device_id as number) || null);
-      setPromptTemplate((cfg.prompt_template as string) || '');
-      setAutoIdentify(cfg.auto_identify !== false);
-    }
-  }, [device]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!device) return;
-
+    setSubmitError(null);
     try {
       const existingConfig = (device.config as Record<string, unknown>) || {};
       let config: Record<string, unknown> | undefined;
 
       if (device.type === 'camera') {
-        config = { ...existingConfig, snapshotUrl };
+        config = { ...existingConfig, snapshotUrl: data.snapshotUrl };
       } else if (device.type === 'pet_recognizer') {
         config = {
           ...existingConfig,
-          model,
-          source_device_id: sourceDeviceId,
-          prompt_template: promptTemplate,
-          auto_identify: autoIdentify,
+          model: data.model,
+          source_device_id: data.sourceDeviceId
+            ? Number(data.sourceDeviceId)
+            : null,
+          prompt_template: data.promptTemplate,
+          auto_identify: data.autoIdentify,
         };
       }
 
       await updateDevice.mutateAsync({
-        name,
-        enabled,
+        name: data.name,
+        enabled: data.enabled,
         ...(config !== undefined && { config }),
       });
       navigate('/settings');
@@ -120,19 +149,27 @@ const EditDevicePage: React.FC = () => {
         {t('settings.edit_device_title')}
       </SectionHeader>
 
-      <form onSubmit={handleSubmit} className="settings-form">
+      <form onSubmit={handleSubmit(onFormSubmit)} className="settings-form">
         <FormField label={t('settings.device_name_label')}>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
+          <Input {...register('name', { required: true })} />
         </FormField>
 
         <FormField label={t('settings.enabled')}>
           <div className="switch-row">
-            <Switch checked={enabled} onCheckedChange={setEnabled} />
-            <span>{enabled ? t('settings.enabled') : t('settings.disabled')}</span>
+            <Controller
+              name="enabled"
+              control={control}
+              render={({ field }) => (
+                <>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    ref={field.ref}
+                  />
+                  <span>{field.value ? t('settings.enabled') : t('settings.disabled')}</span>
+                </>
+              )}
+            />
           </div>
         </FormField>
 
@@ -150,8 +187,7 @@ const EditDevicePage: React.FC = () => {
         {device.type === 'camera' && (
           <FormField label={t('settings.snapshot_url_label')}>
             <Input
-              value={snapshotUrl}
-              onChange={(e) => setSnapshotUrl(e.target.value)}
+              {...register('snapshotUrl')}
               placeholder={t('settings.snapshot_url_placeholder')}
             />
             <p className="help-text">{t('settings.snapshot_url_help')}</p>
@@ -162,9 +198,7 @@ const EditDevicePage: React.FC = () => {
           <>
             <FormField label={t('settings.source_device_label')}>
               <Select
-                value={sourceDeviceId?.toString() || ''}
-                onChange={(e) => setSourceDeviceId(Number(e.target.value))}
-                required
+                {...register('sourceDeviceId', { required: true })}
                 placeholder={t('settings.source_device_placeholder')}
                 options={sourceDeviceOptions}
               />
@@ -172,26 +206,36 @@ const EditDevicePage: React.FC = () => {
 
             <FormField label={t('settings.model_label')}>
               <Input
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
+                {...register('model', { required: true })}
                 placeholder={t('settings.model_placeholder')}
-                required
               />
             </FormField>
 
             <FormField label={t('settings.prompt_template_label')}>
               <Textarea
-                value={promptTemplate}
-                onChange={(e) => setPromptTemplate(e.target.value)}
+                {...register('promptTemplate', { required: true })}
                 rows={6}
-                required
               />
             </FormField>
 
             <FormField label={t('settings.auto_identify_label')}>
               <div className="switch-row">
-                <Switch checked={autoIdentify} onCheckedChange={setAutoIdentify} />
-                <span>{autoIdentify ? t('settings.enabled') : t('settings.disabled')}</span>
+                <Controller
+                  name="autoIdentify"
+                  control={control}
+                  render={({ field }) => (
+                    <>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        ref={field.ref}
+                      />
+                      <span>
+                        {field.value ? t('settings.enabled') : t('settings.disabled')}
+                      </span>
+                    </>
+                  )}
+                />
               </div>
             </FormField>
           </>

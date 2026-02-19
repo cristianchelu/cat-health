@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GetPetResponseDTO } from 'shared';
 import { usePets } from '@/hooks/queries/petQueries';
@@ -10,34 +10,24 @@ export function PetProvider({ children }: { children: ReactNode }) {
     null,
   );
 
-  // Auto-select first pet when:
-  // 1. No pet is currently selected
-  // 2. Pets have loaded successfully
-  // 3. There is at least one pet available
-  useEffect(() => {
-    if (!selectedPet && !isLoading && pets.length > 0) {
-      setSelectedPet(pets[0]);
-    }
-  }, [selectedPet, isLoading, pets]);
+  // Derive effective selection: user's choice if it still exists in the list,
+  // otherwise first pet (or null). No effect needed—we only setState on user action.
+  const selectedStillExists =
+    selectedPet && pets.some((p) => p.id === selectedPet.id);
+  const effectiveSelectedPet = selectedStillExists
+    ? selectedPet
+    : (pets[0] ?? null);
 
-  // Handle case where selected pet is deleted
-  useEffect(() => {
-    if (selectedPet && pets.length > 0) {
-      const petStillExists = pets.some((pet) => pet.id === selectedPet.id);
-      if (!petStillExists) {
-        // Selected pet was deleted, select first available pet
-        setSelectedPet(pets[0]);
-      }
-    } else if (selectedPet && pets.length === 0) {
-      // All pets were deleted
-      setSelectedPet(null);
-    }
-  }, [selectedPet, pets]);
+  // Clear stale selection when the selected pet was deleted (state update during
+  // render is allowed in React 18 when adjusting to props/state).
+  if (selectedPet && !selectedStillExists) {
+    setSelectedPet(null);
+  }
 
   return (
     <PetContext.Provider
       value={{
-        selectedPet,
+        selectedPet: effectiveSelectedPet,
         setSelectedPet,
         pets,
         isLoading,

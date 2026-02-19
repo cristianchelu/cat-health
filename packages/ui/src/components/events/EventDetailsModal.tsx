@@ -126,7 +126,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     if (!hasAnalysisData || !decodedRawData?.weights) return null;
     const tracker = new LitterboxStateTracker();
     return tracker.processEvent(decodedRawData.weights);
-  }, [hasAnalysisData, decodedRawData?.weights]);
+  }, [hasAnalysisData, decodedRawData]);
 
   if (!event) {
     return null;

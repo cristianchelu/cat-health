@@ -143,7 +143,7 @@ export function useUpdateProviderAccount(accountId: number) {
   return useMutation({
     mutationFn: (data: PatchProviderAccountRequestDTO) =>
       updateProviderAccount(accountId, data),
-    onSuccess: (_, __, ___) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['providerAccounts'] });
       queryClient.invalidateQueries({
         queryKey: ['providerAccount', accountId],
