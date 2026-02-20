@@ -1,13 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import type { DeviceType } from 'shared';
 import { useDevices, useProviderAccounts } from '@/hooks/queries/deviceQueries';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import Avatar from '@/components/ui/Avatar';
-import { LitterboxIcon } from '@/components/icons/LitterboxIcon';
-import { WaterFountainIcon } from '@/components/icons/WaterFountainIcon';
+import { getDeviceIcon } from '@/components/icons/deviceIcons';
 import { CardList, CardListItem, CardListContent } from './components/CardList';
 import {
   Plus,
@@ -16,22 +14,12 @@ import {
   Smartphone,
   Database,
   Cat,
-  CctvIcon,
   Server,
   Drumstick,
-  Sparkles,
 } from 'lucide-react';
 import { useFoods } from '@/hooks/queries/foodQueries';
 
 import './Settings.css';
-
-const DEVICE_ICON: Record<DeviceType, React.ReactNode> = {
-  litterbox: <LitterboxIcon size="1em" />,
-  water_fountain: <WaterFountainIcon size="1em" />,
-  feeder: <SettingsIcon size="1em" />,
-  camera: <CctvIcon size="1em" />,
-  pet_recognizer: <Sparkles size="1em" />,
-};
 
 const Settings: React.FC = () => {
   const { t } = useTranslation();
@@ -123,9 +111,7 @@ const Settings: React.FC = () => {
           </SectionHeader>
           <CardList>
             {devices.map((device) => {
-              const icon = DEVICE_ICON[device.type] || (
-                <SettingsIcon size="1em" />
-              );
+              const icon = getDeviceIcon(device.type, <SettingsIcon size="1em" />);
               return (
                 <CardListItem
                   key={device.id}

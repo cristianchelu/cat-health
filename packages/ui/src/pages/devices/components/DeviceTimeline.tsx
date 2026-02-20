@@ -99,6 +99,8 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
                     key={event.id}
                     onClick={() => handleEventClick(event)}
                     event={event}
+                    showPet={true}
+                    showDevice={false}
                   />
                 ))}
           </Timeline>

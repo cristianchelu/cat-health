@@ -2,9 +2,7 @@ import * as React from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import type { GetDeviceResponseDTO, WaterFountainState } from 'shared';
-import { Camera, Utensils } from 'lucide-react';
-import { WaterFountainIcon } from '@/components/icons/WaterFountainIcon';
-import { LitterboxIcon } from '@/components/icons/LitterboxIcon';
+import { getDeviceIcon } from '@/components/icons/deviceIcons';
 import {
   Card,
   CardHeader,
@@ -25,21 +23,6 @@ interface DeviceCardProps {
 const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-
-  const getIcon = () => {
-    switch (device.type) {
-      case 'water_fountain':
-        return <WaterFountainIcon />;
-      case 'litterbox':
-        return <LitterboxIcon />;
-      case 'feeder':
-        return <Utensils />;
-      case 'camera':
-        return <Camera />;
-      default:
-        return null;
-    }
-  };
 
   const getStatusLabel = () => {
     switch (device.status) {
@@ -80,7 +63,7 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
         <div className="device-header-group">
           <Tooltip content={getStatusLabel()} position="bottom">
             <div className="device-icon-wrapper">
-              {getIcon()}
+              {getDeviceIcon(device.type)}
               <div className={cn('status-indicator', getStatusClass())} />
             </div>
           </Tooltip>

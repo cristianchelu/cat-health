@@ -143,6 +143,8 @@ const Overview: React.FC = () => {
                   key={event.id}
                   onClick={() => handleEventClick(event)}
                   event={event}
+                  showPet={false}
+                  showDevice={true}
                 />
               ))}
           </Timeline>
