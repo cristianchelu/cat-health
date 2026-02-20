@@ -111,4 +111,18 @@ export class MediaManager {
       })
       .execute();
   }
+
+  /**
+   * Remove a persisted media file from disk by its relative path (as stored in media.file_path).
+   * Ignores ENOENT. Logs other errors.
+   */
+  async unlinkPersistedFile(relativePath: string): Promise<void> {
+    try {
+      await fs.unlink(path.join(this.mediaDir, relativePath));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+        console.error(`Failed to unlink media file ${relativePath}:`, err);
+      }
+    }
+  }
 }

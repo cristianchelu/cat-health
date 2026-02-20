@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePets } from '@/hooks/queries/petQueries';
-import { useEventMedia, useUpdateEvent } from '@/hooks/queries/eventQueries';
+import { useEventMedia, useUpdateEvent, useDeleteEvent } from '@/hooks/queries/eventQueries';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/form/Select';
@@ -92,6 +92,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     isOpen && event !== null,
   );
   const { mutate: updateEvent, isPending: isUpdating } = useUpdateEvent();
+  const { mutate: deleteEventMutation, isPending: isDeleting } = useDeleteEvent();
 
   const [selectedPetId, setSelectedPetId] = React.useState<string | null>(null);
   const [selectedEliminationType, setSelectedEliminationType] =
@@ -173,6 +174,16 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   const hasMedia = media && media.length > 0;
 
+  const handleDelete = () => {
+    if (!event) return;
+    if (!window.confirm(t('event_details.confirm_delete_event'))) return;
+    deleteEventMutation(event.id, {
+      onSuccess: () => {
+        onClose();
+      },
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="event-details-modal-content">
@@ -249,8 +260,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 icon
                 className="action-btn"
                 title={t('event_details.delete_event')}
+                onClick={handleDelete}
+                disabled={isDeleting}
               >
-                <Trash2 size={20} />
+                {isDeleting ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <Trash2 size={20} />
+                )}
               </Button>
               {hasMedia && (
                 <Button

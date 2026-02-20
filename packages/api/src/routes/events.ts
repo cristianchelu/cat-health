@@ -27,6 +27,7 @@ import {
 import { type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import { db } from '../database/index.ts';
 import type { Food } from '../database/types/FoodTable.ts';
+import { MediaManager } from '../services/media/MediaManager.ts';
 
 type FoodNutrientItem = { nutrient: string; unit: string; value: number };
 
@@ -558,11 +559,47 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     },
     async (request) => {
       const { eventId } = request.params;
+      const eventIdStr = String(eventId);
 
-      await db
-        .deleteFrom('event')
-        .where('id', '=', eventId)
-        .executeTakeFirstOrThrow();
+      const filesToUnlink: string[] = [];
+
+      await db.transaction().execute(async (trx) => {
+        const eventMedia = await trx
+          .selectFrom('media_link')
+          .innerJoin('media', 'media.id', 'media_link.media_id')
+          .select(['media_link.media_id as media_id', 'media.file_path as file_path'])
+          .where('media_link.entity_type', '=', 'event')
+          .where('media_link.entity_id', '=', eventIdStr)
+          .execute();
+
+        await trx
+          .deleteFrom('media_link')
+          .where('entity_type', '=', 'event')
+          .where('entity_id', '=', eventIdStr)
+          .execute();
+
+        await trx
+          .deleteFrom('event')
+          .where('id', '=', eventId)
+          .executeTakeFirstOrThrow();
+
+        for (const { media_id, file_path } of eventMedia) {
+          const otherLinks = await trx
+            .selectFrom('media_link')
+            .select(trx.fn.countAll().as('count'))
+            .where('media_id', '=', media_id)
+            .executeTakeFirst();
+          if (otherLinks && Number(otherLinks.count) === 0) {
+            await trx.deleteFrom('media').where('id', '=', media_id).execute();
+            if (file_path) filesToUnlink.push(file_path);
+          }
+        }
+      });
+
+      const mediaManager = new MediaManager(db);
+      await Promise.all(
+        filesToUnlink.map((filePath) => mediaManager.unlinkPersistedFile(filePath)),
+      );
 
       return { success: true };
     },

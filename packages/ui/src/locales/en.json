@@ -225,6 +225,7 @@
         "no_media_available": "No media available",
         "event_media_alt": "Event media",
         "delete_event": "Delete Event",
+        "confirm_delete_event": "Are you sure you want to delete this event? This cannot be undone.",
         "download_media": "Download Media",
         "pet_identification": "Pet Identification",
         "event_type": "Event Type",

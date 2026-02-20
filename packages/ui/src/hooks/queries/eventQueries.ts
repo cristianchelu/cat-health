@@ -4,7 +4,7 @@ import {
   type GetEventMediaResponseDTO,
   type PatchEventRequestDTO,
 } from 'shared';
-import { updateEvent, getVerifiedEventMedia } from '@/api/pets';
+import { updateEvent, deleteEvent, getVerifiedEventMedia } from '@/api/pets';
 
 export const useEventMedia = (eventId: number, enabled: boolean = true) => {
   return useQuery({
@@ -29,6 +29,17 @@ export function useUpdateEvent() {
       eventId: number;
       data: PatchEventRequestDTO;
     }) => updateEvent(eventId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deviceEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['petEvents'] });
+    },
+  });
+}
+
+export function useDeleteEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (eventId: number) => deleteEvent(eventId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deviceEvents'] });
       queryClient.invalidateQueries({ queryKey: ['petEvents'] });

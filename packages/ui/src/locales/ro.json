@@ -171,6 +171,7 @@
         "no_media_available": "Nu există media disponibilă",
         "event_media_alt": "Media eveniment",
         "delete_event": "Șterge eveniment",
+        "confirm_delete_event": "Sigur doriți să ștergeți acest eveniment? Această acțiune nu poate fi anulată.",
         "download_media": "Descarcă media",
         "pet_identification": "Identificare animal",
         "event_type": "Tip eveniment",
