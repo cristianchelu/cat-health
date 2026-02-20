@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, HeartPulse, Settings, TabletSmartphone } from 'lucide-react';
+import { HeartPulse, Settings, TabletSmartphone, Stethoscope } from 'lucide-react';
 import { NavLink } from 'react-router';
 
 import { cn } from '@/lib/utils';
@@ -11,8 +11,8 @@ const MobileNav: React.FC = () => {
   const { t } = useTranslation();
 
   const navigationItems = [
-    { path: '/', label: t('navigation.overview'), icon: <Activity /> },
-    { path: '/health', label: t('navigation.health'), icon: <HeartPulse /> },
+    { path: '/', label: t('navigation.overview'), icon: <HeartPulse /> },
+    { path: '/health', label: t('navigation.health'), icon: <Stethoscope /> },
     {
       path: '/devices',
       label: t('navigation.devices'),

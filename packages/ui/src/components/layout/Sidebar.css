@@ -148,8 +148,15 @@
   }
 
   .toggle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: var(--text-sm);
     font-weight: var(--font-bold);
+  }
+
+  .toggle-icon svg {
+    display: block;
   }
 
   @media (max-width: 767px) {

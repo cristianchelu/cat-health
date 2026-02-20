@@ -2,7 +2,14 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router';
 
-import { Activity, HeartPulse, Settings, TabletSmartphone } from 'lucide-react';
+import {
+  HeartPulse,
+  Settings,
+  TabletSmartphone,
+  Stethoscope,
+  ArrowRight,
+  ArrowLeft,
+} from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -19,8 +26,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false, onToggle }) => {
   const { t } = useTranslation();
 
   const navigationItems = [
-    { path: '/', label: t('navigation.overview'), icon: <Activity /> },
-    { path: '/health', label: t('navigation.health'), icon: <HeartPulse /> },
+    { path: '/', label: t('navigation.overview'), icon: <HeartPulse /> },
+    { path: '/health', label: t('navigation.health'), icon: <Stethoscope /> },
     {
       path: '/devices',
       label: t('navigation.devices'),
@@ -66,7 +73,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false, onToggle }) => {
               : t('navigation.collapse_sidebar')
           }
         >
-          <span className="toggle-icon">{isCollapsed ? '→' : '←'}</span>
+          <span className="toggle-icon">
+            {isCollapsed ? <ArrowRight size="1em" /> : <ArrowLeft size="1em" />}
+          </span>
         </button>
       )}
     </aside>

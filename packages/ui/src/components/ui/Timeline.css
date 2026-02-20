@@ -272,7 +272,6 @@
 
     .timeline-meta {
       font-size: var(--text-base);
-      gap: var(--space-md);
     }
 
     .timeline-meta-item svg {
