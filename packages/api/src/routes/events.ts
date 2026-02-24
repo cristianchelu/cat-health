@@ -215,7 +215,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .execute();
 
       // Group events by local date in the specified timezone
-      const dailyEvents = new Map<string, Array<{ type: LitterboxUseEliminationType; timestamp: string }>>();
+      const dailyEvents = new Map<string, Array<{ type: LitterboxUseEliminationType; timestamp: string; straining?: boolean }>>();
 
       // Initialize days
       for (let i = 0; i < days; i++) {
@@ -231,13 +231,14 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       // Process events
       for (const event of litterboxEvents) {
         const dateStr = formatInTimeZone(event.timestamp, timezone, 'yyyy-MM-dd');
-        const eventData = event.data as { elimination_type?: LitterboxUseEliminationType };
+        const eventData = event.data as { elimination_type?: LitterboxUseEliminationType; straining?: boolean };
         const eliminationType = eventData.elimination_type || 'unknown';
 
         if (dailyEvents.has(dateStr)) {
           dailyEvents.get(dateStr)!.push({
             type: eliminationType,
             timestamp: event.timestamp.toISOString(),
+            ...(eventData.straining ? { straining: true } : {}),
           });
         }
 

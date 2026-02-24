@@ -173,6 +173,16 @@
 .elimination-type-selector-wrapper {
   width: auto;
   min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+
+  .straining-badge {
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    color: var(--color-error);
+    text-align: right;
+  }
 }
 
 .elimination-type-select {

@@ -670,12 +670,8 @@ export class LitterboxController extends BaseESPHomeController {
           session.startTime,
         );
 
-        let eliminationType: LitterboxUseEliminationType;
-        if (eliminationWeight < NO_ELIMINATION_THRESHOLD) {
-          eliminationType = 'no_elimination';
-        } else {
-          eliminationType = determineEliminationType(analysis.periods);
-        }
+        const eliminationType = determineEliminationType(analysis.periods);
+        const straining = eliminationType !== 'no_elimination' && eliminationWeight < NO_ELIMINATION_THRESHOLD;
 
         const event: NewEvent = {
           pet_id: petId,
@@ -686,6 +682,7 @@ export class LitterboxController extends BaseESPHomeController {
             elimination_type: eliminationType,
             elimination_weight: Math.round(Math.max(0, eliminationWeight)),
             duration: Math.round(duration / 1000),
+            straining,
           },
           raw_data: rawData,
           human_verified: false,

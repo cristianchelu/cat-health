@@ -45,29 +45,35 @@ function formatShortDuration(date: Date): string {
   return `${minutes}m`;
 }
 
+interface DotData {
+  type: DotType;
+  straining?: boolean;
+}
+
 interface DayData {
-  dots: DotType[];
+  dots: DotData[];
   hasOverflow: boolean;
   overflowCount: number;
 }
 
 function processApiData(
-  apiDays: Array<{ date: string; events: Array<{ type: string; timestamp: string }> }>,
+  apiDays: Array<{ date: string; events: Array<{ type: string; timestamp: string; straining?: boolean }> }>,
 ): DayData[] {
   return apiDays.map((day) => {
-    // Expand "both" events into separate dots
-    const dots: DotType[] = [];
+    const dots: DotData[] = [];
     for (const event of day.events) {
       const type = event.type as LitterboxUseEliminationType;
       if (type === 'both') {
-        dots.push('urination', 'defecation');
+        dots.push(
+          { type: 'urination', straining: event.straining },
+          { type: 'defecation', straining: event.straining },
+        );
       } else {
-        dots.push(type as DotType);
+        dots.push({ type: type as DotType, straining: event.straining });
       }
     }
 
-    // Sort by priority (lower priority first, so higher priority ends up at top)
-    dots.sort((a, b) => DOT_PRIORITY[a] - DOT_PRIORITY[b]);
+    dots.sort((a, b) => DOT_PRIORITY[a.type] - DOT_PRIORITY[b.type]);
 
     let hasOverflow = false;
     let overflowCount = 0;
@@ -75,7 +81,6 @@ function processApiData(
     if (dots.length > MAX_DOTS_PER_DAY) {
       hasOverflow = true;
       overflowCount = dots.length - MAX_DOTS_PER_DAY;
-      // Keep the first N dots (actual eliminations), drop the top ones (no_elimination)
       dots.splice(MAX_DOTS_PER_DAY);
     }
 
@@ -168,7 +173,7 @@ const LitterboxVisitsCard: React.FC<LitterboxVisitsCardProps> = ({ petId }) => {
         <div className="litterbox-dot-chart">
           {dayData.map((day, dayIndex) => (
             <div key={dayIndex} className="dot-column">
-              {day.dots.map((dotType, dotIndex) => {
+              {day.dots.map((dot, dotIndex) => {
                 const isTopDot = dotIndex === day.dots.length - 1;
                 const showOverflow = isTopDot && day.hasOverflow;
 
@@ -178,8 +183,8 @@ const LitterboxVisitsCard: React.FC<LitterboxVisitsCardProps> = ({ petId }) => {
                     className="dot-wrapper"
                   >
                     <div
-                      className="dot"
-                      style={{ backgroundColor: DOT_COLORS[dotType] }}
+                      className={`dot${dot.straining ? ' dot-straining' : ''}`}
+                      style={{ backgroundColor: DOT_COLORS[dot.type] }}
                     />
                     {showOverflow && (
                       <span className="overflow-badge">+{day.overflowCount}</span>

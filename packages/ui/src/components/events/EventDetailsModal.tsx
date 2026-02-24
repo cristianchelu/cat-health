@@ -319,6 +319,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   className="elimination-type-select"
                   disabled={isUpdating}
                 />
+                {event.data.straining && (
+                  <span className="straining-badge">{t('overview.straining_detected')}</span>
+                )}
               </div>
             </div>
           )}

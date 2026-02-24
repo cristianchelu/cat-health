@@ -134,6 +134,7 @@ export const LitterboxTrendsResponseSchema = Type.Object({
         Type.Object({
           type: LitterboxUseEliminationTypeSchema,
           timestamp: Type.String(),
+          straining: Type.Optional(Type.Boolean()),
         }),
       ),
     }),

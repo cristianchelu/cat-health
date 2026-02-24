@@ -23,7 +23,7 @@ const COLOR_MAP: Record<LitterboxUseEliminationType, string> = {
   urination: '#FFA500',
   defecation: '#8B4513',
   both: 'var(--color-warning)',
-  no_elimination: 'var(--color-error)',
+  no_elimination: 'var(--color-text-muted)',
   unknown: 'var(--color-text-muted)',
 };
 
@@ -40,9 +40,10 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
   const eliminationType = data.elimination_type as LitterboxUseEliminationType;
 
   const variant = React.useMemo(() => {
-    if (eliminationType === 'no_elimination') return 'danger';
+    if (data.straining) return 'danger';
+    if (eliminationType === 'no_elimination') return 'default';
     return 'warning';
-  }, [eliminationType]);
+  }, [eliminationType, data.straining]);
 
   const title = React.useMemo(() => {
     switch (eliminationType) {
@@ -75,7 +76,10 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
             {format(new Date(event.timestamp), 'HH:mm')}
           </Timeline.Timestamp>
           {data.elimination_weight !== undefined && (
-            <Timeline.Value variant={variant}>
+            <Timeline.Value
+              variant={variant}
+              style={eliminationType === 'no_elimination' ? { color: 'var(--color-text-muted)' } : undefined}
+            >
               {data.elimination_weight}g
             </Timeline.Value>
           )}
@@ -86,15 +90,13 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
           {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
           {event.human_verified && <EventVerified />}
-          {children}
-        </Timeline.Meta>
-        {data.elimination_type === 'no_elimination' && (
-          <Timeline.Footer>
+          {data.straining && (
             <Timeline.Badge variant="warning">
               {t('overview.straining_detected')}
             </Timeline.Badge>
-          </Timeline.Footer>
-        )}
+          )}
+          {children}
+        </Timeline.Meta>
       </Timeline.Content>
     </Timeline.Item>
   );

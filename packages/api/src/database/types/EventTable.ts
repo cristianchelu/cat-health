@@ -18,6 +18,7 @@ export interface LitterboxUseEventData {
   elimination_type: LitterboxUseEliminationType;
   elimination_weight: number;
   duration: number;
+  straining?: boolean;
 }
 
 export type FoodIntakeFoodType = 'dry' | 'wet' | 'treat' | 'unknown';
