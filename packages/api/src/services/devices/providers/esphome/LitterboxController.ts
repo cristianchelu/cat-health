@@ -475,13 +475,23 @@ function determineEliminationType(
   if (eliminatingPeriods.length === 0) {
     return 'no_elimination';
   }
-  const avgVariance =
-    eliminatingPeriods.reduce((sum, p) => sum + (p.variance ?? 0), 0) /
-    eliminatingPeriods.length;
-  if (avgVariance < URINATION_VARIANCE_THRESHOLD_G) {
-    return 'urination';
+
+  if (eliminatingPeriods.length === 1) {
+    return (eliminatingPeriods[0].variance ?? 0) < URINATION_VARIANCE_THRESHOLD_G
+      ? 'urination'
+      : 'defecation';
   }
-  return 'defecation';
+
+  if (eliminatingPeriods.length === 2) {
+    const [a, b] = eliminatingPeriods;
+    const aIsUrination = (a.variance ?? 0) < URINATION_VARIANCE_THRESHOLD_G;
+    const bIsUrination = (b.variance ?? 0) < URINATION_VARIANCE_THRESHOLD_G;
+    if (aIsUrination !== bIsUrination) {
+      return 'both';
+    }
+  }
+
+  return 'unknown';
 }
 
 // --- LitterboxController ---
