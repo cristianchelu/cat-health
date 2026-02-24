@@ -29,6 +29,10 @@ export class IntegrationManager implements DeviceDirectory {
     };
   }
 
+  getMediaManager(): MediaManager {
+    return this.mediaManager;
+  }
+
   registerProvider(provider: DeviceProvider) {
     this.providers.set(provider.name, provider);
   }

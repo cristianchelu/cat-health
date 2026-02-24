@@ -140,6 +140,10 @@ export class FountainController
       if (activityKey !== null && key === activityKey) {
         if (state === true) {
           const date = new Date();
+          this.deps.eventBus.publish('device.activity.start', {
+            deviceId: this.deviceId,
+            timestamp: date,
+          });
           this.currentEvent = {
             data: {
               type: 'water_intake',

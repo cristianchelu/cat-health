@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 import { Button } from '@/components/ui/Button';
 import {
   Card,
@@ -75,6 +76,14 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
     [device.camera_link?.config?.crop],
   );
   const normalizedRotate = device.camera_link?.config?.rotate;
+  const normalizedAcquisitionTypes = React.useMemo(
+    () =>
+      device.camera_link?.config?.acquisitionTypes?.length
+        ? device.camera_link.config.acquisitionTypes
+        : ['snapshot'],
+    [device.camera_link?.config?.acquisitionTypes],
+  );
+  const normalizedFetchDelay = device.camera_link?.config?.fetchDelay ?? 60;
 
   const [selectedCameraId, setSelectedCameraId] = React.useState<number | ''>(
     linkedCamera,
@@ -83,6 +92,12 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
     React.useState<Required<DeviceCameraConfigDTO>['crop']>(normalizedCrop);
   const [rotate, setRotate] = React.useState<number | undefined>(
     normalizedRotate,
+  );
+  const [acquisitionTypes, setAcquisitionTypes] = React.useState<string[]>(
+    normalizedAcquisitionTypes,
+  );
+  const [fetchDelay, setFetchDelay] = React.useState<number>(
+    normalizedFetchDelay,
   );
   const [snapshotKey, setSnapshotKey] = React.useState(0);
   const [aspectRatio, setAspectRatio] = React.useState(16 / 9);
@@ -107,21 +122,55 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
     setRotate(normalizedRotate);
   }, [normalizedRotate]);
 
+  React.useEffect(() => {
+    setAcquisitionTypes(normalizedAcquisitionTypes);
+  }, [normalizedAcquisitionTypes]);
+
+  React.useEffect(() => {
+    setFetchDelay(normalizedFetchDelay);
+  }, [normalizedFetchDelay]);
+
   const cameras = React.useMemo(() => {
     return (allDevices || []).filter(
       (d) => d.type === 'camera' && d.id !== device.id,
     );
   }, [allDevices, device.id]);
 
+  const linkedCameraDevice = React.useMemo(() => {
+    if (typeof linkedCamera !== 'number') return undefined;
+    return (allDevices || []).find((d) => d.id === linkedCamera);
+  }, [allDevices, linkedCamera]);
+  const isThinginoCamera =
+    linkedCameraDevice?.type === 'camera' &&
+    linkedCameraDevice?.provider === 'thingino';
+
   const handleLink = () => {
     if (typeof selectedCameraId !== 'number') return;
-    const config: DeviceCameraConfigDTO = { crop, rotate };
+    const config: DeviceCameraConfigDTO = {
+      crop,
+      rotate,
+      acquisitionTypes: acquisitionTypes.length ? acquisitionTypes : ['snapshot'],
+      fetchDelay,
+    };
     linkMutation.mutate({ camera_id: selectedCameraId, config });
   };
 
   const handleSaveROI = () => {
-    const config: DeviceCameraConfigDTO = { crop, rotate };
+    const config: DeviceCameraConfigDTO = {
+      crop,
+      rotate,
+      acquisitionTypes: acquisitionTypes.length ? acquisitionTypes : ['snapshot'],
+      fetchDelay,
+    };
     updateConfigMutation.mutate({ config });
+  };
+
+  const toggleAcquisitionType = (type: 'snapshot' | 'recording') => {
+    setAcquisitionTypes((prev) =>
+      prev.includes(type)
+        ? prev.filter((t) => t !== type)
+        : [...prev, type].sort(),
+    );
   };
 
   const handleUnlink = () => {
@@ -423,6 +472,62 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
                 </Button>
               </div>
             </div>
+
+            <div className="acquisition-section">
+              <label className="section-heading">
+                {t('camera_link.acquisition_types')}
+              </label>
+              <div className="acquisition-checkboxes">
+                <label className="acquisition-option">
+                  <input
+                    type="checkbox"
+                    checked={acquisitionTypes.includes('snapshot')}
+                    onChange={() => toggleAcquisitionType('snapshot')}
+                  />
+                  <span>{t('camera_link.acquisition_snapshot')}</span>
+                </label>
+                <label className="acquisition-option">
+                  <input
+                    type="checkbox"
+                    checked={acquisitionTypes.includes('recording')}
+                    onChange={() => toggleAcquisitionType('recording')}
+                  />
+                  <span>{t('camera_link.acquisition_recording')}</span>
+                </label>
+              </div>
+              <div className="fetch-delay-group">
+                <label className="label">
+                  {t('camera_link.fetch_delay_label')}
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={fetchDelay}
+                  onChange={(e) =>
+                    setFetchDelay(
+                      e.target.value === ''
+                        ? 0
+                        : Math.max(0, Number(e.target.value)),
+                    )
+                  }
+                />
+                <p className="help-text">
+                  {t('camera_link.fetch_delay_help')}
+                </p>
+              </div>
+            </div>
+
+            {isThinginoCamera && linkedCameraDevice && (
+              <p className="edit-camera-hint">
+                {t('camera_link.edit_camera_recording_hint')}{' '}
+                <Link
+                  to={`/settings/devices/${linkedCameraDevice.id}`}
+                  className="edit-camera-link"
+                >
+                  {t('camera_link.edit_camera_link')}
+                </Link>
+              </p>
+            )}
           </div>
         )}
       </CardContent>

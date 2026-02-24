@@ -232,7 +232,14 @@
         "roi_instructions": "Trage dreptunghiul pentru a muta. Trage colțurile pentru a redimensiona.",
         "rotate_degrees": "Rotație (grade)",
         "save_roi_rotation": "Salvează ROI și rotație",
-        "snapshot_alt": "Instantaneu cameră"
+        "snapshot_alt": "Instantaneu cameră",
+        "acquisition_types": "Achiziție și înregistrare",
+        "acquisition_snapshot": "Instantaneu",
+        "acquisition_recording": "Înregistrare",
+        "fetch_delay_label": "Întârziere preluare (secunde)",
+        "fetch_delay_help": "Secunde de așteptat după sfârșitul evenimentului înainte de preluarea înregistrării (pentru camere cu durată minimă a clipului).",
+        "edit_camera_recording_hint": "Pentru calea înregistrărilor, credențiale SSH și durata clipului, editează dispozitivul camerei.",
+        "edit_camera_link": "Editează camera"
     },
     "devices": {
         "loading": "Se încarcă dispozitivele...",

@@ -543,6 +543,10 @@ export class LitterboxController extends BaseESPHomeController {
 
   private startSession() {
     console.log(`Starting litterbox session for ${this.device.name}`);
+    this.deps.eventBus.publish('device.activity.start', {
+      deviceId: this.deviceId,
+      timestamp: new Date(),
+    });
     this.currentSession = {
       startTime: new Date(),
       measurements: [],
@@ -629,7 +633,19 @@ export class LitterboxController extends BaseESPHomeController {
           human_verified: false,
         };
 
-        await this.deps.db.insertInto('event').values(event).execute();
+        const inserted = await this.deps.db
+          .insertInto('event')
+          .values(event)
+          .returning(['id'])
+          .executeTakeFirstOrThrow();
+
+        this.deps.eventBus.publish('device.event', {
+          deviceId: this.deviceId,
+          eventId: inserted.id,
+          type: 'litterbox_maintenance',
+          data: event.data,
+          timestamp: session.startTime,
+        });
       } else {
         // Use event: run state analysis for accurate catWeight and elimination type
         const weights = measurements.map((m) => m.weight);
@@ -688,6 +704,14 @@ export class LitterboxController extends BaseESPHomeController {
             })
             .execute();
         }
+
+        this.deps.eventBus.publish('device.event', {
+          deviceId: this.deviceId,
+          eventId: insertedEvent.id,
+          type: 'litterbox_use',
+          data: event.data,
+          timestamp: session.startTime,
+        });
 
         console.log(
           `Recorded litterbox use event for pet ${petId || 'unknown'}`,

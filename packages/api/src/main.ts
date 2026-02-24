@@ -32,9 +32,11 @@ import foodRoutes from './routes/foods.ts';
 
 import { EventBus } from './services/devices/EventBus.ts';
 import { IntegrationManager } from './services/devices/IntegrationManager.ts';
+import { EventMediaCoordinator } from './services/media/EventMediaCoordinator.ts';
 import { ESPHomeProvider } from './services/devices/providers/esphome/ESPHomeProvider.ts';
 import { CameraProvider } from './services/devices/providers/camera/CameraProvider.ts';
 import { InferenceProvider } from './services/devices/providers/inference/InferenceProvider.ts';
+import { ThinginoProvider } from './services/devices/providers/thingino/ThinginoProvider.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -194,10 +196,19 @@ const start = async () => {
     // Register Providers
     integrationManager.registerProvider(new ESPHomeProvider());
     integrationManager.registerProvider(new CameraProvider());
+    integrationManager.registerProvider(new ThinginoProvider());
     integrationManager.registerProvider(new InferenceProvider());
 
     // Start Integration Manager (loads accounts and devices)
     await integrationManager.initialize();
+
+    const eventMediaCoordinator = new EventMediaCoordinator(
+      db,
+      eventBus,
+      integrationManager.getMediaManager(),
+      integrationManager,
+    );
+    await eventMediaCoordinator.initialize();
 
     fastify.decorate('integrationManager', integrationManager);
 

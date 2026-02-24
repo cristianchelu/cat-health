@@ -22,6 +22,10 @@ interface DeviceFormValues {
   sourceDeviceId: string;
   promptTemplate: string;
   autoIdentify: boolean;
+  sshUser: string;
+  sshPrivateKeyPath: string;
+  remotePath: string;
+  clipDurationSeconds: number;
 }
 
 const DEFAULT_FORM_VALUES: DeviceFormValues = {
@@ -32,12 +36,17 @@ const DEFAULT_FORM_VALUES: DeviceFormValues = {
   sourceDeviceId: '',
   promptTemplate: '',
   autoIdentify: true,
+  sshUser: '',
+  sshPrivateKeyPath: '',
+  remotePath: '',
+  clipDurationSeconds: 120,
 };
 
 function deviceToFormValues(device: {
   name: string;
   enabled: boolean;
   type: string;
+  provider?: string;
   config?: unknown;
 }): DeviceFormValues {
   const cfg = device.config as Record<string, unknown> | undefined;
@@ -49,8 +58,24 @@ function deviceToFormValues(device: {
     sourceDeviceId: '',
     promptTemplate: '',
     autoIdentify: true,
+    sshUser: '',
+    sshPrivateKeyPath: '',
+    remotePath: '',
+    clipDurationSeconds: 120,
   };
   if (!cfg) return base;
+  if (device.type === 'camera' && device.provider === 'thingino') {
+    const rec = cfg.recording as Record<string, unknown> | undefined;
+    const ssh = rec?.ssh as Record<string, unknown> | undefined;
+    return {
+      ...base,
+      snapshotUrl: (cfg.snapshotUrl as string) || '',
+      sshUser: (ssh?.user as string) || '',
+      sshPrivateKeyPath: (ssh?.privateKeyPath as string) || '',
+      remotePath: (rec?.remotePath as string) || '',
+      clipDurationSeconds: (rec?.clipDurationSeconds as number) ?? 120,
+    };
+  }
   if (device.type === 'camera') {
     return { ...base, snapshotUrl: (cfg.snapshotUrl as string) || '' };
   }
@@ -94,7 +119,20 @@ const EditDevicePage: React.FC = () => {
       const existingConfig = (device.config as Record<string, unknown>) || {};
       let config: Record<string, unknown> | undefined;
 
-      if (device.type === 'camera') {
+      if (device.type === 'camera' && device.provider === 'thingino') {
+        config = {
+          ...existingConfig,
+          snapshotUrl: data.snapshotUrl,
+          recording: {
+            ssh: {
+              user: data.sshUser,
+              privateKeyPath: data.sshPrivateKeyPath,
+            },
+            remotePath: data.remotePath,
+            clipDurationSeconds: data.clipDurationSeconds,
+          },
+        };
+      } else if (device.type === 'camera') {
         config = { ...existingConfig, snapshotUrl: data.snapshotUrl };
       } else if (device.type === 'pet_recognizer') {
         config = {
@@ -192,6 +230,32 @@ const EditDevicePage: React.FC = () => {
             />
             <p className="help-text">{t('settings.snapshot_url_help')}</p>
           </FormField>
+        )}
+
+        {device.provider === 'thingino' && device.type === 'camera' && (
+          <>
+            <FormField label={t('settings.ssh_user_label')}>
+              <Input {...register('sshUser')} placeholder="root" />
+            </FormField>
+            <FormField label={t('settings.ssh_key_path_label')}>
+              <Input
+                {...register('sshPrivateKeyPath')}
+                placeholder="/path/to/key"
+              />
+            </FormField>
+            <FormField label={t('settings.remote_path_label')}>
+              <Input
+                {...register('remotePath')}
+                placeholder="/mnt/sd/recordings"
+              />
+            </FormField>
+            <FormField label={t('settings.clip_duration_label')}>
+              <Input
+                type="number"
+                {...register('clipDurationSeconds', { valueAsNumber: true })}
+              />
+            </FormField>
+          </>
         )}
 
         {device.type === 'pet_recognizer' && (

@@ -15,7 +15,7 @@ export class CameraDeviceController implements Camera {
   private config: CameraConfig;
   private status: DeviceStatus = 'unknown';
   private device: Device;
-  private deps: ProviderDeps;
+  protected deps: ProviderDeps;
 
   constructor(device: Device, deps: ProviderDeps) {
     this.device = device;

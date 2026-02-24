@@ -110,6 +110,10 @@ export type DeviceCameraCrop = Static<typeof DeviceCameraCropSchema>;
 export const DeviceCameraConfigSchema = Type.Object({
   crop: Type.Optional(DeviceCameraCropSchema),
   rotate: Type.Optional(Type.Number()),
+  /** Which media to acquire, e.g. ['snapshot', 'recording']. Defaults to ['snapshot']. */
+  acquisitionTypes: Type.Optional(Type.Array(Type.String())),
+  /** Seconds to wait after event ends before fetching recording (e.g. for cameras with minimum clip duration). */
+  fetchDelay: Type.Optional(Type.Number()),
 });
 export type DeviceCameraConfigDTO = Static<typeof DeviceCameraConfigSchema>;
 

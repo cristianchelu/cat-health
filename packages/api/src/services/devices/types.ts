@@ -18,6 +18,28 @@ export interface Camera extends DeviceController {
   getSnapshotBuffer(): Promise<Buffer | undefined>;
 }
 
+export type RecordingResult =
+  | { type: 'local'; pendingMedia: PendingMedia; mimeType: string }
+  | {
+      type: 'remote';
+      url: string;
+      provider: string;
+      externalId?: string;
+      mimeType: string;
+    };
+
+export interface RecordingSource extends DeviceController {
+  fetchRecording(options: {
+    startTime: Date;
+    endTime: Date;
+    eventType: EventType;
+    transforms?: {
+      crop?: { left: number; top: number; width: number; height: number };
+      rotate?: number;
+    };
+  }): Promise<RecordingResult>;
+}
+
 export interface DeviceDirectory {
   instantiateController(
     deviceId: number,

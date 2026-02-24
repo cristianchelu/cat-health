@@ -1,7 +1,13 @@
 import { EventEmitter } from 'events';
 
+export interface ActivityStartEvent {
+  deviceId: number;
+  timestamp: Date;
+}
+
 export interface DeviceEvent {
   deviceId: number;
+  eventId: number;
   type: string;
   data: unknown;
   timestamp: Date;

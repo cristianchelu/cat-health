@@ -98,6 +98,60 @@
     width: 100%;
   }
 
+  .acquisition-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .acquisition-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .acquisition-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .acquisition-option input {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .fetch-delay-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .help-text {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+
+  .edit-camera-hint {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+
+  .edit-camera-link {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+
+  .edit-camera-link:hover {
+    text-decoration: none;
+  }
+
   .roi-container {
     position: relative;
     width: fit-content;

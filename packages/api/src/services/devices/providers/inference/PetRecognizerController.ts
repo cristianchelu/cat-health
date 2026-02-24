@@ -3,15 +3,8 @@ import path from 'path';
 import sharp from 'sharp';
 import type { DeviceStatus } from 'shared';
 import type { DeviceController, ProviderDeps, Device, ProviderAccount } from '../../types.ts';
+import type { DeviceEvent } from '../../EventBus.ts';
 import type { PetRecognizerConfig, InferenceAccountConfig } from 'shared';
-
-interface DeviceEvent {
-  deviceId: number;
-  type: string;
-  data: unknown;
-  timestamp: Date;
-  eventId: number;
-}
 
 const RESIZE_SIZE = 256;
 
