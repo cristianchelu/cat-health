@@ -8,6 +8,7 @@ import EventDevice from './meta/EventDevice';
 import EventDuration from './meta/EventDuration';
 import EventPet from './meta/EventPet';
 import EventVerified from './meta/EventVerified';
+import './WaterEvent.css';
 
 const WaterEvent: React.FC<EventComponentProps> = ({
   event,
@@ -18,6 +19,10 @@ const WaterEvent: React.FC<EventComponentProps> = ({
 }) => {
   const { t } = useTranslation();
   const { data } = event;
+
+  const excludedAmount: number | undefined =
+    typeof data.excluded_amount === 'number' ? data.excluded_amount : undefined;
+  const hasFiltered = data.filtered === true && excludedAmount != null && excludedAmount > 0;
 
   return (
     <Timeline.Item
@@ -41,6 +46,11 @@ const WaterEvent: React.FC<EventComponentProps> = ({
         </Timeline.Header>
         <Timeline.Meta>
           {data.duration && <EventDuration duration={data.duration} />}
+          {hasFiltered && (
+            <span className="water-event__spill-badge">
+              {t('overview.water_spill_excluded', { amount: excludedAmount })}
+            </span>
+          )}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
           {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
           {event.human_verified && <EventVerified />}

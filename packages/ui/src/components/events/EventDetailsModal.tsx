@@ -10,8 +10,11 @@ import type {
   LitterboxUseEliminationType,
 } from 'shared';
 import WeightSignalChart from './WeightSignalChart';
+import WaterSignalChart from './WaterSignalChart';
 import { LitterboxStateTracker } from './litterboxStateTracker';
 import { decodeLitterboxRawData } from './decodeLitterboxRawData';
+import { decodeWaterRawData } from './decodeWaterRawData';
+import { analyzeWaterSegments } from './analyzeWaterSegments';
 
 import './EventDetailsModal.css';
 import { Loader2, Trash2, Download, Info, Image, Activity } from 'lucide-react';
@@ -24,7 +27,14 @@ interface EventDetailsModalProps {
 
 const WaterIntakeDetails: React.FC<{ event: GetEventDTO }> = ({ event }) => {
   const { t } = useTranslation();
-  const data = event.data as { duration?: number; amount?: number };
+  const data = event.data as {
+    duration?: number;
+    amount?: number;
+    raw_amount?: number;
+    excluded_amount?: number;
+  };
+  const hasFiltering =
+    data.excluded_amount != null && data.excluded_amount > 0;
   return (
     <div className="event-specific-details">
       {data.duration != null && (
@@ -32,6 +42,11 @@ const WaterIntakeDetails: React.FC<{ event: GetEventDTO }> = ({ event }) => {
       )}
       {data.amount != null && (
         <span className="detail-item">{t('event_details.amount_ml', { amount: data.amount })}</span>
+      )}
+      {hasFiltering && (
+        <span className="detail-item detail-item--muted">
+          {t('event_details.water_excluded_ml', { amount: data.excluded_amount })}
+        </span>
       )}
     </div>
   );
@@ -117,17 +132,27 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     return decodeLitterboxRawData(event?.raw_data);
   }, [event?.data?.type, event?.raw_data]);
 
+  const decodedWaterData = React.useMemo(() => {
+    if (event?.data?.type !== 'water_intake') return null;
+    return decodeWaterRawData(event?.raw_data);
+  }, [event?.data?.type, event?.raw_data]);
+
   // Check if event has analysis data
   const hasAnalysisData =
-    event?.data?.type === 'litterbox_use' &&
-    (decodedRawData?.weights?.length ?? 0) > 0;
+    (event?.data?.type === 'litterbox_use' && (decodedRawData?.weights?.length ?? 0) > 0) ||
+    (event?.data?.type === 'water_intake' && (decodedWaterData?.weights?.length ?? 0) > 0);
 
   // Compute analysis result when needed
   const analysisResult = React.useMemo(() => {
-    if (!hasAnalysisData || !decodedRawData?.weights) return null;
+    if (event?.data?.type !== 'litterbox_use' || !decodedRawData?.weights) return null;
     const tracker = new LitterboxStateTracker();
     return tracker.processEvent(decodedRawData.weights);
-  }, [hasAnalysisData, decodedRawData]);
+  }, [event?.data?.type, decodedRawData]);
+
+  const waterPeriods = React.useMemo(() => {
+    if (!decodedWaterData?.weights) return null;
+    return analyzeWaterSegments(decodedWaterData.weights);
+  }, [decodedWaterData]);
 
   if (!event) {
     return null;
@@ -240,6 +265,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             <WeightSignalChart
               weights={decodedRawData.weights}
               periods={analysisResult.periods}
+            />
+          )}
+          {activeTab === 'analysis' && waterPeriods && decodedWaterData && (
+            <WaterSignalChart
+              weights={decodedWaterData.weights}
+              periods={waterPeriods}
             />
           )}
         </div>

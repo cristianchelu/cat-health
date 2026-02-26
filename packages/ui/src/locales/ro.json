@@ -27,6 +27,7 @@
         "times": "ori",
         "no_weight_data": "Nu există date despre greutate",
         "straining_detected": "Efort detectat",
+        "water_spill_excluded": "{{amount}}ml exclus (vărsare/joacă)",
         "loose_stools": "Scaun moale",
         "weight_recorded": "Greutate înregistrată"
     },
@@ -178,7 +179,11 @@
         "legend_entering": "Intrare",
         "legend_occupied": "Ocupat",
         "legend_eliminating": "Eliminare",
-        "legend_gap": "Pauză"
+        "legend_gap": "Pauză",
+        "legend_drinking": "Băut (10–90 ml/min)",
+        "legend_spill": "Vărsare / joacă (>90 ml/min)",
+        "legend_noise": "Zgomot / inactiv",
+        "water_excluded_ml": "{{amount}}ml excluși (vărsare/joacă)"
     },
     "device_types": {
         "litterbox": "Litieră",

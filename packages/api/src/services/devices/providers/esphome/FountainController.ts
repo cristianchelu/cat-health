@@ -12,26 +12,134 @@ import {
   type ReconnectConfig,
 } from './BaseESPHomeController.ts';
 
+const DRINKING_RATE_MIN_ML_PER_MIN = 10;
+const DRINKING_RATE_MAX_ML_PER_MIN = 90;
+const SMOOTH_HALF_WINDOW = 2; // ±2 samples → 5-sample (~0.5s) smoothing window
+const RATE_HALF_WINDOW = 5;   // ±5 samples → ~1s centered rate-estimation window
+
 const SENSORS = {
   ACTIVITY: 'activity',
   PUMP_STATUS: 'pump_status',
   WATER_LEVEL: 'water_level',
   LAST_DRINK_AMOUNT: 'last_drink_amount',
   LAST_DRINK_DURATION: 'last_drink_duration',
+  UNFILTERED_WEIGHT: 'unfiltered_weight',
   // Optional sensors for fountain-specific features
   WATER_CHANGE_DAYS_REMAINING: 'water_change_days_remaining',
   FILTER_CHANGE_DAYS_REMAINING: 'filter_change_days_remaining',
 } as const;
 
+interface RawMeasurement {
+  timestamp: Date;
+  weight: number; // grams
+}
+
+interface WaterSession {
+  startTime: Date;
+  endTime?: Date;
+  measurements: RawMeasurement[];
+}
+
+interface DrinkingAnalysis {
+  amount: number;         // ml of valid drinking (rate-filtered)
+  duration: number;       // seconds of valid drinking
+  rawAmount: number;      // total weight drop across session
+  excludedAmount: number; // weight drop excluded by rate filter
+  filtered: boolean;      // true if any segments were excluded
+}
+
+/**
+ * Classifies each ~100ms inter-sample interval individually by estimating
+ * its flow rate from a centered ±RATE_HALF_WINDOW span. This gives ~100ms
+ * resolution on spill/drink boundaries instead of the 1-second boundary
+ * artifacts of fixed buckets.
+ *
+ * Algorithm:
+ *  1. Smooth the raw weight series (centered ±SMOOTH_HALF_WINDOW average).
+ *  2. At every sample i, compute a rate estimate from the wider
+ *     ±RATE_HALF_WINDOW span — enough span to stabilise noise while keeping
+ *     the estimate local.
+ *  3. For each consecutive pair (i, i+1) where weight drops, classify the
+ *     interval using the average of the rates at its two endpoints.
+ *  4. Sum drops and durations from valid-drinking intervals only.
+ */
+function analyzeDrinkingSegments(measurements: RawMeasurement[]): DrinkingAnalysis {
+  if (measurements.length < 2) {
+    return { amount: 0, duration: 0, rawAmount: 0, excludedAmount: 0, filtered: false };
+  }
+
+  const n = measurements.length;
+
+  // Step 1: Smooth — centered ±SMOOTH_HALF_WINDOW average
+  const smoothed = measurements.map((_, i) => {
+    const lo = Math.max(0, i - SMOOTH_HALF_WINDOW);
+    const hi = Math.min(n - 1, i + SMOOTH_HALF_WINDOW);
+    let sum = 0;
+    for (let j = lo; j <= hi; j++) sum += measurements[j].weight;
+    return sum / (hi - lo + 1);
+  });
+
+  // Step 2: Per-sample rate estimate — centered ±RATE_HALF_WINDOW span (~1s at 10Hz)
+  const rates = measurements.map((_, i) => {
+    const lo = Math.max(0, i - RATE_HALF_WINDOW);
+    const hi = Math.min(n - 1, i + RATE_HALF_WINDOW);
+    const dtMs =
+      measurements[hi].timestamp.getTime() - measurements[lo].timestamp.getTime();
+    if (dtMs <= 0) return 0;
+    return ((smoothed[lo] - smoothed[hi]) / dtMs) * 60_000; // ml/min, positive = consumption
+  });
+
+  // Step 3: Per-interval accumulation (~100ms granularity)
+  let validAmount = 0;
+  let validDurationMs = 0;
+  let hasExclusions = false;
+
+  for (let i = 0; i < n - 1; i++) {
+    const dtMs =
+      measurements[i + 1].timestamp.getTime() - measurements[i].timestamp.getTime();
+    if (dtMs <= 0) continue;
+
+    const drop = smoothed[i] - smoothed[i + 1];
+    if (drop <= 0) continue; // weight unchanged or increased — skip
+
+    // Average of the two endpoint estimates for this interval
+    const intervalRate = (rates[i] + rates[i + 1]) / 2;
+
+    if (
+      intervalRate >= DRINKING_RATE_MIN_ML_PER_MIN &&
+      intervalRate <= DRINKING_RATE_MAX_ML_PER_MIN
+    ) {
+      validAmount += drop;
+      validDurationMs += dtMs;
+    } else {
+      hasExclusions = true;
+    }
+  }
+
+  // Net weight drop for the session as the raw amount; physically the most
+  // meaningful "water removed from bowl" figure.
+  const rawAmount = Math.max(0, smoothed[0] - smoothed[n - 1]);
+
+  return {
+    amount: Math.round(Math.max(0, validAmount)),
+    duration: Math.round(validDurationMs / 1000),
+    rawAmount: Math.round(rawAmount),
+    excludedAmount: Math.round(Math.max(0, rawAmount - validAmount)),
+    filtered: hasExclusions,
+  };
+}
+
 export class FountainController
   extends BaseESPHomeController
   implements Camera {
   private currentEvent: NewEvent<WaterIntakeEventData> | null = null;
+  private currentSession: WaterSession | null = null;
   private pendingSnapshot: PendingMedia | null = null;
   private state: WaterFountainState = {
     waterLevel: 0,
   };
   private captureInProgress = false;
+  private version = 1;
 
   constructor(device: Device, deps: ProviderDeps) {
     super(device, deps);
@@ -111,7 +219,23 @@ export class FountainController
       return;
     }
 
-    // Capture drink data whenever it arrives if we have an active event
+    // Collect raw weight samples into the active session (10Hz HX711 stream)
+    if (this.currentSession) {
+      const unfilteredWeightKey = this.getEntityKey(SENSORS.UNFILTERED_WEIGHT);
+      if (
+        unfilteredWeightKey !== null &&
+        key === unfilteredWeightKey &&
+        typeof state === 'number'
+      ) {
+        this.currentSession.measurements.push({
+          timestamp: new Date(),
+          weight: state, // ESPHome sensor is already in grams
+        });
+        return;
+      }
+    }
+
+    // Capture drink data from ESPHome aggregates as fallback
     if (this.currentEvent && state) {
       const drinkAmountKey = this.getEntityKey(SENSORS.LAST_DRINK_AMOUNT);
       const drinkDurationKey = this.getEntityKey(SENSORS.LAST_DRINK_DURATION);
@@ -144,6 +268,9 @@ export class FountainController
             deviceId: this.deviceId,
             timestamp: date,
           });
+
+          this.currentSession = { startTime: date, measurements: [] };
+
           this.currentEvent = {
             data: {
               type: 'water_intake',
@@ -170,26 +297,67 @@ export class FountainController
 
           }
         } else {
-          // Activity just ended
-          console.log('Activity ended. Checking for drink data...');
+          // Activity just ended — close the session
+          console.log('Activity ended.');
 
-          // Check if we already have the data (arrived before activity ended)
-          if (
-            this.currentEvent &&
-            this.currentEvent.data.amount > 0 &&
-            this.currentEvent.data.duration &&
-            this.currentEvent.data.duration > 0
-          ) {
-            console.log('Drink data already captured, saving immediately.');
-            const eventToSave = this.currentEvent;
-            const snapshotToSave = this.pendingSnapshot;
-            this.currentEvent = null;
-            this.pendingSnapshot = null;
-            this.saveDrinkEvent(eventToSave, snapshotToSave);
+          if (this.currentSession) {
+            this.currentSession.endTime = new Date();
+          }
+
+          const session = this.currentSession;
+          this.currentSession = null;
+
+          if (session && session.measurements.length >= 2) {
+            // Enough raw data for segment-level rate analysis
+            console.log(
+              `[Fountain] Processing session with ${session.measurements.length} raw samples`,
+            );
+            const analysis = analyzeDrinkingSegments(session.measurements);
+            const rawData = this.encodeWaterRawData(session.startTime, session.measurements);
+
+            console.log(
+              `[Fountain] Drinking analysis: ${analysis.amount}ml valid, ` +
+              `${analysis.excludedAmount}ml excluded, ` +
+              `${analysis.duration}s duration, filtered=${analysis.filtered}`,
+            );
+
+            if (this.currentEvent) {
+              const eventToSave = this.currentEvent;
+              const snapshotToSave = this.pendingSnapshot;
+              this.currentEvent = null;
+              this.pendingSnapshot = null;
+
+              eventToSave.data.amount = analysis.amount;
+              eventToSave.data.duration = analysis.duration;
+              eventToSave.data.raw_amount = analysis.rawAmount;
+              eventToSave.data.excluded_amount = analysis.excludedAmount;
+              eventToSave.data.filtered = analysis.filtered;
+              eventToSave.raw_data = rawData;
+
+              this.saveDrinkEvent(eventToSave, snapshotToSave);
+            }
           } else {
-            // Data not yet available, wait for it
-            console.log('Waiting for drink data...');
-            this.captureNextDrinkData();
+            // No raw stream available — fall back to ESPHome aggregates
+            console.log(
+              '[Fountain] No raw weight samples, falling back to last_drink_amount/duration',
+            );
+
+            if (
+              this.currentEvent &&
+              this.currentEvent.data.amount > 0 &&
+              this.currentEvent.data.duration &&
+              this.currentEvent.data.duration > 0
+            ) {
+              console.log('Drink data already captured, saving immediately.');
+              const eventToSave = this.currentEvent;
+              const snapshotToSave = this.pendingSnapshot;
+              this.currentEvent = null;
+              this.pendingSnapshot = null;
+              this.saveDrinkEvent(eventToSave, snapshotToSave);
+            } else {
+              console.log('Waiting for drink data...');
+              this.captureNextDrinkData();
+            }
           }
         }
       }
@@ -254,7 +422,11 @@ export class FountainController
 
     console.log('--- SAVING DRINK EVENT ---');
     console.log(`Device: ${this.device.name}`);
-    console.log(`Amount: ${eventData.amount}ml`);
+    console.log(`Amount: ${eventData.amount}ml (filtered)`);
+    if (eventData.raw_amount != null) {
+      console.log(`Raw amount: ${eventData.raw_amount}ml`);
+      console.log(`Excluded: ${eventData.excluded_amount}ml`);
+    }
     console.log(`Duration: ${eventData.duration}s`);
     console.log('--------------------------');
 
@@ -304,6 +476,48 @@ export class FountainController
         await snapshot.cleanup();
       }
     }
+  }
+
+  /**
+   * Encodes raw HX711 weight measurements into a compact binary buffer.
+   *
+   * Format v2:
+   *   [version:1]   uint8  — 2
+   *   [startTs:8]   uint64 BE — ms since epoch
+   *   [context:4]   bytes  — [waterLevel:1 (0-100, 255=null)][reserved:3]
+   *   [count:4]     uint32 BE — number of samples
+   *   [weights:N*4] int32 BE each — centgrams (grams × 100), 0.01 g resolution
+   */
+  private encodeWaterRawData(
+    startTime: Date,
+    measurements: RawMeasurement[],
+  ): Buffer {
+    const count = measurements.length;
+    const buf = Buffer.allocUnsafe(1 + 8 + 4 + 4 + count * 4);
+
+    let off = 0;
+
+    buf.writeUInt8(this.version, off); off += 1;
+    buf.writeBigUInt64BE(BigInt(startTime.getTime()), off); off += 8;
+
+    // Context: water level percent (0-100), 255 = unknown
+    const waterLevelKey = this.getEntityKey(SENSORS.WATER_LEVEL);
+    const waterLevel =
+      waterLevelKey !== null
+        ? Math.min(100, Math.max(0, Math.round(this.sensorValues.get(waterLevelKey) as number ?? 255)))
+        : 255;
+    buf.writeUInt8(waterLevel, off); off += 1;
+    buf.writeUInt8(0, off); off += 1; // reserved
+    buf.writeUInt16BE(0, off); off += 2; // reserved
+
+    buf.writeUInt32BE(count, off); off += 4;
+
+    for (const m of measurements) {
+      // Store as centgrams (×100) in int32 — 0.01 g resolution, range ±21 Mg
+      buf.writeInt32BE(Math.round(m.weight * 100), off); off += 4;
+    }
+
+    return buf;
   }
 
   async getSnapshotBuffer(): Promise<Buffer | undefined> {

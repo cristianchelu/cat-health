@@ -1,0 +1,81 @@
+.water-signal-chart {
+  --water-color-drinking: rgba(34, 197, 94, 0.20);
+  --water-color-spill: rgba(239, 68, 68, 0.20);
+  --water-color-noise: rgba(148, 163, 184, 0.12);
+  --color-signal-line: var(--color-primary);
+  --color-chart-bg: var(--color-surface-muted);
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-chart-bg);
+
+  svg {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    background: var(--color-chart-bg);
+  }
+
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    background: var(--color-surface-muted);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+  }
+
+  .legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-sm);
+
+    &.drinking {
+      background: var(--water-color-drinking);
+      border: 1px solid color-mix(in srgb, var(--water-color-drinking) 60%, var(--color-text) 40%);
+    }
+
+    &.spill {
+      background: var(--water-color-spill);
+      border: 1px solid color-mix(in srgb, var(--water-color-spill) 60%, var(--color-text) 40%);
+    }
+
+    &.noise {
+      background: var(--water-color-noise);
+      border: 1px solid color-mix(in srgb, var(--water-color-noise) 60%, var(--color-text) 40%);
+    }
+  }
+
+  .chart-duration {
+    position: absolute;
+    top: var(--space-xs);
+    right: var(--space-xs);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    background: var(--color-surface);
+    padding: var(--space-3xs) var(--space-xs);
+    border-radius: var(--radius-sm);
+    opacity: 0.8;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .water-signal-chart {
+    --water-color-drinking: rgba(16, 185, 129, 0.22);
+    --water-color-spill: rgba(248, 113, 113, 0.22);
+    --water-color-noise: rgba(100, 116, 139, 0.14);
+    --color-signal-line: var(--color-primary-light);
+    --color-chart-bg: var(--color-surface);
+  }
+}

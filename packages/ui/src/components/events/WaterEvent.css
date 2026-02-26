@@ -1,0 +1,5 @@
+.water-event__spill-badge {
+  font-size: var(--font-size-xs);
+  color: var(--color-warning);
+  font-style: italic;
+}

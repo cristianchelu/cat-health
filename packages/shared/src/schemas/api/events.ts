@@ -94,6 +94,17 @@ export const WeightTrendsResponseSchema = Type.Array(
 );
 export type WeightTrendsResponseDTO = Static<typeof WeightTrendsResponseSchema>;
 
+export const WaterIntakeEventDataSchema = Type.Object({
+  type: Type.Literal('water_intake'),
+  amount: Type.Number(),
+  duration: Type.Optional(Type.Number()),
+  source: Type.Optional(Type.Union([Type.Literal('drinking'), Type.Literal('food')])),
+  raw_amount: Type.Optional(Type.Number()),
+  excluded_amount: Type.Optional(Type.Number()),
+  filtered: Type.Optional(Type.Boolean()),
+});
+export type WaterIntakeEventDataDTO = Static<typeof WaterIntakeEventDataSchema>;
+
 // Water trends
 export const WaterTrendParamsSchema = Type.Object({ petId: Type.Number() });
 export type WaterTrendParamsDTO = Static<typeof WaterTrendParamsSchema>;
