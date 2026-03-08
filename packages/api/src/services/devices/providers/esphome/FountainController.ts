@@ -14,8 +14,9 @@ import {
 
 const DRINKING_RATE_MIN_ML_PER_MIN = 10;
 const DRINKING_RATE_MAX_ML_PER_MIN = 90;
-const SMOOTH_HALF_WINDOW = 2; // ±2 samples → 5-sample (~0.5s) smoothing window
+const EMA_SPAN = 10;          // ~1s at 10 Hz; alpha = 2/(span+1) ≈ 0.18
 const RATE_HALF_WINDOW = 5;   // ±5 samples → ~1s centered rate-estimation window
+const MIN_DRINKING_DURATION_SAMPLES = 10; // min contiguous in-band samples (~1s) to count as drinking
 
 const SENSORS = {
   ACTIVITY: 'activity',
@@ -55,13 +56,15 @@ interface DrinkingAnalysis {
  * artifacts of fixed buckets.
  *
  * Algorithm:
- *  1. Smooth the raw weight series (centered ±SMOOTH_HALF_WINDOW average).
+ *  1. EMA-smooth the raw weight series (alpha = 2/(EMA_SPAN+1)).
  *  2. At every sample i, compute a rate estimate from the wider
  *     ±RATE_HALF_WINDOW span — enough span to stabilise noise while keeping
  *     the estimate local.
- *  3. For each consecutive pair (i, i+1) where weight drops, classify the
- *     interval using the average of the rates at its two endpoints.
- *  4. Sum drops and durations from valid-drinking intervals only.
+ *  3. Classify each interval as in-band (drinking candidate), spill, or noise.
+ *  4. Group consecutive in-band intervals into runs; only runs lasting
+ *     ≥ MIN_DRINKING_DURATION_SAMPLES count as valid drinking (shorter runs
+ *     are treated as noise to reject brief splashes).
+ *  5. Sum drops and durations from confirmed drinking runs only.
  */
 function analyzeDrinkingSegments(measurements: RawMeasurement[]): DrinkingAnalysis {
   if (measurements.length < 2) {
@@ -70,14 +73,13 @@ function analyzeDrinkingSegments(measurements: RawMeasurement[]): DrinkingAnalys
 
   const n = measurements.length;
 
-  // Step 1: Smooth — centered ±SMOOTH_HALF_WINDOW average
-  const smoothed = measurements.map((_, i) => {
-    const lo = Math.max(0, i - SMOOTH_HALF_WINDOW);
-    const hi = Math.min(n - 1, i + SMOOTH_HALF_WINDOW);
-    let sum = 0;
-    for (let j = lo; j <= hi; j++) sum += measurements[j].weight;
-    return sum / (hi - lo + 1);
-  });
+  // Step 1: EMA smooth
+  const alpha = 2 / (EMA_SPAN + 1);
+  const smoothed: number[] = new Array(n);
+  smoothed[0] = measurements[0].weight;
+  for (let i = 1; i < n; i++) {
+    smoothed[i] = alpha * measurements[i].weight + (1 - alpha) * smoothed[i - 1];
+  }
 
   // Step 2: Per-sample rate estimate — centered ±RATE_HALF_WINDOW span (~1s at 10Hz)
   const rates = measurements.map((_, i) => {
@@ -89,7 +91,36 @@ function analyzeDrinkingSegments(measurements: RawMeasurement[]): DrinkingAnalys
     return ((smoothed[lo] - smoothed[hi]) / dtMs) * 60_000; // ml/min, positive = consumption
   });
 
-  // Step 3: Per-interval accumulation (~100ms granularity)
+  // Step 3: Classify each interval by its average endpoint rate
+  type IntervalClass = 'drinking' | 'other';
+  const intervalClass: IntervalClass[] = new Array(n - 1);
+  for (let i = 0; i < n - 1; i++) {
+    const intervalRate = (rates[i] + rates[i + 1]) / 2;
+    intervalClass[i] =
+      intervalRate >= DRINKING_RATE_MIN_ML_PER_MIN &&
+      intervalRate <= DRINKING_RATE_MAX_ML_PER_MIN
+        ? 'drinking'
+        : 'other';
+  }
+
+  // Step 4: Group consecutive in-band intervals into runs; accept only those
+  // lasting ≥ MIN_DRINKING_DURATION_SAMPLES (rejects brief splashes/glitches).
+  const validIntervals = new Uint8Array(n - 1); // 1 = confirmed drinking
+  let runStart = -1;
+  for (let i = 0; i <= n - 1; i++) {
+    const inBand = i < n - 1 && intervalClass[i] === 'drinking';
+    if (inBand && runStart === -1) {
+      runStart = i;
+    } else if (!inBand && runStart !== -1) {
+      const runLen = i - runStart;
+      if (runLen >= MIN_DRINKING_DURATION_SAMPLES) {
+        for (let j = runStart; j < i; j++) validIntervals[j] = 1;
+      }
+      runStart = -1;
+    }
+  }
+
+  // Step 5: Accumulate from confirmed drinking intervals only
   let validAmount = 0;
   let validDurationMs = 0;
   let hasExclusions = false;
@@ -100,15 +131,9 @@ function analyzeDrinkingSegments(measurements: RawMeasurement[]): DrinkingAnalys
     if (dtMs <= 0) continue;
 
     const drop = smoothed[i] - smoothed[i + 1];
-    if (drop <= 0) continue; // weight unchanged or increased — skip
+    if (drop <= 0) continue;
 
-    // Average of the two endpoint estimates for this interval
-    const intervalRate = (rates[i] + rates[i + 1]) / 2;
-
-    if (
-      intervalRate >= DRINKING_RATE_MIN_ML_PER_MIN &&
-      intervalRate <= DRINKING_RATE_MAX_ML_PER_MIN
-    ) {
+    if (validIntervals[i]) {
       validAmount += drop;
       validDurationMs += dtMs;
     } else {
@@ -116,8 +141,7 @@ function analyzeDrinkingSegments(measurements: RawMeasurement[]): DrinkingAnalys
     }
   }
 
-  // Net weight drop for the session as the raw amount; physically the most
-  // meaningful "water removed from bowl" figure.
+  // Net weight drop for the session as the raw amount.
   const rawAmount = Math.max(0, smoothed[0] - smoothed[n - 1]);
 
   return {

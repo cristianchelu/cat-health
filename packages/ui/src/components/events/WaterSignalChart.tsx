@@ -17,6 +17,18 @@ const STATE_COLORS: Record<string, string> = {
   noise: 'var(--water-color-noise)',
 };
 
+const EMA_SPAN = 10; // must match analyzeWaterSegments and FountainController
+
+function emaSmooth(weights: number[]): number[] {
+  const alpha = 2 / (EMA_SPAN + 1);
+  const out: number[] = new Array(weights.length);
+  out[0] = weights[0];
+  for (let i = 1; i < weights.length; i++) {
+    out[i] = alpha * weights[i] + (1 - alpha) * out[i - 1];
+  }
+  return out;
+}
+
 // LTTB downsampling — preserves visual shape far better than simple decimation
 function downsample(data: number[], maxPoints: number): number[] {
   if (data.length <= maxPoints) return data;
@@ -84,15 +96,16 @@ const WaterSignalChart = React.forwardRef<HTMLDivElement, WaterSignalChartProps>
     const { t } = useTranslation();
 
     const maxPoints = 800;
+    const smoothedWeights = React.useMemo(() => emaSmooth(weights), [weights]);
     const displayWeights = React.useMemo(
-      () => downsample(weights, maxPoints),
-      [weights],
+      () => downsample(smoothedWeights, maxPoints),
+      [smoothedWeights],
     );
 
     const scaleFactor = weights.length / displayWeights.length;
 
-    const minWeight = Math.min(...weights);
-    const maxWeight = Math.max(...weights);
+    const minWeight = Math.min(...smoothedWeights);
+    const maxWeight = Math.max(...smoothedWeights);
     const range = maxWeight - minWeight || 1;
     const padding = range * 0.1;
     const paddedMin = minWeight - padding;

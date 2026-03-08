@@ -1,4 +1,4 @@
-// Mirrors the sliding-window analysis in FountainController so the frontend
+// Mirrors the EMA + time-in-band analysis in FountainController so the frontend
 // can colour each interval of the raw weight signal as drinking / spill / noise.
 
 export type WaterSegmentState = 'drinking' | 'spill' | 'noise';
@@ -11,18 +11,19 @@ export interface WaterPeriod {
 
 const DRINKING_RATE_MIN_ML_PER_MIN = 10;
 const DRINKING_RATE_MAX_ML_PER_MIN = 90;
-const SMOOTH_HALF = 2; // ±2 samples → 5-sample (~0.5 s) smoothing window
-const RATE_HALF = 5;   // ±5 samples → ~1 s rate-estimation window
-const HZ = 10;         // assumed sample rate
+const EMA_SPAN = 10;          // ~1s at 10 Hz; alpha = 2/(span+1)
+const RATE_HALF = 5;          // ±5 samples → ~1 s rate-estimation window
+const HZ = 10;                // assumed sample rate
+const MIN_DRINKING_DURATION_SAMPLES = 10; // min contiguous in-band samples (~1s) to count as drinking
 
-function smoothWeights(weights: number[]): number[] {
-  return weights.map((_, i) => {
-    const lo = Math.max(0, i - SMOOTH_HALF);
-    const hi = Math.min(weights.length - 1, i + SMOOTH_HALF);
-    let sum = 0;
-    for (let j = lo; j <= hi; j++) sum += weights[j];
-    return sum / (hi - lo + 1);
-  });
+function emaSmooth(weights: number[]): number[] {
+  const alpha = 2 / (EMA_SPAN + 1);
+  const out: number[] = new Array(weights.length);
+  out[0] = weights[0];
+  for (let i = 1; i < weights.length; i++) {
+    out[i] = alpha * weights[i] + (1 - alpha) * out[i - 1];
+  }
+  return out;
 }
 
 function estimateRates(smoothed: number[]): number[] {
@@ -48,22 +49,40 @@ function classify(rate: number): WaterSegmentState {
 export function analyzeWaterSegments(weights: number[]): WaterPeriod[] {
   if (weights.length < 2) return [];
 
-  const smoothed = smoothWeights(weights);
+  const smoothed = emaSmooth(weights);
   const rates = estimateRates(smoothed);
 
-  const periods: WaterPeriod[] = [];
+  // Build initial periods from per-sample classification
+  const raw: WaterPeriod[] = [];
   let currentState = classify(rates[0]);
   let periodStart = 0;
 
   for (let i = 1; i < weights.length; i++) {
     const state = classify(rates[i]);
     if (state !== currentState) {
-      periods.push({ state: currentState, start: periodStart, end: i });
+      raw.push({ state: currentState, start: periodStart, end: i });
       currentState = state;
       periodStart = i;
     }
   }
-  periods.push({ state: currentState, start: periodStart, end: weights.length });
+  raw.push({ state: currentState, start: periodStart, end: weights.length });
 
-  return periods;
+  // Time-in-band: demote short drinking runs to noise, then merge adjacent same-state
+  const demoted = raw.map((p) =>
+    p.state === 'drinking' && p.end - p.start < MIN_DRINKING_DURATION_SAMPLES
+      ? { ...p, state: 'noise' as WaterSegmentState }
+      : p,
+  );
+
+  const merged: WaterPeriod[] = [];
+  for (const p of demoted) {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.state === p.state) {
+      prev.end = p.end;
+    } else {
+      merged.push({ ...p });
+    }
+  }
+
+  return merged;
 }
