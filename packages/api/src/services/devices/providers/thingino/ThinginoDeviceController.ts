@@ -189,6 +189,25 @@ export class ThinginoDeviceController
       })
       .then(() => {
         this.isSshConnected = true;
+        // node-ssh removes its 'error' listener on 'ready', so later keepalive
+        // timeouts (or other connection errors) are unhandled and crash the process.
+        // Attach a persistent handler so we log, clear state, and dispose.
+        const conn = this.ssh.connection;
+        if (conn) {
+          conn.on('error', (err: Error) => {
+            console.error(
+              `SSH connection error for Thingino device ${this.deviceId} (${cfg.host}):`,
+              err.message,
+            );
+            this.isSshConnected = false;
+            this.connectionPromise = null;
+            try {
+              this.ssh.dispose();
+            } catch {
+              /* ignore */
+            }
+          });
+        }
       })
       .catch((err) => {
         this.connectionPromise = null;
