@@ -30,6 +30,7 @@
     align-items: flex-end;
     height: 100%;
     gap: 4px;
+    padding-top: var(--space-xs);
   }
 
   .dot-column {

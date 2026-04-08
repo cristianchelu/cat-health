@@ -31,7 +31,7 @@ const EventDuration: React.FC<EventDurationProps> = ({ duration }) => {
   return (
     <Timeline.MetaItem>
       <Timer />
-      {formatter.format({ minutes, seconds })}
+      {minutes > 0 ? formatter.format({ minutes, seconds }) : `${seconds}s`}
     </Timeline.MetaItem>
   );
 };

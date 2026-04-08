@@ -52,7 +52,7 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
       case 'defecation':
         return t('overview.defecation');
       case 'both':
-        return t('overview.elimination');
+        return t('overview.both');
       case 'no_elimination':
         return t('overview.no_elimination');
       default:

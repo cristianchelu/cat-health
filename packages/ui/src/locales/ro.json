@@ -27,7 +27,7 @@
         "times": "ori",
         "no_weight_data": "Nu există date despre greutate",
         "straining_detected": "Efort detectat",
-        "water_spill_excluded": "{{amount}}ml exclus (vărsare/joacă)",
+        "water_spill_excluded": "{{amount}}ml vărsat",
         "loose_stools": "Scaun moale",
         "weight_recorded": "Greutate înregistrată"
     },

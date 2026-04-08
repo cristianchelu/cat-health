@@ -45,11 +45,11 @@ const WaterEvent: React.FC<EventComponentProps> = ({
           <Timeline.Title>{t('overview.water_intake')}</Timeline.Title>
         </Timeline.Header>
         <Timeline.Meta>
-          {data.duration && <EventDuration duration={data.duration} />}
+          {data.duration !== null && <EventDuration duration={data.duration} />}
           {hasFiltered && (
-            <span className="water-event__spill-badge">
+            <Timeline.MetaItem>
               {t('overview.water_spill_excluded', { amount: excludedAmount })}
-            </span>
+            </Timeline.MetaItem>
           )}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
           {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
