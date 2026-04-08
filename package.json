@@ -5,7 +5,17 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "format": "prettier --write .",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev": "concurrently -c blue,magenta -n api,ui \"npm run start -w api\" \"npm run start -w ui\"",
+    "dev:api": "npm run start -w api",
+    "dev:ui": "npm run start -w ui",
+    "dev:shared": "npm run dev -w shared",
+    "lint": "npm run lint --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "migrate": "npm run migrate -w api",
+    "migrate:down": "npm run migrate:down -w api",
+    "sync": "npm run sync -w api",
+    "reset-db": "npm run reset-db -w api"
   },
   "author": "Cristian Chelu",
   "license": "MIT",
@@ -15,6 +25,7 @@
     "packages/shared"
   ],
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "@eslint/js": "^9.39.2",
     "eslint": "^9.39.2",
     "globals": "^17.3.0",

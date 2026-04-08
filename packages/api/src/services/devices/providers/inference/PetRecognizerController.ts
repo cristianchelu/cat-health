@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
+import { getMediaPath } from '../../../../mediaPaths.ts';
 import type { DeviceStatus } from 'shared';
 import type { DeviceController, ProviderDeps, Device, ProviderAccount } from '../../types.ts';
 import type { DeviceEvent } from '../../EventBus.ts';
@@ -85,7 +86,7 @@ export class PetRecognizerController implements DeviceController {
         return { pet_id: null, pet_name: 'unknown', raw_response: 'Media not found' };
       }
 
-      const targetImagePath = path.join(process.env.MEDIA_PATH!, targetMedia.file_path);
+      const targetImagePath = path.join(getMediaPath(), targetMedia.file_path);
       const targetImageBuffer = await fs.readFile(targetImagePath);
       const targetImageDataUrl = await resizeImageToBase64(targetImageBuffer);
 
@@ -132,7 +133,7 @@ export class PetRecognizerController implements DeviceController {
           const media = mediaById.get(id);
           if (!media) continue;
           try {
-            const imagePath = path.join(process.env.MEDIA_PATH!, media.file_path);
+            const imagePath = path.join(getMediaPath(), media.file_path);
             const imageBuffer = await fs.readFile(imagePath);
             const imageDataUrl = await resizeImageToBase64(imageBuffer);
             images.push(imageDataUrl);

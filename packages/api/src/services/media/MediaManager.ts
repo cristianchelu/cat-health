@@ -1,10 +1,10 @@
 import fs from 'fs/promises';
-import assert from 'node:assert';
 import path from 'path';
 import crypto from 'crypto';
 import type { Kysely } from 'kysely';
 import type { Database } from '../../database/index.ts';
 import type { MediaMetadata } from '../../database/types/MediaTable.ts';
+import { getMediaPath, getMediaTempPath } from '../../mediaPaths.ts';
 
 export interface PendingMedia {
   path: string;
@@ -18,12 +18,9 @@ export class MediaManager {
   private mediaDir: string;
 
   constructor(db: Kysely<Database>) {
-    assert(process.env.MEDIA_PATH, 'MEDIA_PATH is not set in .env');
-    assert(process.env.MEDIA_TEMP_PATH, 'MEDIA_TEMP_PATH is not set in .env');
-
     this.db = db;
-    this.mediaDir = process.env.MEDIA_PATH;
-    this.tempDir = process.env.MEDIA_TEMP_PATH;
+    this.mediaDir = getMediaPath();
+    this.tempDir = getMediaTempPath();
   }
 
   async initialize() {

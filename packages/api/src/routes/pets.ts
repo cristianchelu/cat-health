@@ -1,4 +1,5 @@
 import { db } from '../database/index.ts';
+import { getMediaPath } from '../mediaPaths.ts';
 import { sql } from 'kysely';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -269,10 +270,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .webp({ quality: 80 })
         .toBuffer();
 
-      const mediaRoot = process.env.MEDIA_PATH;
-      if (!mediaRoot) {
-        return reply.status(500).send({ error: 'MEDIA_PATH not configured' });
-      }
+      const mediaRoot = getMediaPath();
       const petDir = path.join(mediaRoot, 'pets', String(id));
       await fs.mkdir(petDir, { recursive: true });
       const avatarFilename = 'avatar_256.webp';
@@ -371,9 +369,8 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     await db.deleteFrom('media_link').where('id', '=', link.link_id).execute();
     await db.deleteFrom('media').where('id', '=', link.media_id).execute();
     try {
-      const mediaRoot = process.env.MEDIA_PATH;
-      if (mediaRoot && link.file_path) {
-        await fs.unlink(path.join(mediaRoot, link.file_path));
+      if (link.file_path) {
+        await fs.unlink(path.join(getMediaPath(), link.file_path));
       }
     } catch (error: unknown) {
       // ignore unlink errors

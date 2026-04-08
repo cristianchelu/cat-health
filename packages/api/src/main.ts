@@ -3,8 +3,9 @@ import { config } from 'dotenv';
 config();
 
 import path from 'node:path';
-import assert from 'node:assert';
 import fs from 'node:fs/promises';
+
+import { getMediaPath, getMediaTempPath } from './mediaPaths.ts';
 
 import Fastify from 'fastify';
 import { type TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
@@ -14,13 +15,9 @@ import fastifyStatic from '@fastify/static';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
-assert(process.env.MEDIA_PATH, 'MEDIA_PATH is not set in .env');
-
-// Ensure required directories exist
-await fs.mkdir(process.env.MEDIA_PATH, { recursive: true });
-if (process.env.MEDIA_TEMP_PATH) {
-  await fs.mkdir(process.env.MEDIA_TEMP_PATH, { recursive: true });
-}
+// Ensure required directories exist (defaults under repo `data/` if unset)
+await fs.mkdir(getMediaPath(), { recursive: true });
+await fs.mkdir(getMediaTempPath(), { recursive: true });
 
 import { migrateToLatest } from './database/migrate.ts';
 import { db } from './database/index.ts';
@@ -105,7 +102,7 @@ await fastify.register(multipart, {
 
 // Serve video recordings & snapshots statically
 await fastify.register(fastifyStatic, {
-  root: process.env.MEDIA_PATH,
+  root: getMediaPath(),
   prefix: '/api/media/',
 });
 
