@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import { getMediaPath } from '../../../../mediaPaths.ts';
 import type { DeviceStatus } from 'shared';
 import type { DeviceController, ProviderDeps, Device, ProviderAccount } from '../../types.ts';
-import type { DeviceEvent } from '../../EventBus.ts';
+import type { DeviceMediaReadyEvent } from '../../EventBus.ts';
 import type { PetRecognizerConfig, InferenceAccountConfig } from 'shared';
 
 const RESIZE_SIZE = 256;
@@ -24,7 +24,7 @@ export class PetRecognizerController implements DeviceController {
   private status: DeviceStatus = 'unknown';
   private device: Device;
   private deps: ProviderDeps;
-  private eventHandler: ((event: DeviceEvent) => void) | null = null;
+  private eventHandler: ((event: DeviceMediaReadyEvent) => void) | null = null;
 
   constructor(device: Device, account: ProviderAccount, deps: ProviderDeps) {
     this.device = device;
@@ -39,8 +39,8 @@ export class PetRecognizerController implements DeviceController {
   }
 
   async connect(): Promise<void> {
-    // Subscribe to device.event on EventBus
-    this.eventHandler = (event: DeviceEvent) => {
+    // Subscribe only after snapshot media has been linked to the event.
+    this.eventHandler = (event: DeviceMediaReadyEvent) => {
       // Filter for events from our source device
       if (event.deviceId === this.config.source_device_id && this.config.auto_identify) {
         // Run identification asynchronously (don't block event handler)
@@ -53,14 +53,14 @@ export class PetRecognizerController implements DeviceController {
       }
     };
 
-    this.deps.eventBus.subscribe('device.event', this.eventHandler);
+    this.deps.eventBus.subscribe('device.event.media_ready', this.eventHandler);
     this.status = 'online';
     console.log(`Pet recognizer ${this.device.name} connected and listening`);
   }
 
   async disconnect(): Promise<void> {
     if (this.eventHandler) {
-      this.deps.eventBus.removeListener('device.event', this.eventHandler);
+      this.deps.eventBus.removeListener('device.event.media_ready', this.eventHandler);
       this.eventHandler = null;
     }
     this.status = 'offline';
@@ -280,7 +280,9 @@ export class PetRecognizerController implements DeviceController {
         .execute();
 
       if (eventMedia.length === 0) {
-        console.warn(`No media found for event ${eventId}`);
+        console.warn(
+          `Invariant violation: device.event.media_ready fired without linked media for event ${eventId}`,
+        );
         return { pet_id: null, pet_name: 'unknown', raw_response: 'No media' };
       }
 

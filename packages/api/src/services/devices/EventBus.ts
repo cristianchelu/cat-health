@@ -13,6 +13,15 @@ export interface DeviceEvent {
   timestamp: Date;
 }
 
+export interface DeviceMediaReadyEvent {
+  deviceId: number;
+  eventId: number;
+  type: string;
+  timestamp: Date;
+  mediaReady: true;
+  linkedMediaIds?: number[];
+}
+
 export class EventBus extends EventEmitter {
   publish(topic: string, event: unknown) {
     this.emit(topic, event);

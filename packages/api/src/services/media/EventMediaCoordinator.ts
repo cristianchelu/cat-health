@@ -3,7 +3,12 @@ import type { Database } from '../../database/index.ts';
 import type { DeviceCameraConfig } from '../../database/types/DeviceCameraTable.ts';
 import type { EventType } from 'shared';
 import type { DeviceDirectory, RecordingSource } from '../devices/types.ts';
-import type { EventBus, ActivityStartEvent, DeviceEvent } from '../devices/EventBus.ts';
+import type {
+  EventBus,
+  ActivityStartEvent,
+  DeviceEvent,
+  DeviceMediaReadyEvent,
+} from '../devices/EventBus.ts';
 import type { MediaManager } from './MediaManager.ts';
 import type { PendingMedia } from './MediaManager.ts';
 
@@ -161,6 +166,22 @@ export class EventMediaCoordinator {
     });
   }
 
+  private publishMediaReady(
+    event: DeviceEvent,
+    linkedMediaIds: number[],
+  ): void {
+    const mediaReadyEvent: DeviceMediaReadyEvent = {
+      deviceId: event.deviceId,
+      eventId: event.eventId,
+      type: event.type,
+      timestamp: event.timestamp,
+      mediaReady: true,
+      linkedMediaIds,
+    };
+
+    this.eventBus.publish('device.event.media_ready', mediaReadyEvent);
+  }
+
   private async handleDeviceEvent(event: DeviceEvent): Promise<void> {
     const { deviceId, eventId, timestamp } = event;
 
@@ -187,6 +208,7 @@ export class EventMediaCoordinator {
           'image/jpeg',
         );
         await this.mediaManager.linkMediaToEvent(media.id, eventId, 'snapshot');
+        this.publishMediaReady(event, [media.id]);
       } catch (err) {
         console.error('[EventMediaCoordinator] Failed to persist snapshot:', err);
         await pending.snapshot.cleanup().catch(() => {});
