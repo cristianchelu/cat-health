@@ -31,6 +31,14 @@ This is a **Pet Assistant** application focused on cat health monitoring through
 
 ## Code Standards & Patterns
 
+### Date & Timezone
+
+**NEVER** use `new Date().toISOString().split('T')[0]` or `date.toISOString().split('T')[0]` to obtain a local calendar date string. `toISOString()` returns UTC, which will produce the wrong calendar date for users in positive UTC offsets during the hours around midnight.
+
+**ALWAYS** use one of:
+- `format(date, 'yyyy-MM-dd')` from `date-fns` (uses local time)
+- `createDayRange(date?)` from `@/lib/utils` when you need a full `DateRange` for a single day
+
 ### CSS Architecture
 
 **IMPORTANT**: We prioritize native, semantic CSS with minimal inline styles. NO FUCKING TAILWIND.

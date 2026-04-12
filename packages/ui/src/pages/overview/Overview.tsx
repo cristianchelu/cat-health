@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock, Plus } from 'lucide-react';
-import { addDays, subDays, format, parseISO } from 'date-fns';
+import { addDays, subDays, parseISO } from 'date-fns';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetEvents } from '@/hooks/queries/petQueries';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -11,7 +11,7 @@ import Timeline from '@/components/ui/Timeline';
 import { EventTimelineItem } from '@/components/events';
 import EventDetailsModal from '@/components/events/EventDetailsModal';
 import LogFoodModal from '@/components/events/LogFoodModal';
-import type { DateRange } from '@/lib/utils';
+import { createDayRange, type DateRange } from '@/lib/utils';
 
 import WeightTrendCard from '@/pages/overview/components/WeightTrendCard';
 import WaterConsumptionCard from '@/pages/overview/components/WaterConsumptionCard';
@@ -29,46 +29,20 @@ const Overview: React.FC = () => {
   );
   const [showFoodModal, setShowFoodModal] = React.useState(false);
 
-  const getTodayString = () => new Date().toISOString().split('T')[0];
-
-  const [dateRange, setDateRange] = React.useState<DateRange>(() => {
-    const dateStr = getTodayString();
-    return {
-      startDate: dateStr,
-      endDate: dateStr,
-      type: 'day',
-    };
-  });
+  const [dateRange, setDateRange] = React.useState<DateRange>(createDayRange);
 
   const handlePrevDay = () => {
-    const current = parseISO(dateRange.startDate);
-    const prev = subDays(current, 1);
-    const dateStr = format(prev, 'yyyy-MM-dd');
-    setDateRange({
-      startDate: dateStr,
-      endDate: dateStr,
-      type: 'day',
-    });
+    const prev = subDays(parseISO(dateRange.startDate), 1);
+    setDateRange(createDayRange(prev));
   };
 
   const handleNextDay = () => {
-    const current = parseISO(dateRange.startDate);
-    const next = addDays(current, 1);
-    const dateStr = format(next, 'yyyy-MM-dd');
-    setDateRange({
-      startDate: dateStr,
-      endDate: dateStr,
-      type: 'day',
-    });
+    const next = addDays(parseISO(dateRange.startDate), 1);
+    setDateRange(createDayRange(next));
   };
 
   const handleReset = () => {
-    const dateStr = getTodayString();
-    setDateRange({
-      startDate: dateStr,
-      endDate: dateStr,
-      type: 'day',
-    });
+    setDateRange(createDayRange());
   };
 
   const handleEventClick = (event: GetEventDTO) => {
@@ -85,7 +59,7 @@ const Overview: React.FC = () => {
     isFetching,
   } = usePetEvents(selectedPet?.id ?? 0, dateRange, !!selectedPet);
 
-  const isCurrentDay = dateRange.startDate === getTodayString();
+  const isCurrentDay = dateRange.startDate === createDayRange().startDate;
 
   const dateNavigation = (
     <DateNavigation

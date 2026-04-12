@@ -1,4 +1,5 @@
 import { clsx } from 'clsx';
+import { format } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
 
 export const cn = clsx;
@@ -9,6 +10,15 @@ export interface DateRange {
   startDate: string; // YYYY-MM-DD format
   endDate: string; // YYYY-MM-DD format
   type: TimeRangeType;
+}
+
+/**
+ * Create a DateRange for a single local calendar day. Defaults to today.
+ * Always use this instead of new Date().toISOString().split('T')[0] to avoid UTC date drift.
+ */
+export function createDayRange(date: Date = new Date()): DateRange {
+  const dateStr = format(date, 'yyyy-MM-dd');
+  return { startDate: dateStr, endDate: dateStr, type: 'day' };
 }
 
 /**

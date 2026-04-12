@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { addDays, subDays, format, parseISO } from 'date-fns';
+import { addDays, subDays, parseISO } from 'date-fns';
 import Timeline from '@/components/ui/Timeline';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { useDeviceEvents } from '@/hooks/queries/deviceQueries';
 import { EventTimelineItem } from '@/components/events';
-import { dateToTimeRange } from '@/lib/utils';
+import { createDayRange, dateToTimeRange } from '@/lib/utils';
 import './DeviceTimeline.css';
 import EventDetailsModal from '@/components/events/EventDetailsModal';
 import type { GetEventDTO } from 'shared';
@@ -17,8 +17,9 @@ interface DeviceTimelineProps {
 
 const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
   const { t } = useTranslation();
-  const getTodayString = () => new Date().toISOString().split('T')[0];
-  const [currentDate, setCurrentDate] = React.useState<string>(getTodayString);
+  const [currentDate, setCurrentDate] = React.useState<string>(
+    () => createDayRange().startDate,
+  );
   const [selectedEvent, setSelectedEvent] = React.useState<GetEventDTO | null>(
     null,
   );
@@ -28,19 +29,15 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
   }, [currentDate]);
 
   const handlePrevDay = () => {
-    const current = parseISO(currentDate);
-    const prev = subDays(current, 1);
-    setCurrentDate(format(prev, 'yyyy-MM-dd'));
+    setCurrentDate(createDayRange(subDays(parseISO(currentDate), 1)).startDate);
   };
 
   const handleNextDay = () => {
-    const current = parseISO(currentDate);
-    const next = addDays(current, 1);
-    setCurrentDate(format(next, 'yyyy-MM-dd'));
+    setCurrentDate(createDayRange(addDays(parseISO(currentDate), 1)).startDate);
   };
 
   const handleReset = () => {
-    setCurrentDate(getTodayString());
+    setCurrentDate(createDayRange().startDate);
   };
 
   const handleEventClick = (event: GetEventDTO) => {
@@ -58,7 +55,7 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
     error,
   } = useDeviceEvents(deviceId, startTime, endTime, true);
 
-  const isCurrentDay = currentDate === getTodayString();
+  const isCurrentDay = currentDate === createDayRange().startDate;
 
   return (
     <div className="device-timeline">
