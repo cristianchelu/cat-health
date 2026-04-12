@@ -20,9 +20,14 @@ import './Sidebar.css';
 interface SidebarProps {
   isCollapsed?: boolean;
   onToggle?: () => void;
+  showPetSelector?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false, onToggle }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  isCollapsed = false,
+  onToggle,
+  showPetSelector = false,
+}) => {
   const { t } = useTranslation();
 
   const navigationItems = [
@@ -56,10 +61,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false, onToggle }) => {
             ))}
           </ul>
         </nav>
-        <section>
-          <h4>{t('navigation.pets')}</h4>
-          <PetSelector />
-        </section>
+        {showPetSelector ? (
+          <section>
+            <h4>{t('navigation.pets')}</h4>
+            <PetSelector />
+          </section>
+        ) : null}
       </div>
 
       {/* Collapse Toggle Button */}

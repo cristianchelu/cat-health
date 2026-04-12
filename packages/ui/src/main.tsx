@@ -18,6 +18,8 @@ import AddDevicePage from './pages/settings/AddDevicePage.tsx';
 import AddEditFoodPage from './pages/settings/AddEditFoodPage.tsx';
 import EditDevicePage from './pages/settings/EditDevicePage.tsx';
 
+import { petSelectorRouteHandle } from './router/routeHandle';
+
 import './index.css';
 
 const router = createBrowserRouter(
@@ -26,8 +28,12 @@ const router = createBrowserRouter(
       path: '/',
       element: <App />,
       children: [
-        { path: '/', element: <Overview /> },
-        { path: '/health', element: <Health /> },
+        { path: '/', element: <Overview />, handle: petSelectorRouteHandle },
+        {
+          path: '/health',
+          element: <Health />,
+          handle: petSelectorRouteHandle,
+        },
         { path: '/devices', element: <Devices /> },
         { path: '/devices/:id', element: <DeviceDetails /> },
         { path: '/settings', element: <Settings /> },

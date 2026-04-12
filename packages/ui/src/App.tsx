@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Outlet } from 'react-router';
+import { Outlet, useMatches } from 'react-router';
 import Sidebar from './components/layout/Sidebar';
 import MobileNav from './components/navigation/MobileNav';
 import PetSelector from './components/navigation/PetSelector';
 import { PetProvider } from './contexts/PetProvider';
+import { matchShowsPetSelector } from './router/routeHandle';
 
 import './App.css';
 
@@ -16,6 +17,7 @@ if (import.meta.env.DEV) {
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const showPetSelector = useMatches().some(matchShowsPetSelector);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -24,8 +26,9 @@ function App() {
           <Sidebar
             isCollapsed={isSidebarCollapsed}
             onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            showPetSelector={showPetSelector}
           />
-          <PetSelector variant="mobile" />
+          {showPetSelector ? <PetSelector variant="mobile" /> : null}
           <main>
             <div id="content">
               <Outlet />
