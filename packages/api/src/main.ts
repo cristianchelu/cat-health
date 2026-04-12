@@ -46,6 +46,19 @@ const fastify = Fastify({
   trustProxy: true,
 }).withTypeProvider<TypeBoxTypeProvider>();
 
+function getCorsAllowedOrigins(): Set<string> {
+  const raw = process.env.CORS_ALLOWED_ORIGINS;
+  if (!raw?.trim()) return new Set();
+  const set = new Set<string>();
+  for (const part of raw.split(',')) {
+    const origin = part.trim();
+    if (origin) set.add(origin);
+  }
+  return set;
+}
+
+const corsAllowedOrigins = getCorsAllowedOrigins();
+
 fastify.addHook('onRequest', (req, _reply, done) => {
   const ingressPath = req.headers['x-ingress-path'];
   if (
@@ -63,12 +76,8 @@ await fastify.register(cors, {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
-    // Check for environment-specific frontend URL first
-    const frontendUrl = process.env.FRONTEND_URL;
-    if (frontendUrl && frontendUrl !== '*') {
-      if (origin === frontendUrl) {
-        return callback(null, true);
-      }
+    if (corsAllowedOrigins.has(origin)) {
+      return callback(null, true);
     }
 
     // Development mode: Allow any localhost/127.0.0.1 and any IP on port 5173
@@ -86,7 +95,6 @@ await fastify.register(cors, {
       }
     }
 
-    // Production mode: Only allow specific frontend URL
     callback(null, false);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

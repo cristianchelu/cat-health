@@ -14,6 +14,8 @@ services:
       - ./images:/app/images:Z
     environment:
       - NODE_ENV=production
+      # Comma-separated origins for browser CORS (e.g. http://homeassistant.local:8123 for HA panels)
+      # - CORS_ALLOWED_ORIGINS=http://homeassistant.local:8123,https://your-app.example
       # Override SQLite database path
       - SQLITE_PATH=/app/data/database.sqlite
       # Override video recording storage path
