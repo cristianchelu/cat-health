@@ -158,7 +158,6 @@ export class FountainController
   implements Camera {
   private currentEvent: NewEvent<WaterIntakeEventData> | null = null;
   private currentSession: WaterSession | null = null;
-  private pendingSnapshot: PendingMedia | null = null;
   private state: WaterFountainState = {
     waterLevel: 0,
   };
@@ -309,18 +308,8 @@ export class FountainController
             raw_data: null,
           };
 
-          // Get linked camera (which could be itself) and take a snapshot
-          const camera = await this.deps.directory.getLinkedCamera(
-            this.deviceId,
-          );
-          if (camera) {
-            this.pendingSnapshot =
-              (await camera.captureSnapshot({
-                timestamp: date,
-                eventType: 'water_intake',
-              })) || null;
-
-          }
+          // Snapshots are captured and linked by EventMediaCoordinator on
+          // device.activity.start / device.event (same pattern as LitterboxController).
         } else {
           // Activity just ended — close the session
           console.log('Activity ended.');
@@ -348,9 +337,7 @@ export class FountainController
 
             if (this.currentEvent) {
               const eventToSave = this.currentEvent;
-              const snapshotToSave = this.pendingSnapshot;
               this.currentEvent = null;
-              this.pendingSnapshot = null;
 
               eventToSave.data.amount = analysis.amount;
               eventToSave.data.duration = analysis.duration;
@@ -360,15 +347,12 @@ export class FountainController
               eventToSave.raw_data = rawData;
 
               if (this.shouldPersistDrinkEvent(eventToSave.data)) {
-                this.saveDrinkEvent(eventToSave, snapshotToSave);
+                this.saveDrinkEvent(eventToSave);
               } else {
                 console.log(
                   `[Fountain] Skipping analyzed water_intake event with non-positive metrics: ` +
                   `amount=${eventToSave.data.amount}ml, duration=${eventToSave.data.duration}s`,
                 );
-                if (snapshotToSave) {
-                  void snapshotToSave.cleanup();
-                }
               }
             }
           } else {
@@ -383,10 +367,8 @@ export class FountainController
             ) {
               console.log('Drink data already captured, saving immediately.');
               const eventToSave = this.currentEvent;
-              const snapshotToSave = this.pendingSnapshot;
               this.currentEvent = null;
-              this.pendingSnapshot = null;
-              this.saveDrinkEvent(eventToSave, snapshotToSave);
+              this.saveDrinkEvent(eventToSave);
             } else {
               console.log('Waiting for drink data...');
               this.captureNextDrinkData();
@@ -422,10 +404,9 @@ export class FountainController
 
       // Once both values are captured, save them
       if (!!this.currentEvent && this.shouldPersistDrinkEvent(data)) {
-        this.saveDrinkEvent(this.currentEvent, this.pendingSnapshot);
+        this.saveDrinkEvent(this.currentEvent);
         this.client.off('sensor', onSensorUpdate);
         this.currentEvent = null;
-        this.pendingSnapshot = null;
       }
     };
 
@@ -436,20 +417,12 @@ export class FountainController
         console.warn('Timed out waiting for drink data.');
         this.client.off('sensor', onSensorUpdate);
 
-        if (this.pendingSnapshot) {
-          await this.pendingSnapshot.cleanup();
-          this.pendingSnapshot = null;
-        }
-
         this.currentEvent = null;
       }
     }, 1000);
   }
 
-  private async saveDrinkEvent(
-    event: NewEvent<WaterIntakeEventData>,
-    snapshot: PendingMedia | null,
-  ) {
+  private async saveDrinkEvent(event: NewEvent<WaterIntakeEventData>) {
     const eventData = event.data;
     const eventTimestamp = event.timestamp;
 
@@ -475,25 +448,6 @@ export class FountainController
         return;
       }
 
-      if (snapshot) {
-        try {
-          const media = await this.deps.mediaManager.persistMedia(
-            snapshot.path,
-            snapshot.metadata,
-            'image/jpeg',
-          );
-          await this.deps.mediaManager.linkMediaToEvent(
-            media.id,
-            result.id,
-            'snapshot',
-          );
-          console.log(`Linked snapshot ${media.id} to event ${result.id}`);
-        } catch (mediaErr) {
-          console.error('Failed to persist snapshot:', mediaErr);
-          await snapshot.cleanup();
-        }
-      }
-
       // Emit completed event
       this.deps.eventBus.publish('device.event', {
         deviceId: this.deviceId,
@@ -504,10 +458,6 @@ export class FountainController
       });
     } catch (err) {
       console.error('Failed to insert drink event:', err);
-      // Cleanup pending snapshot if event save failed
-      if (snapshot) {
-        await snapshot.cleanup();
-      }
     }
   }
 
