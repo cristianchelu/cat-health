@@ -8,8 +8,13 @@ import { PetProvider } from './contexts/PetProvider';
 
 import './App.css';
 
+const queryClient = new QueryClient();
+
+if (import.meta.env.DEV) {
+  window.__TANSTACK_QUERY_CLIENT__ = queryClient;
+}
+
 function App() {
-  const [queryClient] = useState(() => new QueryClient());
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
