@@ -513,6 +513,7 @@ export class LitterboxController extends BaseESPHomeController {
       maxDelay: 30000,
       heartbeatTimeout: 30000,
       pingInterval: 15000,
+      connectHandshakeTimeout: 20000,
     };
   }
 
@@ -626,7 +627,6 @@ export class LitterboxController extends BaseESPHomeController {
       );
 
       if (eliminationWeight < MAINTENANCE_THRESHOLD) {
-        // Maintenance event
         console.log(
           `Detected maintenance event at ${session.startTime.toISOString()}: ${eliminationWeight}g`,
         );

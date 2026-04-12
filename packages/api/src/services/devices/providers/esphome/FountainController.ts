@@ -179,6 +179,7 @@ export class FountainController
       maxDelay: 5000,
       heartbeatTimeout: 3000,
       pingInterval: 1000,
+      connectHandshakeTimeout: 12000,
     };
   }
 
@@ -358,7 +359,17 @@ export class FountainController
               eventToSave.data.filtered = analysis.filtered;
               eventToSave.raw_data = rawData;
 
-              this.saveDrinkEvent(eventToSave, snapshotToSave);
+              if (this.shouldPersistDrinkEvent(eventToSave.data)) {
+                this.saveDrinkEvent(eventToSave, snapshotToSave);
+              } else {
+                console.log(
+                  `[Fountain] Skipping analyzed water_intake event with non-positive metrics: ` +
+                  `amount=${eventToSave.data.amount}ml, duration=${eventToSave.data.duration}s`,
+                );
+                if (snapshotToSave) {
+                  void snapshotToSave.cleanup();
+                }
+              }
             }
           } else {
             // No raw stream available — fall back to ESPHome aggregates
@@ -368,9 +379,7 @@ export class FountainController
 
             if (
               this.currentEvent &&
-              this.currentEvent.data.amount > 0 &&
-              this.currentEvent.data.duration &&
-              this.currentEvent.data.duration > 0
+              this.shouldPersistDrinkEvent(this.currentEvent.data)
             ) {
               console.log('Drink data already captured, saving immediately.');
               const eventToSave = this.currentEvent;
@@ -412,7 +421,7 @@ export class FountainController
       }
 
       // Once both values are captured, save them
-      if (!!this.currentEvent && data.amount && data.duration) {
+      if (!!this.currentEvent && this.shouldPersistDrinkEvent(data)) {
         this.saveDrinkEvent(this.currentEvent, this.pendingSnapshot);
         this.client.off('sensor', onSensorUpdate);
         this.currentEvent = null;
@@ -500,6 +509,18 @@ export class FountainController
         await snapshot.cleanup();
       }
     }
+  }
+
+  private shouldPersistDrinkEvent(data: WaterIntakeEventData): boolean {
+    const amount = data.amount ?? 0;
+    const duration = data.duration ?? 0;
+
+    return (
+      Number.isFinite(amount) &&
+      Number.isFinite(duration) &&
+      amount > 0 &&
+      duration > 0
+    );
   }
 
   /**
