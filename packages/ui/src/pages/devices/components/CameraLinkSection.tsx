@@ -105,7 +105,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
   const snapshotUrl = React.useMemo(
     () =>
       selectedCameraId
-        ? `/api/devices/${selectedCameraId}/snapshot?t=${snapshotKey}`
+        ? `api/devices/${selectedCameraId}/snapshot?t=${snapshotKey}`
         : undefined,
     [selectedCameraId, snapshotKey],
   );

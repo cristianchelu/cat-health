@@ -141,7 +141,7 @@ export function useUploadPetAvatar(petId: number) {
     mutationFn: async (file: File) => {
       const form = new FormData();
       form.append('avatar', file);
-      const res = await fetch(`/api/pets/${petId}/avatar`, {
+      const res = await fetch(`api/pets/${petId}/avatar`, {
         method: 'POST',
         body: form,
       });

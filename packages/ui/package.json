@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "vite dev",
+    "prebuild": "npm run icons",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write .",

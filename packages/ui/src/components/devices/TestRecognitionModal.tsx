@@ -162,7 +162,7 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
                     onClick={() => !isTesting && handleTest(media.id, media.actualPetId)}
                   >
                     <img
-                      src={`/api/media/${media.file_path}`}
+                      src={`api/media/${media.file_path}`}
                       alt={t('pet_recognizer.test_image_alt')}
                     />
                     {isTesting && (

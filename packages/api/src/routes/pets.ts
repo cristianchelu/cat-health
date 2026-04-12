@@ -53,7 +53,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         // birth_date is stored as text in SQLite, shared schema currently uses Any
         birth_date: r.birth_date,
         avatar_url: r.avatar_file_path
-          ? `/api/media/${r.avatar_file_path}`
+          ? `api/media/${r.avatar_file_path}`
           : undefined,
       }));
     },
@@ -117,7 +117,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         breed: row.breed,
         birth_date: row.birth_date,
         avatar_url: row.avatar_file_path
-          ? `/api/images/${row.avatar_file_path}`
+          ? `api/media/${row.avatar_file_path}`
           : undefined,
       };
     },
@@ -177,7 +177,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('media_link.entity_id', '=', String(id))
         .where('media_link.relation', '=', 'avatar')
         .executeTakeFirst();
-      const avatar_url = avatar ? `/api/images/${avatar.file_path}` : undefined;
+      const avatar_url = avatar ? `api/media/${avatar.file_path}` : undefined;
       return { ...result, avatar_url };
     },
   );
@@ -342,7 +342,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       return reply.send({
         success: true,
         avatar: {
-          url: `/api/media/${relFilePath}`,
+          url: `api/media/${relFilePath}`,
           width: 256,
           height: 256,
         },
@@ -392,7 +392,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       .executeTakeFirst();
     if (!avatar) return reply.status(404).send({ error: 'Avatar not found' });
     return reply.send({
-      url: `/api/media/${avatar.file_path}`,
+      url: `api/media/${avatar.file_path}`,
       metadata: avatar.metadata,
     });
   });

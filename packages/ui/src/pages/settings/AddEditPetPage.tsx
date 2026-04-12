@@ -2,15 +2,15 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import PetForm from './components/PetForm';
-import { useUploadPetAvatar } from '@/hooks/queries/petQueries';
-import type { PostPetRequestDTO } from 'shared';
-import './AddEditPetPage.css';
 import {
   usePet,
   useCreatePet,
   useUpdatePet,
   useDeletePet,
+  useUploadPetAvatar,
 } from '@/hooks/queries/petQueries';
+import type { PostPetRequestDTO } from 'shared';
+import './AddEditPetPage.css';
 
 const AddEditPetPage: React.FC = () => {
   const { t } = useTranslation();
@@ -44,7 +44,7 @@ const AddEditPetPage: React.FC = () => {
             // Use a one-off upload for the new pet id without invoking a hook inside callback
             const form = new FormData();
             form.append('avatar', avatarFile);
-            await fetch(`/api/pets/${newPet.id}/avatar`, {
+            await fetch(`api/pets/${newPet.id}/avatar`, {
               method: 'POST',
               body: form,
             });

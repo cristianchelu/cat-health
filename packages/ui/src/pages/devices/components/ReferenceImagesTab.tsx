@@ -118,7 +118,7 @@ const ReferenceImagesTab: React.FC<ReferenceImagesTabProps> = ({ device }) => {
                   {refs.map((ref) => (
                     <div key={ref.id} className="image-item">
                       <img
-                        src={`/api/media/${ref.file_path}`}
+                        src={`api/media/${ref.file_path}`}
                         alt={t('pet_recognizer.reference_for_alt', { name: pet.name })}
                       />
                       <button

@@ -15,7 +15,6 @@ import { LitterboxStateTracker } from './litterboxStateTracker';
 import { decodeLitterboxRawData } from './decodeLitterboxRawData';
 import { decodeWaterRawData } from './decodeWaterRawData';
 import { analyzeWaterSegments } from './analyzeWaterSegments';
-
 import './EventDetailsModal.css';
 import { Loader2, Trash2, Download, Info, Image, Activity } from 'lucide-react';
 
@@ -250,10 +249,13 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   {media.map((m) => (
                     <div key={m.id} className="media-item">
                       {m.mime_type.startsWith('image/') && (
-                        <img src={`/api/media/${m.file_path}`} alt={t('event_details.event_media_alt')} />
+                        <img
+                          src={`api/media/${m.file_path}`}
+                          alt={t('event_details.event_media_alt')}
+                        />
                       )}
                       {m.mime_type.startsWith('video/') && (
-                        <video controls src={`/api/media/${m.file_path}`} />
+                        <video controls src={`api/media/${m.file_path}`} />
                       )}
                     </div>
                   ))}
@@ -308,7 +310,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   title={t('event_details.download_media')}
                   onClick={() => {
                     const link = document.createElement('a');
-                    link.href = `/api/media/${media[0].file_path}`;
+                    link.href = `api/media/${media[0].file_path}`;
                     link.download =
                       media[0].file_path.split('/').pop() || 'media';
                     link.click();

@@ -113,7 +113,7 @@ const ReferenceImagePicker: React.FC<ReferenceImagePickerProps> = ({
                     onClick={() => toggleSelection(media.id)}
                   >
                     <img
-                      src={`/api/media/${media.file_path}`}
+                      src={`api/media/${media.file_path}`}
                       alt={t('pet_recognizer.event_snapshot_alt')}
                     />
                     {selectedIds.has(media.id) && (
