@@ -17,11 +17,11 @@
     color: var(--color-text);
   }
 
-  .litterbox-loading {
+  .overview-litterbox-chart-slot {
+    flex: 1;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
+    flex-direction: column;
+    min-height: var(--overview-litterbox-dot-chart-min-height);
   }
 
   .litterbox-dot-chart {
@@ -31,6 +31,12 @@
     height: 100%;
     gap: 4px;
     padding-top: var(--space-xs);
+  }
+
+  .litterbox-dot-chart--pending {
+    flex: 1 0 auto;
+    min-height: var(--overview-litterbox-dot-chart-min-height);
+    pointer-events: none;
   }
 
   .dot-column {

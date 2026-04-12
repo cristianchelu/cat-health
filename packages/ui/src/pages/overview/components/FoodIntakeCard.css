@@ -2,6 +2,13 @@
   --card-padding: var(--space-sm);
   gap: 0;
 
+  .overview-metric-chart-slot {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: var(--overview-metric-bar-chart-min-height);
+  }
+
   .intake-value {
     font-size: var(--text-2xl);
     font-weight: var(--font-bold);

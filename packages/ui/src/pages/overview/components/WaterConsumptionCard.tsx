@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { GlassWater, Loader } from 'lucide-react';
+import { GlassWater } from 'lucide-react';
 import MetricBarChart from '@/components/ui/MetricBarChart';
 import { usePetWaterTrends } from '@/hooks/queries/petQueries';
 
@@ -17,62 +17,59 @@ const WaterConsumptionCard: React.FC<WaterConsumptionCardProps> = ({
   const { t } = useTranslation();
   const { data: waterData, isLoading, error } = usePetWaterTrends(petId, 7);
 
-  if (isLoading) {
-    return (
-      <Card className="water-consumption-card">
-        <CardHeader>
-          <GlassWater style={{ marginRight: 'auto' }} />
-          <span className="consumption-value">--- ml</span>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-full">
-            <Loader className="animate-spin" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const showEmpty =
+    !isLoading && (error || !waterData || waterData.length === 0);
 
-  if (error || !waterData || waterData.length === 0) {
+  if (showEmpty) {
     return (
       <Card className="water-consumption-card">
         <CardHeader>
           <GlassWater style={{ marginRight: 'auto' }} />
           <span className="consumption-value">--- ml</span>
         </CardHeader>
-        <CardContent empty>
+        <CardContent empty className="overview-metric-chart-slot">
           <p>{t('overview.no_water_data')}</p>
         </CardContent>
       </Card>
     );
   }
 
-  // Calculate today's total (last item)
-  const todayData = waterData[waterData.length - 1];
-  const todayConsumption = Math.round(todayData.tracked ? todayData.amount : 0);
+  let todayConsumption = 0;
+  let chart: React.ReactNode = null;
 
-  // Calculate max value for scaling (add 20% padding)
-  const maxConsumption = Math.max(...waterData.map((d) => d.amount));
-  const maxUpperBound = Math.max(...waterData.map((d) => d.upperBound));
-  const chartMax = Math.max(maxUpperBound * 1.2, maxConsumption * 1.1);
+  if (isLoading) {
+    chart = null;
+  } else if (waterData) {
+    const todayData = waterData[waterData.length - 1];
+    todayConsumption = Math.round(todayData.tracked ? todayData.amount : 0);
 
-  // Transform data for MetricBarChart
-  const chartData = waterData.map((day) => ({
-    value: day.amount,
-    tracked: day.tracked,
-    lowerBound: day.lowerBound,
-    upperBound: day.upperBound,
-  }));
+    const maxConsumption = Math.max(...waterData.map((d) => d.amount));
+    const maxUpperBound = Math.max(...waterData.map((d) => d.upperBound));
+    const chartMax = Math.max(maxUpperBound * 1.2, maxConsumption * 1.1);
+    const chartData = waterData.map((day) => ({
+      value: day.amount,
+      tracked: day.tracked,
+      lowerBound: day.lowerBound,
+      upperBound: day.upperBound,
+    }));
+    chart = <MetricBarChart data={chartData} maxValue={chartMax} />;
+  } else {
+    chart = null;
+  }
+
+  const headerValue = isLoading ? (
+    <span className="consumption-value">--- ml</span>
+  ) : (
+    <span className="consumption-value">{todayConsumption} ml</span>
+  );
 
   return (
-    <Card className="water-consumption-card">
+    <Card className="water-consumption-card" isLoading={isLoading}>
       <CardHeader>
         <GlassWater style={{ marginRight: 'auto' }} />
-        <span className="consumption-value">{todayConsumption} ml</span>
+        {headerValue}
       </CardHeader>
-      <CardContent>
-        <MetricBarChart data={chartData} maxValue={chartMax} />
-      </CardContent>
+      <CardContent className="overview-metric-chart-slot">{chart}</CardContent>
     </Card>
   );
 };

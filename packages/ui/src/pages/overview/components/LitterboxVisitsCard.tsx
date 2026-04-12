@@ -1,12 +1,15 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { Toilet, Loader, Droplets } from 'lucide-react';
+import { Toilet, Droplets } from 'lucide-react';
 import PoopIcon from '@/components/icons/PoopIcon';
 import { usePetLitterboxTrends } from '@/hooks/queries/petQueries';
-import { differenceInMinutes, differenceInHours, differenceInDays } from 'date-fns';
+import {
+  differenceInMinutes,
+  differenceInHours,
+  differenceInDays,
+} from 'date-fns';
 import type { LitterboxUseEliminationType } from 'shared';
-
 import './LitterboxVisitsCard.css';
 
 interface LitterboxVisitsCardProps {
@@ -57,7 +60,14 @@ interface DayData {
 }
 
 function processApiData(
-  apiDays: Array<{ date: string; events: Array<{ type: string; timestamp: string; straining?: boolean }> }>,
+  apiDays: Array<{
+    date: string;
+    events: Array<{
+      type: string;
+      timestamp: string;
+      straining?: boolean;
+    }>;
+  }>,
 ): DayData[] {
   return apiDays.map((day) => {
     const dots: DotData[] = [];
@@ -106,7 +116,7 @@ const LitterboxVisitsCard: React.FC<LitterboxVisitsCardProps> = ({ petId }) => {
     ? formatShortDuration(new Date(data.lastPoop))
     : null;
 
-  if (isLoading) {
+  if (error && !isLoading) {
     return (
       <Card className="litterbox-visits-card">
         <CardHeader>
@@ -122,79 +132,72 @@ const LitterboxVisitsCard: React.FC<LitterboxVisitsCardProps> = ({ petId }) => {
             </span>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="litterbox-loading">
-            <Loader className="animate-spin" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="litterbox-visits-card">
-        <CardHeader>
-          <Toilet style={{ marginRight: 'auto' }} />
-          <div className="litterbox-stats">
-            <span className="litterbox-stat">
-              <Droplets size={18} color="#FFA500" />
-              --
-            </span>
-            <span className="litterbox-stat">
-              <PoopIcon size={18} color="#8B4513" />
-              --
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent empty>
+        <CardContent empty className="overview-litterbox-chart-slot">
           <p>{t('overview.error_loading')}</p>
         </CardContent>
       </Card>
     );
   }
 
+  const statsHeader = isLoading ? (
+    <div className="litterbox-stats">
+      <span className="litterbox-stat">
+        <Droplets size={18} color="#FFA500" />
+        --
+      </span>
+      <span className="litterbox-stat">
+        <PoopIcon size={18} color="#8B4513" />
+        --
+      </span>
+    </div>
+  ) : (
+    <div className="litterbox-stats">
+      <span className="litterbox-stat">
+        <Droplets size={18} color="#FFA500" />
+        {timeSinceLastPee ?? '--'}
+      </span>
+      <span className="litterbox-stat">
+        <PoopIcon size={18} color="#8B4513" />
+        {timeSinceLastPoop ?? '--'}
+      </span>
+    </div>
+  );
+
+  const chartBody = isLoading ? (
+    <div className="litterbox-dot-chart litterbox-dot-chart--pending" aria-hidden />
+  ) : (
+    <div className="litterbox-dot-chart">
+      {dayData.map((day, dayIndex) => (
+        <div key={dayIndex} className="dot-column">
+          {day.dots.map((dot, dotIndex) => {
+            const isTopDot = dotIndex === day.dots.length - 1;
+            const showOverflow = isTopDot && day.hasOverflow;
+
+            return (
+              <div key={dotIndex} className="dot-wrapper">
+                <div
+                  className={`dot${dot.straining ? ' dot-straining' : ''}`}
+                  style={{ backgroundColor: DOT_COLORS[dot.type] }}
+                />
+                {showOverflow && (
+                  <span className="overflow-badge">+{day.overflowCount}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+
   return (
-    <Card className="litterbox-visits-card">
+    <Card className="litterbox-visits-card" isLoading={isLoading}>
       <CardHeader>
         <Toilet style={{ marginRight: 'auto' }} />
-        <div className="litterbox-stats">
-          <span className="litterbox-stat">
-            <Droplets size={18} color="#FFA500" />
-            {timeSinceLastPee ?? '--'}
-          </span>
-          <span className="litterbox-stat">
-            <PoopIcon size={18} color="#8B4513" />
-            {timeSinceLastPoop ?? '--'}
-          </span>
-        </div>
+        {statsHeader}
       </CardHeader>
-      <CardContent>
-        <div className="litterbox-dot-chart">
-          {dayData.map((day, dayIndex) => (
-            <div key={dayIndex} className="dot-column">
-              {day.dots.map((dot, dotIndex) => {
-                const isTopDot = dotIndex === day.dots.length - 1;
-                const showOverflow = isTopDot && day.hasOverflow;
-
-                return (
-                  <div
-                    key={dotIndex}
-                    className="dot-wrapper"
-                  >
-                    <div
-                      className={`dot${dot.straining ? ' dot-straining' : ''}`}
-                      style={{ backgroundColor: DOT_COLORS[dot.type] }}
-                    />
-                    {showOverflow && (
-                      <span className="overflow-badge">+{day.overflowCount}</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+      <CardContent className="overview-litterbox-chart-slot">
+        {chartBody}
       </CardContent>
     </Card>
   );

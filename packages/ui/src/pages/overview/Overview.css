@@ -1,4 +1,9 @@
 .page-overview {
+  /* Stable chart regions for overview metric cards (loading + loaded) */
+  --overview-weight-chart-min-height: 4.75rem;
+  --overview-metric-bar-chart-min-height: 5.75rem;
+  --overview-litterbox-dot-chart-min-height: 5.5rem;
+
   /* padding: var(--space-lg); */
   max-width: var(--max-width-content);
   margin: 0 auto;

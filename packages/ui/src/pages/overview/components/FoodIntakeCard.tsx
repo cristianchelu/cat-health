@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { subDays, format } from 'date-fns';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { Drumstick, Loader } from 'lucide-react';
+import { Drumstick } from 'lucide-react';
 import MetricBarChart from '@/components/ui/MetricBarChart';
 import { useQuery } from '@tanstack/react-query';
 import { getPetEvents } from '@/api/pets';
@@ -31,8 +31,7 @@ const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const today = new Date();
   const startDate = subDays(today, DAYS - 1);
-  
-  // Use timezone-aware date conversion
+
   const { dateToTimeRange } = React.useMemo(() => {
     return {
       dateToTimeRange: (date: Date) => {
@@ -40,10 +39,10 @@ const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
         const start = fromZonedTime(`${dateStr}T00:00:00.000`, timezone);
         const end = fromZonedTime(`${dateStr}T23:59:59.999`, timezone);
         return { start: start.toISOString(), end: end.toISOString() };
-      }
+      },
     };
   }, [timezone]);
-  
+
   const startTime = dateToTimeRange(startDate).start;
   const endTime = dateToTimeRange(today).end;
 
@@ -53,17 +52,15 @@ const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
     enabled: petId > 0,
   });
 
-  if (isLoading) {
+  if (error && !isLoading) {
     return (
       <Card className="food-intake-card">
         <CardHeader>
           <Drumstick style={{ marginRight: 'auto' }} />
           <span className="intake-value">--- kcal</span>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-full">
-            <Loader className="animate-spin" />
-          </div>
+        <CardContent empty className="overview-metric-chart-slot">
+          <p>{t('overview.no_activity')}</p>
         </CardContent>
       </Card>
     );
@@ -81,7 +78,11 @@ const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
     dailyCalories.set(dateStr, 0);
   }
   for (const ev of foodEvents) {
-    const dateStr = formatInTimeZone(new Date(ev.timestamp), timezone, 'yyyy-MM-dd');
+    const dateStr = formatInTimeZone(
+      new Date(ev.timestamp),
+      timezone,
+      'yyyy-MM-dd',
+    );
     const data = ev.data as { nutrients?: { calories?: number } };
     const kcal = Math.round(data.nutrients?.calories ?? 0);
     dailyCalories.set(dateStr, (dailyCalories.get(dateStr) ?? 0) + kcal);
@@ -102,39 +103,31 @@ const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
 
   const todayStr = formatInTimeZone(today, timezone, 'yyyy-MM-dd');
   const todayKcal = dailyCalories.get(todayStr) ?? 0;
-  const maxValue = Math.max(
-    ...chartData.map((d) => d.value),
-    TARGET_MAX,
-  ) * 1.2;
+  const maxValue =
+    Math.max(...chartData.map((d) => d.value), TARGET_MAX) * 1.2;
 
-  if (error) {
-    return (
-      <Card className="food-intake-card">
-        <CardHeader>
-          <Drumstick style={{ marginRight: 'auto' }} />
-          <span className="intake-value">--- kcal</span>
-        </CardHeader>
-        <CardContent empty>
-          <p>{t('overview.no_activity')}</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const headerValue = isLoading ? (
+    <span className="intake-value">--- kcal</span>
+  ) : (
+    <span className="intake-value">{todayKcal} kcal</span>
+  );
+
+  const chart = isLoading ? null : (
+    <MetricBarChart
+      data={chartData}
+      maxValue={maxValue}
+      lowerBound={TARGET_MIN}
+      upperBound={TARGET_MAX}
+    />
+  );
 
   return (
-    <Card className="food-intake-card">
+    <Card className="food-intake-card" isLoading={isLoading}>
       <CardHeader>
         <Drumstick style={{ marginRight: 'auto' }} />
-        <span className="intake-value">{todayKcal} kcal</span>
+        {headerValue}
       </CardHeader>
-      <CardContent>
-        <MetricBarChart
-          data={chartData}
-          maxValue={maxValue}
-          lowerBound={TARGET_MIN}
-          upperBound={TARGET_MAX}
-        />
-      </CardContent>
+      <CardContent className="overview-metric-chart-slot">{chart}</CardContent>
     </Card>
   );
 };
