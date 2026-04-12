@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import type { DeviceStatus, EventType } from 'shared';
+import type { DeviceStatus } from 'shared';
 import type { Camera, ProviderDeps, Device } from '../../types.ts';
 import type { PendingMedia } from '../../../media/MediaManager.ts';
 import { type Static, Type } from '@fastify/type-provider-typebox';
@@ -58,7 +58,6 @@ export class CameraDeviceController implements Camera {
 
   async captureSnapshot(options: {
     timestamp: Date;
-    eventType: EventType;
     crop?: { left: number; top: number; width: number; height: number };
     rotate?: number;
   }): Promise<PendingMedia | undefined> {
@@ -105,9 +104,7 @@ export class CameraDeviceController implements Camera {
 
       await pipeline.toFile(pendingMedia.path);
 
-      console.log(
-        `Snapshot saved to ${pendingMedia.path} for event ${options.eventType}`,
-      );
+      console.log(`Snapshot saved to ${pendingMedia.path}`);
       return pendingMedia;
     } catch (error) {
       console.error(

@@ -28,6 +28,8 @@ export class EventMediaCoordinator {
   private mediaManager: MediaManager;
   private directory: DeviceDirectory;
   private pendingByDevice = new Map<number, PendingDeviceMedia>();
+  /** In-flight activity.start snapshot work; `handleDeviceEvent` awaits this so pending is populated. */
+  private snapshotWorkByDevice = new Map<number, Promise<void>>();
   private recordingTimeouts = new Set<ReturnType<typeof setTimeout>>();
   private onActivityStartBound: (event: ActivityStartEvent) => void;
   private onDeviceEventBound: (event: DeviceEvent) => void;
@@ -75,6 +77,24 @@ export class EventMediaCoordinator {
       if (pending.snapshot) pending.snapshot.cleanup().catch(() => {});
     }
     this.pendingByDevice.clear();
+    this.snapshotWorkByDevice.clear();
+  }
+
+  private async awaitSnapshotCaptureIfAny(deviceId: number): Promise<void> {
+    const p = this.snapshotWorkByDevice.get(deviceId);
+    if (p) await p;
+  }
+
+  private beginTrackedSnapshotWork(deviceId: number, work: Promise<void>): void {
+    this.snapshotWorkByDevice.set(deviceId, work);
+    work.finally(() => {
+      if (this.snapshotWorkByDevice.get(deviceId) === work) {
+        this.snapshotWorkByDevice.delete(deviceId);
+      }
+    });
+    work.catch((err) => {
+      console.error('[EventMediaCoordinator] activity.start error:', err);
+    });
   }
 
   private async getLinkConfig(
@@ -93,12 +113,17 @@ export class EventMediaCoordinator {
   }
 
   private onActivityStart(event: ActivityStartEvent): void {
-    this.handleActivityStart(event.deviceId, event.timestamp).catch((err) => {
-      console.error('[EventMediaCoordinator] activity.start error:', err);
-    });
+    this.beginTrackedSnapshotWork(
+      event.deviceId,
+      this.performActivitySnapshot(event.deviceId, event.timestamp),
+    );
   }
 
-  private async handleActivityStart(
+  /**
+   * Runs the activity.start snapshot pipeline. Returned promise is tracked so
+   * `handleDeviceEvent` can await it before reading `pendingByDevice`.
+   */
+  private async performActivitySnapshot(
     deviceId: number,
     timestamp: Date,
   ): Promise<void> {
@@ -113,7 +138,6 @@ export class EventMediaCoordinator {
 
     const snapshot = await camera.captureSnapshot({
       timestamp,
-      eventType: 'litterbox_use', // coordinator doesn't know event type yet; relation is still 'snapshot'
     });
     if (!snapshot) return;
 
@@ -139,6 +163,9 @@ export class EventMediaCoordinator {
 
   private async handleDeviceEvent(event: DeviceEvent): Promise<void> {
     const { deviceId, eventId, timestamp } = event;
+
+    await this.awaitSnapshotCaptureIfAny(deviceId);
+
     const link = await this.getLinkConfig(deviceId);
     if (!link) return;
 

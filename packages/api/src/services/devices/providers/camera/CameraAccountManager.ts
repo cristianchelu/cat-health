@@ -85,8 +85,6 @@ export class CameraAccountManager implements AccountManager {
       // Try to capture a snapshot to verify the URL
       const result = await controller.captureSnapshot({
         timestamp: new Date(),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        eventType: 'visit_entry' as any, // Dummy event type
       });
 
       if (!result) {

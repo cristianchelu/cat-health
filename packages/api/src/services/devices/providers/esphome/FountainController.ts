@@ -1,6 +1,6 @@
 import { type Entity as EspHomeEntity } from 'esphome-client';
 import sharp from 'sharp';
-import type { EventType, WaterFountainState } from 'shared';
+import type { WaterFountainState } from 'shared';
 import type { Camera, ProviderDeps, Device } from '../../types.ts';
 import type { PendingMedia } from '../../../media/MediaManager.ts';
 import type {
@@ -46,7 +46,36 @@ interface DrinkingAnalysis {
   duration: number;       // seconds of valid drinking
   rawAmount: number;      // total weight drop across session
   excludedAmount: number; // weight drop excluded by rate filter
-  filtered: boolean;      // true if any segments were excluded
+  filtered: boolean; // true if any segments were excluded
+}
+
+/** Merge device-reported aggregates with server-side segment analysis for persistence. */
+function buildPersistedDrinkMetrics(options: {
+  deviceAmount: number;
+  deviceDuration: number;
+  analysis: DrinkingAnalysis;
+  sessionStart: Date;
+  sessionEnd: Date;
+}): { amount: number; duration: number; raw_amount: number } {
+  const { deviceAmount, deviceDuration, analysis, sessionStart, sessionEnd } =
+    options;
+
+  const raw_amount =
+    deviceAmount > analysis.rawAmount
+      ? Math.round(deviceAmount)
+      : analysis.rawAmount;
+
+  const amount =
+    deviceAmount > 0
+      ? Math.max(0, Math.round(deviceAmount - analysis.excludedAmount))
+      : analysis.amount;
+
+  const wallClockDuration = Math.round(
+    (sessionEnd.getTime() - sessionStart.getTime()) / 1000,
+  );
+  const duration = deviceDuration > 0 ? deviceDuration : wallClockDuration;
+
+  return { amount, duration, raw_amount };
 }
 
 /**
@@ -307,15 +336,14 @@ export class FountainController
             device_id: this.deviceId,
             raw_data: null,
           };
-
-          // Snapshots are captured and linked by EventMediaCoordinator on
-          // device.activity.start / device.event (same pattern as LitterboxController).
         } else {
           // Activity just ended — close the session
           console.log('Activity ended.');
 
+          const activityEndTime = new Date();
+
           if (this.currentSession) {
-            this.currentSession.endTime = new Date();
+            this.currentSession.endTime = activityEndTime;
           }
 
           const session = this.currentSession;
@@ -331,17 +359,32 @@ export class FountainController
 
             console.log(
               `[Fountain] Drinking analysis: ${analysis.amount}ml valid, ` +
-              `${analysis.excludedAmount}ml excluded, ` +
-              `${analysis.duration}s duration, filtered=${analysis.filtered}`,
+              `${analysis.excludedAmount}ml excluded, ${analysis.rawAmount}ml raw, ` +
+              `${analysis.duration}s filtered-duration, filtered=${analysis.filtered}`,
             );
 
             if (this.currentEvent) {
               const eventToSave = this.currentEvent;
               this.currentEvent = null;
 
-              eventToSave.data.amount = analysis.amount;
-              eventToSave.data.duration = analysis.duration;
-              eventToSave.data.raw_amount = analysis.rawAmount;
+              // Device-reported values captured via handleSensorUpdate before activity ended.
+              // The device uses a 5s pre-activity rolling baseline so it knows the water level
+              // before the activity sensor fires — giving it a more complete picture than the
+              // server, which only starts collecting samples after the activity signal arrives.
+              const deviceAmount = eventToSave.data.amount; // 0 if sensor update not received
+              const deviceDuration = eventToSave.data.duration ?? 0; // 0 if sensor update not received
+
+              const metrics = buildPersistedDrinkMetrics({
+                deviceAmount,
+                deviceDuration,
+                analysis,
+                sessionStart: session.startTime,
+                sessionEnd: session.endTime!,
+              });
+
+              eventToSave.data.amount = metrics.amount;
+              eventToSave.data.duration = metrics.duration;
+              eventToSave.data.raw_amount = metrics.raw_amount;
               eventToSave.data.excluded_amount = analysis.excludedAmount;
               eventToSave.data.filtered = analysis.filtered;
               eventToSave.raw_data = rawData;
@@ -428,12 +471,12 @@ export class FountainController
 
     console.log('--- SAVING DRINK EVENT ---');
     console.log(`Device: ${this.device.name}`);
-    console.log(`Amount: ${eventData.amount}ml (filtered)`);
+    console.log(`Amount: ${eventData.amount}ml`);
     if (eventData.raw_amount != null) {
-      console.log(`Raw amount: ${eventData.raw_amount}ml`);
-      console.log(`Excluded: ${eventData.excluded_amount}ml`);
+      console.log(`Raw amount: ${eventData.raw_amount}ml (device-corrected)`);
+      console.log(`Excluded: ${eventData.excluded_amount}ml (rate-filtered)`);
     }
-    console.log(`Duration: ${eventData.duration}s`);
+    console.log(`Duration: ${eventData.duration}s (device-reported)`);
     console.log('--------------------------');
 
     try {
@@ -573,7 +616,6 @@ export class FountainController
 
   async captureSnapshot(options: {
     timestamp: Date;
-    eventType: EventType;
     crop?: { left: number; top: number; width: number; height: number };
     rotate?: number;
   }): Promise<PendingMedia | undefined> {
@@ -623,9 +665,7 @@ export class FountainController
 
       await pipeline.toFile(pendingMedia.path);
 
-      console.log(
-        `Snapshot saved to ${pendingMedia.path} for event ${options.eventType}`,
-      );
+      console.log(`Snapshot saved to ${pendingMedia.path}`);
       return pendingMedia;
     } catch (error) {
       console.error(

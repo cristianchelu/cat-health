@@ -11,7 +11,6 @@ export type { Device, ProviderAccount };
 export interface Camera extends DeviceController {
   captureSnapshot(options: {
     timestamp: Date;
-    eventType: EventType;
     crop?: { left: number; top: number; width: number; height: number };
     rotate?: number;
   }): Promise<PendingMedia | undefined>;
