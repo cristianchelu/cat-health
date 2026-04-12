@@ -21,7 +21,10 @@ CMD ["npm", "run", "start", "-w", "api"]
 
 # ---- Build ----
 FROM deps AS build
-COPY . .
+COPY tsconfig.json ./
+COPY packages/shared ./packages/shared
+COPY packages/api ./packages/api
+COPY packages/ui ./packages/ui
 RUN npm run build --workspaces --if-present
 
 # ---- Production Dependencies ----

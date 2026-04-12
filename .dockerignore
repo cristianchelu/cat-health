@@ -1,9 +1,23 @@
+# Dependencies & build output
 node_modules
 **/node_modules
-data/recordings
-data/database.sqlite
-npm-debug.log
 dist
 packages/ui/dist
 packages/api/dist
+npm-debug.log
+*.tsbuildinfo
+
+# Secrets
 .env
+
+# VCS & editor (not needed in image)
+.git
+**/.git
+.cursor
+
+# Local runtime data (bind-mounted in compose; never needed for build)
+data/
+
+# Repo meta / agent notes
+summaries/
+AGENTS.md
