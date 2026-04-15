@@ -410,6 +410,7 @@
         "chart_occ_mean": "μ {{value}}",
         "chart_bout_sigma": "σ {{value}}",
         "chart_legend_mean": "mean weight",
-        "chart_legend_sigma_rms": "RMS"
+        "chart_legend_sigma_rms": "RMS",
+        "chart_axis_scrub": "Seek video: drag or click along the time scale"
     }
 }

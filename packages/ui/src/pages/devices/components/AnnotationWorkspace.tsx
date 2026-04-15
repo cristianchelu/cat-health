@@ -301,6 +301,101 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     onVideoOpenChange(!videoOpen);
   }, [hasVideo, isLoadingMedia, isSaving, onVideoOpenChange, videoOpen]);
 
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const videoTimeRafRef = React.useRef<number | null>(null);
+  const [videoDurationSec, setVideoDurationSec] = React.useState<number | null>(null);
+  const [playheadChartSec, setPlayheadChartSec] = React.useState<number | null>(null);
+
+  const chartDurationSec = React.useMemo(() => {
+    if (!weights.length) return 0;
+    return weights.length / sampleRate;
+  }, [weights.length, sampleRate]);
+
+  /**
+   * When chart span and file length differ (trim, codec, camera buffer), map linearly
+   * so chart 0↔end aligns with video 0↔end without backend offset metadata.
+   */
+  const mapVideoTimeToChartSec = React.useCallback(
+    (videoT: number) => {
+      if (chartDurationSec <= 0) return 0;
+      const vd = videoDurationSec;
+      if (vd != null && vd > 0 && Number.isFinite(vd)) {
+        const scaled = (videoT / vd) * chartDurationSec;
+        return Math.max(0, Math.min(scaled, chartDurationSec));
+      }
+      return Math.max(0, Math.min(videoT, chartDurationSec));
+    },
+    [chartDurationSec, videoDurationSec],
+  );
+
+  const mapChartSecToVideoTime = React.useCallback(
+    (chartSec: number) => {
+      if (chartDurationSec <= 0) return 0;
+      const vd = videoDurationSec;
+      if (vd != null && vd > 0 && Number.isFinite(vd)) {
+        const scaled = (chartSec / chartDurationSec) * vd;
+        return Math.max(0, Math.min(scaled, vd));
+      }
+      return Math.max(0, Math.min(chartSec, chartDurationSec));
+    },
+    [chartDurationSec, videoDurationSec],
+  );
+
+  const syncPlayheadFromVideo = React.useCallback(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    setPlayheadChartSec(mapVideoTimeToChartSec(el.currentTime));
+  }, [mapVideoTimeToChartSec]);
+
+  const onVideoTimeTick = React.useCallback(() => {
+    if (videoTimeRafRef.current != null) return;
+    videoTimeRafRef.current = requestAnimationFrame(() => {
+      videoTimeRafRef.current = null;
+      syncPlayheadFromVideo();
+    });
+  }, [syncPlayheadFromVideo]);
+
+  React.useEffect(
+    () => () => {
+      if (videoTimeRafRef.current != null) cancelAnimationFrame(videoTimeRafRef.current);
+    },
+    [],
+  );
+
+  React.useEffect(() => {
+    setPlayheadChartSec(null);
+    setVideoDurationSec(null);
+  }, [event.id]);
+
+  React.useEffect(() => {
+    if (!showMediaSection || !hasVideo) setPlayheadChartSec(null);
+  }, [showMediaSection, hasVideo]);
+
+  const handleAxisSeek = React.useCallback(
+    (chartSec: number) => {
+      const el = videoRef.current;
+      if (!el) return;
+      el.currentTime = mapChartSecToVideoTime(chartSec);
+      setPlayheadChartSec(mapVideoTimeToChartSec(el.currentTime));
+    },
+    [mapChartSecToVideoTime, mapVideoTimeToChartSec],
+  );
+
+  const chartMediaSync = React.useMemo(() => {
+    if (!hasVideo || !showMediaSection || chartDurationSec <= 0) return undefined;
+    return {
+      playheadChartSec,
+      onAxisSeek: handleAxisSeek,
+    };
+  }, [chartDurationSec, handleAxisSeek, hasVideo, playheadChartSec, showMediaSection]);
+
+  React.useEffect(() => {
+    if (!showMediaSection || !hasVideo) return;
+    const el = videoRef.current;
+    if (!el) return;
+    syncPlayheadFromVideo();
+  }, [hasVideo, showMediaSection, syncPlayheadFromVideo, videoDurationSec]);
+
   React.useEffect(() => {
     if (!actionsRef) return;
 
@@ -394,9 +489,31 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
           )}
           {!isLoadingMedia && hasVideo && (
             <div className="annotation-media-gallery">
-              {videoItems.map((m) => (
+              {videoItems.map((m, i) => (
                 <div key={m.id} className="annotation-media-item">
-                  <video controls src={`api/media/${m.file_path}`} />
+                  <video
+                    ref={i === 0 ? videoRef : undefined}
+                    controls
+                    src={`api/media/${m.file_path}`}
+                    onLoadedMetadata={(e) => {
+                      if (i !== 0) return;
+                      const el = e.currentTarget;
+                      const d = el.duration;
+                      setVideoDurationSec(Number.isFinite(d) && d > 0 ? d : null);
+                      const cDur = chartDurationSec;
+                      if (cDur <= 0) return;
+                      const vd = Number.isFinite(d) && d > 0 ? d : null;
+                      if (vd != null) {
+                        setPlayheadChartSec(
+                          Math.max(0, Math.min((el.currentTime / vd) * cDur, cDur)),
+                        );
+                      } else {
+                        setPlayheadChartSec(Math.max(0, Math.min(el.currentTime, cDur)));
+                      }
+                    }}
+                    onTimeUpdate={i === 0 ? onVideoTimeTick : undefined}
+                    onSeeked={i === 0 ? syncPlayheadFromVideo : undefined}
+                  />
                 </div>
               ))}
             </div>
@@ -417,6 +534,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
             onBoutsChange={handleBoutsChange}
             selectedBoutIndex={selectedBoutIndex}
             onSelectBout={setSelectedBoutIndex}
+            mediaSync={chartMediaSync}
           />
         ) : (
           <div className="annotation-no-chart">

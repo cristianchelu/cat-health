@@ -6,6 +6,12 @@ import type { LitterboxBoutAnnotation } from '@/types/litterbox';
 
 import './WeightSignalChart.css';
 
+export interface WeightSignalChartMediaSync {
+  /** Position along the chart timeline in seconds; null hides the playhead. */
+  playheadChartSec: number | null;
+  onAxisSeek: (chartSec: number) => void;
+}
+
 interface WeightSignalChartProps extends React.ComponentProps<'div'> {
   weights: number[];
   periods: StatePeriod[];
@@ -15,6 +21,8 @@ interface WeightSignalChartProps extends React.ComponentProps<'div'> {
   onBoutsChange?: (bouts: LitterboxBoutAnnotation[]) => void;
   selectedBoutIndex?: number | null;
   onSelectBout?: (index: number | null) => void;
+  /** Video sync: playhead and scrub only on the bottom time-axis strip (annotation workspace). */
+  mediaSync?: WeightSignalChartMediaSync;
 }
 
 const STATE_COLORS: Record<string, string> = {
@@ -171,6 +179,7 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
       onBoutsChange,
       selectedBoutIndex,
       onSelectBout,
+      mediaSync,
       ...props
     },
     ref,
@@ -228,6 +237,47 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
       const rect = svgRef.current.getBoundingClientRect();
       const rawX = ((e.clientX - rect.left) / rect.width) * SVG_WIDTH;
       return clamp(rawX, 0, SVG_WIDTH);
+    }, []);
+
+    const getSvgXFromPointerLike = React.useCallback((e: { clientX: number; clientY: number }): number => {
+      if (!svgRef.current) return 0;
+      const rect = svgRef.current.getBoundingClientRect();
+      const rawX = ((e.clientX - rect.left) / rect.width) * SVG_WIDTH;
+      return clamp(rawX, 0, SVG_WIDTH);
+    }, []);
+
+    const axisDragRef = React.useRef(false);
+
+    const handleAxisPointerDown = React.useCallback(
+      (e: React.PointerEvent<SVGRectElement>) => {
+        if (!mediaSync || !isInteractive || duration <= 0) return;
+        e.stopPropagation();
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        axisDragRef.current = true;
+        const x = getSvgXFromPointerLike(e);
+        mediaSync.onAxisSeek(xToSec(x));
+      },
+      [duration, getSvgXFromPointerLike, isInteractive, mediaSync, xToSec],
+    );
+
+    const handleAxisPointerMove = React.useCallback(
+      (e: React.PointerEvent<SVGRectElement>) => {
+        if (!axisDragRef.current || !mediaSync || duration <= 0) return;
+        const x = getSvgXFromPointerLike(e);
+        mediaSync.onAxisSeek(xToSec(x));
+      },
+      [duration, getSvgXFromPointerLike, mediaSync, xToSec],
+    );
+
+    const handleAxisPointerUp = React.useCallback((e: React.PointerEvent<SVGRectElement>) => {
+      if (!axisDragRef.current) return;
+      axisDragRef.current = false;
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        /* already released */
+      }
     }, []);
 
     const handlePointerDown = React.useCallback(
@@ -572,6 +622,38 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
                   </g>
                 );
               })}
+              {mediaSync && isInteractive && duration > 0 && (
+                <rect
+                  className="chart-axis-scrub-hit"
+                  x={0}
+                  y={chartHeight}
+                  width={SVG_WIDTH}
+                  height={AXIS_HEIGHT}
+                  fill="transparent"
+                  cursor="ew-resize"
+                  aria-label={t('annotation.chart_axis_scrub')}
+                  onPointerDown={handleAxisPointerDown}
+                  onPointerMove={handleAxisPointerMove}
+                  onPointerUp={handleAxisPointerUp}
+                  onPointerCancel={handleAxisPointerUp}
+                />
+              )}
+              {mediaSync &&
+                mediaSync.playheadChartSec != null &&
+                Number.isFinite(mediaSync.playheadChartSec) &&
+                duration > 0 && (
+                  <line
+                    className="chart-axis-playhead"
+                    x1={secToX(clamp(mediaSync.playheadChartSec, 0, duration))}
+                    y1={chartHeight}
+                    x2={secToX(clamp(mediaSync.playheadChartSec, 0, duration))}
+                    y2={svgHeight}
+                    stroke="var(--color-primary)"
+                    strokeWidth={2}
+                    vectorEffect="non-scaling-stroke"
+                    pointerEvents="none"
+                  />
+                )}
             </g>
           )}
         </svg>

@@ -349,6 +349,7 @@
         "chart_occ_mean": "μ {{value}}",
         "chart_bout_sigma": "σ {{value}}",
         "chart_legend_mean": "medie greutate",
-        "chart_legend_sigma_rms": "RMS"
+        "chart_legend_sigma_rms": "RMS",
+        "chart_axis_scrub": "Video: trage sau clic pe axa timpului"
     }
 }

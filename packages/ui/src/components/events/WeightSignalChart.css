@@ -26,6 +26,14 @@
     overflow: visible;
   }
 
+  .chart-axis-scrub-hit {
+    touch-action: none;
+  }
+
+  .chart-axis-playhead {
+    pointer-events: none;
+  }
+
   .chart-legend {
     display: flex;
     flex-wrap: wrap;
