@@ -23,7 +23,7 @@ import { decodeLitterboxRawData } from './decodeLitterboxRawData';
 import { decodeWaterRawData } from './decodeWaterRawData';
 import { analyzeWaterSegments } from './analyzeWaterSegments';
 import './EventDetailsModal.css';
-import { Loader2, Trash2, Download, Info, Image, Activity, RefreshCw } from 'lucide-react';
+import { Loader2, Trash2, Download, Info, Image, Activity, Sparkles } from 'lucide-react';
 
 const EMPTY_LITTERBOX_SEGMENT_PERIODS: LitterboxAnalysisStatePeriod[] = [];
 
@@ -310,25 +310,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           )}
           {activeTab === 'analysis' && hasLitterboxChartWeights && decodedRawData && (
             <div className="event-details-litterbox-analysis">
-              <div className="event-details-analysis-toolbar">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  icon
-                  size="sm"
-                  className="event-details-reanalyze-btn"
-                  disabled={isAnalyzing}
-                  title={t('event_details.analyze')}
-                  aria-label={t('event_details.analyze')}
-                  onClick={() => runAnalyze(displayEvent.id)}
-                >
-                  {isAnalyzing ? (
-                    <Loader2 size={18} className="animate-spin" aria-hidden />
-                  ) : (
-                    <RefreshCw size={18} aria-hidden />
-                  )}
-                </Button>
-              </div>
               <WeightSignalChart
                 weights={decodedRawData.weights}
                 periods={segmentPeriods ?? EMPTY_LITTERBOX_SEGMENT_PERIODS}
@@ -354,6 +335,27 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               </span>
             </div>
             <div className="event-actions">
+              {hasLitterboxChartWeights && (
+                <>
+                  {/* TODO: Hide for devices with visit annotation off — needs device context on the event (or similar) without an extra device fetch. */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    icon
+                    className="action-btn"
+                    title={t('event_details.analyze')}
+                    aria-label={t('event_details.analyze')}
+                    onClick={() => runAnalyze(displayEvent.id)}
+                    disabled={isAnalyzing}
+                  >
+                    {isAnalyzing ? (
+                      <Loader2 size={20} aria-hidden className="animate-spin" />
+                    ) : (
+                      <Sparkles size={20} aria-hidden />
+                    )}
+                  </Button>
+                </>
+              )}
               <Button
                 variant="ghost"
                 icon

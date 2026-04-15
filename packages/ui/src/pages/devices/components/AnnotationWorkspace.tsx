@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckCheck, AlertCircle, Trash2, Loader2, RotateCcw, Ban, Wrench, Video, RefreshCw } from 'lucide-react';
+import { CheckCheck, AlertCircle, Trash2, Loader2, RotateCcw, Ban, Wrench, Video, Sparkles } from 'lucide-react';
 import { useAnalyzeLitterboxEvent, useEventMedia, usePatchEvent } from '@/hooks/queries/eventQueries';
 import { usePets } from '@/hooks/queries/petQueries';
 import { Select } from '@/components/ui/form/Select';
@@ -70,6 +70,7 @@ export interface AnnotationWorkspaceActions {
   setSelectedBoutType: (boutType: LitterboxBoutAnnotation['bout_type']) => void;
   clearSelection: () => void;
   convertToMaintenance: () => Promise<void>;
+  reanalyze: () => void;
 }
 
 const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
@@ -317,6 +318,11 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
 
   const hasRawData = weights.length > 0;
 
+  const handleReanalyze = React.useCallback(() => {
+    if (!hasRawData || isSaving || isAnalyzing) return;
+    runAnalyze(event.id);
+  }, [hasRawData, isAnalyzing, isSaving, runAnalyze, event.id]);
+
   const videoItems = React.useMemo(
     () => (media ?? []).filter((m) => m.mime_type.startsWith('video/')),
     [media],
@@ -485,6 +491,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
       },
       clearSelection: () => setSelectedBoutIndex(null),
       convertToMaintenance: handleConvertToMaintenance,
+      reanalyze: handleReanalyze,
     };
 
     return () => {
@@ -500,6 +507,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     flushSave,
     handleBoutTypeChange,
     handleConvertToMaintenance,
+    handleReanalyze,
     handleDeleteBout,
     localBouts,
     petId,
@@ -560,37 +568,16 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
           Suspect query invalidation/refetch, parent re-renders, analyze mutation, or drag render path—profile and isolate chart / narrow invalidation / batch drag updates. */}
       <div className="annotation-workspace-chart">
         {hasRawData ? (
-          <div className="annotation-chart-with-overlay">
-            <div className="annotation-analyze-toolbar">
-              <Button
-                type="button"
-                variant="ghost"
-                icon
-                size="sm"
-                className="annotation-reanalyze-btn"
-                disabled={isSaving || isAnalyzing}
-                title={t('event_details.analyze')}
-                aria-label={t('event_details.analyze')}
-                onClick={() => runAnalyze(event.id)}
-              >
-                {isAnalyzing ? (
-                  <Loader2 size={16} aria-hidden className="animate-spin" />
-                ) : (
-                  <RefreshCw size={16} aria-hidden />
-                )}
-              </Button>
-            </div>
-            <WeightSignalChart
-              weights={weights}
-              periods={analysisResult?.periods ?? EMPTY_ANALYSIS_PERIODS}
-              sampleRate={sampleRate}
-              bouts={localBouts}
-              onBoutsChange={handleBoutsChange}
-              selectedBoutIndex={selectedBoutIndex}
-              onSelectBout={setSelectedBoutIndex}
-              mediaSync={chartMediaSync}
-            />
-          </div>
+          <WeightSignalChart
+            weights={weights}
+            periods={analysisResult?.periods ?? EMPTY_ANALYSIS_PERIODS}
+            sampleRate={sampleRate}
+            bouts={localBouts}
+            onBoutsChange={handleBoutsChange}
+            selectedBoutIndex={selectedBoutIndex}
+            onSelectBout={setSelectedBoutIndex}
+            mediaSync={chartMediaSync}
+          />
         ) : (
           <div className="annotation-no-chart">
             <AlertCircle size={24} />
@@ -654,6 +641,22 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
                 }
               >
                 <Video size={16} aria-hidden />
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleReanalyze}
+                disabled={isSaving || isAnalyzing || !hasRawData}
+                className="annotation-icon-action-btn"
+                aria-label={t('event_details.analyze')}
+                title={t('event_details.analyze')}
+              >
+                {isAnalyzing ? (
+                  <Loader2 size={16} aria-hidden className="animate-spin" />
+                ) : (
+                  <Sparkles size={16} aria-hidden />
+                )}
               </Button>
               <Button
                 type="button"
@@ -748,6 +751,12 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
                 <kbd className="annotation-kbd">s</kbd>
                 {' '}
                 {t('annotation.kbd_s')}
+              </span>
+              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
+              <span className="annotation-kbd-hint">
+                <kbd className="annotation-kbd">r</kbd>
+                {' '}
+                {t('annotation.kbd_r')}
               </span>
               <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
               <span className="annotation-kbd-hint">

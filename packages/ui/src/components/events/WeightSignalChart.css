@@ -111,13 +111,13 @@
     }
 
     &.bout-urination {
-      background: rgba(99, 102, 241, 0.35);
-      border: 1.5px solid rgba(99, 102, 241, 0.9);
+      background: rgba(180, 120, 20, 0.35);
+      border: 1.5px solid rgba(180, 120, 20, 0.9);
     }
 
     &.bout-defecation {
-      background: rgba(180, 120, 20, 0.35);
-      border: 1.5px solid rgba(180, 120, 20, 0.9);
+      background: rgba(139, 69, 19, 0.35);
+      border: 1.5px solid rgba(139, 69, 19, 0.9);
     }
   }
 

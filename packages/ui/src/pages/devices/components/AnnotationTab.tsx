@@ -463,6 +463,12 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
         return;
       }
 
+      if (lower === 'r') {
+        e.preventDefault();
+        workspaceActionsRef.current?.reanalyze();
+        return;
+      }
+
       if (e.shiftKey && lower === 'm') {
         e.preventDefault();
         void workspaceActionsRef.current?.convertToMaintenance();

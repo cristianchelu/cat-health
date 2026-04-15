@@ -32,15 +32,16 @@ const STATE_COLORS: Record<string, string> = {
   gap: 'var(--color-state-gap)',
 };
 
+/** Urination: amber/orange; defecation: saddle brown (aligned with overview event dots). */
 const BOUT_FILL_COLORS: Record<LitterboxBoutAnnotation['bout_type'], string> = {
-  urination: 'rgba(99, 102, 241, 0.28)',
-  defecation: 'rgba(180, 120, 20, 0.28)',
+  urination: 'rgba(180, 120, 20, 0.28)',
+  defecation: 'rgba(139, 69, 19, 0.28)',
   unknown: 'rgba(156, 163, 175, 0.3)',
 };
 
 const BOUT_STROKE_COLORS: Record<LitterboxBoutAnnotation['bout_type'], string> = {
-  urination: 'rgba(99, 102, 241, 0.9)',
-  defecation: 'rgba(180, 120, 20, 0.9)',
+  urination: 'rgba(180, 120, 20, 0.9)',
+  defecation: 'rgba(139, 69, 19, 0.9)',
   unknown: 'rgba(100, 110, 130, 0.8)',
 };
 
