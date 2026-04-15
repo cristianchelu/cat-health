@@ -1,6 +1,7 @@
 import {
   getDevice,
   getDeviceEvents,
+  getDeviceAnnotationEvents,
   getDevices,
   getProviders,
   getProviderAccounts,
@@ -100,6 +101,17 @@ export function useUpdateEvent(deviceId: number, currentDate: string) {
         queryKey: ['deviceEvents', deviceId, currentDate],
       });
     },
+  });
+}
+
+export function useDeviceAnnotationEvents(
+  deviceId: number,
+  opts: { limit?: number; offset?: number; human_verified?: boolean } = {},
+) {
+  return useQuery({
+    queryKey: ['deviceAnnotationEvents', deviceId, opts],
+    queryFn: () => getDeviceAnnotationEvents(deviceId, opts),
+    placeholderData: keepPreviousData,
   });
 }
 

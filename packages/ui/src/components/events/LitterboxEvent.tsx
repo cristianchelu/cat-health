@@ -10,6 +10,7 @@ import EventPet from './meta/EventPet';
 import EventVerified from './meta/EventVerified';
 import PoopIcon from '../icons/PoopIcon';
 import type { LitterboxUseEliminationType } from 'shared';
+import type { LitterboxAnnotation } from '@/types/litterbox';
 
 const ICON_MAP: Record<LitterboxUseEliminationType, React.ElementType> = {
   urination: Droplets,
@@ -90,6 +91,11 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
           {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
           {event.human_verified && <EventVerified />}
+          {event.human_verified && (data as { annotation?: LitterboxAnnotation }).annotation?.bouts?.length ? (
+            <Timeline.Badge variant="default">
+              {t('annotation.status_bout')}
+            </Timeline.Badge>
+          ) : null}
           {data.straining && (
             <Timeline.Badge variant="warning">
               {t('overview.straining_detected')}

@@ -24,12 +24,27 @@ import {
   type LitterboxUseEliminationType,
 } from 'shared';
 
-import { type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
+import {
+  Type,
+  type FastifyPluginAsyncTypebox,
+} from '@fastify/type-provider-typebox';
 import { db } from '../database/index.ts';
 import type { Food } from '../database/types/FoodTable.ts';
 import { MediaManager } from '../services/media/MediaManager.ts';
 
 type FoodNutrientItem = { nutrient: string; unit: string; value: number };
+
+const Http404ResponseSchema = Type.Object({
+  statusCode: Type.Literal(404),
+  error: Type.Literal('Not Found'),
+  message: Type.String(),
+});
+
+const Http400BadRequestSchema = Type.Object({
+  statusCode: Type.Literal(400),
+  error: Type.Literal('Bad Request'),
+  message: Type.String(),
+});
 
 function calculateNutrientsFromFood(
   amount: number,
@@ -439,6 +454,42 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     },
   );
 
+  fastify.get(
+    '/:eventId',
+    {
+      schema: {
+        params: PatchEventParamsSchema,
+        response: {
+          '200': GetEventSchema,
+          '404': Http404ResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { eventId } = request.params;
+
+      const event = await db
+        .selectFrom('event')
+        .selectAll()
+        .where('id', '=', eventId)
+        .where('parent_event_id', 'is', null)
+        .executeTakeFirst();
+
+      if (!event) {
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Event not found',
+        });
+      }
+
+      return {
+        ...event,
+        raw_data: event.raw_data ? Array.from(event.raw_data) : null,
+      };
+    },
+  );
+
   fastify.post(
     '/',
     {
@@ -527,16 +578,92 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PatchEventRequestSchema,
         response: {
           '200': GetEventSchema,
+          '400': Http400BadRequestSchema,
+          '404': Http404ResponseSchema,
         },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const { eventId } = request.params;
-      const { body } = request;
+      const body = request.body;
+
+      const existing = await db
+        .selectFrom('event')
+        .select(['id', 'pet_id', 'device_id', 'parent_event_id'])
+        .where('id', '=', eventId)
+        .executeTakeFirst();
+
+      if (!existing) {
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Event not found',
+        });
+      }
+
+      // SQLite re-checks all FK columns on UPDATE. Orphaned references (e.g. device removed while
+      // foreign_keys were off, or manual DB edits) would make any PATCH fail with SQLITE_CONSTRAINT_FOREIGNKEY
+      // even when the client only updates `data`. Clear broken references before applying the patch.
+      const fkRepair: {
+        pet_id?: null;
+        device_id?: null;
+        parent_event_id?: null;
+      } = {};
+
+      if (existing.pet_id != null) {
+        const ok = await db
+          .selectFrom('pet')
+          .select('id')
+          .where('id', '=', existing.pet_id)
+          .executeTakeFirst();
+        if (!ok) fkRepair.pet_id = null;
+      }
+      if (existing.device_id != null) {
+        const ok = await db
+          .selectFrom('device')
+          .select('id')
+          .where('id', '=', existing.device_id)
+          .executeTakeFirst();
+        if (!ok) fkRepair.device_id = null;
+      }
+      if (existing.parent_event_id != null) {
+        const ok = await db
+          .selectFrom('event')
+          .select('id')
+          .where('id', '=', existing.parent_event_id)
+          .executeTakeFirst();
+        if (!ok) fkRepair.parent_event_id = null;
+      }
+
+      // Only validate FK for a real pet row id (positive integer). 0 / NaN / null must not hit this lookup.
+      let patchBody = body;
+      if (body.pet_id !== undefined && body.pet_id !== null) {
+        const p = body.pet_id;
+        const invalidPetId =
+          typeof p !== 'number' ||
+          !Number.isInteger(p) ||
+          p < 1;
+        if (invalidPetId) {
+          patchBody = { ...body, pet_id: null };
+        } else {
+          const ok = await db
+            .selectFrom('pet')
+            .select('id')
+            .where('id', '=', p)
+            .executeTakeFirst();
+          if (!ok) {
+            return reply.code(400).send({
+              statusCode: 400,
+              error: 'Bad Request',
+              message: 'pet_id does not exist',
+            });
+          }
+        }
+      }
 
       const result = await db
         .updateTable('event')
-        .set(body)
+        .set({ ...fkRepair, ...patchBody })
         .where('id', '=', eventId)
         .returningAll()
         .executeTakeFirstOrThrow();

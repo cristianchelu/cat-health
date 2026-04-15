@@ -1,10 +1,12 @@
+import type { LitterboxUseEliminationType } from 'shared';
+
+// --- State analyzer (plateau detection for accurate cat weight and elimination type) ---
+
 export interface StatePeriod {
   state: string;
   start: number;
   end: number;
   variance?: number;
-  /** Mean weight (same units as `weights`) on the trimmed slice used for `variance`. */
-  meanWeight?: number;
 }
 
 export interface StateResult {
@@ -14,7 +16,9 @@ export interface StateResult {
   periods: StatePeriod[];
 }
 
-class Ring {
+export type StateTransition = { from: string; to: string; index: number };
+
+export class Ring {
   private buf: number[];
   private i = 0;
   private filled = 0;
@@ -25,7 +29,7 @@ class Ring {
     this.n = n;
   }
 
-  push(x: number) {
+  push(x: number): void {
     this.buf[this.i] = x;
     this.i = (this.i + 1) % this.n;
     this.filled = Math.min(this.filled + 1, this.n);
@@ -53,31 +57,37 @@ class Ring {
     return this.buf.every(fn);
   }
 
-  size() {
+  first(): number | undefined {
+    return this.filled ? this.buf[0] : undefined;
+  }
+
+  last(): number | undefined {
+    return this.filled ? this.buf[(this.i + this.n - 1) % this.n] : undefined;
+  }
+
+  size(): number {
     return this.filled;
+  }
+
+  toArray(): number[] {
+    const result: number[] = [];
+    for (let k = 0; k < this.filled; k++) {
+      result.push(this.buf[k]);
+    }
+    return result;
   }
 }
 
-interface StateTransition {
-  from: string;
-  to: string;
-  index: number;
-}
+export class StateAnalyzer {
+  private states = {
+    EMPTY: 'empty',
+    ENTERING: 'entering',
+    OCCUPIED: 'occupied',
+    ELIMINATING: 'eliminating',
+    GAP: 'gap',
+    ENDED: 'ended',
+  };
 
-const STATES = {
-  EMPTY: 'empty',
-  ENTERING: 'entering',
-  OCCUPIED: 'occupied',
-  ELIMINATING: 'eliminating',
-  GAP: 'gap',
-  ENDED: 'ended',
-} as const;
-export type LitterboxState = (typeof STATES)[keyof typeof STATES];
-
-export class LitterboxStateTracker {
-  private states = STATES;
-
-  // Config
   private hz = 10;
   private varStable = Math.sqrt(250);
   private stableMergeGap = 1.5 * this.hz;
@@ -90,26 +100,21 @@ export class LitterboxStateTracker {
   private knownPresenceTol = 0.1;
   private windowSize = 10;
 
-  private currentState: LitterboxState = this.states.EMPTY;
+  private currentState = this.states.EMPTY;
   private knownCatWeights: number[];
-
   private window = new Ring(this.windowSize);
   private weightHistory = new Ring(this.windowSize);
   private meanHistory = new Ring(3);
-
   private exitBelowCnt = 0;
   private gapCnt = 0;
   private stableCnt = 0;
-
   private sessionActive = false;
   private sessionStartSample = 0;
   private currentSample = 0;
-
   private wasteWeight = 0;
   private catWeight = 0;
   private bestStableWeight = 0;
   private bestStableDur = 0;
-
   private transitions: StateTransition[] = [];
 
   constructor(knownCatWeights?: number[]) {
@@ -120,23 +125,19 @@ export class LitterboxStateTracker {
   }
 
   processSample(weight: number, index: number): void {
-    this.currentSample = index;
-
-    this.window.push(weight);
-    this.weightHistory.push(weight);
-
-    const mean1s = this.window.mean();
-    this.meanHistory.push(mean1s);
-
-    const var10sample = Math.sqrt(this.weightHistory.variance());
-    const stableNow = var10sample > 0 && var10sample < this.varStable;
-
     if (
       this.sessionActive &&
-      this.currentSample - this.sessionStartSample > this.maxSession
+      index - this.sessionStartSample > this.maxSession
     ) {
       return;
     }
+    this.currentSample = index;
+    this.window.push(weight);
+    this.weightHistory.push(weight);
+    const mean1s = this.window.mean();
+    this.meanHistory.push(mean1s);
+    const var10sample = Math.sqrt(this.weightHistory.variance());
+    const stableNow = var10sample > 0 && var10sample < this.varStable;
 
     const entryDelta = this.entryThreshold();
     const presenceThreshold =
@@ -150,7 +151,6 @@ export class LitterboxStateTracker {
         }
         break;
       }
-
       case this.states.ENTERING: {
         if (!this.confirmPresence(mean1s)) {
           if (mean1s < 0.5 * this.entryThreshold()) {
@@ -158,12 +158,9 @@ export class LitterboxStateTracker {
           }
           break;
         }
-
-        // Transition to OCCUPIED when weight stabilizes above entry threshold
         if (
           this.meanHistory.variance() < 10 &&
-          (this.meanHistory.every((m) => this.nearKnownCatWeight(m)) ||
-            (this.meanHistory.size() >= 3 && mean1s > this.entryThreshold() * 1.5))
+          this.meanHistory.every((m) => this.nearKnownCatWeight(m))
         ) {
           this.transitionTo(this.states.OCCUPIED, this.windowSize / 2);
         } else {
@@ -171,25 +168,21 @@ export class LitterboxStateTracker {
         }
         break;
       }
-
       case this.states.OCCUPIED: {
         if (stableNow) {
-          // Transition to ELIMINATING when stable, either matching known weight
-          // or when we have a stable weight above entry threshold
-          if (
-            this.nearKnownCatWeight(mean1s) ||
-            mean1s > this.entryThreshold() * 1.5
-          ) {
+          if (this.nearKnownCatWeight(mean1s)) {
             this.transitionTo(this.states.ELIMINATING);
           }
         }
-
         if (weight < entryDelta) {
           this.transitionTo(this.states.GAP, this.windowSize);
           this.exitBelowCnt = 0;
           break;
         }
-        if (this.catWeight > 0 && this.catWeight - mean1s > presenceThreshold) {
+        if (
+          this.catWeight > 0 &&
+          this.catWeight - mean1s > presenceThreshold
+        ) {
           this.exitBelowCnt++;
           if (this.exitBelowCnt >= this.exitHold) {
             this.exitBelowCnt = 0;
@@ -201,7 +194,6 @@ export class LitterboxStateTracker {
         }
         break;
       }
-
       case this.states.ELIMINATING: {
         if (stableNow) {
           this.stableCnt++;
@@ -210,8 +202,10 @@ export class LitterboxStateTracker {
           this.stableCnt = 0;
           this.transitionTo(this.states.OCCUPIED);
         }
-
-        if (this.catWeight > 0 && this.catWeight - mean1s > presenceThreshold) {
+        if (
+          this.catWeight > 0 &&
+          this.catWeight - mean1s > presenceThreshold
+        ) {
           this.exitBelowCnt++;
           if (this.exitBelowCnt >= this.exitHold) {
             this.exitBelowCnt = 0;
@@ -223,19 +217,12 @@ export class LitterboxStateTracker {
         }
         break;
       }
-
       case this.states.GAP: {
         this.gapCnt++;
-
         if (mean1s > entryDelta) {
           if (stableNow) {
-            if (
-              this.nearKnownCatWeight(mean1s) ||
-              mean1s > this.entryThreshold() * 1.5
-            ) {
+            if (this.nearKnownCatWeight(mean1s)) {
               this.transitionTo(this.states.ELIMINATING);
-            } else {
-              this.transitionTo(this.states.ENTERING);
             }
           } else {
             this.transitionTo(this.states.ENTERING);
@@ -246,7 +233,6 @@ export class LitterboxStateTracker {
         }
         break;
       }
-
       case this.states.ENDED: {
         return;
       }
@@ -266,14 +252,13 @@ export class LitterboxStateTracker {
   }
 
   private postProcessTransitions(): StatePeriod[] {
-    if (!this.transitions.length) {
-      return [];
-    }
+    if (!this.transitions.length) return [];
 
     let initialPeriods: StatePeriod[] = [];
     for (let i = 0; i < this.transitions.length; i++) {
       const currentTransition = this.transitions[i];
-      const start = i === 0 ? this.sessionStartSample : currentTransition.index;
+      const start =
+        i === 0 ? this.sessionStartSample : currentTransition.index;
       const end = this.transitions[i + 1]
         ? this.transitions[i + 1].index
         : this.currentSample;
@@ -284,7 +269,6 @@ export class LitterboxStateTracker {
       (p) => p.state !== this.states.EMPTY && p.end > p.start,
     );
 
-    // Merge short OCCUPIED gaps between ELIMINATING states
     for (let i = 1; i < initialPeriods.length - 1; i++) {
       const prev = initialPeriods[i - 1];
       const curr = initialPeriods[i];
@@ -303,7 +287,6 @@ export class LitterboxStateTracker {
       }
     }
 
-    // Remove short ELIMINATING states
     const minEliminationDuration = 5 * this.hz;
     initialPeriods.forEach((p) => {
       if (
@@ -314,7 +297,6 @@ export class LitterboxStateTracker {
       }
     });
 
-    // Merge adjacent identical states
     if (initialPeriods.length === 0) return [];
 
     const mergedPeriods: StatePeriod[] = [{ ...initialPeriods[0] }];
@@ -327,7 +309,6 @@ export class LitterboxStateTracker {
         mergedPeriods.push({ ...currentPeriod });
       }
     }
-
     return mergedPeriods;
   }
 
@@ -341,13 +322,12 @@ export class LitterboxStateTracker {
     };
   }
 
-  public processEvent(weights: number[]): StateResult {
+  processEvent(weights: number[]): StateResult {
     this.reset();
     for (let i = 0; i < weights.length; i++) {
       this.processSample(weights[i], i);
     }
     const result = this.getSessionSummary();
-
     result.periods.forEach((period) => {
       const buffer = 10;
       const periodWeights = weights.slice(
@@ -356,7 +336,6 @@ export class LitterboxStateTracker {
       );
       if (periodWeights.length < 2) {
         period.variance = undefined;
-        period.meanWeight = undefined;
         return;
       }
       const mean =
@@ -365,14 +344,14 @@ export class LitterboxStateTracker {
         periodWeights.reduce((sum, w) => sum + Math.pow(w - mean, 2), 0) /
         periodWeights.length;
       period.variance = Math.sqrt(variance);
-      period.meanWeight = mean;
     });
-
     return result;
   }
 
   private entryThreshold(): number {
-    const minKnown = this.knownCatWeights.length ? this.knownCatWeights[0] : 0;
+    const minKnown = this.knownCatWeights.length
+      ? this.knownCatWeights[0]
+      : 0;
     const frac = minKnown
       ? Math.max(this.entryDeltaMin, minKnown * this.entryDeltaFrac)
       : this.entryDeltaMin;
@@ -391,13 +370,13 @@ export class LitterboxStateTracker {
     this.transitions = [];
   }
 
-  private transitionTo(newState: LitterboxState, offset?: number): void {
+  private transitionTo(newState: string, offset?: number): void {
     if (this.currentState !== newState) {
       if (this.sessionActive && newState === this.states.EMPTY) {
         this.currentState = newState;
+        this.endSession();
         return;
       }
-
       this.transitions.push({
         from: this.currentState,
         to: newState,
@@ -423,12 +402,17 @@ export class LitterboxStateTracker {
     return this.nearKnownCatWeight(rel) || rel > this.entryThreshold();
   }
 
+  private endSession(): StateResult {
+    this.sessionActive = false;
+    this.transitionTo(this.states.ENDED);
+    return this.getSessionSummary();
+  }
+
   reset(): void {
     this.currentState = this.states.EMPTY;
     this.sessionActive = false;
     this.window = new Ring(10);
     this.weightHistory = new Ring(10);
-    this.meanHistory = new Ring(3);
     this.catWeight = 0;
     this.bestStableWeight = 0;
     this.bestStableDur = 0;
@@ -438,4 +422,34 @@ export class LitterboxStateTracker {
     this.transitions = [];
     this.wasteWeight = 0;
   }
+}
+
+export const URINATION_VARIANCE_THRESHOLD_G = 4;
+
+export function determineEliminationType(
+  periods: StatePeriod[],
+): LitterboxUseEliminationType {
+  const eliminatingPeriods = periods.filter(
+    (p) => p.state === 'eliminating' && p.variance !== undefined,
+  );
+  if (eliminatingPeriods.length === 0) {
+    return 'no_elimination';
+  }
+
+  if (eliminatingPeriods.length === 1) {
+    return (eliminatingPeriods[0].variance ?? 0) < URINATION_VARIANCE_THRESHOLD_G
+      ? 'urination'
+      : 'defecation';
+  }
+
+  if (eliminatingPeriods.length === 2) {
+    const [a, b] = eliminatingPeriods;
+    const aIsUrination = (a.variance ?? 0) < URINATION_VARIANCE_THRESHOLD_G;
+    const bIsUrination = (b.variance ?? 0) < URINATION_VARIANCE_THRESHOLD_G;
+    if (aIsUrination !== bIsUrination) {
+      return 'both';
+    }
+  }
+
+  return 'unknown';
 }

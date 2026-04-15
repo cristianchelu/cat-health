@@ -1,0 +1,31 @@
+.device-annotate-page {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  /* Cancel main vertical padding for floor-to-ceiling use of the main column. */
+  margin-top: calc(-1 * var(--space-sm));
+  margin-bottom: calc(-1 * var(--space-sm));
+  /*
+   * Desktop: main sits in a 100svh-tall grid row; match that so the flex/grid chain gets a definite height.
+   * (Horizontal padding from main is unchanged.)
+   */
+  height: 100svh;
+  max-height: 100svh;
+
+  @media (max-width: 767px) {
+    margin-top: calc(-1 * var(--space-md));
+    margin-bottom: calc(-1 * var(--space-md));
+    /* Fill flex-sized #content (see App.css); avoids guessing pet selector + nav heights. */
+    height: auto;
+    max-height: none;
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .annotation-tab {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+}

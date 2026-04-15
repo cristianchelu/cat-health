@@ -29,9 +29,11 @@ export function useUpdateEvent() {
       eventId: number;
       data: PatchEventRequestDTO;
     }) => updateEvent(eventId, data),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['deviceEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['deviceAnnotationEvents'] });
       queryClient.invalidateQueries({ queryKey: ['petEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['event', variables.eventId] });
     },
   });
 }
@@ -40,9 +42,10 @@ export function useDeleteEvent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (eventId: number) => deleteEvent(eventId),
-    onSuccess: () => {
+    onSuccess: (_data, eventId) => {
       queryClient.invalidateQueries({ queryKey: ['deviceEvents'] });
       queryClient.invalidateQueries({ queryKey: ['petEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
     },
   });
 }

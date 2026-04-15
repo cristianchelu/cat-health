@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { Link, useNavigate } from 'react-router';
+import { ArrowLeft, ListChecks, Pencil } from 'lucide-react';
 import type { GetDeviceResponseDTO } from 'shared';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { isVisitAnnotationEnabled } from '@/lib/deviceAnnotation';
 import './DeviceHeader.css';
 
 interface DeviceHeaderProps {
@@ -57,15 +58,27 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
           </div>
         </div>
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => navigate(`/settings/devices/${device.id}`)}
-        className="edit-button"
-        aria-label={t('settings.edit_device_title')}
-      >
-        <Pencil className="icon" />
-      </Button>
+      <div className="device-header-actions">
+        {isVisitAnnotationEnabled(device) && (
+          <Link
+            to={`/devices/${device.id}/annotate`}
+            className="device-header-icon-action"
+            aria-label={t('devices.open_annotation_workspace')}
+            title={t('devices.open_annotation_workspace')}
+          >
+            <ListChecks className="icon" />
+          </Link>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/settings/devices/${device.id}`)}
+          className="edit-button"
+          aria-label={t('settings.edit_device_title')}
+        >
+          <Pencil className="icon" />
+        </Button>
+      </div>
     </div>
   );
 };

@@ -17,6 +17,7 @@ import './EditDevicePage.css';
 interface DeviceFormValues {
   name: string;
   enabled: boolean;
+  visitAnnotationEnabled: boolean;
   snapshotUrl: string;
   model: string;
   sourceDeviceId: string;
@@ -31,6 +32,7 @@ interface DeviceFormValues {
 const DEFAULT_FORM_VALUES: DeviceFormValues = {
   name: '',
   enabled: true,
+  visitAnnotationEnabled: false,
   snapshotUrl: '',
   model: '',
   sourceDeviceId: '',
@@ -53,6 +55,7 @@ function deviceToFormValues(device: {
   const base = {
     name: device.name,
     enabled: device.enabled,
+    visitAnnotationEnabled: cfg?.visit_annotation_enabled === true,
     snapshotUrl: '',
     model: '',
     sourceDeviceId: '',
@@ -149,7 +152,10 @@ const EditDevicePage: React.FC = () => {
       await updateDevice.mutateAsync({
         name: data.name,
         enabled: data.enabled,
-        ...(config !== undefined && { config }),
+        config: {
+          ...(config ?? existingConfig),
+          visit_annotation_enabled: data.visitAnnotationEnabled,
+        },
       });
       navigate('/settings');
     } catch (err) {
@@ -209,6 +215,26 @@ const EditDevicePage: React.FC = () => {
               )}
             />
           </div>
+        </FormField>
+
+        <FormField label={t('settings.visit_annotation_label')}>
+          <div className="switch-row">
+            <Controller
+              name="visitAnnotationEnabled"
+              control={control}
+              render={({ field }) => (
+                <>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    ref={field.ref}
+                  />
+                  <span>{field.value ? t('settings.enabled') : t('settings.disabled')}</span>
+                </>
+              )}
+            />
+          </div>
+          <p className="help-text">{t('settings.visit_annotation_help')}</p>
         </FormField>
 
         <div className="device-summary">

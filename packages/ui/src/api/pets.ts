@@ -75,6 +75,11 @@ export async function getPetEvents(
   return data;
 }
 
+export async function getEventById(eventId: number) {
+  const { data } = await apiClient.get<GetEventDTO>(`/events/${eventId}`);
+  return data;
+}
+
 export async function deleteEvent(eventId: number) {
   const { data } = await apiClient.delete<DeleteEventResponseDTO>(
     `/events/${eventId}`,

@@ -111,6 +111,24 @@ export async function getDeviceEvents(
   return data;
 }
 
+export async function getDeviceAnnotationEvents(
+  deviceId: number,
+  opts: { limit?: number; offset?: number; human_verified?: boolean } = {},
+) {
+  const params: Record<string, unknown> = {
+    device_id: deviceId,
+    limit: opts.limit ?? 100,
+    offset: opts.offset ?? 0,
+  };
+  if (opts.human_verified !== undefined) {
+    params.human_verified = opts.human_verified;
+  }
+  const { data } = await apiClient.get<GetEventsResponseDTO>('/events', {
+    params,
+  });
+  return data;
+}
+
 export async function linkDeviceCamera(
   deviceId: number,
   input: PutDeviceCameraRequestDTO,

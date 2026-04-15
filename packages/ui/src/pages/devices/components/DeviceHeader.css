@@ -81,13 +81,44 @@
     }
   }
 
+  .device-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    flex-shrink: 0;
+  }
+
   .edit-button {
     flex-shrink: 0;
+
+    .icon {
+      height: 1rem;
+      width: 1rem;
+    }
+  }
+
+  .device-header-icon-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: var(--space-xs);
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
     color: var(--color-text-muted);
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition-fast);
 
     &:hover {
       color: var(--color-text);
       background-color: var(--color-surface-muted);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
     }
 
     .icon {

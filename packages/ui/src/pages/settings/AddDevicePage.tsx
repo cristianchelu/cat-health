@@ -47,6 +47,7 @@ const AddDevicePage: React.FC = () => {
     'You are identifying cats. Here are reference photos:\n\n{{reference_images}}\n\nWho is the cat in this new image? Reply with ONLY the cat\'s name, or \'unknown\'.',
   );
   const [autoIdentify, setAutoIdentify] = useState(true);
+  const [visitAnnotationEnabled, setVisitAnnotationEnabled] = useState(false);
 
   // Discovery query
   const {
@@ -95,6 +96,7 @@ const AddDevicePage: React.FC = () => {
       const config = {
         ...(selectedDevice.config as Record<string, unknown>),
         encryptionKey: apiKey || undefined,
+        visit_annotation_enabled: visitAnnotationEnabled,
       };
 
       await addDevice.mutateAsync({
@@ -118,6 +120,7 @@ const AddDevicePage: React.FC = () => {
     try {
       const config = {
         snapshotUrl,
+        visit_annotation_enabled: visitAnnotationEnabled,
       };
 
       // Generate a random external ID for manual devices
@@ -148,6 +151,7 @@ const AddDevicePage: React.FC = () => {
         prompt_template: promptTemplate,
         auto_identify: autoIdentify,
         reference_images: {},
+        visit_annotation_enabled: visitAnnotationEnabled,
       };
 
       // Generate a random external ID for recognizer
@@ -406,6 +410,17 @@ const AddDevicePage: React.FC = () => {
               </div>
             </div>
             )}
+
+            <FormField label={t('settings.visit_annotation_label')}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Switch
+                  checked={visitAnnotationEnabled}
+                  onCheckedChange={setVisitAnnotationEnabled}
+                />
+                <span>{visitAnnotationEnabled ? t('settings.enabled') : t('settings.disabled')}</span>
+              </div>
+              <p className="help-text">{t('settings.visit_annotation_help')}</p>
+            </FormField>
 
             {error && <div className="error-message">{error}</div>}
 
