@@ -15,7 +15,9 @@
     "migrate": "npm run migrate -w api",
     "migrate:down": "npm run migrate:down -w api",
     "sync": "npm run sync -w api",
-    "reset-db": "npm run reset-db -w api"
+    "reset-db": "npm run reset-db -w api",
+    "backup-db": "npm run backup-db -w api",
+    "restore-db": "npm run restore-db -w api"
   },
   "author": "Cristian Chelu",
   "license": "MIT",
