@@ -7,10 +7,11 @@ import type { EventComponentProps } from './types';
 import EventDevice from './meta/EventDevice';
 import EventDuration from './meta/EventDuration';
 import EventPet from './meta/EventPet';
+import EventAnnotated from './meta/EventAnnotated';
 import EventVerified from './meta/EventVerified';
 import PoopIcon from '../icons/PoopIcon';
 import type { LitterboxUseEliminationType } from 'shared';
-import type { LitterboxAnnotation } from '@/types/litterbox';
+import { hasPersistedLitterboxAnnotation } from '@/types/litterbox';
 
 const ICON_MAP: Record<LitterboxUseEliminationType, React.ElementType> = {
   urination: Droplets,
@@ -90,12 +91,12 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
           {data.duration && <EventDuration duration={data.duration} />}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
           {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
-          {event.human_verified && <EventVerified />}
-          {event.human_verified && (data as { annotation?: LitterboxAnnotation }).annotation?.bouts?.length ? (
-            <Timeline.Badge>
-              {t('annotation.status_bout')}
-            </Timeline.Badge>
-          ) : null}
+          {event.human_verified &&
+            (hasPersistedLitterboxAnnotation(data) ? (
+              <EventAnnotated />
+            ) : (
+              <EventVerified />
+            ))}
           {data.straining && (
             <Timeline.Badge variant="warning">
               {t('overview.straining_detected')}

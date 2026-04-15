@@ -8,4 +8,5 @@ export { default as EventDuration } from './meta/EventDuration';
 export { default as EventPet } from './meta/EventPet';
 export { default as EventDevice } from './meta/EventDevice';
 export { default as EventVerified } from './meta/EventVerified';
+export { default as EventAnnotated } from './meta/EventAnnotated';
 export * from './types';

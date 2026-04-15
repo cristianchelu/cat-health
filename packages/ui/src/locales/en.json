@@ -24,6 +24,7 @@
         "both": "Both",
         "no_elimination": "No elimination",
         "verified": "Verified",
+        "annotated": "Annotated",
         "times": "times",
         "no_weight_data": "No weight data available",
         "no_water_data": "No water consumption data available",

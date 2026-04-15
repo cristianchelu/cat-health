@@ -10,3 +10,10 @@ export interface LitterboxAnnotation {
   /** When true, omit from human-verified export / training fixtures (bad data). */
   excluded?: boolean;
 }
+
+/** Persisted annotation workspace data on a litterbox event (superset of verified-only). */
+export function hasPersistedLitterboxAnnotation(data: {
+  annotation?: LitterboxAnnotation;
+}): boolean {
+  return data.annotation != null && typeof data.annotation === 'object';
+}
