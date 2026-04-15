@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import type { StatePeriod } from './litterboxStateTracker';
+import type { LitterboxAnalysisStatePeriod as StatePeriod } from 'shared';
 import type { LitterboxBoutAnnotation } from '@/types/litterbox';
 
 import './WeightSignalChart.css';
@@ -157,6 +157,19 @@ function formatMeanG(value: number): string {
   return Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(1);
 }
 
+/** Single pass; avoid Math.min/max(...arr) on large arrays (re-renders per pointer frame during drag). */
+function arrayMinMax(arr: number[]): { min: number; max: number } {
+  if (arr.length === 0) return { min: 0, max: 0 };
+  let min = arr[0]!;
+  let max = arr[0]!;
+  for (let i = 1; i < arr.length; i++) {
+    const v = arr[i]!;
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
+  return { min, max };
+}
+
 type DragMode =
   | { type: 'none' }
   | { type: 'create'; startX: number; currentX: number }
@@ -168,7 +181,26 @@ const SVG_HEIGHT = 150;
 const AXIS_HEIGHT = 18;
 const HANDLE_W = 8;
 
-const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProps>(
+function areWeightSignalChartPropsEqual(
+  prev: Readonly<WeightSignalChartProps>,
+  next: Readonly<WeightSignalChartProps>,
+): boolean {
+  if (prev.weights !== next.weights) return false;
+  if (prev.periods !== next.periods) return false;
+  if ((prev.sampleRate ?? 10) !== (next.sampleRate ?? 10)) return false;
+  if (prev.bouts !== next.bouts) return false;
+  if (prev.onBoutsChange !== next.onBoutsChange) return false;
+  if (prev.selectedBoutIndex !== next.selectedBoutIndex) return false;
+  if (prev.onSelectBout !== next.onSelectBout) return false;
+  if (prev.className !== next.className) return false;
+  const pm = prev.mediaSync;
+  const nm = next.mediaSync;
+  if (pm === nm) return true;
+  if (!pm || !nm) return false;
+  return pm.playheadChartSec === nm.playheadChartSec && pm.onAxisSeek === nm.onAxisSeek;
+}
+
+const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChartProps>(
   (
     {
       className,
@@ -191,23 +223,33 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
     const displayWeights = React.useMemo(() => downsample(weights, maxPoints), [weights]);
     const scaleFactor = weights.length / displayWeights.length;
 
-    const minWeight = Math.min(...weights);
-    const maxWeight = Math.max(...weights);
-    const range = maxWeight - minWeight || 1;
-    const padding = range * 0.1;
-    const paddedMin = minWeight - padding;
-    const paddedMax = maxWeight + padding;
+    const { paddedMin, paddedMax } = React.useMemo(() => {
+      const { min: minWeight, max: maxWeight } = arrayMinMax(weights);
+      const range = maxWeight - minWeight || 1;
+      const padding = range * 0.1;
+      return {
+        paddedMin: minWeight - padding,
+        paddedMax: maxWeight + padding,
+      };
+    }, [weights]);
 
     const chartHeight = isInteractive ? SVG_HEIGHT : SVG_HEIGHT;
     const svgHeight = isInteractive ? SVG_HEIGHT + AXIS_HEIGHT : SVG_HEIGHT;
 
-    const linePath = createPath(displayWeights, SVG_WIDTH, chartHeight, paddedMin, paddedMax);
+    const linePath = React.useMemo(
+      () => createPath(displayWeights, SVG_WIDTH, chartHeight, paddedMin, paddedMax),
+      [chartHeight, displayWeights, paddedMax, paddedMin],
+    );
 
-    const scaledPeriods = periods.map((p) => ({
-      ...p,
-      start: p.start / scaleFactor,
-      end: p.end / scaleFactor,
-    }));
+    const scaledPeriods = React.useMemo(
+      () =>
+        periods.map((p) => ({
+          ...p,
+          start: p.start / scaleFactor,
+          end: p.end / scaleFactor,
+        })),
+      [periods, scaleFactor],
+    );
 
     const duration = weights.length / sampleRate;
 
@@ -230,21 +272,65 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
     // Drag state (only in interactive mode)
     const [drag, setDrag] = React.useState<DragMode>({ type: 'none' });
     const svgRef = React.useRef<SVGSVGElement>(null);
+    /** Set on pointerdown; reused on pointermove so we do not call getScreenCTM().inverse() every move. */
+    const svgScreenToUserInverseRef = React.useRef<DOMMatrix | null>(null);
 
-    // Get SVG-space x from a pointer event
-    const getSvgX = React.useCallback((e: React.PointerEvent<SVGSVGElement>): number => {
-      if (!svgRef.current) return 0;
-      const rect = svgRef.current.getBoundingClientRect();
-      const rawX = ((e.clientX - rect.left) / rect.width) * SVG_WIDTH;
-      return clamp(rawX, 0, SVG_WIDTH);
+    const refreshSvgScreenToUserInverse = React.useCallback(() => {
+      const svg = svgRef.current;
+      if (!svg) {
+        svgScreenToUserInverseRef.current = null;
+        return;
+      }
+      const ctm = svg.getScreenCTM();
+      svgScreenToUserInverseRef.current = ctm ? ctm.inverse() : null;
     }, []);
 
-    const getSvgXFromPointerLike = React.useCallback((e: { clientX: number; clientY: number }): number => {
-      if (!svgRef.current) return 0;
-      const rect = svgRef.current.getBoundingClientRect();
-      const rawX = ((e.clientX - rect.left) / rect.width) * SVG_WIDTH;
-      return clamp(rawX, 0, SVG_WIDTH);
+    const clearSvgScreenToUserInverse = React.useCallback(() => {
+      svgScreenToUserInverseRef.current = null;
     }, []);
+
+    /**
+     * Map screen coordinates to viewBox x (0…SVG_WIDTH). Required because the SVG uses
+     * preserveAspectRatio="meet": the drawable area is letterboxed inside the layout box,
+     * so mapping across the full bounding rect width misaligns drags with the chart.
+     */
+    const pointerClientToSvgX = React.useCallback(
+      (clientX: number, clientY: number): number => {
+        const svg = svgRef.current;
+        if (!svg) return 0;
+        const inv = svgScreenToUserInverseRef.current;
+        if (inv) {
+          const pt = svg.createSVGPoint();
+          pt.x = clientX;
+          pt.y = clientY;
+          const p = pt.matrixTransform(inv);
+          return clamp(p.x, 0, SVG_WIDTH);
+        }
+        const ctm = svg.getScreenCTM();
+        if (ctm) {
+          const pt = svg.createSVGPoint();
+          pt.x = clientX;
+          pt.y = clientY;
+          const p = pt.matrixTransform(ctm.inverse());
+          return clamp(p.x, 0, SVG_WIDTH);
+        }
+        const rect = svg.getBoundingClientRect();
+        const scale = Math.min(rect.width / SVG_WIDTH, rect.height / svgHeight);
+        const offsetX = (rect.width - SVG_WIDTH * scale) / 2;
+        return clamp((clientX - rect.left - offsetX) / scale, 0, SVG_WIDTH);
+      },
+      [svgHeight],
+    );
+
+    const getSvgX = React.useCallback(
+      (e: React.PointerEvent<SVGSVGElement>) => pointerClientToSvgX(e.clientX, e.clientY),
+      [pointerClientToSvgX],
+    );
+
+    const getSvgXFromPointerLike = React.useCallback(
+      (e: { clientX: number; clientY: number }) => pointerClientToSvgX(e.clientX, e.clientY),
+      [pointerClientToSvgX],
+    );
 
     const axisDragRef = React.useRef(false);
 
@@ -253,12 +339,13 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
         if (!mediaSync || !isInteractive || duration <= 0) return;
         e.stopPropagation();
         e.preventDefault();
+        refreshSvgScreenToUserInverse();
         e.currentTarget.setPointerCapture(e.pointerId);
         axisDragRef.current = true;
         const x = getSvgXFromPointerLike(e);
         mediaSync.onAxisSeek(xToSec(x));
       },
-      [duration, getSvgXFromPointerLike, isInteractive, mediaSync, xToSec],
+      [duration, getSvgXFromPointerLike, isInteractive, mediaSync, refreshSvgScreenToUserInverse, xToSec],
     );
 
     const handleAxisPointerMove = React.useCallback(
@@ -273,22 +360,24 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
     const handleAxisPointerUp = React.useCallback((e: React.PointerEvent<SVGRectElement>) => {
       if (!axisDragRef.current) return;
       axisDragRef.current = false;
+      clearSvgScreenToUserInverse();
       try {
         e.currentTarget.releasePointerCapture(e.pointerId);
       } catch {
         /* already released */
       }
-    }, []);
+    }, [clearSvgScreenToUserInverse]);
 
     const handlePointerDown = React.useCallback(
       (e: React.PointerEvent<SVGSVGElement>) => {
         if (!isInteractive) return;
+        refreshSvgScreenToUserInverse();
         e.currentTarget.setPointerCapture(e.pointerId);
         const x = getSvgX(e);
         // Start a create drag from this point
         setDrag({ type: 'create', startX: x, currentX: x });
       },
-      [isInteractive, getSvgX, setDrag],
+      [getSvgX, isInteractive, refreshSvgScreenToUserInverse, setDrag],
     );
 
     const handlePointerMove = React.useCallback(
@@ -306,44 +395,62 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
 
     const handlePointerUp = React.useCallback(
       (e: React.PointerEvent<SVGSVGElement>) => {
-        if (!isInteractive || !bouts) return;
-        e.currentTarget.releasePointerCapture(e.pointerId);
-
-        if (drag.type === 'create') {
-          const x1 = Math.min(drag.startX, drag.currentX);
-          const x2 = Math.max(drag.startX, drag.currentX);
-          // Only create if drag is at least a few pixels wide
-          if (x2 - x1 > 4) {
-            const t_start_s = xToSec(x1);
-            const t_end_s = xToSec(x2);
-            const newBout: LitterboxBoutAnnotation = {
-              bout_index: bouts.length,
-              t_start_s,
-              t_end_s,
-              bout_type: 'unknown',
-            };
-            const next = [...bouts, newBout].map((b, i) => ({ ...b, bout_index: i }));
-            onBoutsChange?.(next);
-            onSelectBout?.(next.length - 1);
+        if (!isInteractive) return;
+        try {
+          if (!bouts) return;
+          try {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+          } catch {
+            /* already released */
           }
-        } else if (drag.type === 'resize') {
-          const newSec = xToSec(drag.currentX);
-          const next = bouts.map((b, i) => {
-            if (i !== drag.boutIndex) return b;
-            if (drag.handle === 'left') {
-              const t_start_s = clamp(newSec, 0, b.t_end_s - 0.1);
-              return { ...b, t_start_s };
-            } else {
-              const t_end_s = clamp(newSec, b.t_start_s + 0.1, duration);
-              return { ...b, t_end_s };
-            }
-          });
-          onBoutsChange?.(next);
-        }
 
-        setDrag({ type: 'none' });
+          if (drag.type === 'create') {
+            const x1 = Math.min(drag.startX, drag.currentX);
+            const x2 = Math.max(drag.startX, drag.currentX);
+            // Only create if drag is at least a few pixels wide
+            if (x2 - x1 > 4) {
+              const t_start_s = xToSec(x1);
+              const t_end_s = xToSec(x2);
+              const newBout: LitterboxBoutAnnotation = {
+                bout_index: bouts.length,
+                t_start_s,
+                t_end_s,
+                bout_type: 'unknown',
+              };
+              const next = [...bouts, newBout].map((b, i) => ({ ...b, bout_index: i }));
+              onBoutsChange?.(next);
+              onSelectBout?.(next.length - 1);
+            }
+          } else if (drag.type === 'resize') {
+            const newSec = xToSec(drag.currentX);
+            const next = bouts.map((b, i) => {
+              if (i !== drag.boutIndex) return b;
+              if (drag.handle === 'left') {
+                const t_start_s = clamp(newSec, 0, b.t_end_s - 0.1);
+                return { ...b, t_start_s };
+              } else {
+                const t_end_s = clamp(newSec, b.t_start_s + 0.1, duration);
+                return { ...b, t_end_s };
+              }
+            });
+            onBoutsChange?.(next);
+          }
+        } finally {
+          clearSvgScreenToUserInverse();
+          setDrag({ type: 'none' });
+        }
       },
-      [isInteractive, bouts, drag, xToSec, duration, onBoutsChange, onSelectBout, setDrag],
+      [
+        bouts,
+        clearSvgScreenToUserInverse,
+        drag,
+        duration,
+        isInteractive,
+        onBoutsChange,
+        onSelectBout,
+        setDrag,
+        xToSec,
+      ],
     );
 
     // Time axis ticks (only in interactive mode)
@@ -367,19 +474,24 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
     const occupiedMeanOverlays = React.useMemo(() => {
       if (!isInteractive || weights.length === 0) return [];
       const wlen = weights.length;
-      const items: { key: string; cx: number; label: string }[] = [];
+      const items: { key: string; cx: number; meanLabel: string; sigmaLabel: string }[] = [];
       for (let i = 0; i < periods.length; i++) {
         const p = periods[i];
-        if (p.state !== 'occupied' || p.meanWeight === undefined) continue;
+        if (p.state !== 'occupied') continue;
+        const start = clamp(Math.round(p.start), 0, wlen - 1);
+        const end = clamp(Math.round(p.end), 0, wlen - 1);
+        const stats = trimmedSliceMeanSigma(weights, start, end);
+        if (stats === null) continue;
         const cx = ((p.start + p.end) / 2 / wlen) * SVG_WIDTH;
         items.push({
           key: `occ-${i}-${p.start}-${p.end}`,
           cx,
-          label: t('annotation.chart_occ_mean', { value: formatMeanG(p.meanWeight) }),
+          meanLabel: t('annotation.chart_occ_mean', { value: formatMeanG(stats.mean) }),
+          sigmaLabel: t('annotation.chart_bout_sigma', { value: formatSigmaG(stats.sigma) }),
         });
       }
       return items;
-    }, [isInteractive, periods, weights.length, t]);
+    }, [isInteractive, periods, weights, t]);
 
     const boutStatOverlays = React.useMemo(() => {
       if (!isInteractive || !bouts?.length || weights.length === 0) return [];
@@ -482,6 +594,7 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
                   onPointerDown={(e) => {
                     e.stopPropagation();
                     if (!svgRef.current) return;
+                    refreshSvgScreenToUserInverse();
                     (svgRef.current as SVGSVGElement).setPointerCapture(e.pointerId);
                     setDrag({ type: 'resize', boutIndex: idx, handle: 'left', currentX: getSvgX(e as unknown as React.PointerEvent<SVGSVGElement>) });
                   }}
@@ -500,6 +613,7 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
                   onPointerDown={(e) => {
                     e.stopPropagation();
                     if (!svgRef.current) return;
+                    refreshSvgScreenToUserInverse();
                     (svgRef.current as SVGSVGElement).setPointerCapture(e.pointerId);
                     setDrag({ type: 'resize', boutIndex: idx, handle: 'right', currentX: getSvgX(e as unknown as React.PointerEvent<SVGSVGElement>) });
                   }}
@@ -550,14 +664,17 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
               {occupiedMeanOverlays.map((o) => (
                 <text
                   key={o.key}
-                  x={o.cx}
-                  y={chartStatY}
                   textAnchor="middle"
                   dominantBaseline="auto"
                   fontSize={8}
                   className="chart-stat-overlay chart-stat-overlay--occupied"
                 >
-                  {o.label}
+                  <tspan x={o.cx} y={boutMeanStatY}>
+                    {o.meanLabel}
+                  </tspan>
+                  <tspan x={o.cx} y={chartStatY}>
+                    {o.sigmaLabel}
+                  </tspan>
                 </text>
               ))}
               {boutStatOverlays.map((o) =>
@@ -719,6 +836,9 @@ const WeightSignalChart = React.forwardRef<HTMLDivElement, WeightSignalChartProp
   },
 );
 
+WeightSignalChartInner.displayName = 'WeightSignalChart';
+
+const WeightSignalChart = React.memo(WeightSignalChartInner, areWeightSignalChartPropsEqual);
 WeightSignalChart.displayName = 'WeightSignalChart';
 
 export { type WeightSignalChartProps };

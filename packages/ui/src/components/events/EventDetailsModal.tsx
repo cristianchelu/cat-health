@@ -1,22 +1,31 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
+import { getEventById } from '@/api/pets';
 import { usePets } from '@/hooks/queries/petQueries';
-import { useEventMedia, useUpdateEvent, useDeleteEvent } from '@/hooks/queries/eventQueries';
+import {
+  useAnalyzeLitterboxEvent,
+  useEventMedia,
+  useUpdateEvent,
+  useDeleteEvent,
+} from '@/hooks/queries/eventQueries';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/form/Select';
 import type {
   GetEventDTO,
+  LitterboxAnalysisStatePeriod,
   LitterboxUseEliminationType,
 } from 'shared';
 import WeightSignalChart from './WeightSignalChart';
 import WaterSignalChart from './WaterSignalChart';
-import { LitterboxStateTracker } from './litterboxStateTracker';
 import { decodeLitterboxRawData } from './decodeLitterboxRawData';
 import { decodeWaterRawData } from './decodeWaterRawData';
 import { analyzeWaterSegments } from './analyzeWaterSegments';
 import './EventDetailsModal.css';
-import { Loader2, Trash2, Download, Info, Image, Activity } from 'lucide-react';
+import { Loader2, Trash2, Download, Info, Image, Activity, RefreshCw } from 'lucide-react';
+
+const EMPTY_LITTERBOX_SEGMENT_PERIODS: LitterboxAnalysisStatePeriod[] = [];
 
 interface EventDetailsModalProps {
   event: GetEventDTO | null;
@@ -107,6 +116,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   );
   const { mutate: updateEvent, isPending: isUpdating } = useUpdateEvent();
   const { mutate: deleteEventMutation, isPending: isDeleting } = useDeleteEvent();
+  const { mutate: runAnalyze, isPending: isAnalyzing } = useAnalyzeLitterboxEvent();
+
+  const eventId = event?.id;
+  const { data: eventFromServer } = useQuery({
+    queryKey: ['event', eventId ?? 0],
+    queryFn: () => getEventById(eventId!),
+    enabled: Boolean(isOpen && eventId),
+  });
 
   const [selectedPetId, setSelectedPetId] = React.useState<string | null>(null);
   const [selectedEliminationType, setSelectedEliminationType] =
@@ -126,34 +143,61 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     }
   }, [event]);
 
+  /** Prefer React Query payload so the modal stays in sync after mutations (e.g. reanalyze) while `event` from parent state may be stale. */
+  const displayEvent = event ? (eventFromServer ?? event) : null;
+
   const decodedRawData = React.useMemo(() => {
-    if (event?.data?.type !== 'litterbox_use') return null;
-    return decodeLitterboxRawData(event?.raw_data);
-  }, [event?.data?.type, event?.raw_data]);
+    if (displayEvent?.data?.type !== 'litterbox_use') return null;
+    return decodeLitterboxRawData(displayEvent.raw_data);
+  }, [displayEvent?.data?.type, displayEvent?.raw_data]);
 
   const decodedWaterData = React.useMemo(() => {
-    if (event?.data?.type !== 'water_intake') return null;
-    return decodeWaterRawData(event?.raw_data);
-  }, [event?.data?.type, event?.raw_data]);
+    if (displayEvent?.data?.type !== 'water_intake') return null;
+    return decodeWaterRawData(displayEvent.raw_data);
+  }, [displayEvent?.data?.type, displayEvent?.raw_data]);
 
   // Check if event has analysis data
   const hasAnalysisData =
-    (event?.data?.type === 'litterbox_use' && (decodedRawData?.weights?.length ?? 0) > 0) ||
-    (event?.data?.type === 'water_intake' && (decodedWaterData?.weights?.length ?? 0) > 0);
+    (displayEvent?.data?.type === 'litterbox_use' &&
+      (decodedRawData?.weights?.length ?? 0) > 0) ||
+    (displayEvent?.data?.type === 'water_intake' &&
+      (decodedWaterData?.weights?.length ?? 0) > 0);
 
-  // Compute analysis result when needed
-  const analysisResult = React.useMemo(() => {
-    if (event?.data?.type !== 'litterbox_use' || !decodedRawData?.weights) return null;
-    const tracker = new LitterboxStateTracker();
-    return tracker.processEvent(decodedRawData.weights);
-  }, [event?.data?.type, decodedRawData]);
+  const litterboxData =
+    displayEvent?.data?.type === 'litterbox_use'
+      ? (displayEvent.data as {
+          segments?: LitterboxAnalysisStatePeriod[] | null;
+        })
+      : null;
+
+  const segmentPeriods: LitterboxAnalysisStatePeriod[] | null | undefined =
+    litterboxData?.segments;
 
   const waterPeriods = React.useMemo(() => {
-    if (!decodedWaterData?.weights) return null;
-    return analyzeWaterSegments(decodedWaterData.weights);
+    const w = decodedWaterData?.weights;
+    if (!w?.length) return [];
+    return analyzeWaterSegments(w);
   }, [decodedWaterData]);
 
-  if (!event) {
+  const hasLitterboxChartWeights =
+    displayEvent?.data?.type === 'litterbox_use' &&
+    (decodedRawData?.weights?.length ?? 0) > 0;
+
+  const hasWaterChartWeights =
+    displayEvent?.data?.type === 'water_intake' &&
+    (decodedWaterData?.weights?.length ?? 0) > 0;
+
+  React.useEffect(() => {
+    if (!eventFromServer || !event || eventFromServer.id !== event.id) return;
+    setSelectedPetId(eventFromServer.pet_id ? String(eventFromServer.pet_id) : 'null');
+    if (eventFromServer.data?.type === 'litterbox_use') {
+      setSelectedEliminationType(
+        eventFromServer.data.elimination_type ?? 'unknown',
+      );
+    }
+  }, [event, eventFromServer]);
+
+  if (!event || !displayEvent) {
     return null;
   }
 
@@ -175,14 +219,15 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     const newValue = e.target.value as LitterboxUseEliminationType;
     setSelectedEliminationType(newValue);
 
-    if (event.data?.type !== 'litterbox_use') return;
+    if (displayEvent.data?.type !== 'litterbox_use') return;
 
     updateEvent({
-      eventId: event.id,
+      eventId: displayEvent.id,
       data: {
         data: {
-          ...event.data,
+          ...displayEvent.data,
           elimination_type: newValue,
+          segments: null,
         },
         human_verified: true,
       },
@@ -263,13 +308,34 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               )}
             </>
           )}
-          {activeTab === 'analysis' && analysisResult && decodedRawData && (
-            <WeightSignalChart
-              weights={decodedRawData.weights}
-              periods={analysisResult.periods}
-            />
+          {activeTab === 'analysis' && hasLitterboxChartWeights && decodedRawData && (
+            <div className="event-details-litterbox-analysis">
+              <div className="event-details-analysis-toolbar">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  icon
+                  size="sm"
+                  className="event-details-reanalyze-btn"
+                  disabled={isAnalyzing}
+                  title={t('event_details.analyze')}
+                  aria-label={t('event_details.analyze')}
+                  onClick={() => runAnalyze(displayEvent.id)}
+                >
+                  {isAnalyzing ? (
+                    <Loader2 size={18} className="animate-spin" aria-hidden />
+                  ) : (
+                    <RefreshCw size={18} aria-hidden />
+                  )}
+                </Button>
+              </div>
+              <WeightSignalChart
+                weights={decodedRawData.weights}
+                periods={segmentPeriods ?? EMPTY_LITTERBOX_SEGMENT_PERIODS}
+              />
+            </div>
           )}
-          {activeTab === 'analysis' && waterPeriods && decodedWaterData && (
+          {activeTab === 'analysis' && hasWaterChartWeights && decodedWaterData && (
             <WaterSignalChart
               weights={decodedWaterData.weights}
               periods={waterPeriods}
@@ -281,10 +347,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           <div className="event-header-row">
             <div className="event-info">
               <DialogTitle className="event-title">
-                {getEventTitle(event, t)}
+                {getEventTitle(displayEvent, t)}
               </DialogTitle>
               <span className="event-time">
-                {formatEventTime(event.timestamp)}
+                {formatEventTime(displayEvent.timestamp)}
               </span>
             </div>
             <div className="event-actions">
@@ -338,7 +404,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             </div>
           </div>
 
-          {event.data?.type === 'litterbox_use' && (
+          {displayEvent.data?.type === 'litterbox_use' && (
             <div className="event-section elimination-type-section">
               <div className="section-label">
                 <Info size={14} className="info-icon" />
@@ -352,7 +418,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   className="elimination-type-select"
                   disabled={isUpdating}
                 />
-                {event.data.straining && (
+                {displayEvent.data.straining && (
                   <span className="straining-badge">{t('overview.straining_detected')}</span>
                 )}
               </div>
@@ -360,7 +426,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           )}
 
           <div className="event-section details-section">
-            <EventDetailsRenderer event={event} />
+            <EventDetailsRenderer event={displayEvent} />
           </div>
         </div>
       </DialogContent>

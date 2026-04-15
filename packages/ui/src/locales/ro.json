@@ -187,7 +187,8 @@
         "legend_spill": "Vărsare / joacă (>90 ml/min)",
         "legend_noise": "Zgomot / inactiv",
         "water_excluded_ml": "{{amount}}ml excluși (vărsare/joacă)",
-        "chart_ending_weight": "final {{value}} g"
+        "chart_ending_weight": "final {{value}} g",
+        "analyze": "Analizează"
     },
     "device_types": {
         "litterbox": "Litieră",

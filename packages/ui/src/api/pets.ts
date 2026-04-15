@@ -98,6 +98,13 @@ export async function updateEvent(
   return data;
 }
 
+export async function analyzeLitterboxEvent(eventId: number) {
+  const { data } = await apiClient.post<GetEventDTO>(
+    `/events/${eventId}/analyze`,
+  );
+  return data;
+}
+
 export async function getPetWeightTrends(
   petId: number,
   query: WeightTrendQueryDTO,

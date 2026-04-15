@@ -19,6 +19,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { sql, type Kysely } from 'kysely';
+import { decodeLitterboxRawData } from 'shared';
 
 import type { Database } from '../../../../../database/index.ts';
 import type { LitterboxUseEventData } from '../../../../../database/types/EventTable.ts';
@@ -27,36 +28,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULT_OUT = path.join(__dirname, 'test');
 const SAMPLE_RATE_FALLBACK_HZ = 10;
-
-interface DecodedLitterboxRawData {
-  weights: number[];
-}
-
-function decodeLitterboxRawDataBuffer(raw: Buffer | null): DecodedLitterboxRawData | null {
-  if (!raw || raw.length < 1 + 8 + 10 + 4) return null;
-
-  let offset = 0;
-  const version = raw.readUInt8(offset);
-  offset += 1;
-  if (version !== 1) return null;
-
-  offset += 8; // startTime ms — unused for fixture stream (line order = sample index)
-
-  offset += 10; // context
-
-  const count = raw.readUInt32BE(offset);
-  offset += 4;
-
-  const available = Math.floor((raw.length - offset) / 2);
-  const n = Math.min(count, available);
-  const weights: number[] = new Array(n);
-  for (let i = 0; i < n; i++) {
-    weights[i] = raw.readInt16BE(offset);
-    offset += 2;
-  }
-
-  return { weights };
-}
 
 function csvEscape(value: string | number | boolean): string {
   const s = String(value);
@@ -200,7 +171,7 @@ async function exportFixtures(
       continue;
     }
 
-    const decoded = decodeLitterboxRawDataBuffer(event.raw_data);
+    const decoded = decodeLitterboxRawData(event.raw_data);
     if (!decoded || decoded.weights.length === 0) {
       console.warn(`skip event ${event.id}: no decodable weight stream`);
       skipped++;

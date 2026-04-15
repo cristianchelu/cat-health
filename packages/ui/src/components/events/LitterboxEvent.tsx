@@ -10,8 +10,14 @@ import EventPet from './meta/EventPet';
 import EventAnnotated from './meta/EventAnnotated';
 import EventVerified from './meta/EventVerified';
 import PoopIcon from '../icons/PoopIcon';
-import type { LitterboxUseEliminationType } from 'shared';
+import {
+  LITTERBOX_SAMPLE_HZ,
+  type LitterboxAnalysisStatePeriod,
+  type LitterboxUseEliminationType,
+} from 'shared';
+import { eliminationBadgeRowsFromSegments } from '@/lib/litterboxEliminationBadges';
 import { hasPersistedLitterboxAnnotation } from '@/types/litterbox';
+import EventEliminationSegments from './meta/EventEliminationSegments';
 
 const ICON_MAP: Record<LitterboxUseEliminationType, React.ElementType> = {
   urination: Droplets,
@@ -38,8 +44,16 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
 }) => {
   const { t } = useTranslation();
   const { data } = event;
+  const persistedSegments = (data as { segments?: LitterboxAnalysisStatePeriod[] | null })
+    .segments;
+  const badgeSegments = React.useMemo(
+    () => eliminationBadgeRowsFromSegments(persistedSegments, LITTERBOX_SAMPLE_HZ),
+    [persistedSegments],
+  );
 
   const eliminationType = data.elimination_type as LitterboxUseEliminationType;
+
+  const showEliminationSegments = badgeSegments.length > 0;
 
   const variant = React.useMemo(() => {
     if (data.straining) return 'danger';
@@ -89,6 +103,9 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
         </Timeline.Header>
         <Timeline.Meta>
           {data.duration && <EventDuration duration={data.duration} />}
+          {showEliminationSegments && (
+            <EventEliminationSegments segments={badgeSegments} />
+          )}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
           {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
           {event.human_verified &&

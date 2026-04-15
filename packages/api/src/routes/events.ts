@@ -31,6 +31,8 @@ import {
 import { db } from '../database/index.ts';
 import type { Food } from '../database/types/FoodTable.ts';
 import { MediaManager } from '../services/media/MediaManager.ts';
+import { computeLitterboxAnalysisData } from '../services/devices/providers/esphome/analyzeLitterboxUse.ts';
+import type { LitterboxUseEventData } from '../database/types/EventTable.ts';
 
 type FoodNutrientItem = { nutrient: string; unit: string; value: number };
 
@@ -566,6 +568,78 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       return {
         ...result,
         raw_data: result.raw_data ? Array.from(result.raw_data) : null,
+      };
+    },
+  );
+
+  fastify.post(
+    '/:eventId/analyze',
+    {
+      schema: {
+        params: PatchEventParamsSchema,
+        response: {
+          '200': GetEventSchema,
+          '400': Http400BadRequestSchema,
+          '404': Http404ResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { eventId } = request.params;
+
+      const eventRow = await db
+        .selectFrom('event')
+        .selectAll()
+        .where('id', '=', eventId)
+        .where('parent_event_id', 'is', null)
+        .executeTakeFirst();
+
+      if (!eventRow) {
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Event not found',
+        });
+      }
+
+      const d = eventRow.data as { type?: string };
+      if (d?.type !== 'litterbox_use') {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Only litterbox_use events can be analyzed',
+        });
+      }
+
+      const existing = eventRow.data as LitterboxUseEventData;
+      const result = await computeLitterboxAnalysisData(db, {
+        timestamp: eventRow.timestamp,
+        raw_data: eventRow.raw_data,
+        existing,
+      });
+
+      if (!result.ok) {
+        const message =
+          result.error === 'no_raw_data' || result.error === 'decode_failed'
+            ? 'Missing or invalid litterbox raw_data'
+            : 'Analysis failed';
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message,
+        });
+      }
+
+      const updated = await db
+        .updateTable('event')
+        .set({ data: result.data })
+        .where('id', '=', eventId)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      return {
+        ...updated,
+        raw_data: updated.raw_data ? Array.from(updated.raw_data) : null,
       };
     },
   );

@@ -1,0 +1,14 @@
+.event-elimination-segments {
+  &.timeline-meta-item {
+    gap: var(--space-3xs);
+  }
+
+  .event-elimination-segments__sep {
+    opacity: 0.55;
+    user-select: none;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}

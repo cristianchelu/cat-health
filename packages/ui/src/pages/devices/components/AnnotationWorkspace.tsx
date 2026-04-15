@@ -1,17 +1,23 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckCheck, AlertCircle, Trash2, Loader2, RotateCcw, Ban, Wrench, Video } from 'lucide-react';
-import { useEventMedia, useUpdateEvent } from '@/hooks/queries/eventQueries';
+import { CheckCheck, AlertCircle, Trash2, Loader2, RotateCcw, Ban, Wrench, Video, RefreshCw } from 'lucide-react';
+import { useAnalyzeLitterboxEvent, useEventMedia, usePatchEvent } from '@/hooks/queries/eventQueries';
 import { usePets } from '@/hooks/queries/petQueries';
 import { Select } from '@/components/ui/form/Select';
 import { Button } from '@/components/ui/Button';
 import WeightSignalChart from '@/components/events/WeightSignalChart';
-import { LitterboxStateTracker } from '@/components/events/litterboxStateTracker';
 import { decodeLitterboxRawData } from '@/components/events/decodeLitterboxRawData';
 import { deriveDetectorBouts } from '@/lib/litterboxDetectorBouts';
-import type { GetEventDTO, LitterboxUseEliminationType } from 'shared';
+import type {
+  GetEventDTO,
+  LitterboxAnalysisStatePeriod,
+  LitterboxUseEliminationType,
+} from 'shared';
 import type { LitterboxBoutAnnotation, LitterboxAnnotation } from '@/types/litterbox';
 import './AnnotationWorkspace.css';
+
+/** Stable fallback so `periods` stays referentially equal when there are no analyzer segments. */
+const EMPTY_ANALYSIS_PERIODS: LitterboxAnalysisStatePeriod[] = [];
 
 interface AnnotationWorkspaceProps {
   event: GetEventDTO;
@@ -74,7 +80,9 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   onConvertedToMaintenance,
 }) => {
   const { t } = useTranslation();
-  const { mutate: updateEvent, mutateAsync: updateEventAsync, isPending: isSaving } = useUpdateEvent();
+  /** Avoid `useMutation` here: it re-renders via useSyncExternalStore on every mutation state tick. */
+  const { patchEvent, isPatching: isSaving } = usePatchEvent();
+  const { mutate: runAnalyze, isPending: isAnalyzing } = useAnalyzeLitterboxEvent();
   const { data: pets } = usePets();
   const { data: media, isLoading: isLoadingMedia } = useEventMedia(event.id);
 
@@ -88,11 +96,14 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   const decodedRaw = React.useMemo(() => decodeLitterboxRawData(event.raw_data), [event.raw_data]);
   const weights = React.useMemo(() => decodedRaw?.weights ?? [], [decodedRaw]);
 
+  const segmentsFromServer = (
+    event.data as { segments?: LitterboxAnalysisStatePeriod[] | null }
+  ).segments;
+
   const analysisResult = React.useMemo(() => {
-    if (!weights.length) return null;
-    const tracker = new LitterboxStateTracker();
-    return tracker.processEvent(weights);
-  }, [weights]);
+    if (segmentsFromServer == null) return null;
+    return { periods: segmentsFromServer };
+  }, [segmentsFromServer]);
 
   const sampleRate = React.useMemo(() => {
     if (!weights.length || !data.duration) return 10;
@@ -133,6 +144,11 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   }, [event.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Latest server event snapshot; avoids re-creating `save` when `event.data` identity changes (refetch / mutation). */
+  const eventIdRef = React.useRef(event.id);
+  const eventDataRef = React.useRef(event.data);
+  eventIdRef.current = event.id;
+  eventDataRef.current = event.data;
 
   const flushSave = React.useCallback(
     async (
@@ -145,16 +161,24 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     ) => {
       if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
       saveDebounceRef.current = null;
+      const eventData = eventDataRef.current;
+      const eventId = eventIdRef.current;
       const resolvedPetId = resolvePetIdFromSelect(nextPetId);
-      const prevAnn = (event.data as { annotation?: LitterboxAnnotation }).annotation;
-      await updateEventAsync({
-        eventId: event.id,
+      const prevAnn = (eventData as { annotation?: LitterboxAnnotation }).annotation;
+      const prevElim =
+        (eventData as { elimination_type?: LitterboxUseEliminationType }).elimination_type ??
+        'unknown';
+      const elimStalePatch =
+        nextElimType !== prevElim ? { segments: null } : {};
+      await patchEvent({
+        eventId,
         data: {
           pet_id: resolvedPetId,
           data: {
-            ...event.data,
+            ...eventData,
             elimination_type: nextElimType,
             straining: nextStraining,
+            ...elimStalePatch,
             annotation: {
               ...(prevAnn ?? {}),
               bouts: nextBouts,
@@ -165,7 +189,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
         },
       });
     },
-    [event.id, event.data, updateEventAsync],
+    [patchEvent],
   );
 
   const save = React.useCallback(
@@ -179,16 +203,24 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     ) => {
       if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
       saveDebounceRef.current = setTimeout(() => {
+        const eventData = eventDataRef.current;
+        const eventId = eventIdRef.current;
         const resolvedPetId = resolvePetIdFromSelect(nextPetId);
-        const prevAnn = (event.data as { annotation?: LitterboxAnnotation }).annotation;
-        updateEvent({
-          eventId: event.id,
+        const prevAnn = (eventData as { annotation?: LitterboxAnnotation }).annotation;
+        const prevElim =
+          (eventData as { elimination_type?: LitterboxUseEliminationType }).elimination_type ??
+          'unknown';
+        const elimStalePatch =
+          nextElimType !== prevElim ? { segments: null } : {};
+        void patchEvent({
+          eventId,
           data: {
             pet_id: resolvedPetId,
             data: {
-              ...event.data,
+              ...eventData,
               elimination_type: nextElimType,
               straining: nextStraining,
+              ...elimStalePatch,
               annotation: {
                 ...(prevAnn ?? {}),
                 bouts: nextBouts,
@@ -200,7 +232,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
         });
       }, 500);
     },
-    [event.id, event.data, updateEvent],
+    [patchEvent],
   );
 
   const handleBoutsChange = React.useCallback(
@@ -245,7 +277,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
       clearTimeout(saveDebounceRef.current);
       saveDebounceRef.current = null;
     }
-    await updateEventAsync({
+    await patchEvent({
       eventId: event.id,
       data: {
         pet_id: null,
@@ -257,7 +289,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
       },
     });
     onConvertedToMaintenance?.();
-  }, [event.id, onConvertedToMaintenance, t, updateEventAsync]);
+  }, [event.id, onConvertedToMaintenance, patchEvent, t]);
 
   const handleBoutTypeChange = React.useCallback((idx: number, boutType: LitterboxBoutAnnotation['bout_type']) => {
     const next = localBouts.map((b, i) => (i === idx ? { ...b, bout_type: boutType } : b));
@@ -524,18 +556,41 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
         </div>
       )}
 
+      {/* TODO(perf): Chart bout drag still lags during/overlapping PATCH saves; usePatchEvent/memo not enough.
+          Suspect query invalidation/refetch, parent re-renders, analyze mutation, or drag render path—profile and isolate chart / narrow invalidation / batch drag updates. */}
       <div className="annotation-workspace-chart">
-        {hasRawData && analysisResult ? (
-          <WeightSignalChart
-            weights={weights}
-            periods={analysisResult.periods}
-            sampleRate={sampleRate}
-            bouts={localBouts}
-            onBoutsChange={handleBoutsChange}
-            selectedBoutIndex={selectedBoutIndex}
-            onSelectBout={setSelectedBoutIndex}
-            mediaSync={chartMediaSync}
-          />
+        {hasRawData ? (
+          <div className="annotation-chart-with-overlay">
+            <div className="annotation-analyze-toolbar">
+              <Button
+                type="button"
+                variant="ghost"
+                icon
+                size="sm"
+                className="annotation-reanalyze-btn"
+                disabled={isSaving || isAnalyzing}
+                title={t('event_details.analyze')}
+                aria-label={t('event_details.analyze')}
+                onClick={() => runAnalyze(event.id)}
+              >
+                {isAnalyzing ? (
+                  <Loader2 size={16} aria-hidden className="animate-spin" />
+                ) : (
+                  <RefreshCw size={16} aria-hidden />
+                )}
+              </Button>
+            </div>
+            <WeightSignalChart
+              weights={weights}
+              periods={analysisResult?.periods ?? EMPTY_ANALYSIS_PERIODS}
+              sampleRate={sampleRate}
+              bouts={localBouts}
+              onBoutsChange={handleBoutsChange}
+              selectedBoutIndex={selectedBoutIndex}
+              onSelectBout={setSelectedBoutIndex}
+              mediaSync={chartMediaSync}
+            />
+          </div>
         ) : (
           <div className="annotation-no-chart">
             <AlertCircle size={24} />

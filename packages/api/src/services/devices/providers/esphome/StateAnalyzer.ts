@@ -1,5 +1,8 @@
 import type { LitterboxUseEliminationType } from 'shared';
 
+/** Urination vs defecation split from eliminating-period variance (server-only). */
+export const URINATION_VARIANCE_THRESHOLD_G = 4;
+
 // --- State analyzer (plateau detection for accurate cat weight and elimination type) ---
 
 export interface StatePeriod {
@@ -423,8 +426,6 @@ export class StateAnalyzer {
     this.wasteWeight = 0;
   }
 }
-
-export const URINATION_VARIANCE_THRESHOLD_G = 4;
 
 export function determineEliminationType(
   periods: StatePeriod[],

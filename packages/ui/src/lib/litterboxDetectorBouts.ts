@@ -1,16 +1,16 @@
-import type { StatePeriod } from '@/components/events/litterboxStateTracker';
+import type { LitterboxAnalysisStatePeriod as StatePeriod } from 'shared';
 import type { LitterboxBoutAnnotation } from '@/types/litterbox';
-
-/** Must match `URINATION_VARIANCE_THRESHOLD_G` in `packages/api/.../StateAnalyzer.ts`. */
-const URINATION_VARIANCE_THRESHOLD_G = 4;
 
 function isEliminatingPeriod(p: StatePeriod): boolean {
   return p.state === 'eliminating' && p.end > p.start;
 }
 
-function varianceToBoutType(v: number | undefined): LitterboxBoutAnnotation['bout_type'] {
-  if (v === undefined) return 'unknown';
-  return v < URINATION_VARIANCE_THRESHOLD_G ? 'urination' : 'defecation';
+function periodToBoutType(
+  p: StatePeriod,
+): LitterboxBoutAnnotation['bout_type'] {
+  if (p.elimination_type === 'urination') return 'urination';
+  if (p.elimination_type === 'defecation') return 'defecation';
+  return 'unknown';
 }
 
 export function deriveDetectorBouts(periods: StatePeriod[], sampleRateHz: number): LitterboxBoutAnnotation[] {
@@ -25,17 +25,10 @@ export function deriveDetectorBouts(periods: StatePeriod[], sampleRateHz: number
     eliminating.push(period);
   }
 
-  const bouts: LitterboxBoutAnnotation[] = eliminating.map((period, i) => ({
+  return eliminating.map((period, i) => ({
     bout_index: i,
     t_start_s: period.start / hz,
     t_end_s: period.end / hz,
-    bout_type: 'unknown' as const,
+    bout_type: periodToBoutType(period),
   }));
-
-  if (bouts.length === 1) {
-    bouts[0].bout_type = varianceToBoutType(eliminating[0].variance);
-  }
-
-  return bouts;
 }
-

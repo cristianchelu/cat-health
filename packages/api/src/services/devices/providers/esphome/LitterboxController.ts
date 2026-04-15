@@ -1,4 +1,5 @@
 import { sql } from 'kysely';
+import { encodeLitterboxRawData } from 'shared';
 import type { NewEvent } from '../../../../database/types/EventTable.ts';
 import type { ProviderDeps, Device } from '../../types.ts';
 import {
@@ -6,6 +7,7 @@ import {
   type ReconnectConfig,
 } from './BaseESPHomeController.ts';
 import { StateAnalyzer, determineEliminationType } from './StateAnalyzer.ts';
+import { persistedLitterboxSegments } from './persistedLitterboxSegments.ts';
 
 const MAINTENANCE_THRESHOLD = -20;
 const NO_ELIMINATION_THRESHOLD = 10;
@@ -163,10 +165,13 @@ export class LitterboxController extends BaseESPHomeController {
       console.log('[Litterbox] Context data:', contextData);
 
       // Encode raw data
-      const rawData = this.encodeRawData(
-        session.startTime,
-        measurements,
-        contextData || undefined,
+      const rawData = Buffer.from(
+        encodeLitterboxRawData({
+          version: 1,
+          startTimeMs: session.startTime.getTime(),
+          context: contextData || undefined,
+          weights: measurements.map((m) => m.weight),
+        }),
       );
 
       if (eliminationWeight < MAINTENANCE_THRESHOLD) {
@@ -216,6 +221,8 @@ export class LitterboxController extends BaseESPHomeController {
         const eliminationType = determineEliminationType(analysis.periods);
         const straining = eliminationType !== 'no_elimination' && eliminationWeight < NO_ELIMINATION_THRESHOLD;
 
+        const segments = persistedLitterboxSegments(analysis.periods);
+
         const event: NewEvent = {
           pet_id: petId,
           device_id: this.deviceId,
@@ -226,6 +233,7 @@ export class LitterboxController extends BaseESPHomeController {
             elimination_weight: Math.round(Math.max(0, eliminationWeight)),
             duration: Math.round(duration / 1000),
             straining,
+            segments,
           },
           raw_data: rawData,
           human_verified: false,
@@ -414,108 +422,6 @@ export class LitterboxController extends BaseESPHomeController {
     }
 
     return latestWeights;
-  }
-
-  private encodeRawData(
-    startTime: Date,
-    measurements: RawMeasurement[],
-    context?: ContextData,
-  ): Buffer {
-    // Binary encoding format v1: [version:1byte][startTimestamp:8bytes][context:10bytes][count:4bytes][weights:count*2bytes]
-    // Context format: [wasteWeight:2bytes][litterRemaining:2bytes][deepCleanTimer:1byte][totalVisits:1byte][daysSinceLitterReplaced:1byte][hoursSinceLastScoop:1byte][reserved:2bytes]
-    const version = 1;
-    const count = measurements.length;
-    const buffer = Buffer.allocUnsafe(1 + 8 + 10 + 4 + count * 2);
-
-    let offset = 0;
-    buffer.writeUInt8(version, offset);
-    offset += 1;
-
-    buffer.writeBigUInt64BE(BigInt(startTime.getTime()), offset);
-    offset += 8;
-
-    // Context data (10 bytes total) - use max values to indicate null
-    if (context) {
-      // Waste weight: 0-2048g fits in uint16
-      const wasteWeight = Math.min(
-        65534,
-        Math.max(0, Math.round(context.wasteWeight)),
-      );
-      buffer.writeUInt16BE(wasteWeight, offset);
-      offset += 2;
-
-      // Litter remaining: 0-50kg (50000g) fits in uint16
-      const litterRemaining = Math.min(
-        65534,
-        Math.max(0, Math.round(context.litterRemaining)),
-      );
-      buffer.writeUInt16BE(litterRemaining, offset);
-      offset += 2;
-
-      // Deep clean timer: 0-255 hours fits in uint8
-      const deepCleanTimer = Math.min(
-        254,
-        Math.max(0, Math.round(context.deepCleanTimer)),
-      );
-      buffer.writeUInt8(deepCleanTimer, offset);
-      offset += 1;
-
-      // Total visits: 0-255 fits in uint8
-      const totalVisits = Math.min(
-        254,
-        Math.max(0, Math.round(context.totalVisits)),
-      );
-      buffer.writeUInt8(totalVisits, offset);
-      offset += 1;
-
-      // Days since litter replaced: 0-254 days fits in uint8
-      const daysSinceLitterReplaced = Math.min(
-        254,
-        Math.max(0, Math.round(context.daysSinceLitterReplaced)),
-      );
-      buffer.writeUInt8(daysSinceLitterReplaced, offset);
-      offset += 1;
-
-      // Hours since last scoop: 0-254 hours fits in uint8
-      const hoursSinceLastScoop = Math.min(
-        254,
-        Math.max(0, Math.round(context.hoursSinceLastScoop)),
-      );
-      buffer.writeUInt8(hoursSinceLastScoop, offset);
-      offset += 1;
-    } else {
-      // No context - fill with max values (null indicators)
-      buffer.writeUInt16BE(65535, offset); // wasteWeight null
-      offset += 2;
-      buffer.writeUInt16BE(65535, offset); // litterRemaining null
-      offset += 2;
-      buffer.writeUInt8(255, offset); // deepCleanTimer null
-      offset += 1;
-      buffer.writeUInt8(255, offset); // totalVisits null
-      offset += 1;
-      buffer.writeUInt8(255, offset); // daysSinceLitterReplaced null
-      offset += 1;
-      buffer.writeUInt8(255, offset); // hoursSinceLastScoop null
-      offset += 1;
-    }
-
-    // Reserved space for future use
-    buffer.writeUInt16BE(0, offset);
-    offset += 2;
-
-    buffer.writeUInt32BE(count, offset);
-    offset += 4;
-
-    // Store tared weights
-    for (const measurement of measurements) {
-      const weight = Math.round(measurement.weight);
-      // Clamp to int16 range
-      const clampedWeight = Math.max(-32768, Math.min(32767, weight));
-      buffer.writeInt16BE(clampedWeight, offset);
-      offset += 2;
-    }
-
-    return buffer;
   }
 
 }

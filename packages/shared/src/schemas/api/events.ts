@@ -21,7 +21,28 @@ export const LitterboxUseEliminationTypeSchema = Type.Union([
 export type LitterboxUseEliminationType =
   Static<typeof LitterboxUseEliminationTypeSchema>;
 
+/** Sample rate (Hz); must match `StateAnalyzer` on the device path. */
+export const LITTERBOX_SAMPLE_HZ = 10;
 
+/**
+ * One row from server `StateAnalyzer` periods, persisted on the event as `data.segments`.
+ * Sample indices `start` / `end` align with the weight array; use `LITTERBOX_SAMPLE_HZ` (or derived Hz from duration/length) for seconds in the UI.
+ * Per-interval stats (variance, mean) are not persisted — UIs that need them recompute from `raw_data` weights.
+ */
+export interface LitterboxAnalysisStatePeriod {
+  state: string;
+  start: number;
+  end: number;
+  /** Urination vs defecation for `eliminating` rows; set server-side (underlying variance is not stored). */
+  elimination_type?: "urination" | "defecation";
+}
+
+/** Timeline badge row: seconds from sample indices; `elimination_type` comes from persisted segments. */
+export interface LitterboxEliminationBadgeSegment {
+  elimination_type: "urination" | "defecation";
+  start_s: number;
+  end_s: number;
+}
 
 export const GetEventSchema = Type.Object({
   id: Type.Number(),
@@ -55,7 +76,7 @@ export const GetEventsQuerySchema = Type.Object({
   pet_id: Type.Optional(Type.Number()),
   device_id: Type.Optional(Type.Number()),
   startTime: Type.Optional(Type.String({ format: "date-time" })), // ISO 8601 format
-  endTime: Type.Optional(Type.String({ format: "date-time" })), // ISO 8601 format
+  endTime: Type.Optional(Type.String({ format: "date-time" })),
   limit: Type.Optional(Type.Number({ minimum: 1, maximum: 5000 })),
   offset: Type.Optional(Type.Number({ minimum: 0 })),
   includeChildren: Type.Optional(Type.Boolean()),

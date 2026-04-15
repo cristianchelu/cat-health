@@ -245,7 +245,8 @@
         "legend_spill": "Spill / play (>90 ml/min)",
         "legend_noise": "Noise / idle",
         "water_excluded_ml": "{{amount}}ml excluded (spill/play)",
-        "chart_ending_weight": "end {{value}} g"
+        "chart_ending_weight": "end {{value}} g",
+        "analyze": "Analyze"
     },
     "device_types": {
         "litterbox": "Litterbox",

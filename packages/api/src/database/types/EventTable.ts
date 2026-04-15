@@ -1,5 +1,8 @@
 import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
-import { LitterboxUseEliminationType } from 'shared';
+import type {
+  LitterboxAnalysisStatePeriod,
+  LitterboxUseEliminationType,
+} from 'shared';
 
 export interface WeightMeasurementEventData {
   type: 'weight_measurement';
@@ -36,6 +39,11 @@ export interface LitterboxUseEventData {
   duration: number;
   straining?: boolean;
   annotation?: LitterboxAnnotation;
+  /**
+   * Full server `StateAnalyzer` period list (sample indices). `null` = not analyzed / cleared;
+   * `[]` = analyzed, zero periods. Per-row `elimination_type` (urination/defecation) is set on ingest/analyze.
+   */
+  segments?: LitterboxAnalysisStatePeriod[] | null;
 }
 
 export type FoodIntakeFoodType = 'dry' | 'wet' | 'treat' | 'unknown';

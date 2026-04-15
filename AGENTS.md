@@ -276,6 +276,7 @@ import { db } from "../database/index.ts";
 
 - **TypeScript**: Primary language for both frontend and backend
 - **Node.js**: Runtime environment
+- **Binary payloads** (`packages/shared/src/binary/`): versioned encode/decode for compact DB/network blobs (e.g. litterbox `raw_data`). Prefer `Uint8Array` APIs; API code may wrap with `Buffer` where needed.
 
 ### Backend Key Dependencies
 
