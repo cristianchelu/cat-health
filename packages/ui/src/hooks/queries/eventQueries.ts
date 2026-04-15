@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
 import apiClient from '@/api/apiClient';
 import {
+  type GetEventDTO,
+  type GetEventsResponseDTO,
   type GetEventMediaResponseDTO,
   type PatchEventRequestDTO,
 } from 'shared';
@@ -13,15 +15,43 @@ import {
   getVerifiedEventMedia,
 } from '@/api/pets';
 
-/** Shared with `useUpdateEvent` and `usePatchEvent` (mutation `onSuccess`). */
-export function invalidateQueriesAfterEventPatch(
+/**
+ * Replaces one row in every cached `deviceAnnotationEvents` page when present.
+ * Call with the server `GetEventDTO` after analyze or PATCH — avoids refetching the whole list.
+ */
+export function mergeGetEventIntoDeviceAnnotationCaches(
   queryClient: QueryClient,
-  eventId: number,
-) {
+  event: GetEventDTO,
+): void {
+  queryClient.setQueriesData<GetEventsResponseDTO | undefined>(
+    { queryKey: ['deviceAnnotationEvents'] },
+    (old) => {
+      if (old?.data == null) return old;
+      const idx = old.data.findIndex((e) => e.id === event.id);
+      if (idx === -1) return old;
+      const nextData = old.data.slice();
+      nextData[idx] = event;
+      return { ...old, data: nextData };
+    },
+  );
+}
+
+/** Detail query + annotation list rows; does not refetch. Pair with {@link invalidateQueriesAfterEventPatch}. */
+export function applyServerEventToEventCaches(
+  queryClient: QueryClient,
+  event: GetEventDTO,
+): void {
+  queryClient.setQueryData(['event', event.id], event);
+  mergeGetEventIntoDeviceAnnotationCaches(queryClient, event);
+}
+
+/**
+ * Invalidate list queries that are not updated by {@link applyServerEventToEventCaches}.
+ * Call `applyServerEventToEventCaches(queryClient, result)` first when you have the patched event body.
+ */
+export function invalidateQueriesAfterEventPatch(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ['deviceEvents'] });
-  queryClient.invalidateQueries({ queryKey: ['deviceAnnotationEvents'] });
   queryClient.invalidateQueries({ queryKey: ['petEvents'] });
-  queryClient.invalidateQueries({ queryKey: ['event', eventId] });
 }
 
 /**
@@ -42,7 +72,8 @@ export function usePatchEvent() {
       if (pendingRef.current === 1) setIsPatching(true);
       try {
         const result = await updateEvent(variables.eventId, variables.data);
-        invalidateQueriesAfterEventPatch(queryClient, variables.eventId);
+        applyServerEventToEventCaches(queryClient, result);
+        invalidateQueriesAfterEventPatch(queryClient);
         return result;
       } finally {
         pendingRef.current -= 1;
@@ -81,8 +112,9 @@ export function useUpdateEvent() {
       eventId: number;
       data: PatchEventRequestDTO;
     }) => updateEvent(eventId, data),
-    onSuccess: (_data, variables) => {
-      invalidateQueriesAfterEventPatch(queryClient, variables.eventId);
+    onSuccess: (data) => {
+      applyServerEventToEventCaches(queryClient, data);
+      invalidateQueriesAfterEventPatch(queryClient);
     },
   });
 }
@@ -103,11 +135,10 @@ export function useAnalyzeLitterboxEvent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (eventId: number) => analyzeLitterboxEvent(eventId),
-    onSuccess: (_data, eventId) => {
+    onSuccess: (data) => {
+      applyServerEventToEventCaches(queryClient, data);
       queryClient.invalidateQueries({ queryKey: ['deviceEvents'] });
-      queryClient.invalidateQueries({ queryKey: ['deviceAnnotationEvents'] });
       queryClient.invalidateQueries({ queryKey: ['petEvents'] });
-      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
     },
   });
 }

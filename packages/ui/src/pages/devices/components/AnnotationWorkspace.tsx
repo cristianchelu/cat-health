@@ -83,7 +83,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   const { t } = useTranslation();
   /** Avoid `useMutation` here: it re-renders via useSyncExternalStore on every mutation state tick. */
   const { patchEvent, isPatching: isSaving } = usePatchEvent();
-  const { mutate: runAnalyze, isPending: isAnalyzing } = useAnalyzeLitterboxEvent();
+  const { mutateAsync: runAnalyzeAsync, isPending: isAnalyzing } = useAnalyzeLitterboxEvent();
   const { data: pets } = usePets();
   const { data: media, isLoading: isLoadingMedia } = useEventMedia(event.id);
 
@@ -318,10 +318,42 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
 
   const hasRawData = weights.length > 0;
 
-  const handleReanalyze = React.useCallback(() => {
+  const handleReanalyze = React.useCallback(async () => {
     if (!hasRawData || isSaving || isAnalyzing) return;
-    runAnalyze(event.id);
-  }, [hasRawData, isAnalyzing, isSaving, runAnalyze, event.id]);
+    try {
+      const updated = await runAnalyzeAsync(event.id);
+      eventDataRef.current = updated.data;
+
+      const ud = updated.data as {
+        elimination_type?: LitterboxUseEliminationType;
+        straining?: boolean;
+        segments?: LitterboxAnalysisStatePeriod[] | null;
+      };
+      const nextElim = ud.elimination_type ?? 'unknown';
+      const nextStrain = ud.straining ?? false;
+      setEliminationType(nextElim);
+      setStraining(nextStrain);
+
+      const periods = ud.segments ?? [];
+      const next = periods.length === 0 ? [] : deriveDetectorBouts(periods, sampleRate);
+      setSelectedBoutIndex(next.length > 0 ? 0 : null);
+      setLocalBouts(next);
+
+      await flushSave(next, petId, nextElim, nextStrain, updated.human_verified, excluded);
+    } catch {
+      // Request failed (e.g. missing raw_data); list/detail queries still refresh on success path only.
+    }
+  }, [
+    excluded,
+    event.id,
+    flushSave,
+    hasRawData,
+    isAnalyzing,
+    isSaving,
+    petId,
+    runAnalyzeAsync,
+    sampleRate,
+  ]);
 
   const videoItems = React.useMemo(
     () => (media ?? []).filter((m) => m.mime_type.startsWith('video/')),
