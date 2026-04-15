@@ -26,7 +26,7 @@ This is a **Pet Assistant** application focused on cat health monitoring through
 - **Build Tool**: Vite
 - **Routing**: React Router v7
 - **State Management**: TanStack Query for server state
-- **Charts**: Chart.js with react-chartjs-2
+- **Charts / metrics**: Custom SVG and layout components (no Chart.js)
 - **Icons**: Lucide React + React Icons
 
 ## Code Standards & Patterns
@@ -289,7 +289,7 @@ import { db } from "../database/index.ts";
 - **React 19**: UI framework
 - **TanStack Query**: Server state management
 - **React Router v7**: Client-side routing
-- **Chart.js**: Data visualization
+- **Custom charts**: SVG/CSS metric and signal views in components
 - **Vite**: Build tool and dev server
 
 ## Theme & Design System

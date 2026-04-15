@@ -22,11 +22,11 @@
     &:hover {
       color: var(--color-text);
     }
+  }
 
-    &-active {
-      color: var(--color-text);
-      border-bottom-color: var(--color-primary);
-    }
+  .tabs-trigger-active {
+    color: var(--color-text);
+    border-bottom-color: var(--color-primary);
   }
 
   .tabs-content {

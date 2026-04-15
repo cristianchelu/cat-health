@@ -92,7 +92,7 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
           {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
           {event.human_verified && <EventVerified />}
           {event.human_verified && (data as { annotation?: LitterboxAnnotation }).annotation?.bouts?.length ? (
-            <Timeline.Badge variant="default">
+            <Timeline.Badge>
               {t('annotation.status_bout')}
             </Timeline.Badge>
           ) : null}

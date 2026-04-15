@@ -3,6 +3,79 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { VitePWA } from 'vite-plugin-pwa';
 
+/** Rollup `manualChunks`: group `node_modules` by dependency family for caching and smaller per-file warnings. */
+function vendorFamilyChunk(moduleId: string): string | undefined {
+  if (!moduleId.includes('node_modules')) {
+    return undefined;
+  }
+  const id = moduleId.replace(/\\/g, '/');
+
+  const families: Array<{ name: string; test: (s: string) => boolean }> = [
+    {
+      name: 'react-vendor',
+      test: (s) =>
+        s.includes('/node_modules/react/') ||
+        s.includes('/node_modules/react-dom/') ||
+        s.includes('/node_modules/scheduler/') ||
+        s.includes('/node_modules/use-sync-external-store/'),
+    },
+    {
+      name: 'router-vendor',
+      test: (s) => s.includes('/node_modules/react-router/'),
+    },
+    {
+      name: 'query-vendor',
+      test: (s) =>
+        s.includes('/node_modules/@tanstack/query-core/') ||
+        s.includes('/node_modules/@tanstack/react-query/'),
+    },
+    {
+      name: 'date-vendor',
+      test: (s) =>
+        s.includes('/node_modules/date-fns/') ||
+        s.includes('/node_modules/date-fns-tz/'),
+    },
+    {
+      name: 'i18n-vendor',
+      test: (s) =>
+        s.includes('/node_modules/i18next/') ||
+        s.includes('/node_modules/react-i18next/') ||
+        s.includes('/node_modules/i18next-browser-languagedetector/'),
+    },
+    {
+      name: 'forms-vendor',
+      test: (s) => s.includes('/node_modules/react-hook-form/'),
+    },
+    {
+      name: 'http-vendor',
+      test: (s) => s.includes('/node_modules/axios/'),
+    },
+    {
+      name: 'icons-vendor',
+      test: (s) =>
+        s.includes('/node_modules/lucide-react/') ||
+        s.includes('/node_modules/react-icons/'),
+    },
+    {
+      name: 'radix-vendor',
+      test: (s) =>
+        s.includes('/node_modules/radix-ui/') ||
+        s.includes('/node_modules/@radix-ui/'),
+    },
+    {
+      name: 'workbox-vendor',
+      test: (s) => s.includes('/node_modules/workbox-'),
+    },
+  ];
+
+  for (const { name, test } of families) {
+    if (test(id)) {
+      return name;
+    }
+  }
+  return 'vendor';
+}
+
 // https://vite.dev/config/
 //
 // `base: './'` + PWA: both are intentional. Relative `base` keeps built `/assets/...`
@@ -178,6 +251,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: vendorFamilyChunk,
+      },
     },
   },
 });
