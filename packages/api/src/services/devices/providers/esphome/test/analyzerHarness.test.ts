@@ -1,8 +1,9 @@
 /**
  * StateAnalyzer fixture harness (Wave 3).
  *
- * Loads human-verified exports (gitignored): visits.csv, streams/*.txt, bouts.csv.
- * See exportHumanVerifiedLitterboxFixtures.ts for column definitions.
+ * Loads fixture exports (gitignored): visits.csv, streams/*.txt, bouts.csv.
+ * Produce them with exportHumanVerifiedLitterboxFixtures.ts (--selection verified |
+ * annotated | any); see that script for column definitions.
  *
  * Baseline workflow (guard against silent regressions):
  * 1. Run with fixtures: `npm run test:analyzer -w packages/api` → writes test/metrics_latest.json

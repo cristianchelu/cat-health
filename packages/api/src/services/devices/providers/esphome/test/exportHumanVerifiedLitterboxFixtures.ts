@@ -1,15 +1,22 @@
 /**
- * Export human_verified litterbox_use events from SQLite into text fixtures
+ * Export litterbox_use events from SQLite into text fixtures
  * matching esp32-litterbox-visits-test-plan.md (streams/, visits.csv, bouts.csv).
  *
  * Run from packages/api:
- *   node --experimental-strip-types src/services/devices/providers/esphome/exportHumanVerifiedLitterboxFixtures.ts --out src/services/devices/providers/esphome/test
+ *   node --experimental-strip-types src/services/devices/providers/esphome/test/exportHumanVerifiedLitterboxFixtures.ts --out src/services/devices/providers/esphome/test
  *
  * Options:
  *   --out <dir>     Output directory (default: ./test under this file's directory)
  *   --limit <n>   Max visits to export (default: 50)
  *   --db <path>   SQLite file (default: SQLITE_PATH env or repo data/database.sqlite)
  *   --no-clean    Do not delete existing streams/*.txt (and legacy *.csv) before writing
+ *   --selection verified|annotated|any
+ *                 verified (default): human_verified litterbox_use rows only
+ *                 annotated: rows with persisted data.annotation (may be unverified)
+ *                 any: human_verified OR annotation present
+ *
+ * When annotation.bouts is non-empty, rows are written to bouts.csv and
+ * bout_annotation_level=per_bout; otherwise bout_annotation_level=session_only.
  *
  * Visits with data.annotation.excluded === true are omitted (bad data flagged in the UI).
  */
@@ -35,11 +42,14 @@ function csvEscape(value: string | number | boolean): string {
   return s;
 }
 
+type FixtureSelection = 'verified' | 'annotated' | 'any';
+
 function parseArgs(argv: string[]) {
   let outDir = DEFAULT_OUT;
   let limit = 50;
   let clean = true;
   let dbPath: string | undefined;
+  let selection: FixtureSelection = 'verified';
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out' && argv[i + 1]) {
@@ -50,9 +60,16 @@ function parseArgs(argv: string[]) {
       dbPath = path.resolve(argv[++i]);
     } else if (a === '--no-clean') {
       clean = false;
+    } else if (a === '--selection' && argv[i + 1]) {
+      const v = argv[++i].toLowerCase();
+      if (v === 'verified' || v === 'annotated' || v === 'any') {
+        selection = v;
+      } else {
+        console.warn(`Unknown --selection ${v}; using verified`);
+      }
     }
   }
-  return { outDir, limit, clean, dbPath };
+  return { outDir, limit, clean, dbPath, selection };
 }
 
 async function getLatestPetWeightsGrams(
@@ -107,9 +124,9 @@ function groundTruthCatSlot(
 
 async function exportFixtures(
   db: Kysely<Database>,
-  opts: { outDir: string; limit: number; clean: boolean },
+  opts: { outDir: string; limit: number; clean: boolean; selection: FixtureSelection },
 ) {
-  const { outDir, limit, clean } = opts;
+  const { outDir, limit, clean, selection } = opts;
   const streamsDir = path.join(outDir, 'streams');
   await mkdir(streamsDir, { recursive: true });
 
@@ -126,15 +143,32 @@ async function exportFixtures(
     }
   }
 
-  const events = await db
+  const base = db
     .selectFrom('event')
     .selectAll()
-    .where('human_verified', '=', true)
     .where(sql<string>`json_extract(data, '$.type')`, '=', 'litterbox_use')
-    .where('parent_event_id', 'is', null)
-    .orderBy('timestamp', 'desc')
-    .limit(limit)
-    .execute();
+    .where('parent_event_id', 'is', null);
+
+  const events =
+    selection === 'verified'
+      ? await base
+          .where('human_verified', '=', true)
+          .orderBy('timestamp', 'desc')
+          .limit(limit)
+          .execute()
+      : selection === 'annotated'
+        ? await base
+            .where(sql`json_extract(data, '$.annotation')`, 'is not', null)
+            .orderBy('timestamp', 'desc')
+            .limit(limit)
+            .execute()
+        : await base
+            .where(
+              sql<boolean>`(human_verified = 1 OR json_extract(data, '$.annotation') IS NOT NULL)`,
+            )
+            .orderBy('timestamp', 'desc')
+            .limit(limit)
+            .execute();
 
   const visitRows: string[] = [
     [
@@ -206,6 +240,10 @@ async function exportFixtures(
       .join('\n');
     await writeFile(path.join(outDir, streamRel), `${body}\n`, 'utf8');
 
+    const annBouts = data.annotation?.bouts ?? [];
+    const boutLevel =
+      annBouts.length > 0 ? 'per_bout' : 'session_only';
+
     visitRows.push(
       [
         csvEscape(visitId),
@@ -217,13 +255,22 @@ async function exportFixtures(
         csvEscape(catSlot),
         csvEscape(knownKgJson),
         csvEscape(Boolean(data.straining)),
-        csvEscape('session_only'),
+        csvEscape(boutLevel),
       ].join(','),
     );
 
-    // Per-plan: no per-bout human labels in DB; do not invent bout intervals.
-    // bouts.csv stays header-only for these exports (true negatives: no_elimination
-    // is represented by absence of rows in bouts.csv for that visit_id).
+    const sortedBouts = [...annBouts].sort((a, b) => a.bout_index - b.bout_index);
+    for (const bout of sortedBouts) {
+      boutRows.push(
+        [
+          csvEscape(visitId),
+          csvEscape(bout.bout_index),
+          csvEscape(bout.t_start_s),
+          csvEscape(bout.t_end_s),
+          csvEscape(bout.bout_type),
+        ].join(','),
+      );
+    }
 
     exported++;
   }
@@ -232,10 +279,10 @@ async function exportFixtures(
   await writeFile(path.join(outDir, 'bouts.csv'), boutRows.join('\n') + '\n', 'utf8');
 
   console.log(
-    `Wrote ${exported} visits to ${outDir} (streams/, visits.csv, bouts.csv). Skipped ${skipped}.`,
+    `Wrote ${exported} visits to ${outDir} (streams/, visits.csv, bouts.csv). Skipped ${skipped}. selection=${selection}`,
   );
   console.log(
-    'Note: bout_annotation_level=session_only — elimination_type and cat slot are human-verified; bouts.csv has no rows (no per-bout human spans in DB).',
+    'Ground truth: session_elimination_type and cat slot from event row; per-bout rows in bouts.csv when data.annotation.bouts is present.',
   );
 }
 
