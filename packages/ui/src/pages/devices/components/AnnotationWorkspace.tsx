@@ -71,6 +71,7 @@ export interface AnnotationWorkspaceActions {
   clearSelection: () => void;
   convertToMaintenance: () => Promise<void>;
   reanalyze: () => void;
+  setEventEliminationType: (t: LitterboxUseEliminationType) => void;
 }
 
 const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
@@ -242,6 +243,14 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     setEliminationType(val);
     save(localBouts, petId, val, straining, event.human_verified, excluded);
   };
+
+  const setEventEliminationType = React.useCallback(
+    (val: LitterboxUseEliminationType) => {
+      setEliminationType(val);
+      save(localBouts, petId, val, straining, event.human_verified, excluded);
+    },
+    [localBouts, petId, save, straining, event.human_verified, excluded],
+  );
 
   const handleStrainingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setStraining(e.target.checked);
@@ -513,6 +522,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
       clearSelection: () => setSelectedBoutIndex(null),
       convertToMaintenance: handleConvertToMaintenance,
       reanalyze: handleReanalyze,
+      setEventEliminationType,
     };
 
     return () => {
@@ -529,6 +539,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     handleBoutTypeChange,
     handleConvertToMaintenance,
     handleReanalyze,
+    setEventEliminationType,
     handleDeleteBout,
     localBouts,
     petId,
@@ -816,6 +827,16 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
                 </span>
                 {' '}
                 {t('annotation.kbd_123')}
+              </span>
+              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
+              <span className="annotation-kbd-hint">
+                <span className="annotation-kbd-cluster">
+                  <kbd className="annotation-kbd annotation-kbd--wide">Alt</kbd>
+                  <span className="annotation-kbd-join">+</span>
+                  <kbd className="annotation-kbd">1–5</kbd>
+                </span>
+                {' '}
+                {t('annotation.kbd_main_elim')}
               </span>
               <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
               <span className="annotation-kbd-hint">

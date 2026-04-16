@@ -23,6 +23,15 @@ const ELIMINATION_TYPES: LitterboxUseEliminationType[] = [
   'unknown',
 ];
 
+/** Alt + top-row 1–5 for main visit type. Uses `KeyboardEvent.code` (Digit1…5), not `key`, so layout/Shift symbols (!@…) do not matter. */
+const MAIN_ELIM_ALT_DIGIT_CODE_INDEX: Record<string, number> = {
+  Digit1: 0,
+  Digit2: 1,
+  Digit3: 2,
+  Digit4: 3,
+  Digit5: 4,
+};
+
 function getAnnotationStatus(event: GetEventDTO): 'excluded' | 'bout' | 'session' | 'none' {
   const d = event.data as { annotation?: LitterboxAnnotation };
   if (d.annotation?.excluded === true) return 'excluded';
@@ -506,19 +515,28 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
         return;
       }
 
-      if (key === '1') {
-        e.preventDefault();
-        workspaceActionsRef.current?.setSelectedBoutType('urination');
-        return;
+      if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
+        const idx = MAIN_ELIM_ALT_DIGIT_CODE_INDEX[e.code];
+        if (idx !== undefined) {
+          e.preventDefault();
+          workspaceActionsRef.current?.setEventEliminationType(ELIMINATION_TYPES[idx]);
+          return;
+        }
       }
-      if (key === '2') {
-        e.preventDefault();
-        workspaceActionsRef.current?.setSelectedBoutType('defecation');
-        return;
-      }
-      if (key === '3') {
-        e.preventDefault();
-        workspaceActionsRef.current?.setSelectedBoutType('unknown');
+
+      if (key === '1' || key === '2' || key === '3') {
+        const noMod = !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey;
+        if (noMod) {
+          e.preventDefault();
+          if (key === '1') {
+            workspaceActionsRef.current?.setSelectedBoutType('urination');
+          } else if (key === '2') {
+            workspaceActionsRef.current?.setSelectedBoutType('defecation');
+          } else {
+            workspaceActionsRef.current?.setSelectedBoutType('unknown');
+          }
+          return;
+        }
       }
     }
 
