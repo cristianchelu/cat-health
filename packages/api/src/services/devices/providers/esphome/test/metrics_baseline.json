@@ -1,0 +1,261 @@
+{
+  "visit_count": 1818,
+  "elimination": {
+    "matrix": {
+      "urination": {
+        "urination": 724,
+        "defecation": 65,
+        "both": 17,
+        "no_elimination": 7,
+        "unknown": 15
+      },
+      "defecation": {
+        "urination": 0,
+        "defecation": 272,
+        "both": 5,
+        "no_elimination": 10,
+        "unknown": 16
+      },
+      "both": {
+        "urination": 0,
+        "defecation": 0,
+        "both": 23,
+        "no_elimination": 0,
+        "unknown": 1
+      },
+      "no_elimination": {
+        "urination": 9,
+        "defecation": 16,
+        "both": 2,
+        "no_elimination": 592,
+        "unknown": 3
+      },
+      "unknown": {
+        "urination": 3,
+        "defecation": 2,
+        "both": 0,
+        "no_elimination": 35,
+        "unknown": 1
+      }
+    },
+    "perClassPrecision": {
+      "urination": 0.9836956521739131,
+      "defecation": 0.7661971830985915,
+      "both": 0.48936170212765956,
+      "no_elimination": 0.9192546583850931,
+      "unknown": 0.027777777777777776
+    },
+    "perClassRecall": {
+      "urination": 0.8743961352657005,
+      "defecation": 0.8976897689768977,
+      "both": 0.9583333333333334,
+      "no_elimination": 0.9517684887459807,
+      "unknown": 0.024390243902439025
+    },
+    "overallAccuracy": 0.8866886688668867,
+    "unknownAbstentionRate": 0.019801980198019802,
+    "n": 1818,
+    "by_session_elimination_type": {
+      "no_elimination": {
+        "accuracy": 0.9517684887459807,
+        "n": 622
+      },
+      "urination": {
+        "accuracy": 0.8743961352657005,
+        "n": 828
+      },
+      "defecation": {
+        "accuracy": 0.8976897689768977,
+        "n": 303
+      },
+      "both": {
+        "accuracy": 0.9583333333333334,
+        "n": 24
+      },
+      "unknown": {
+        "accuracy": 0.024390243902439025,
+        "n": 41
+      }
+    },
+    "by_straining": {
+      "true": {
+        "accuracy": 0.7286821705426356,
+        "n": 129
+      },
+      "false": {
+        "accuracy": 0.8987566607460036,
+        "n": 1689
+      }
+    }
+  },
+  "cat": {
+    "accuracy_excluding_unknown_slot": 0.7566826593557231,
+    "evaluated": 1459,
+    "by_session_elimination_type": {
+      "no_elimination": {
+        "accuracy": 0.4897959183673469,
+        "n": 294
+      },
+      "urination": {
+        "accuracy": 0.821256038647343,
+        "n": 828
+      },
+      "defecation": {
+        "accuracy": 0.8283828382838284,
+        "n": 303
+      },
+      "both": {
+        "accuracy": 0.9166666666666666,
+        "n": 24
+      },
+      "unknown": {
+        "accuracy": 0.7,
+        "n": 10
+      }
+    },
+    "by_straining": {
+      "true": {
+        "accuracy": 0.890625,
+        "n": 128
+      },
+      "false": {
+        "accuracy": 0.743801652892562,
+        "n": 1331
+      }
+    }
+  },
+  "bouts": {
+    "has_data": true,
+    "tp": 1176,
+    "fp": 96,
+    "fn": 12,
+    "precision": 0.9245283018867925,
+    "recall": 0.98989898989899,
+    "f1": 0.9560975609756097
+  },
+  "continuous": {
+    "waste_abs_error": {
+      "median": 27,
+      "p90": 67,
+      "p95": 76
+    },
+    "cat_abs_error_grams": {
+      "median": 30.899999999999636,
+      "p90": 124.10000000000036,
+      "p95": 6374
+    },
+    "cat_within_5pct_rate": 0.9163810829335161,
+    "cat_within_n": 1459
+  },
+  "stratified_continuous": {
+    "by_session_elimination_type": {
+      "no_elimination": {
+        "n": 622,
+        "waste_abs_error": {
+          "median": 3,
+          "p90": 9,
+          "p95": 13
+        },
+        "cat_abs_error_grams": {
+          "median": 55.80000000000018,
+          "p90": 6560,
+          "p95": 6603
+        },
+        "cat_within_5pct_rate": 0.6156462585034014,
+        "cat_within_n": 294
+      },
+      "urination": {
+        "n": 828,
+        "waste_abs_error": {
+          "median": 44,
+          "p90": 69,
+          "p95": 76
+        },
+        "cat_abs_error_grams": {
+          "median": 27.52404999999999,
+          "p90": 74.61999999999989,
+          "p95": 97.88599999999951
+        },
+        "cat_within_5pct_rate": 0.9951690821256038,
+        "cat_within_n": 828
+      },
+      "defecation": {
+        "n": 303,
+        "waste_abs_error": {
+          "median": 42,
+          "p90": 65,
+          "p95": 74
+        },
+        "cat_abs_error_grams": {
+          "median": 23.966549199999463,
+          "p90": 62.89999999999873,
+          "p95": 77.28199999999924
+        },
+        "cat_within_5pct_rate": 0.9966996699669967,
+        "cat_within_n": 303
+      },
+      "both": {
+        "n": 24,
+        "waste_abs_error": {
+          "median": 90.5,
+          "p90": 119,
+          "p95": 119
+        },
+        "cat_abs_error_grams": {
+          "median": 36.4326515000007,
+          "p90": 61.100000000000364,
+          "p95": 72.50000000000091
+        },
+        "cat_within_5pct_rate": 0.9583333333333334,
+        "cat_within_n": 24
+      },
+      "unknown": {
+        "n": 41,
+        "waste_abs_error": {
+          "median": 34,
+          "p90": 632,
+          "p95": 912
+        },
+        "cat_abs_error_grams": {
+          "median": 32.12638673770016,
+          "p90": 6375,
+          "p95": 6601
+        },
+        "cat_within_5pct_rate": 0.7,
+        "cat_within_n": 10
+      }
+    },
+    "by_straining": {
+      "true": {
+        "n": 129,
+        "waste_abs_error": {
+          "median": 5,
+          "p90": 10,
+          "p95": 12
+        },
+        "cat_abs_error_grams": {
+          "median": 17.5,
+          "p90": 66.63999999999942,
+          "p95": 78.80000000000018
+        },
+        "cat_within_5pct_rate": 1,
+        "cat_within_n": 128
+      },
+      "false": {
+        "n": 1689,
+        "waste_abs_error": {
+          "median": 32,
+          "p90": 68,
+          "p95": 76
+        },
+        "cat_abs_error_grams": {
+          "median": 32.100000000000364,
+          "p90": 156.60000000000036,
+          "p95": 6404
+        },
+        "cat_within_5pct_rate": 0.9083395942900075,
+        "cat_within_n": 1331
+      }
+    }
+  }
+}

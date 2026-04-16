@@ -233,6 +233,8 @@ interface MetricsSnapshot {
   };
   cat: {
     accuracy_excluding_unknown_slot: number;
+    /** `detectedCatIndex === ground_truth_cat_slot` (same n as evaluated). */
+    presence_slot_accuracy: number;
     evaluated: number;
     by_session_elimination_type: Record<
       string,
@@ -291,8 +293,12 @@ function printSummary(m: MetricsSnapshot): void {
   rows.push(['elim accuracy', m.elimination.overallAccuracy.toFixed(4)]);
   rows.push(['unknown abstain', m.elimination.unknownAbstentionRate.toFixed(4)]);
   rows.push([
-    'cat accuracy*',
+    'cat slot (weight 1%)*',
     m.cat.accuracy_excluding_unknown_slot.toFixed(4),
+  ]);
+  rows.push([
+    'pet slot (presence)',
+    m.cat.presence_slot_accuracy.toFixed(4),
   ]);
   rows.push(['cat eval n', String(m.cat.evaluated)]);
   if (m.bouts.has_data) {
@@ -319,7 +325,12 @@ function printSummary(m: MetricsSnapshot): void {
   for (const [a, b] of rows) {
     console.log(`${pad(a, col0)}  ${pad(b, col1)}`);
   }
-  console.log('*Cat accuracy excludes ground_truth_cat_slot === -1');
+  console.log(
+    '*Cat slot (weight 1%): nearest known weight to catWeight; excludes ground_truth_cat_slot === -1',
+  );
+  console.log(
+    ' pet slot (presence): StateAnalyzer.detectedCatIndex vs ground-truth slot (production attribution)',
+  );
 
   const conf = m.elimination.matrix;
   console.log('\nConfusion (rows=GT, cols=pred):');
@@ -366,6 +377,8 @@ const harnessEnabled = fixturesAvailable();
 
       let catEval = 0;
       let catCorrect = 0;
+      /** Matches production: `StateAnalyzer` presence winner vs sorted pet slot. */
+      let presenceSlotCorrect = 0;
 
       const wasteErrs: number[] = [];
       const catErrs: number[] = [];
@@ -426,6 +439,9 @@ const harnessEnabled = fixturesAvailable();
         if (v.ground_truth_cat_slot >= 0) {
           catEval++;
           const det = detectedCatIndex(v.knownGrams, r.catWeight);
+          if (r.detectedCatIndex === v.ground_truth_cat_slot) {
+            presenceSlotCorrect++;
+          }
           if (det === v.ground_truth_cat_slot) {
             catCorrect++;
             bySession[sk].cat_correct++;
@@ -573,6 +589,9 @@ const harnessEnabled = fixturesAvailable();
           accuracy_excluding_unknown_slot: catEval
             ? catCorrect / catEval
             : 0,
+          presence_slot_accuracy: catEval
+            ? presenceSlotCorrect / catEval
+            : 0,
           evaluated: catEval,
           by_session_elimination_type: bySessionCat,
           by_straining: byStrainingCat,
@@ -636,7 +655,9 @@ const harnessEnabled = fixturesAvailable();
             latestCat,
             baseline.cat.accuracy_excluding_unknown_slot,
           );
-          console.log(`delta cat accuracy (rel): ${(d * 100).toFixed(2)}%`);
+          console.log(
+            `delta cat slot weight-1% (rel): ${(d * 100).toFixed(2)}%`,
+          );
           if (
             regressedBeyond(
               latestCat,
@@ -645,7 +666,19 @@ const harnessEnabled = fixturesAvailable();
             )
           ) {
             msgs.push(
-              `cat accuracy regressed >${TH * 100}% rel: ${latestCat} vs ${baseline.cat.accuracy_excluding_unknown_slot}`,
+              `cat slot (weight 1%) regressed >${TH * 100}% rel: ${latestCat} vs ${baseline.cat.accuracy_excluding_unknown_slot}`,
+            );
+          }
+        }
+
+        const latestPresence = snapshot.cat.presence_slot_accuracy;
+        if (typeof baseline.cat?.presence_slot_accuracy === 'number') {
+          const bPresence = baseline.cat.presence_slot_accuracy;
+          const d = relativeDelta(latestPresence, bPresence);
+          console.log(`delta pet slot presence (rel): ${(d * 100).toFixed(2)}%`);
+          if (regressedBeyond(latestPresence, bPresence, TH)) {
+            msgs.push(
+              `pet slot (presence) regressed >${TH * 100}% rel: ${latestPresence} vs ${bPresence}`,
             );
           }
         }

@@ -152,23 +152,23 @@ async function exportFixtures(
   const events =
     selection === 'verified'
       ? await base
-          .where('human_verified', '=', true)
+        .where('human_verified', '=', true)
+        .orderBy('timestamp', 'desc')
+        .limit(limit)
+        .execute()
+      : selection === 'annotated'
+        ? await base
+          .where(sql`json_extract(data, '$.annotation')`, 'is not', null)
           .orderBy('timestamp', 'desc')
           .limit(limit)
           .execute()
-      : selection === 'annotated'
-        ? await base
-            .where(sql`json_extract(data, '$.annotation')`, 'is not', null)
-            .orderBy('timestamp', 'desc')
-            .limit(limit)
-            .execute()
         : await base
-            .where(
-              sql<boolean>`(human_verified = 1 OR json_extract(data, '$.annotation') IS NOT NULL)`,
-            )
-            .orderBy('timestamp', 'desc')
-            .limit(limit)
-            .execute();
+          .where(
+            sql<boolean>`(human_verified = 1 OR json_extract(data, '$.annotation') IS NOT NULL)`,
+          )
+          .orderBy('timestamp', 'desc')
+          .limit(limit)
+          .execute();
 
   const visitRows: string[] = [
     [

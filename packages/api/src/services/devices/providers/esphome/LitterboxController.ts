@@ -205,18 +205,36 @@ export class LitterboxController extends BaseESPHomeController {
           timestamp: session.startTime,
         });
       } else {
-        // Use event: run state analysis for accurate catWeight and elimination type
         const weights = measurements.map((m) => m.weight);
-        const knownWeights = Array.from(
-          (await this.getLatestPetWeights(session.startTime)).values(),
+        const latestPetWeights = await this.getLatestPetWeights(
+          session.startTime,
         );
+        const knownWeights = Array.from(latestPetWeights.values()).sort(
+          (a, b) => a - b,
+        );
+        const petIdsByWeight = new Map<number, number>();
+        for (const [pid, w] of latestPetWeights) {
+          petIdsByWeight.set(w, pid);
+        }
+
         const analyzer = new StateAnalyzer(knownWeights);
         const analysis = analyzer.processEvent(weights);
 
-        const petId = await this.determinePetId(
-          analysis.catWeight,
-          session.startTime,
-        );
+        let petId: number | null = null;
+        if (
+          analysis.detectedCatIndex >= 0 &&
+          analysis.detectedCatIndex < knownWeights.length
+        ) {
+          const detectedWeight = knownWeights[analysis.detectedCatIndex];
+          petId = petIdsByWeight.get(detectedWeight) ?? null;
+          console.log(
+            `[Litterbox] Identified pet ${petId} via presence (index=${analysis.detectedCatIndex}, knownWeight=${detectedWeight}g, presenceCounts=${JSON.stringify(analysis.catPresence)})`,
+          );
+        } else {
+          console.log(
+            `[Litterbox] No cat identified via presence (presenceCounts=${JSON.stringify(analysis.catPresence)})`,
+          );
+        }
 
         const eliminationType = determineEliminationType(analysis.periods);
         const straining = eliminationType !== 'no_elimination' && eliminationWeight < NO_ELIMINATION_THRESHOLD;
@@ -319,57 +337,6 @@ export class LitterboxController extends BaseESPHomeController {
       daysSinceLitterReplaced,
       hoursSinceLastScoop,
     };
-  }
-
-  private async determinePetId(
-    catWeight: number,
-    eventTimestamp: Date,
-  ): Promise<number | null> {
-    const latestWeights = await this.getLatestPetWeights(eventTimestamp);
-
-    if (latestWeights.size === 0) {
-      console.log(
-        `[Litterbox] No weight measurements found before ${eventTimestamp.toISOString()}, cannot determine pet`,
-      );
-      return null;
-    }
-
-    console.log(`[Litterbox] Determining pet for cat weight: ${catWeight}g`);
-    console.log(
-      `[Litterbox] Latest pet weights:`,
-      Object.fromEntries(latestWeights),
-    );
-
-    let closestPetId: number | null = null;
-    let minDiff = Infinity;
-    const marginPercent = 0.1; // 10% margin
-
-    for (const [petId, knownWeight] of latestWeights) {
-      const diff = Math.abs(catWeight - knownWeight);
-      const margin = knownWeight * marginPercent;
-
-      console.log(
-        `[Litterbox] Checking pet ${petId} (weight: ${knownWeight}g), diff: ${diff}g, margin: ${margin}g`,
-      );
-
-      if (diff <= margin && diff < minDiff) {
-        minDiff = diff;
-        closestPetId = petId;
-      }
-    }
-
-    if (closestPetId === null) {
-      console.log(
-        `No cat found within 10% margin for cat weight ${catWeight}g`,
-      );
-    } else {
-      const knownWeight = latestWeights.get(closestPetId)!;
-      console.log(
-        `Identified cat ${closestPetId} (weight: ${knownWeight}g) for cat weight ${catWeight}g`,
-      );
-    }
-
-    return closestPetId;
   }
 
   private async getLatestPetWeights(

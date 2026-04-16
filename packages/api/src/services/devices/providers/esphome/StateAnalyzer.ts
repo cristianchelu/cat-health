@@ -14,9 +14,11 @@ export interface StatePeriod {
 
 export interface StateResult {
   state: string;
-  catWeight: number;
+  catWeight: number; // stable ELIMINATING mean, 0 if never stable (trendline only)
   wasteWeight: number;
   periods: StatePeriod[];
+  detectedCatIndex: number; // index into knownCatWeights, -1 = unknown
+  catPresence: number[]; // per-cat sample counts in OCCUPIED+ELIMINATING
 }
 
 export type StateTransition = { from: string; to: string; index: number };
@@ -116,8 +118,11 @@ export class StateAnalyzer {
   private currentSample = 0;
   private wasteWeight = 0;
   private catWeight = 0;
-  private bestStableWeight = 0;
-  private bestStableDur = 0;
+  private elimSum = 0;
+  private elimCount = 0;
+  private bestElimWeight = 0;
+  private bestElimDur = 0;
+  private catPresence: number[] = [];
   private transitions: StateTransition[] = [];
 
   constructor(knownCatWeights?: number[]) {
@@ -172,6 +177,8 @@ export class StateAnalyzer {
         break;
       }
       case this.states.OCCUPIED: {
+        const ciOccupied = this.closestKnownCat(mean1s);
+        if (ciOccupied >= 0) this.catPresence[ciOccupied]++;
         if (stableNow) {
           if (this.nearKnownCatWeight(mean1s)) {
             this.transitionTo(this.states.ELIMINATING);
@@ -198,10 +205,20 @@ export class StateAnalyzer {
         break;
       }
       case this.states.ELIMINATING: {
+        const ciElim = this.closestKnownCat(mean1s);
+        if (ciElim >= 0) this.catPresence[ciElim]++;
         if (stableNow) {
           this.stableCnt++;
+          this.elimSum += mean1s;
+          this.elimCount++;
+          this.catWeight = this.elimSum / this.elimCount;
         } else {
-          this.updateCatWeightEstimate(mean1s, this.stableCnt);
+          if (this.elimCount > this.bestElimDur) {
+            this.bestElimDur = this.elimCount;
+            this.bestElimWeight = this.elimSum / this.elimCount;
+          }
+          this.elimSum = 0;
+          this.elimCount = 0;
           this.stableCnt = 0;
           this.transitionTo(this.states.OCCUPIED);
         }
@@ -242,16 +259,20 @@ export class StateAnalyzer {
     }
   }
 
-  private updateCatWeightEstimate(
-    stableWeight: number,
-    durationSamples: number,
-  ): void {
-    if (durationSamples > this.bestStableDur) {
-      this.bestStableDur = durationSamples;
-      this.bestStableWeight = stableWeight;
+  private closestKnownCat(val: number, tolFrac = this.knownPresenceTol): number {
+    let best = -1;
+    let minDiff = 1e9;
+    for (let i = 0; i < this.knownCatWeights.length; i++) {
+      const w = this.knownCatWeights[i];
+      if (w > 0) {
+        const diff = Math.abs(val - w);
+        if (diff <= w * tolFrac && diff < minDiff) {
+          minDiff = diff;
+          best = i;
+        }
+      }
     }
-    if (this.catWeight <= 0) this.catWeight = this.bestStableWeight;
-    else this.catWeight = 0.9 * this.catWeight + 0.1 * this.bestStableWeight;
+    return best;
   }
 
   private postProcessTransitions(): StatePeriod[] {
@@ -317,11 +338,28 @@ export class StateAnalyzer {
 
   private getSessionSummary(): StateResult {
     const finalStatePeriods = this.postProcessTransitions();
+
+    let bestW = this.bestElimWeight;
+    if (this.elimCount > this.bestElimDur && this.elimCount > 0) {
+      bestW = this.elimSum / this.elimCount;
+    }
+
+    let detectedCatIndex = -1;
+    let bestCount = 0;
+    for (let i = 0; i < this.catPresence.length; i++) {
+      if (this.catPresence[i] > bestCount) {
+        bestCount = this.catPresence[i];
+        detectedCatIndex = i;
+      }
+    }
+
     return {
       state: this.states.ENDED,
-      catWeight: this.catWeight || this.bestStableWeight,
+      catWeight: bestW > 0 ? bestW : this.catWeight,
       wasteWeight: this.wasteWeight,
       periods: finalStatePeriods,
+      detectedCatIndex,
+      catPresence: [...this.catPresence],
     };
   }
 
@@ -365,8 +403,11 @@ export class StateAnalyzer {
     this.sessionActive = true;
     this.sessionStartSample = this.currentSample;
     this.catWeight = 0;
-    this.bestStableWeight = 0;
-    this.bestStableDur = 0;
+    this.elimSum = 0;
+    this.elimCount = 0;
+    this.bestElimWeight = 0;
+    this.bestElimDur = 0;
+    this.catPresence = new Array(this.knownCatWeights.length).fill(0);
     this.exitBelowCnt = 0;
     this.gapCnt = 0;
     this.stableCnt = 0;
@@ -417,8 +458,11 @@ export class StateAnalyzer {
     this.window = new Ring(10);
     this.weightHistory = new Ring(10);
     this.catWeight = 0;
-    this.bestStableWeight = 0;
-    this.bestStableDur = 0;
+    this.elimSum = 0;
+    this.elimCount = 0;
+    this.bestElimWeight = 0;
+    this.bestElimDur = 0;
+    this.catPresence = new Array(this.knownCatWeights.length).fill(0);
     this.exitBelowCnt = 0;
     this.gapCnt = 0;
     this.stableCnt = 0;
