@@ -3,32 +3,32 @@
   "elimination": {
     "matrix": {
       "urination": {
-        "urination": 724,
-        "defecation": 65,
-        "both": 17,
+        "urination": 786,
+        "defecation": 3,
+        "both": 12,
         "no_elimination": 7,
-        "unknown": 15
+        "unknown": 20
       },
       "defecation": {
-        "urination": 0,
-        "defecation": 272,
-        "both": 5,
+        "urination": 1,
+        "defecation": 271,
+        "both": 11,
         "no_elimination": 10,
-        "unknown": 16
+        "unknown": 10
       },
       "both": {
         "urination": 0,
         "defecation": 0,
-        "both": 23,
+        "both": 24,
         "no_elimination": 0,
-        "unknown": 1
+        "unknown": 0
       },
       "no_elimination": {
-        "urination": 9,
-        "defecation": 16,
-        "both": 2,
+        "urination": 13,
+        "defecation": 12,
+        "both": 1,
         "no_elimination": 592,
-        "unknown": 3
+        "unknown": 4
       },
       "unknown": {
         "urination": 3,
@@ -39,21 +39,21 @@
       }
     },
     "perClassPrecision": {
-      "urination": 0.9836956521739131,
-      "defecation": 0.7661971830985915,
-      "both": 0.48936170212765956,
+      "urination": 0.9788293897882939,
+      "defecation": 0.9409722222222222,
+      "both": 0.5,
       "no_elimination": 0.9192546583850931,
-      "unknown": 0.027777777777777776
+      "unknown": 0.02857142857142857
     },
     "perClassRecall": {
-      "urination": 0.8743961352657005,
-      "defecation": 0.8976897689768977,
-      "both": 0.9583333333333334,
+      "urination": 0.9492753623188406,
+      "defecation": 0.8943894389438944,
+      "both": 1,
       "no_elimination": 0.9517684887459807,
       "unknown": 0.024390243902439025
     },
-    "overallAccuracy": 0.8866886688668867,
-    "unknownAbstentionRate": 0.019801980198019802,
+    "overallAccuracy": 0.9207920792079208,
+    "unknownAbstentionRate": 0.019251925192519254,
     "n": 1818,
     "by_session_elimination_type": {
       "no_elimination": {
@@ -61,15 +61,15 @@
         "n": 622
       },
       "urination": {
-        "accuracy": 0.8743961352657005,
+        "accuracy": 0.9492753623188406,
         "n": 828
       },
       "defecation": {
-        "accuracy": 0.8976897689768977,
+        "accuracy": 0.8943894389438944,
         "n": 303
       },
       "both": {
-        "accuracy": 0.9583333333333334,
+        "accuracy": 1,
         "n": 24
       },
       "unknown": {
@@ -79,47 +79,48 @@
     },
     "by_straining": {
       "true": {
-        "accuracy": 0.7286821705426356,
+        "accuracy": 0.9147286821705426,
         "n": 129
       },
       "false": {
-        "accuracy": 0.8987566607460036,
+        "accuracy": 0.9212551805802249,
         "n": 1689
       }
     }
   },
   "cat": {
-    "accuracy_excluding_unknown_slot": 0.7566826593557231,
+    "accuracy_excluding_unknown_slot": 0.7498286497601097,
+    "presence_slot_accuracy": 0.9869773817683345,
     "evaluated": 1459,
     "by_session_elimination_type": {
       "no_elimination": {
-        "accuracy": 0.4897959183673469,
+        "accuracy": 0.48299319727891155,
         "n": 294
       },
       "urination": {
-        "accuracy": 0.821256038647343,
+        "accuracy": 0.8188405797101449,
         "n": 828
       },
       "defecation": {
-        "accuracy": 0.8283828382838284,
+        "accuracy": 0.8085808580858086,
         "n": 303
       },
       "both": {
-        "accuracy": 0.9166666666666666,
+        "accuracy": 0.9583333333333334,
         "n": 24
       },
       "unknown": {
-        "accuracy": 0.7,
+        "accuracy": 0.6,
         "n": 10
       }
     },
     "by_straining": {
       "true": {
-        "accuracy": 0.890625,
+        "accuracy": 0.921875,
         "n": 128
       },
       "false": {
-        "accuracy": 0.743801652892562,
+        "accuracy": 0.7332832456799399,
         "n": 1331
       }
     }
@@ -140,11 +141,11 @@
       "p95": 76
     },
     "cat_abs_error_grams": {
-      "median": 30.899999999999636,
-      "p90": 124.10000000000036,
+      "median": 29.55000000000109,
+      "p90": 126.18641975308765,
       "p95": 6374
     },
-    "cat_within_5pct_rate": 0.9163810829335161,
+    "cat_within_5pct_rate": 0.9177518848526388,
     "cat_within_n": 1459
   },
   "stratified_continuous": {
@@ -157,11 +158,11 @@
           "p95": 13
         },
         "cat_abs_error_grams": {
-          "median": 55.80000000000018,
+          "median": 59.166666666665606,
           "p90": 6560,
           "p95": 6603
         },
-        "cat_within_5pct_rate": 0.6156462585034014,
+        "cat_within_5pct_rate": 0.6190476190476191,
         "cat_within_n": 294
       },
       "urination": {
@@ -172,11 +173,11 @@
           "p95": 76
         },
         "cat_abs_error_grams": {
-          "median": 27.52404999999999,
-          "p90": 74.61999999999989,
-          "p95": 97.88599999999951
+          "median": 26.926578947368398,
+          "p90": 74.72254901960241,
+          "p95": 93.65924170615926
         },
-        "cat_within_5pct_rate": 0.9951690821256038,
+        "cat_within_5pct_rate": 0.9963768115942029,
         "cat_within_n": 828
       },
       "defecation": {
@@ -187,9 +188,9 @@
           "p95": 74
         },
         "cat_abs_error_grams": {
-          "median": 23.966549199999463,
-          "p90": 62.89999999999873,
-          "p95": 77.28199999999924
+          "median": 24.228461538461488,
+          "p90": 67.23445945945878,
+          "p95": 86.88666666666631
         },
         "cat_within_5pct_rate": 0.9966996699669967,
         "cat_within_n": 303
@@ -202,9 +203,9 @@
           "p95": 119
         },
         "cat_abs_error_grams": {
-          "median": 36.4326515000007,
-          "p90": 61.100000000000364,
-          "p95": 72.50000000000091
+          "median": 28.59346551064482,
+          "p90": 56.40445103857655,
+          "p95": 59.80179372196926
         },
         "cat_within_5pct_rate": 0.9583333333333334,
         "cat_within_n": 24
@@ -217,7 +218,7 @@
           "p95": 912
         },
         "cat_abs_error_grams": {
-          "median": 32.12638673770016,
+          "median": 35.70726544622448,
           "p90": 6375,
           "p95": 6601
         },
@@ -234,9 +235,9 @@
           "p95": 12
         },
         "cat_abs_error_grams": {
-          "median": 17.5,
-          "p90": 66.63999999999942,
-          "p95": 78.80000000000018
+          "median": 19.06473719790438,
+          "p90": 58.184390243905,
+          "p95": 71.68653366584203
         },
         "cat_within_5pct_rate": 1,
         "cat_within_n": 128
@@ -249,11 +250,11 @@
           "p95": 76
         },
         "cat_abs_error_grams": {
-          "median": 32.100000000000364,
-          "p90": 156.60000000000036,
+          "median": 31.0218579234961,
+          "p90": 165.08141592920038,
           "p95": 6404
         },
-        "cat_within_5pct_rate": 0.9083395942900075,
+        "cat_within_5pct_rate": 0.9098422238918107,
         "cat_within_n": 1331
       }
     }

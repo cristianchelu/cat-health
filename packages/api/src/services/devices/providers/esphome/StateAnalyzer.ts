@@ -375,16 +375,7 @@ export class StateAnalyzer {
         period.start + buffer,
         period.end + 1 - buffer,
       );
-      if (periodWeights.length < 2) {
-        period.variance = undefined;
-        return;
-      }
-      const mean =
-        periodWeights.reduce((sum, w) => sum + w, 0) / periodWeights.length;
-      const variance =
-        periodWeights.reduce((sum, w) => sum + Math.pow(w - mean, 2), 0) /
-        periodWeights.length;
-      period.variance = Math.sqrt(variance);
+      period.variance = eliminatingPeriodMotionMetric(periodWeights, this.hz);
     });
     return result;
   }
@@ -469,6 +460,53 @@ export class StateAnalyzer {
     this.transitions = [];
     this.wasteWeight = 0;
   }
+}
+
+function rmsAroundMean(samples: number[]): number {
+  if (samples.length < 2) return 0;
+  let sum = 0;
+  for (let i = 0; i < samples.length; i++) sum += samples[i];
+  const mean = sum / samples.length;
+  let sq = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const d = samples[i] - mean;
+    sq += d * d;
+  }
+  return Math.sqrt(sq / samples.length);
+}
+
+/**
+ * Robust per-second motion metric for an eliminating period.
+ *
+ * Splits the (already edge-trimmed) segment into hz-sized windows (~1s),
+ * computes RMS-around-mean per full window, then returns the median.
+ * This keeps a brief jolt from inflating the whole-segment RMS past the
+ * urination/defecation threshold.
+ *
+ * Fallbacks:
+ * - Fewer than 2 samples: undefined (period not usable).
+ * - Fewer than 1 full window: single RMS over the available samples.
+ */
+export function eliminatingPeriodMotionMetric(
+  samples: number[],
+  hz: number,
+): number | undefined {
+  if (samples.length < 2) return undefined;
+  const windowSize = Math.max(1, Math.round(hz));
+  if (samples.length < windowSize) return rmsAroundMean(samples);
+
+  const rmsValues: number[] = [];
+  const windowCount = Math.floor(samples.length / windowSize);
+  for (let w = 0; w < windowCount; w++) {
+    const start = w * windowSize;
+    rmsValues.push(rmsAroundMean(samples.slice(start, start + windowSize)));
+  }
+
+  rmsValues.sort((a, b) => a - b);
+  const mid = Math.floor(rmsValues.length / 2);
+  return rmsValues.length % 2
+    ? rmsValues[mid]
+    : (rmsValues[mid - 1] + rmsValues[mid]) / 2;
 }
 
 export function determineEliminationType(
