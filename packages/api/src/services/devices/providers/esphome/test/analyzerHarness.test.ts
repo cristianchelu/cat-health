@@ -232,10 +232,14 @@ interface MetricsSnapshot {
     >;
   };
   cat: {
+    /** Nearest known weight to `catWeight` within 1%; GT session has elimination (not scratch). */
     accuracy_excluding_unknown_slot: number;
-    /** `detectedCatIndex === ground_truth_cat_slot` (same n as evaluated). */
+    /** `detectedCatIndex === ground_truth_cat_slot` (same n as `evaluated`). */
     presence_slot_accuracy: number;
+    /** Visits with `ground_truth_cat_slot >= 0`. */
     evaluated: number;
+    /** Subset of `evaluated` where GT session is not `no_elimination` (denominator for weight-slot accuracy). */
+    weight_evaluated: number;
     by_session_elimination_type: Record<
       string,
       { accuracy: number; n: number }
@@ -293,7 +297,7 @@ function printSummary(m: MetricsSnapshot): void {
   rows.push(['elim accuracy', m.elimination.overallAccuracy.toFixed(4)]);
   rows.push(['unknown abstain', m.elimination.unknownAbstentionRate.toFixed(4)]);
   rows.push([
-    'cat slot (weight 1%)*',
+    'cat slot wt 1%†',
     m.cat.accuracy_excluding_unknown_slot.toFixed(4),
   ]);
   rows.push([
@@ -301,6 +305,7 @@ function printSummary(m: MetricsSnapshot): void {
     m.cat.presence_slot_accuracy.toFixed(4),
   ]);
   rows.push(['cat eval n', String(m.cat.evaluated)]);
+  rows.push(['weight eval n', String(m.cat.weight_evaluated)]);
   if (m.bouts.has_data) {
     rows.push(['bout P/R/F1', `${m.bouts.precision.toFixed(3)}/${m.bouts.recall.toFixed(3)}/${m.bouts.f1.toFixed(3)}`]);
   } else {
@@ -326,7 +331,7 @@ function printSummary(m: MetricsSnapshot): void {
     console.log(`${pad(a, col0)}  ${pad(b, col1)}`);
   }
   console.log(
-    '*Cat slot (weight 1%): nearest known weight to catWeight; excludes ground_truth_cat_slot === -1',
+    '†Cat slot (weight 1%): nearest known weight to catWeight; GT session has elimination (excludes scratch/no_elimination); excludes ground_truth_cat_slot === -1',
   );
   console.log(
     ' pet slot (presence): StateAnalyzer.detectedCatIndex vs ground-truth slot (production attribution)',
@@ -377,6 +382,8 @@ const harnessEnabled = fixturesAvailable();
 
       let catEval = 0;
       let catCorrect = 0;
+      /** GT session has elimination: weight-slot and cat-|err| metrics apply. */
+      let weightEvaluated = 0;
       /** Matches production: `StateAnalyzer` presence winner vs sorted pet slot. */
       let presenceSlotCorrect = 0;
 
@@ -438,23 +445,26 @@ const harnessEnabled = fixturesAvailable();
 
         if (v.ground_truth_cat_slot >= 0) {
           catEval++;
-          const det = detectedCatIndex(v.knownGrams, r.catWeight);
           if (r.detectedCatIndex === v.ground_truth_cat_slot) {
             presenceSlotCorrect++;
           }
-          if (det === v.ground_truth_cat_slot) {
-            catCorrect++;
-            bySession[sk].cat_correct++;
-            bySession[sk].cat_n++;
-            byStrain[strainKey].cat_correct++;
-            byStrain[strainKey].cat_n++;
-          } else {
+
+          const eligibleForCatWeightMetrics =
+            v.session_elimination_type !== 'no_elimination';
+          const det = detectedCatIndex(v.knownGrams, r.catWeight);
+          if (eligibleForCatWeightMetrics) {
+            weightEvaluated++;
+            if (det === v.ground_truth_cat_slot) {
+              catCorrect++;
+              bySession[sk].cat_correct++;
+              byStrain[strainKey].cat_correct++;
+            }
             bySession[sk].cat_n++;
             byStrain[strainKey].cat_n++;
           }
 
           const known = v.knownGrams[v.ground_truth_cat_slot];
-          if (known > 0) {
+          if (eligibleForCatWeightMetrics && known > 0) {
             const ce = Math.abs(r.catWeight - known);
             catErrs.push(ce);
             catWithin5N++;
@@ -586,13 +596,14 @@ const harnessEnabled = fixturesAvailable();
           by_straining: byStrainingElim,
         },
         cat: {
-          accuracy_excluding_unknown_slot: catEval
-            ? catCorrect / catEval
+          accuracy_excluding_unknown_slot: weightEvaluated
+            ? catCorrect / weightEvaluated
             : 0,
           presence_slot_accuracy: catEval
             ? presenceSlotCorrect / catEval
             : 0,
           evaluated: catEval,
+          weight_evaluated: weightEvaluated,
           by_session_elimination_type: bySessionCat,
           by_straining: byStrainingCat,
         },

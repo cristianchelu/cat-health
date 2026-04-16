@@ -89,13 +89,14 @@
     }
   },
   "cat": {
-    "accuracy_excluding_unknown_slot": 0.7498286497601097,
+    "accuracy_excluding_unknown_slot": 0.8171673819742489,
     "presence_slot_accuracy": 0.9869773817683345,
     "evaluated": 1459,
+    "weight_evaluated": 1165,
     "by_session_elimination_type": {
       "no_elimination": {
-        "accuracy": 0.48299319727891155,
-        "n": 294
+        "accuracy": 0,
+        "n": 0
       },
       "urination": {
         "accuracy": 0.8188405797101449,
@@ -116,12 +117,12 @@
     },
     "by_straining": {
       "true": {
-        "accuracy": 0.921875,
-        "n": 128
+        "accuracy": 0.9206349206349206,
+        "n": 126
       },
       "false": {
-        "accuracy": 0.7332832456799399,
-        "n": 1331
+        "accuracy": 0.8046198267564967,
+        "n": 1039
       }
     }
   },
@@ -141,12 +142,12 @@
       "p95": 76
     },
     "cat_abs_error_grams": {
-      "median": 29.55000000000109,
-      "p90": 126.18641975308765,
-      "p95": 6374
+      "median": 26.487628865978877,
+      "p90": 73.87663551402147,
+      "p95": 92.88731606826423
     },
-    "cat_within_5pct_rate": 0.9177518848526388,
-    "cat_within_n": 1459
+    "cat_within_5pct_rate": 0.9931330472103004,
+    "cat_within_n": 1165
   },
   "stratified_continuous": {
     "by_session_elimination_type": {
@@ -158,12 +159,12 @@
           "p95": 13
         },
         "cat_abs_error_grams": {
-          "median": 59.166666666665606,
-          "p90": 6560,
-          "p95": 6603
+          "median": 0,
+          "p90": 0,
+          "p95": 0
         },
-        "cat_within_5pct_rate": 0.6190476190476191,
-        "cat_within_n": 294
+        "cat_within_5pct_rate": 0,
+        "cat_within_n": 0
       },
       "urination": {
         "n": 828,
@@ -235,12 +236,12 @@
           "p95": 12
         },
         "cat_abs_error_grams": {
-          "median": 19.06473719790438,
+          "median": 18.84098360655662,
           "p90": 58.184390243905,
           "p95": 71.68653366584203
         },
         "cat_within_5pct_rate": 1,
-        "cat_within_n": 128
+        "cat_within_n": 126
       },
       "false": {
         "n": 1689,
@@ -250,12 +251,12 @@
           "p95": 76
         },
         "cat_abs_error_grams": {
-          "median": 31.0218579234961,
-          "p90": 165.08141592920038,
-          "p95": 6404
+          "median": 27.508241758245276,
+          "p90": 74.72254901960241,
+          "p95": 96.5081521739121
         },
-        "cat_within_5pct_rate": 0.9098422238918107,
-        "cat_within_n": 1331
+        "cat_within_5pct_rate": 0.9923002887391723,
+        "cat_within_n": 1039
       }
     }
   }
