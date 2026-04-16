@@ -166,11 +166,6 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
       const eventId = eventIdRef.current;
       const resolvedPetId = resolvePetIdFromSelect(nextPetId);
       const prevAnn = (eventData as { annotation?: LitterboxAnnotation }).annotation;
-      const prevElim =
-        (eventData as { elimination_type?: LitterboxUseEliminationType }).elimination_type ??
-        'unknown';
-      const elimStalePatch =
-        nextElimType !== prevElim ? { segments: null } : {};
       await patchEvent({
         eventId,
         data: {
@@ -179,7 +174,6 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
             ...eventData,
             elimination_type: nextElimType,
             straining: nextStraining,
-            ...elimStalePatch,
             annotation: {
               ...(prevAnn ?? {}),
               bouts: nextBouts,
@@ -208,11 +202,6 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
         const eventId = eventIdRef.current;
         const resolvedPetId = resolvePetIdFromSelect(nextPetId);
         const prevAnn = (eventData as { annotation?: LitterboxAnnotation }).annotation;
-        const prevElim =
-          (eventData as { elimination_type?: LitterboxUseEliminationType }).elimination_type ??
-          'unknown';
-        const elimStalePatch =
-          nextElimType !== prevElim ? { segments: null } : {};
         void patchEvent({
           eventId,
           data: {
@@ -221,7 +210,6 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
               ...eventData,
               elimination_type: nextElimType,
               straining: nextStraining,
-              ...elimStalePatch,
               annotation: {
                 ...(prevAnn ?? {}),
                 bouts: nextBouts,
@@ -320,30 +308,30 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
 
   const handleReanalyze = React.useCallback(async () => {
     if (!hasRawData || isSaving || isAnalyzing) return;
+    const preserveElim = eliminationType;
+    const preserveStrain = straining;
     try {
       const updated = await runAnalyzeAsync(event.id);
-      eventDataRef.current = updated.data;
-
       const ud = updated.data as {
-        elimination_type?: LitterboxUseEliminationType;
-        straining?: boolean;
         segments?: LitterboxAnalysisStatePeriod[] | null;
       };
-      const nextElim = ud.elimination_type ?? 'unknown';
-      const nextStrain = ud.straining ?? false;
-      setEliminationType(nextElim);
-      setStraining(nextStrain);
+      eventDataRef.current = {
+        ...updated.data,
+        elimination_type: preserveElim,
+        straining: preserveStrain,
+      };
 
       const periods = ud.segments ?? [];
       const next = periods.length === 0 ? [] : deriveDetectorBouts(periods, sampleRate);
       setSelectedBoutIndex(next.length > 0 ? 0 : null);
       setLocalBouts(next);
 
-      await flushSave(next, petId, nextElim, nextStrain, updated.human_verified, excluded);
+      await flushSave(next, petId, preserveElim, preserveStrain, updated.human_verified, excluded);
     } catch {
       // Request failed (e.g. missing raw_data); list/detail queries still refresh on success path only.
     }
   }, [
+    eliminationType,
     excluded,
     event.id,
     flushSave,
@@ -353,6 +341,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     petId,
     runAnalyzeAsync,
     sampleRate,
+    straining,
   ]);
 
   const videoItems = React.useMemo(
