@@ -9,7 +9,7 @@ import {
   useUpdateEvent,
   useDeleteEvent,
 } from '@/hooks/queries/eventQueries';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
+import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/form/Select';
 import type {
@@ -23,7 +23,19 @@ import { decodeLitterboxRawData } from './decodeLitterboxRawData';
 import { decodeWaterRawData } from './decodeWaterRawData';
 import { analyzeWaterSegments } from './analyzeWaterSegments';
 import './EventDetailsModal.css';
-import { Loader2, Trash2, Download, Info, Image, Activity, Sparkles } from 'lucide-react';
+import {
+  Loader2,
+  Trash2,
+  Download,
+  Info,
+  Image,
+  Activity,
+  Sparkles,
+  Timer,
+  GlassWater,
+  DropletOff,
+  X,
+} from 'lucide-react';
 
 const EMPTY_LITTERBOX_SEGMENT_PERIODS: LitterboxAnalysisStatePeriod[] = [];
 
@@ -46,14 +58,30 @@ const WaterIntakeDetails: React.FC<{ event: GetEventDTO }> = ({ event }) => {
   return (
     <div className="event-specific-details">
       {data.duration != null && (
-        <span className="detail-item">{t('event_details.duration_seconds', { seconds: data.duration })}</span>
+        <span className="detail-item">
+          <Timer className="detail-item-icon" aria-hidden />
+          <span className="detail-item-label">{t('event_details.duration_label')}</span>
+          <span className="detail-item-value">
+            {t('event_details.duration_value', { seconds: data.duration })}
+          </span>
+        </span>
       )}
       {data.amount != null && (
-        <span className="detail-item">{t('event_details.amount_ml', { amount: data.amount })}</span>
+        <span className="detail-item">
+          <GlassWater className="detail-item-icon" aria-hidden />
+          <span className="detail-item-label">{t('event_details.amount_label')}</span>
+          <span className="detail-item-value">
+            {t('event_details.amount_value', { amount: data.amount })}
+          </span>
+        </span>
       )}
       {hasFiltering && (
-        <span className="detail-item detail-item--muted">
-          {t('event_details.water_excluded_ml', { amount: data.excluded_amount })}
+        <span className="detail-item">
+          <DropletOff className="detail-item-icon" aria-hidden />
+          <span className="detail-item-label">{t('event_details.water_spilled_label')}</span>
+          <span className="detail-item-value">
+            {t('event_details.water_spilled_amount', { amount: data.excluded_amount })}
+          </span>
         </span>
       )}
     </div>
@@ -255,11 +283,15 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="event-details-modal-content">
-        {/* Tab buttons - only show if analysis data exists */}
+      <DialogContent
+        className="event-details-modal-content"
+        showCloseButton={!hasAnalysisData}
+      >
+        {/* Tab buttons + inline close — only when analysis tab exists */}
         {hasAnalysisData && (
           <div className="event-tabs">
             <button
+              type="button"
               className={`tab-button ${activeTab === 'media' ? 'active' : ''}`}
               onClick={() => setActiveTab('media')}
             >
@@ -267,12 +299,21 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               {t('event_details.media')}
             </button>
             <button
+              type="button"
               className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
               onClick={() => setActiveTab('analysis')}
             >
               <Activity size={16} />
               {t('event_details.analysis')}
             </button>
+            <DialogClose
+              type="button"
+              className="event-tab-close"
+              aria-label={t('common.close')}
+              title={t('common.close')}
+            >
+              <X size={18} aria-hidden />
+            </DialogClose>
           </div>
         )}
 
@@ -421,7 +462,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   disabled={isUpdating}
                 />
                 {displayEvent.data.straining && (
-                  <span className="straining-badge">{t('overview.straining_detected')}</span>
+                  <span className="straining-badge">{t('overview.straining')}</span>
                 )}
               </div>
             </div>

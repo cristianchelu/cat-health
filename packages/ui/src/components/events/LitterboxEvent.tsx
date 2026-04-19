@@ -91,13 +91,24 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
           <Timeline.Timestamp>
             {format(new Date(event.timestamp), 'HH:mm')}
           </Timeline.Timestamp>
-          {data.elimination_weight !== undefined && (
-            <Timeline.Value
-              variant={variant}
-              style={eliminationType === 'no_elimination' ? { color: 'var(--color-text-muted)' } : undefined}
-            >
-              {data.elimination_weight}g
-            </Timeline.Value>
+          {(data.elimination_weight !== undefined || data.straining) && (
+            <span className="timeline-value-group">
+              {data.elimination_weight !== undefined && (
+                <Timeline.Value
+                  variant={variant}
+                  style={
+                    eliminationType === 'no_elimination'
+                      ? { color: 'var(--color-text-muted)' }
+                      : undefined
+                  }
+                >
+                  {data.elimination_weight}g
+                </Timeline.Value>
+              )}
+              {data.straining && (
+                <Timeline.Badge variant="warning">{t('overview.straining')}</Timeline.Badge>
+              )}
+            </span>
           )}
           <Timeline.Title>{title}</Timeline.Title>
         </Timeline.Header>
@@ -114,11 +125,6 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
             ) : (
               <EventVerified />
             ))}
-          {data.straining && (
-            <Timeline.Badge variant="warning">
-              {t('overview.straining_detected')}
-            </Timeline.Badge>
-          )}
           {children}
         </Timeline.Meta>
       </Timeline.Content>

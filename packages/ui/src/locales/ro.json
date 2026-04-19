@@ -27,7 +27,7 @@
         "annotated": "Adnotat",
         "times": "ori",
         "no_weight_data": "Nu există date despre greutate",
-        "straining_detected": "Efort detectat",
+        "straining": "Efort",
         "water_spill_excluded": "{{amount}}ml vărsat",
         "loose_stools": "Scaun moale",
         "weight_recorded": "Greutate înregistrată"
@@ -163,8 +163,10 @@
         "litterbox_icon_alt": "Pictogramă litieră"
     },
     "event_details": {
-        "duration_seconds": "Durată: {{seconds}}s",
-        "amount_ml": "Cantitate: {{amount}}ml",
+        "duration_label": "Durată:",
+        "duration_value": "{{seconds}}s",
+        "amount_label": "Cantitate:",
+        "amount_value": "{{amount}}ml",
         "no_additional_details": "Nu există detalii suplimentare.",
         "water_intake": "Consum apă",
         "litterbox_usage": "Utilizare litieră",
@@ -186,7 +188,8 @@
         "legend_drinking": "Băut (10–90 ml/min)",
         "legend_spill": "Vărsare / joacă (>90 ml/min)",
         "legend_noise": "Zgomot / inactiv",
-        "water_excluded_ml": "{{amount}}ml excluși (vărsare/joacă)",
+        "water_spilled_label": "Vărsat:",
+        "water_spilled_amount": "{{amount}}ml",
         "chart_ending_weight": "final {{value}} g",
         "analyze": "Analizează"
     },
