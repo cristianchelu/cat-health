@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { GlassWater } from 'lucide-react';
+import { DropletOff, GlassWater } from 'lucide-react';
 import { format } from 'date-fns';
 import Timeline from '@/components/ui/Timeline';
 import type { EventComponentProps } from './types';
@@ -8,8 +8,6 @@ import EventDevice from './meta/EventDevice';
 import EventDuration from './meta/EventDuration';
 import EventPet from './meta/EventPet';
 import EventVerified from './meta/EventVerified';
-import './WaterEvent.css';
-
 const WaterEvent: React.FC<EventComponentProps> = ({
   event,
   children,
@@ -47,8 +45,9 @@ const WaterEvent: React.FC<EventComponentProps> = ({
         <Timeline.Meta>
           {data.duration !== null && <EventDuration duration={data.duration} />}
           {hasFiltered && (
-            <Timeline.MetaItem>
-              {t('overview.water_spill_excluded', { amount: excludedAmount })}
+            <Timeline.MetaItem title={t('overview.water_spill_excluded', { amount: excludedAmount })}>
+              <DropletOff aria-hidden />
+              {excludedAmount}ml
             </Timeline.MetaItem>
           )}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}

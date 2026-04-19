@@ -26,8 +26,10 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    showCloseButton?: boolean;
+  }
+>(({ className, children, showCloseButton = true, ...props }, ref) => {
   const { t } = useTranslation();
   return (
     <DialogPortal>
@@ -38,15 +40,20 @@ const DialogContent = React.forwardRef<
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="dialog-close">
-          <X size={24} />
-          <span className="sr-only">{t('common.close')}</span>
-        </DialogPrimitive.Close>
+        {showCloseButton && (
+          <DialogPrimitive.Close className="dialog-close">
+            <X size={24} />
+            <span className="sr-only">{t('common.close')}</span>
+          </DialogPrimitive.Close>
+        )}
       </DialogPrimitive.Content>
     </DialogPortal>
   );
 });
 DialogContent.displayName = DialogPrimitive.Content.displayName;
+
+/** Use inside Dialog content when `showCloseButton={false}` on DialogContent (e.g. custom placement). */
+const DialogClose = DialogPrimitive.Close;
 
 const DialogHeader = ({
   className,
@@ -92,6 +99,7 @@ export {
   Dialog,
   DialogTrigger,
   DialogContent,
+  DialogClose,
   DialogHeader,
   DialogFooter,
   DialogTitle,
