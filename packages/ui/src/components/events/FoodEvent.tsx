@@ -6,6 +6,7 @@ import Timeline from '@/components/ui/Timeline';
 import type { EventComponentProps } from './types';
 import EventDevice from './meta/EventDevice';
 import EventDuration from './meta/EventDuration';
+import EventFood from './meta/EventFood';
 import EventPet from './meta/EventPet';
 import EventVerified from './meta/EventVerified';
 
@@ -18,6 +19,10 @@ const FoodEvent: React.FC<EventComponentProps> = ({
 }) => {
   const { t } = useTranslation();
   const { data } = event;
+  const foodId =
+    typeof (data as { food_id?: unknown }).food_id === 'number'
+      ? (data as { food_id: number }).food_id
+      : undefined;
 
   return (
     <Timeline.Item onClick={onClick}>
@@ -34,6 +39,7 @@ const FoodEvent: React.FC<EventComponentProps> = ({
         </Timeline.Header>
         <Timeline.Meta>
           {data.duration && <EventDuration duration={data.duration} />}
+          {foodId != null && <EventFood foodId={foodId} />}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
           {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
           {event.human_verified && <EventVerified />}
