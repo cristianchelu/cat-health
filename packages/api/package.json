@@ -8,6 +8,7 @@
     "start": "node --watch --experimental-strip-types src/main.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:analyzer": "node --experimental-strip-types --test src/services/devices/providers/esphome/test/*.test.ts",
+    "emit:replay-golden": "node --experimental-strip-types src/services/devices/providers/esphome/test/emitAnalyzerReplayGolden.ts",
     "migrate": "node --experimental-strip-types src/database/migrate.ts",
     "migrate:down": "node --experimental-strip-types src/database/migrate.ts --down",
     "sync": "node --experimental-strip-types src/scripts/migrate.new.ts",

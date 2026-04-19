@@ -94,7 +94,8 @@ export class StateAnalyzer {
   };
 
   private hz = 10;
-  private varStable = Math.sqrt(250);
+  /** Match C++: stable iff 0 < sample variance < 250 (equiv. to sqrt(var) < sqrt(250)). */
+  private static readonly STABLE_WEIGHT_SAMPLE_VAR_MAX = 250;
   private stableMergeGap = 1.5 * this.hz;
   private entryDeltaMin = 1200;
   private entryDeltaFrac = 0.22;
@@ -144,8 +145,9 @@ export class StateAnalyzer {
     this.weightHistory.push(weight);
     const mean1s = this.window.mean();
     this.meanHistory.push(mean1s);
-    const var10sample = Math.sqrt(this.weightHistory.variance());
-    const stableNow = var10sample > 0 && var10sample < this.varStable;
+    const wvar = this.weightHistory.variance();
+    const stableNow =
+      wvar > 0 && wvar < StateAnalyzer.STABLE_WEIGHT_SAMPLE_VAR_MAX;
 
     const entryDelta = this.entryThreshold();
     const presenceThreshold =
@@ -462,7 +464,8 @@ export class StateAnalyzer {
   }
 }
 
-function rmsAroundMean(samples: number[]): number {
+/** Population mean squared deviation (RMS²); avoids sqrt until combined across windows. */
+function meanSqDevAroundMean(samples: number[]): number {
   if (samples.length < 2) return 0;
   let sum = 0;
   for (let i = 0; i < samples.length; i++) sum += samples[i];
@@ -472,7 +475,11 @@ function rmsAroundMean(samples: number[]): number {
     const d = samples[i] - mean;
     sq += d * d;
   }
-  return Math.sqrt(sq / samples.length);
+  return sq / samples.length;
+}
+
+function rmsAroundMean(samples: number[]): number {
+  return Math.sqrt(meanSqDevAroundMean(samples));
 }
 
 /**
@@ -495,18 +502,23 @@ export function eliminatingPeriodMotionMetric(
   const windowSize = Math.max(1, Math.round(hz));
   if (samples.length < windowSize) return rmsAroundMean(samples);
 
-  const rmsValues: number[] = [];
+  const msdValues: number[] = [];
   const windowCount = Math.floor(samples.length / windowSize);
   for (let w = 0; w < windowCount; w++) {
     const start = w * windowSize;
-    rmsValues.push(rmsAroundMean(samples.slice(start, start + windowSize)));
+    msdValues.push(
+      meanSqDevAroundMean(samples.slice(start, start + windowSize)),
+    );
   }
 
-  rmsValues.sort((a, b) => a - b);
-  const mid = Math.floor(rmsValues.length / 2);
-  return rmsValues.length % 2
-    ? rmsValues[mid]
-    : (rmsValues[mid - 1] + rmsValues[mid]) / 2;
+  msdValues.sort((a, b) => a - b);
+  const mid = Math.floor(msdValues.length / 2);
+  if (msdValues.length % 2) {
+    return Math.sqrt(msdValues[mid]!);
+  }
+  const a = msdValues[mid - 1]!;
+  const b = msdValues[mid]!;
+  return (Math.sqrt(a) + Math.sqrt(b)) / 2;
 }
 
 export function determineEliminationType(
