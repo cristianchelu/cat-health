@@ -129,6 +129,7 @@ export default ComponentName;
 #### Utility Functions
 
 - Use `cn()` from `@/lib/utils` for conditional class names
+- Reuse generic unknown-shape helpers from `@/lib/utils` (for example `isRecord()` and `getStringValue()`) instead of redefining local copies.
 - Always forward refs for reusable components
 - Export both component and prop types
 

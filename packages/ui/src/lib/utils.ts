@@ -4,6 +4,19 @@ import { fromZonedTime } from 'date-fns-tz';
 
 export const cn = clsx;
 
+export const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+};
+
+export const getStringValue = (
+  record: Record<string, unknown>,
+  key: string,
+): string | undefined => {
+  const value = record[key];
+
+  return typeof value === 'string' ? value : undefined;
+};
+
 export type TimeRangeType = 'day' | 'week' | 'month' | 'custom';
 
 export interface DateRange {
