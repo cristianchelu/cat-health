@@ -156,6 +156,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const [selectedPetId, setSelectedPetId] = React.useState<string | null>(null);
   const [selectedEliminationType, setSelectedEliminationType] =
     React.useState<LitterboxUseEliminationType>('unknown');
+  const [selectedStraining, setSelectedStraining] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'media' | 'analysis'>('media');
 
   React.useEffect(() => {
@@ -163,8 +164,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       setSelectedPetId(event.pet_id ? String(event.pet_id) : 'null');
       if (event.data?.type === 'litterbox_use' && event.data.elimination_type) {
         setSelectedEliminationType(event.data.elimination_type);
+        setSelectedStraining(event.data.straining ?? false);
       } else if (event.data?.type === 'litterbox_use') {
         setSelectedEliminationType('unknown');
+        setSelectedStraining(event.data.straining ?? false);
       }
       // Reset to media tab when event changes
       setActiveTab('media');
@@ -222,6 +225,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       setSelectedEliminationType(
         eventFromServer.data.elimination_type ?? 'unknown',
       );
+      setSelectedStraining(eventFromServer.data.straining ?? false);
     }
   }, [event, eventFromServer]);
 
@@ -256,6 +260,24 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           ...displayEvent.data,
           elimination_type: newValue,
           segments: null,
+        },
+        human_verified: true,
+      },
+    });
+  };
+
+  const handleStrainingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nextStraining = e.target.checked;
+    setSelectedStraining(nextStraining);
+
+    if (displayEvent.data?.type !== 'litterbox_use') return;
+
+    updateEvent({
+      eventId: displayEvent.id,
+      data: {
+        data: {
+          ...displayEvent.data,
+          straining: nextStraining,
         },
         human_verified: true,
       },
@@ -461,9 +483,17 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   className="elimination-type-select"
                   disabled={isUpdating}
                 />
-                {displayEvent.data.straining && (
-                  <span className="straining-badge">{t('overview.straining')}</span>
-                )}
+                <label className="straining-control" htmlFor="event-details-straining">
+                  <span>{t('annotation.straining')}</span>
+                  <input
+                    id="event-details-straining"
+                    type="checkbox"
+                    checked={selectedStraining}
+                    onChange={handleStrainingChange}
+                    className="straining-checkbox"
+                    disabled={isUpdating}
+                  />
+                </label>
               </div>
             </div>
           )}
