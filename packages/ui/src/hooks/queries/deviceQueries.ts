@@ -164,12 +164,15 @@ export function useUpdateProviderAccount(accountId: number) {
   });
 }
 
-export function useDiscoverDevices(accountId: number | null) {
+export function useDiscoverDevices(
+  accountId: number | null,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: ['discoveredDevices', accountId],
     queryFn: () =>
       accountId ? discoverDevices(accountId) : Promise.resolve([]),
-    enabled: !!accountId,
+    enabled: !!accountId && options?.enabled !== false,
   });
 }
 
