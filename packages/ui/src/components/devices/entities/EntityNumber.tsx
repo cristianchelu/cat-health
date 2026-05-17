@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Input } from '@/components/ui/form/Input';
+import { roundEntityNumericValue } from '@/lib/formatSensorNumericDisplay';
 import { cn } from '@/lib/utils';
 import './EntityControl.css';
 
@@ -11,6 +12,7 @@ interface EntityNumberProps {
   max?: number;
   step?: number;
   unit?: string;
+  deviceClass?: string;
   icon?: React.ReactNode;
   className?: string;
 }
@@ -23,9 +25,16 @@ export const EntityNumber: React.FC<EntityNumberProps> = ({
   max,
   step,
   unit,
+  deviceClass,
   icon,
   className,
 }) => {
+  const displayValue = roundEntityNumericValue(value, {
+    step,
+    unit,
+    deviceClass,
+  });
+
   return (
     <div className={cn('entity-control', className)}>
       <div className="entity-info">
@@ -35,7 +44,7 @@ export const EntityNumber: React.FC<EntityNumberProps> = ({
       <div className="entity-input-group">
         <Input
           type="number"
-          value={value}
+          value={displayValue}
           onChange={(e) => onChange(parseFloat(e.target.value))}
           min={min}
           max={max}

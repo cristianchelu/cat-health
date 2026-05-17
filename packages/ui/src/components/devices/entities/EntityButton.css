@@ -1,0 +1,6 @@
+.entity-button-entity {
+  .button.outline.sm {
+    flex-shrink: 0;
+    min-width: 4.5rem;
+  }
+}

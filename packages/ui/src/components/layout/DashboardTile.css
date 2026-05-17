@@ -1,0 +1,5 @@
+.dashboard-tile {
+  width: 100%;
+  max-width: min(100%, var(--dashboard-tile-max-width, 400px));
+  justify-self: center;
+}

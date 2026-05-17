@@ -273,7 +273,7 @@
         "loading_events": "Se încarcă evenimentele...",
         "no_events_for_device": "Nu s-au găsit evenimente pentru acest dispozitiv",
         "go_back": "Înapoi",
-        "last_seen": "Văzut ultima dată {{date}}",
+        "last_seen": "Văzut ultima dată {{time}}",
         "never_seen": "Niciodată văzut",
         "tab_overview": "Prezentare",
         "tab_history": "Istoric",

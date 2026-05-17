@@ -54,14 +54,8 @@ const GenericDeviceFallback: DevicePageComponent = ({ device }) => (
   <div>No provider view available for {device.provider}</div>
 );
 
-const ESPHomeDevicePage: DevicePageComponent = ({ device, entities, sensors }) => {
-  if (!entities) {
-    return (
-      <div>No ESPHome entities available for {device.name}</div>
-    );
-  }
-
-  return <ESPHomeView entities={entities} sensors={sensors} />;
+const ESPHomeDevicePage: DevicePageComponent = ({ entities, sensors }) => {
+  return <ESPHomeView entities={entities ?? []} sensors={sensors} />;
 };
 
 const devicePageRegistry: DevicePageRegistration[] = [

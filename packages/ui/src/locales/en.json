@@ -330,7 +330,7 @@
         "loading_events": "Loading events...",
         "no_events_for_device": "No events found for this device",
         "go_back": "Go back",
-        "last_seen": "Last seen {{date}}",
+        "last_seen": "Last seen {{time}}",
         "never_seen": "Never seen",
         "tab_overview": "Overview",
         "tab_history": "History",
@@ -345,6 +345,17 @@
             "offline": "Offline",
             "error": "Error",
             "unknown": "Unknown"
+        },
+        "esphome": {
+            "empty_entities": "No entities yet.",
+            "section_primary": "Primary",
+            "section_config": "Configuration",
+            "section_diagnostic": "Diagnostics",
+            "subsection_controls": "Controls",
+            "subsection_sensors": "Sensors",
+            "raw_payload": "Raw state",
+            "press": "Press",
+            "no_reading": "No reading"
         },
         "water_fountain": {
             "water_level": "Water Level",

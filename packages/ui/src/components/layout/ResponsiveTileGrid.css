@@ -1,0 +1,10 @@
+.responsive-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(100%, var(--responsive-tile-grid-min, 280px)), 1fr)
+  );
+  gap: var(--space-lg);
+  justify-items: center;
+  width: 100%;
+}

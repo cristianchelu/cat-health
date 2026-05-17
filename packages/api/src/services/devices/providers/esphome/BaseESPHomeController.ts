@@ -1,5 +1,6 @@
 import {
   type Entity as EspHomeEntity,
+  EntityCategory,
   EspHomeClient,
   LogLevel,
 } from 'esphome-client';
@@ -24,6 +25,23 @@ export interface ReconnectConfig {
   pingInterval: number;
   /** If the native API handshake stalls after `client.connect()`, force a disconnect so reconnect can retry. */
   connectHandshakeTimeout: number;
+}
+
+function mapEspHomeEntityCategory(
+  entity: EspHomeEntity,
+): 'primary' | 'config' | 'diagnostic' {
+  const raw =
+    'entityCategory' in entity &&
+    typeof (entity as { entityCategory?: unknown }).entityCategory === 'number'
+      ? (entity as { entityCategory: number }).entityCategory
+      : undefined;
+  if (raw === EntityCategory.CONFIG) {
+    return 'config';
+  }
+  if (raw === EntityCategory.DIAGNOSTIC) {
+    return 'diagnostic';
+  }
+  return 'primary';
 }
 
 export abstract class BaseESPHomeController implements DeviceController {
@@ -376,17 +394,48 @@ export abstract class BaseESPHomeController implements DeviceController {
   }
 
   protected mapToEntityDTO(entity: EspHomeEntity): EntityDTO {
-
     const objectId = entity.objectId;
+    const category = mapEspHomeEntityCategory(entity);
+    const deviceClass =
+      'deviceClass' in entity && typeof entity.deviceClass === 'string'
+        ? entity.deviceClass
+        : undefined;
+    const icon =
+      'icon' in entity && typeof entity.icon === 'string' ? entity.icon : undefined;
 
-    const dto: EntityDTO = {
+    const accuracyDecimals =
+      entity.type === 'sensor' &&
+      'accuracyDecimals' in entity &&
+      typeof (entity as { accuracyDecimals?: unknown }).accuracyDecimals ===
+        'number' &&
+      Number.isFinite(
+        (entity as { accuracyDecimals: number }).accuracyDecimals,
+      )
+        ? Math.min(
+            15,
+            Math.max(
+              0,
+              Math.floor(
+                (entity as { accuracyDecimals: number }).accuracyDecimals,
+              ),
+            ),
+          )
+        : undefined;
+
+    const dto = {
       ...entity,
       id: objectId ?? entity.name,
+      objectId: objectId ?? undefined,
       value: this.sensorValues.get(entity.key),
-      unit: 'unitOfMeasurement' in entity ? entity.unitOfMeasurement : undefined,
+      unit:
+        'unitOfMeasurement' in entity ? entity.unitOfMeasurement : undefined,
+      category,
+      deviceClass,
+      icon,
+      accuracyDecimals,
     };
 
-    return dto;
+    return dto as EntityDTO;
   }
 
   getState() {

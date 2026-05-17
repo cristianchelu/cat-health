@@ -3,7 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 import { ArrowLeft, ListChecks, Pencil } from 'lucide-react';
 import type { GetDeviceResponseDTO } from 'shared';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/Button';
+import {
+  coerceEpochDate,
+  formatRelativeTimeAgo,
+  resolveDateFnsLocale,
+} from '@/lib/formatRelativeTime';
 import { cn } from '@/lib/utils';
 import { isVisitAnnotationEnabled } from '@/lib/deviceAnnotation';
 import './DeviceHeader.css';
@@ -17,17 +23,32 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
   device,
   className,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const dateLocale = resolveDateFnsLocale(i18n.language);
 
   const formatType = (type: string) => {
     return type.replace(/_/g, ' ');
   };
 
+  const lastSeenDate = device.last_seen
+    ? coerceEpochDate(device.last_seen)
+    : null;
+  const lastSeenRelative =
+    lastSeenDate != null
+      ? formatRelativeTimeAgo(lastSeenDate, { locale: dateLocale })
+      : null;
+  const lastSeenAbsolute =
+    lastSeenDate != null
+      ? format(lastSeenDate, 'PPpp', { locale: dateLocale })
+      : undefined;
+
   const statusLabel =
     device.status === 'offline'
       ? device.last_seen
-        ? t('devices.last_seen', { date: new Date(device.last_seen).toLocaleString() })
+        ? t('devices.last_seen', {
+            time: lastSeenRelative ?? lastSeenAbsolute ?? '—',
+          })
         : t('devices.never_seen')
       : t(`devices.status.${device.status}`);
 
@@ -52,7 +73,14 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
             <span className="separator">•</span>
             <span className="device-provider">{device.provider}</span>
             <span className="separator">•</span>
-            <span className={cn('device-status', device.status)}>
+            <span
+              className={cn('device-status', device.status)}
+              title={
+                device.status === 'offline' && lastSeenAbsolute
+                  ? lastSeenAbsolute
+                  : undefined
+              }
+            >
               {statusLabel}
             </span>
           </div>

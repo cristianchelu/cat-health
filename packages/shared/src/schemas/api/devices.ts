@@ -9,6 +9,13 @@ export const DeviceStatusSchema = Type.Union([
 ]);
 export type DeviceStatus = Static<typeof DeviceStatusSchema>;
 
+export const EntityDisplayCategorySchema = Type.Union([
+  Type.Literal("primary"),
+  Type.Literal("config"),
+  Type.Literal("diagnostic"),
+]);
+export type EntityDisplayCategory = Static<typeof EntityDisplayCategorySchema>;
+
 // TODO: More expressive schema
 export const EntitySchema = Type.Object({
   id: Type.String(),
@@ -31,6 +38,13 @@ export const EntitySchema = Type.Object({
   step: Type.Optional(Type.Number()),
   onLabel: Type.Optional(Type.String()),
   offLabel: Type.Optional(Type.String()),
+  /** Normalized from ESPHome `entityCategory` for dashboard sections */
+  category: Type.Optional(EntityDisplayCategorySchema),
+  deviceClass: Type.Optional(Type.String()),
+  icon: Type.Optional(Type.String()),
+  objectId: Type.Optional(Type.String()),
+  /** ESPHome sensor list: decimal places for display (protobuf `accuracy_decimals`). */
+  accuracyDecimals: Type.Optional(Type.Number()),
 });
 export type EntityDTO = Static<typeof EntitySchema>;
 

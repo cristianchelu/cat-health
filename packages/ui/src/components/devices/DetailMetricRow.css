@@ -1,0 +1,115 @@
+.detail-metric-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-height: 3.25rem;
+  padding: var(--space-md) var(--space-lg);
+  background-color: var(--color-surface);
+  border: var(--border-thin);
+  border-radius: var(--radius-lg);
+  justify-content: center;
+
+  .detail-metric-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    width: 100%;
+  }
+
+  .detail-metric-row-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    min-width: 0;
+    flex: 1;
+  }
+
+  .detail-metric-row-title-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+    min-width: 0;
+  }
+
+  .detail-metric-row-label {
+    font-weight: var(--font-medium);
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
+    margin: 0;
+    line-height: var(--line-height-tight);
+  }
+
+  .detail-metric-row-badge {
+    font-size: var(--text-2xs);
+    font-weight: var(--font-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    background-color: var(--color-surface-muted);
+    border-radius: var(--radius-full);
+    padding: var(--space-3xs) var(--space-xs);
+    white-space: nowrap;
+  }
+
+  .detail-metric-row-summary {
+    font-size: var(--text-xl);
+    font-weight: var(--font-semibold);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+    text-align: right;
+    word-break: break-word;
+    flex-shrink: 0;
+    max-width: 55%;
+    line-height: var(--line-height-tight);
+
+    &.is-placeholder {
+      font-size: var(--text-lg);
+      font-weight: var(--font-medium);
+      color: var(--color-text-muted);
+    }
+  }
+
+  .detail-metric-row-meta {
+    font-size: var(--text-2xs);
+    font-weight: var(--font-medium);
+    color: var(--color-text-muted);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .detail-metric-row-raw {
+    width: 100%;
+
+    summary {
+      cursor: pointer;
+      font-size: var(--text-xs);
+      color: var(--color-text-light);
+      user-select: none;
+    }
+
+    pre {
+      margin: var(--space-xs) 0 0;
+      padding: var(--space-sm);
+      font-size: var(--text-xs);
+      background-color: var(--color-surface-muted);
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+      max-height: 240px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .detail-metric-row-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .detail-metric-row-summary {
+      max-width: none;
+      text-align: left;
+    }
+  }
+}
