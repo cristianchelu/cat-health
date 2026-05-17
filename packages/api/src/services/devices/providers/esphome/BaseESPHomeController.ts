@@ -89,7 +89,11 @@ export abstract class BaseESPHomeController implements DeviceController {
       this.reconnectAttempts = 0;
       this.clearReconnectTimeout();
       this.manualDisconnecting = false;
-      this.markTelemetry();
+      const at = Date.now();
+      this.lastTelemetryAt = at;
+      this.pingInFlight = false;
+      this.clearHeartbeatTimeout();
+      this.deps.presence.reportOnline(this.deviceId, at);
       this.startInactivityCheck();
       console.log(
         `Connected to ${this.deviceTypeName} ${this.device.name} (${this.config.host})`,
@@ -101,6 +105,12 @@ export abstract class BaseESPHomeController implements DeviceController {
     this.client.on('disconnect', () => {
       this.clearConnectHandshakeWatchdog();
       this.status = 'offline';
+      this.deps.presence.reportOffline(
+        this.deviceId,
+        this.lastTelemetryAt != null
+          ? { lastActivityMs: this.lastTelemetryAt }
+          : {},
+      );
       console.error(
         `Disconnected from ${this.deviceTypeName} ${this.device.name}`,
       );
@@ -128,25 +138,30 @@ export abstract class BaseESPHomeController implements DeviceController {
       }
 
       this.onEntitiesReceived(data);
+      this.recordDeviceActivity();
     });
 
     this.client.on('telemetry', this.markTelemetry.bind(this));
 
     this.client.on('sensor', ({ key, state }) => {
       this.sensorValues.set(key, state);
+      this.recordDeviceActivity();
       this.handleSensorUpdate(key, state);
     });
 
     this.client.on('number', ({ key, state }) => {
       this.sensorValues.set(key, state);
+      this.recordDeviceActivity();
     });
 
     this.client.on('switch', ({ key, state }) => {
       this.sensorValues.set(key, state);
+      this.recordDeviceActivity();
     });
 
     this.client.on('binary_sensor', ({ key, state }) => {
       this.sensorValues.set(key, state);
+      this.recordDeviceActivity();
       this.handleSensorUpdate(key, state);
     });
   }
@@ -178,6 +193,14 @@ export abstract class BaseESPHomeController implements DeviceController {
     }, ms);
   }
 
+  protected recordDeviceActivity(at: number = Date.now()) {
+    this.lastTelemetryAt = at;
+    if (this.status !== 'online') {
+      return;
+    }
+    this.deps.presence.recordActivity(this.deviceId, at);
+  }
+
   protected clearReconnectTimeout() {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
@@ -193,9 +216,9 @@ export abstract class BaseESPHomeController implements DeviceController {
   }
 
   protected markTelemetry() {
-    this.lastTelemetryAt = Date.now();
     this.pingInFlight = false;
     this.clearHeartbeatTimeout();
+    this.recordDeviceActivity();
   }
 
   protected startInactivityCheck() {
@@ -225,6 +248,12 @@ export abstract class BaseESPHomeController implements DeviceController {
         this.clearHeartbeatTimeout();
         this.stopInactivityCheck();
         this.status = 'offline';
+        this.deps.presence.reportOffline(
+          this.deviceId,
+          this.lastTelemetryAt != null
+            ? { lastActivityMs: this.lastTelemetryAt }
+            : {},
+        );
         this.scheduleReconnect('ping-failed');
       }
     }, config.pingInterval);
@@ -249,6 +278,12 @@ export abstract class BaseESPHomeController implements DeviceController {
       if (!this.manualDisconnecting) {
         this.pingInFlight = false;
         this.status = 'offline';
+        this.deps.presence.reportOffline(
+          this.deviceId,
+          this.lastTelemetryAt != null
+            ? { lastActivityMs: this.lastTelemetryAt }
+            : {},
+        );
         this.stopInactivityCheck();
         this.client.disconnect();
       }
@@ -289,13 +324,25 @@ export abstract class BaseESPHomeController implements DeviceController {
   }
 
   async connect(): Promise<void> {
+    this.deps.presence.reportOffline(
+      this.deviceId,
+      this.lastTelemetryAt != null
+        ? { lastActivityMs: this.lastTelemetryAt }
+        : {},
+    );
     try {
       this.armConnectHandshakeWatchdog();
       this.client.connect();
     } catch (error) {
       this.clearConnectHandshakeWatchdog();
       console.error(`Failed to connect to ${this.config.host}:`, error);
-      this.status = 'error';
+      this.status = 'offline';
+      this.deps.presence.reportOffline(
+        this.deviceId,
+        this.lastTelemetryAt != null
+          ? { lastActivityMs: this.lastTelemetryAt }
+          : {},
+      );
       this.scheduleReconnect('connect-failed');
     }
   }
@@ -308,6 +355,12 @@ export abstract class BaseESPHomeController implements DeviceController {
     this.stopInactivityCheck();
     this.client.disconnect();
     this.status = 'offline';
+    this.deps.presence.reportOffline(
+      this.deviceId,
+      this.lastTelemetryAt != null
+        ? { lastActivityMs: this.lastTelemetryAt }
+        : {},
+    );
   }
 
   getStatus() {

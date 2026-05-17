@@ -46,10 +46,16 @@ export class CameraDeviceController implements Camera {
 
   async connect(): Promise<void> {
     this.status = 'online';
+    if (this.deviceId !== 0) {
+      this.deps.presence.reportOnline(this.deviceId);
+    }
   }
 
   async disconnect(): Promise<void> {
     this.status = 'offline';
+    if (this.deviceId !== 0) {
+      this.deps.presence.reportOffline(this.deviceId);
+    }
   }
 
   getStatus() {
@@ -105,6 +111,9 @@ export class CameraDeviceController implements Camera {
       await pipeline.toFile(pendingMedia.path);
 
       console.log(`Snapshot saved to ${pendingMedia.path}`);
+      if (this.deviceId !== 0) {
+        this.deps.presence.recordActivity(this.deviceId);
+      }
       return pendingMedia;
     } catch (error) {
       console.error(

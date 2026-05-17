@@ -55,6 +55,7 @@ export class PetRecognizerController implements DeviceController {
 
     this.deps.eventBus.subscribe('device.event.media_ready', this.eventHandler);
     this.status = 'online';
+    this.deps.presence.reportOnline(this.deviceId);
     console.log(`Pet recognizer ${this.device.name} connected and listening`);
   }
 
@@ -64,6 +65,7 @@ export class PetRecognizerController implements DeviceController {
       this.eventHandler = null;
     }
     this.status = 'offline';
+    this.deps.presence.reportOffline(this.deviceId);
   }
 
   getStatus() {
@@ -254,6 +256,8 @@ export class PetRecognizerController implements DeviceController {
       }
 
       console.log(`AI identified pet as: ${identifiedPetName} (ID: ${identifiedPetId})`);
+
+      this.deps.presence.recordActivity(this.deviceId);
 
       return {
         pet_id: identifiedPetId,

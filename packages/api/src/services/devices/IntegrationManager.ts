@@ -11,22 +11,30 @@ import type {
   DeviceProvider,
   ProviderDeps,
 } from './types.ts';
+import { DevicePresence } from './DevicePresence.ts';
 
 export class IntegrationManager implements DeviceDirectory {
   private providers = new Map<string, DeviceProvider>();
   private accountManagers = new Map<number, AccountManager>();
   private deps: ProviderDeps;
   private mediaManager: MediaManager;
+  private readonly presence: DevicePresence;
 
   constructor(db: Kysely<Database>, eventBus: EventBus) {
     this.mediaManager = new MediaManager(db);
+    this.presence = new DevicePresence(db);
     this.deps = {
       db,
       eventBus,
       logger: console,
       mediaManager: this.mediaManager,
       directory: this,
+      presence: this.presence,
     };
+  }
+
+  getPresence(): DevicePresence {
+    return this.presence;
   }
 
   getMediaManager(): MediaManager {
@@ -46,6 +54,7 @@ export class IntegrationManager implements DeviceDirectory {
 
   async initialize() {
     await this.mediaManager.initialize();
+    await this.presence.hydrateAll();
 
     // Load all provider accounts
     const accounts = await this.deps.db

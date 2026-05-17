@@ -28,7 +28,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   // --- Helpers ---
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mapDevice = (device: any) => {
+  const mapDevice = async (device: any) => {
     const mapped = {
       ...device,
       enabled: Boolean(device.enabled),
@@ -43,16 +43,22 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           : device.config,
     };
 
+    const snapshot = await integrationManager
+      .getPresence()
+      .getSnapshot(device.id);
+    mapped.status = snapshot.status;
+    mapped.last_seen =
+      snapshot.lastSeenMs != null
+        ? new Date(snapshot.lastSeenMs).toISOString()
+        : null;
+
     try {
       const controller = integrationManager.instantiateDeviceController({
         ...device,
         config: mapped.config,
       });
-      if (controller) {
-        mapped.status = controller.getStatus();
-        if (controller.getState) {
-          mapped.state = controller.getState();
-        }
+      if (controller?.getState) {
+        mapped.state = controller.getState();
       }
     } catch {
       // Ignore errors when fetching controller state
@@ -291,7 +297,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .selectAll('device')
         .select('provider_account.provider as provider')
         .execute();
-      const mapped = devices.map(mapDevice);
+      const mapped = await Promise.all(devices.map((d) => mapDevice(d)));
       await enrichReferenceMedia(mapped);
       return mapped;
     },
@@ -338,7 +344,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('id', '=', provider_account_id)
         .executeTakeFirstOrThrow();
 
-      return mapDevice({ ...result, provider: account.provider });
+      return await mapDevice({ ...result, provider: account.provider });
     },
   );
 
@@ -371,7 +377,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('device.id', '=', id)
         .executeTakeFirst();
       if (!device) throw new Error('Device not found');
-      const mapped = mapDevice(device);
+      const mapped = await mapDevice(device);
       if (device.camera_id) {
         mapped.camera_link = {
           camera_id: device.camera_id,
@@ -444,7 +450,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       if (!device) throw new Error('Device not found');
 
-      const mapped = mapDevice(device);
+      const mapped = await mapDevice(device);
       if (device.camera_id) {
         mapped.camera_link = {
           camera_id: device.camera_id,

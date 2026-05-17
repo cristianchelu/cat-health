@@ -4,6 +4,7 @@ import type { Database } from '../../database/index.ts';
 import type { Device } from '../../database/types/DeviceTable.ts';
 import type { ProviderAccount } from '../../database/types/ProviderAccountTable.ts';
 import type { MediaManager, PendingMedia } from '../media/MediaManager.ts';
+import type { DevicePresence } from './DevicePresence.ts';
 import type { EventBus } from './EventBus.ts';
 
 export type { Device, ProviderAccount };
@@ -51,6 +52,7 @@ export interface ProviderDeps {
   eventBus: EventBus;
   mediaManager: MediaManager;
   directory: DeviceDirectory;
+  presence: DevicePresence;
   // scheduler: Scheduler; // Not implemented yet, skipping for now
   logger: Console; // Using console for now
 }
