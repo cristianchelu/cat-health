@@ -67,10 +67,6 @@ const LitterboxMetricChart: React.FC<LitterboxMetricChartProps> = ({
 
   return (
     <div className={cn('litterbox-metric-chart', className)} {...props}>
-      <div className="litterbox-metric-chart-header">
-        <h3>{title}</h3>
-        <span>{unit}</span>
-      </div>
       {!hasData ? (
         <div className="litterbox-metric-chart-empty">{emptyLabel}</div>
       ) : (
@@ -85,7 +81,12 @@ const LitterboxMetricChart: React.FC<LitterboxMetricChartProps> = ({
               </span>
             ))}
           </div>
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img">
+          <svg
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            role="img"
+            aria-label={title}
+          >
             {tickValues.map((value) => (
               <line
                 key={value}

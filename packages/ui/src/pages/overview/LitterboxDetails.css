@@ -27,6 +27,34 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .litterbox-details-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    min-width: 0;
+  }
+
+  .litterbox-details-chart-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    min-width: 0;
+
+    .section-header {
+      margin-bottom: 0;
+    }
+  }
+
+  .litterbox-details-chart-section--wide {
+    grid-column: 1 / -1;
+  }
+
+  .litterbox-details-chart-card {
+    gap: 0;
+    padding: 0;
+  }
+
   .litterbox-details-dot-timeline {
     width: 100%;
     max-width: 100%;
@@ -70,25 +98,6 @@
   @media (max-width: 576px) {
     .section-header {
       align-items: flex-start;
-    }
-
-    .section-header-actions {
-      min-width: 0;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-    }
-
-    .date-navigation {
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      max-width: 100%;
-    }
-
-    .date-navigation-display {
-      order: 3;
-      flex-basis: 100%;
-      text-align: right;
-      font-size: var(--text-sm);
     }
   }
 }

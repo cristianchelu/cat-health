@@ -1,17 +1,15 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, Toilet } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
-import type { GetEventDTO, LitterboxTrendsResponseDTO } from 'shared';
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import type { LitterboxTrendsResponseDTO } from 'shared';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetLitterboxTrends } from '@/hooks/queries/petQueries';
 import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import Timeline from '@/components/ui/Timeline';
-import { EventTimelineItem } from '@/components/events';
-import EventDetailsModal from '@/components/events/EventDetailsModal';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent } from '@/components/ui/Card';
 import {
   LitterboxMetricChart,
   LitterboxTrendGrid,
@@ -23,7 +21,6 @@ type TrendEvent = LitterboxTrendsResponseDTO['days'][number]['events'][number];
 
 const URINATION_COLOR = 'var(--color-litterbox-urination)';
 const DEFECATION_COLOR = 'var(--color-litterbox-defecation)';
-const COMBINED_COLOR = 'var(--color-litterbox-both)';
 
 function chartPointsToSeries(
   points: Array<{
@@ -85,36 +82,10 @@ function hoursBetweenEventsToSeries(
   };
 }
 
-function eventToTimelineEvent(
-  event: TrendEvent,
-  petId: number,
-): GetEventDTO | null {
-  if (event.id === undefined) return null;
-  return {
-    id: event.id,
-    parent_event_id: null,
-    pet_id: petId,
-    device_id: event.device_id ?? null,
-    timestamp: event.timestamp,
-    data: {
-      type: 'litterbox_use',
-      elimination_type: event.type,
-      elimination_weight: event.elimination_weight ?? 0,
-      duration: event.duration ?? 0,
-      ...(event.straining ? { straining: true } : {}),
-    },
-    raw_data: null,
-    human_verified: event.human_verified ?? false,
-  };
-}
-
 const LitterboxDetails: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { selectedPet } = usePetContext();
-  const [selectedDate, setSelectedDate] = React.useState<string | null>(null);
-  const [selectedEvent, setSelectedEvent] = React.useState<GetEventDTO | null>(
-    null,
-  );
   const {
     dateRange,
     startTime,
@@ -131,10 +102,6 @@ const LitterboxDetails: React.FC = () => {
     !!selectedPet,
   );
 
-  React.useEffect(() => {
-    setSelectedDate(null);
-  }, [dateRange.startDate, dateRange.endDate]);
-
   if (!selectedPet) {
     return (
       <div className="page-litterbox-details">
@@ -147,12 +114,6 @@ const LitterboxDetails: React.FC = () => {
 
   const analytics = data?.analytics;
   const allEvents = data?.days.flatMap((day) => day.events) ?? [];
-  const selectedDay = data?.days.find((day) => day.date === selectedDate);
-  const timelineEvents = (selectedDay?.events ?? allEvents)
-    .slice()
-    .reverse()
-    .map((event) => eventToTimelineEvent(event, selectedPet.id))
-    .filter((event): event is GetEventDTO => event !== null);
 
   const rangeActions = (
     <DateNavigation
@@ -183,158 +144,113 @@ const LitterboxDetails: React.FC = () => {
 
   return (
     <div className="page-litterbox-details">
-      <SectionHeader icon={<Toilet />} actions={rangeActions}>
-        {t('litterbox_details.title')}
-      </SectionHeader>
-
-      <Card isLoading={isFetching && !isLoading}>
-        <CardHeader>
-          <CardTitle>{t('litterbox_details.timeline')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {error ? (
-            <p className="litterbox-details-empty">
-              {t('litterbox_details.error_loading')}
-            </p>
-          ) : (
-            <div className="litterbox-details-dot-timeline">
-              <LitterboxTrendGrid
-                days={data?.days ?? []}
-                onColumnClick={(column) => setSelectedDate(column.key)}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <header className="litterbox-details-header">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          icon
+          onClick={() => navigate(-1)}
+          aria-label={t('litterbox_details.back')}
+          title={t('litterbox_details.back')}
+        >
+          <ArrowLeft size={18} />
+        </Button>
+        {rangeActions}
+      </header>
 
       <section className="litterbox-details-chart-grid">
-        <Card>
-          <CardContent>
-            <LitterboxMetricChart
-              title={t('litterbox_details.urination_frequency')}
-              unit={t('litterbox_details.hours_between')}
-              emptyLabel={t('litterbox_details.no_chart_data')}
-              series={[urinationIntervalSeries]}
-            />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <LitterboxMetricChart
-              title={t('litterbox_details.defecation_frequency')}
-              unit={t('litterbox_details.hours_between')}
-              emptyLabel={t('litterbox_details.no_chart_data')}
-              series={[defecationIntervalSeries]}
-            />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <LitterboxMetricChart
-              title={t('litterbox_details.urination_duration_chart')}
-              unit={t('litterbox_details.seconds')}
-              emptyLabel={t('litterbox_details.no_chart_data')}
-              series={
-                analytics
-                  ? [
-                      chartPointsToSeries(
-                        analytics.urinationDurationPoints,
-                        'urination-duration',
-                        t('overview.urination'),
-                        URINATION_COLOR,
-                      ),
-                    ]
-                  : []
-              }
-            />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <LitterboxMetricChart
-              title={t('litterbox_details.defecation_duration_chart')}
-              unit={t('litterbox_details.seconds')}
-              emptyLabel={t('litterbox_details.no_chart_data')}
-              series={
-                analytics
-                  ? [
-                      chartPointsToSeries(
-                        analytics.defecationDurationPoints,
-                        'defecation-duration',
-                        t('overview.defecation'),
-                        DEFECATION_COLOR,
-                      ),
-                    ]
-                  : []
-              }
-            />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <LitterboxMetricChart
-              title={t('litterbox_details.weight_chart')}
-              unit={t('litterbox_details.grams')}
-              emptyLabel={t('litterbox_details.no_chart_data')}
-              series={
-                analytics
-                  ? [
-                      chartPointsToSeries(
-                        analytics.urinationWeightPoints,
-                        'urination-weight',
-                        t('overview.urination'),
-                        URINATION_COLOR,
-                      ),
-                      chartPointsToSeries(
-                        analytics.defecationWeightPoints,
-                        'defecation-weight',
-                        t('overview.defecation'),
-                        DEFECATION_COLOR,
-                      ),
-                      chartPointsToSeries(
-                        analytics.combinedEliminationWeightPoints,
-                        'combined-weight',
-                        t('overview.both'),
-                        COMBINED_COLOR,
-                      ),
-                    ]
-                  : []
-              }
-            />
-          </CardContent>
-        </Card>
-      </section>
-
-      <section>
-        <SectionHeader icon={<Activity />}>
-          {selectedDate
-            ? `${t('litterbox_details.visits')} · ${format(parseISO(selectedDate), 'MMM d')}`
-            : t('litterbox_details.recent_visits')}
-        </SectionHeader>
-        <Timeline isLoading={isFetching && !isLoading}>
-          {timelineEvents.length === 0 ? (
-            <li className="litterbox-details-empty">
-              {t('litterbox_details.no_visits')}
-            </li>
-          ) : (
-            timelineEvents.map((event) => (
-              <EventTimelineItem
-                key={event.id}
-                event={event}
-                showPet={false}
-                showDevice={true}
-                onClick={() => setSelectedEvent(event)}
+        <section className="litterbox-details-chart-section litterbox-details-chart-section--wide">
+          <SectionHeader>{t('litterbox_details.timeline')}</SectionHeader>
+          <Card className="litterbox-details-chart-card" isLoading={isFetching && !isLoading}>
+            <CardContent>
+              {error ? (
+                <p className="litterbox-details-empty">
+                  {t('litterbox_details.error_loading')}
+                </p>
+              ) : (
+                <div className="litterbox-details-dot-timeline">
+                  <LitterboxTrendGrid days={data?.days ?? []} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+        <section className="litterbox-details-chart-section">
+          <SectionHeader>{t('litterbox_details.urination_frequency')}</SectionHeader>
+          <Card className="litterbox-details-chart-card">
+            <CardContent>
+              <LitterboxMetricChart
+                title={t('litterbox_details.urination_frequency')}
+                unit={t('litterbox_details.hours_between')}
+                emptyLabel={t('litterbox_details.no_chart_data')}
+                series={[urinationIntervalSeries]}
               />
-            ))
-          )}
-        </Timeline>
+            </CardContent>
+          </Card>
+        </section>
+        <section className="litterbox-details-chart-section">
+          <SectionHeader>{t('litterbox_details.defecation_frequency')}</SectionHeader>
+          <Card className="litterbox-details-chart-card">
+            <CardContent>
+              <LitterboxMetricChart
+                title={t('litterbox_details.defecation_frequency')}
+                unit={t('litterbox_details.hours_between')}
+                emptyLabel={t('litterbox_details.no_chart_data')}
+                series={[defecationIntervalSeries]}
+              />
+            </CardContent>
+          </Card>
+        </section>
+        <section className="litterbox-details-chart-section">
+          <SectionHeader>{t('litterbox_details.urination_duration_chart')}</SectionHeader>
+          <Card className="litterbox-details-chart-card">
+            <CardContent>
+              <LitterboxMetricChart
+                title={t('litterbox_details.urination_duration_chart')}
+                unit={t('litterbox_details.seconds')}
+                emptyLabel={t('litterbox_details.no_chart_data')}
+                series={
+                  analytics
+                    ? [
+                        chartPointsToSeries(
+                          analytics.urinationDurationPoints,
+                          'urination-duration',
+                          t('overview.urination'),
+                          URINATION_COLOR,
+                        ),
+                      ]
+                    : []
+                }
+              />
+            </CardContent>
+          </Card>
+        </section>
+        <section className="litterbox-details-chart-section">
+          <SectionHeader>{t('litterbox_details.defecation_duration_chart')}</SectionHeader>
+          <Card className="litterbox-details-chart-card">
+            <CardContent>
+              <LitterboxMetricChart
+                title={t('litterbox_details.defecation_duration_chart')}
+                unit={t('litterbox_details.seconds')}
+                emptyLabel={t('litterbox_details.no_chart_data')}
+                series={
+                  analytics
+                    ? [
+                        chartPointsToSeries(
+                          analytics.defecationDurationPoints,
+                          'defecation-duration',
+                          t('overview.defecation'),
+                          DEFECATION_COLOR,
+                        ),
+                      ]
+                    : []
+                }
+              />
+            </CardContent>
+          </Card>
+        </section>
       </section>
-
-      <EventDetailsModal
-        isOpen={selectedEvent !== null}
-        event={selectedEvent}
-        onClose={() => setSelectedEvent(null)}
-      />
     </div>
   );
 };
