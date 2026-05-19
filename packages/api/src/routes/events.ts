@@ -21,7 +21,6 @@ import {
   LitterboxTrendParamsSchema,
   LitterboxTrendQuerySchema,
   LitterboxTrendsResponseSchema,
-  type LitterboxUseEliminationType,
 } from 'shared';
 
 import {
@@ -33,6 +32,7 @@ import type { Food } from '../database/types/FoodTable.ts';
 import { MediaManager } from '../services/media/MediaManager.ts';
 import { computeLitterboxAnalysisData } from '../services/devices/providers/esphome/analyzeLitterboxUse.ts';
 import type { LitterboxUseEventData } from '../database/types/EventTable.ts';
+import { buildLitterboxTrendResult } from '../services/litterbox/litterboxAnalytics.ts';
 
 type FoodNutrientItem = { nutrient: string; unit: string; value: number };
 
@@ -216,10 +216,10 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     },
     async (request) => {
       const { petId } = request.params;
-      const { days = 7, timezone = 'UTC' } = request.query;
+      const { startTime, endTime, timezone = 'UTC', detail = false } = request.query;
 
-      const today = new Date();
-      const startDate = startOfDay(subDays(today, days - 1));
+      const startDate = new Date(startTime);
+      const endDate = new Date(endTime);
 
       // Fetch litterbox events
       const litterboxEvents = await db
@@ -228,65 +228,23 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('pet_id', '=', petId)
         .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_use')
         .where('timestamp', '>=', startDate)
+        .where('timestamp', '<=', endDate)
         .orderBy('timestamp', 'asc')
         .execute();
 
-      // Group events by local date in the specified timezone
-      const dailyEvents = new Map<string, Array<{ type: LitterboxUseEliminationType; timestamp: string; straining?: boolean }>>();
-
-      // Initialize days
-      for (let i = 0; i < days; i++) {
-        const d = subDays(today, days - 1 - i);
-        const dateStr = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
-        dailyEvents.set(dateStr, []);
-      }
-
-      // Track last pee and poop timestamps
-      let lastPee: Date | null = null;
-      let lastPoop: Date | null = null;
-
-      // Process events
-      for (const event of litterboxEvents) {
-        const dateStr = formatInTimeZone(event.timestamp, timezone, 'yyyy-MM-dd');
-        const eventData = event.data as { elimination_type?: LitterboxUseEliminationType; straining?: boolean };
-        const eliminationType = eventData.elimination_type || 'unknown';
-
-        if (dailyEvents.has(dateStr)) {
-          dailyEvents.get(dateStr)!.push({
-            type: eliminationType,
-            timestamp: event.timestamp.toISOString(),
-            ...(eventData.straining ? { straining: true } : {}),
-          });
-        }
-
-        // Track last pee/poop
-        if (eliminationType === 'urination' || eliminationType === 'both') {
-          if (!lastPee || event.timestamp > lastPee) {
-            lastPee = event.timestamp;
-          }
-        }
-        if (eliminationType === 'defecation' || eliminationType === 'both') {
-          if (!lastPoop || event.timestamp > lastPoop) {
-            lastPoop = event.timestamp;
-          }
-        }
-      }
-
-      const result = [];
-      for (let i = 0; i < days; i++) {
-        const d = subDays(today, days - 1 - i);
-        const dateStr = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
-        result.push({
-          date: dateStr,
-          events: dailyEvents.get(dateStr) || [],
-        });
-      }
-
-      return {
-        days: result,
-        lastPee: lastPee?.toISOString() ?? null,
-        lastPoop: lastPoop?.toISOString() ?? null,
-      };
+      return buildLitterboxTrendResult({
+        visits: litterboxEvents.map((event) => ({
+          id: event.id,
+          timestamp: event.timestamp,
+          device_id: event.device_id,
+          human_verified: event.human_verified,
+          data: event.data as LitterboxUseEventData,
+        })),
+        startTime: startDate,
+        endTime: endDate,
+        timezone,
+        includeDetails: detail,
+      });
     },
   );
 

@@ -2,6 +2,23 @@
   --card-padding: var(--space-sm);
   gap: 0;
 
+  &.litterbox-visits-card--interactive {
+    cursor: pointer;
+    transition:
+      transform var(--transition-fast),
+      box-shadow var(--transition-fast);
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    &:focus-visible {
+      outline: var(--border-primary);
+      outline-offset: var(--space-2xs);
+    }
+  }
+
   .litterbox-stats {
     display: flex;
     align-items: center;
@@ -25,11 +42,6 @@
   }
 
   .litterbox-dot-chart {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    height: 100%;
-    gap: 4px;
     padding-top: var(--space-xs);
   }
 
@@ -37,41 +49,5 @@
     flex: 1 0 auto;
     min-height: var(--overview-litterbox-dot-chart-min-height);
     pointer-events: none;
-  }
-
-  .dot-column {
-    flex: 1;
-    display: flex;
-    flex-direction: column-reverse;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .dot-wrapper {
-    position: relative;
-    flex-shrink: 0;
-  }
-
-  .dot {
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-
-    &.dot-straining {
-      box-shadow: 0 0 0 2px var(--color-error);
-    }
-  }
-
-  .overflow-badge {
-    position: absolute;
-    top: -6px;
-    right: -12px;
-    font-size: 12px;
-    font-weight: var(--font-bold);
-    color: var(--color-text);
-    background-color: var(--color-background);
-    border-radius: var(--radius-sm);
-    padding: 0 4px;
-    line-height: 1.2;
   }
 }

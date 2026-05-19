@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { addDays, subDays, parseISO } from 'date-fns';
 import Timeline from '@/components/ui/Timeline';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { useDeviceEvents } from '@/hooks/queries/deviceQueries';
+import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
 import { EventTimelineItem } from '@/components/events';
-import { createDayRange, dateToTimeRange } from '@/lib/utils';
 import './DeviceTimeline.css';
 import EventDetailsModal from '@/components/events/EventDetailsModal';
 import type { GetEventDTO } from 'shared';
@@ -17,28 +16,18 @@ interface DeviceTimelineProps {
 
 const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
   const { t } = useTranslation();
-  const [currentDate, setCurrentDate] = React.useState<string>(
-    () => createDayRange().startDate,
-  );
+  const {
+    dateRange,
+    startTime,
+    endTime,
+    isCurrentWindow,
+    goToPreviousWindow,
+    goToNextWindow,
+    resetToCurrentWindow,
+  } = useDateWindowNavigation({ days: 1 });
   const [selectedEvent, setSelectedEvent] = React.useState<GetEventDTO | null>(
     null,
   );
-
-  const { startTime, endTime } = React.useMemo(() => {
-    return dateToTimeRange(currentDate);
-  }, [currentDate]);
-
-  const handlePrevDay = () => {
-    setCurrentDate(createDayRange(subDays(parseISO(currentDate), 1)).startDate);
-  };
-
-  const handleNextDay = () => {
-    setCurrentDate(createDayRange(addDays(parseISO(currentDate), 1)).startDate);
-  };
-
-  const handleReset = () => {
-    setCurrentDate(createDayRange().startDate);
-  };
 
   const handleEventClick = (event: GetEventDTO) => {
     setSelectedEvent(event);
@@ -55,18 +44,16 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
     error,
   } = useDeviceEvents(deviceId, startTime, endTime, true);
 
-  const isCurrentDay = currentDate === createDayRange().startDate;
-
   return (
     <div className="device-timeline">
       <SectionHeader
         actions={
           <DateNavigation
-            date={currentDate}
-            onPrev={handlePrevDay}
-            onNext={handleNextDay}
-            onReset={handleReset}
-            isToday={isCurrentDay}
+            date={dateRange.startDate}
+            onPrev={goToPreviousWindow}
+            onNext={goToNextWindow}
+            onReset={resetToCurrentWindow}
+            isToday={isCurrentWindow}
           />
         }
       ></SectionHeader>

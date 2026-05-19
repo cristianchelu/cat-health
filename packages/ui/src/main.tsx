@@ -8,6 +8,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router';
 import App from './App.tsx';
 
 import Overview from './pages/overview/Overview.tsx';
+import LitterboxDetails from './pages/overview/LitterboxDetails.tsx';
 import Health from './pages/health/Health.tsx';
 import Devices from './pages/devices/Devices.tsx';
 import DeviceDetails from './pages/devices/DeviceDetails.tsx';
@@ -30,6 +31,11 @@ const router = createBrowserRouter(
       element: <App />,
       children: [
         { path: '/', element: <Overview />, handle: petSelectorRouteHandle },
+        {
+          path: '/overview/litterbox',
+          element: <LitterboxDetails />,
+          handle: petSelectorRouteHandle,
+        },
         {
           path: '/health',
           element: <Health />,

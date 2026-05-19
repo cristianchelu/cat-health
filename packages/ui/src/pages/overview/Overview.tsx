@@ -1,9 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock, Plus } from 'lucide-react';
-import { addDays, subDays, parseISO } from 'date-fns';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetEvents } from '@/hooks/queries/petQueries';
+import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { Button } from '@/components/ui/Button';
@@ -11,7 +11,6 @@ import Timeline from '@/components/ui/Timeline';
 import { EventTimelineItem } from '@/components/events';
 import EventDetailsModal from '@/components/events/EventDetailsModal';
 import LogFoodModal from '@/components/events/LogFoodModal';
-import { createDayRange, type DateRange } from '@/lib/utils';
 
 import WeightTrendCard from '@/pages/overview/components/WeightTrendCard';
 import WaterConsumptionCard from '@/pages/overview/components/WaterConsumptionCard';
@@ -29,21 +28,13 @@ const Overview: React.FC = () => {
   );
   const [showFoodModal, setShowFoodModal] = React.useState(false);
 
-  const [dateRange, setDateRange] = React.useState<DateRange>(createDayRange);
-
-  const handlePrevDay = () => {
-    const prev = subDays(parseISO(dateRange.startDate), 1);
-    setDateRange(createDayRange(prev));
-  };
-
-  const handleNextDay = () => {
-    const next = addDays(parseISO(dateRange.startDate), 1);
-    setDateRange(createDayRange(next));
-  };
-
-  const handleReset = () => {
-    setDateRange(createDayRange());
-  };
+  const {
+    dateRange,
+    isCurrentWindow,
+    goToPreviousWindow,
+    goToNextWindow,
+    resetToCurrentWindow,
+  } = useDateWindowNavigation({ days: 1 });
 
   const handleEventClick = (event: GetEventDTO) => {
     setSelectedEvent(event);
@@ -59,15 +50,13 @@ const Overview: React.FC = () => {
     isFetching,
   } = usePetEvents(selectedPet?.id ?? 0, dateRange, !!selectedPet);
 
-  const isCurrentDay = dateRange.startDate === createDayRange().startDate;
-
   const dateNavigation = (
     <DateNavigation
       date={dateRange.startDate}
-      onPrev={handlePrevDay}
-      onNext={handleNextDay}
-      onReset={handleReset}
-      isToday={isCurrentDay}
+      onPrev={goToPreviousWindow}
+      onNext={goToNextWindow}
+      onReset={resetToCurrentWindow}
+      isToday={isCurrentWindow}
     />
   );
 

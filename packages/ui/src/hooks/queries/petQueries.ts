@@ -22,6 +22,7 @@ import type {
   PostPetRequestDTO,
   PatchPetRequestDTO,
   PatchEventRequestDTO,
+  LitterboxTrendQueryDTO,
 } from 'shared';
 import { dateRangeToTimeRange, type DateRange } from '@/lib/utils';
 
@@ -103,11 +104,18 @@ export function usePetWaterTrends(petId: number, days: number) {
   });
 }
 
-export function usePetLitterboxTrends(petId: number, days: number) {
+export function usePetLitterboxTrends(
+  petId: number,
+  query: Omit<LitterboxTrendQueryDTO, 'timezone'>,
+  enabled = true,
+) {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const requestQuery = { ...query, timezone };
   return useQuery({
-    queryKey: ['litterboxTrends', petId, days, timezone],
-    queryFn: () => getPetLitterboxTrends(petId, { days, timezone }),
+    queryKey: ['litterboxTrends', petId, requestQuery],
+    queryFn: () => getPetLitterboxTrends(petId, requestQuery),
+    enabled,
+    placeholderData: keepPreviousData,
   });
 }
 

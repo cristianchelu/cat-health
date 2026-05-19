@@ -153,25 +153,81 @@ export const LitterboxTrendParamsSchema = Type.Object({ petId: Type.Number() });
 export type LitterboxTrendParamsDTO = Static<typeof LitterboxTrendParamsSchema>;
 
 export const LitterboxTrendQuerySchema = Type.Object({
-  days: Type.Optional(Type.Number({ minimum: 1 })),
+  startTime: Type.String({ format: "date-time" }),
+  endTime: Type.String({ format: "date-time" }),
   timezone: Type.Optional(Type.String()),
+  detail: Type.Optional(Type.Boolean()),
 });
 export type LitterboxTrendQueryDTO = Static<typeof LitterboxTrendQuerySchema>;
+
+const LitterboxTrendEventSchema = Type.Object({
+  type: LitterboxUseEliminationTypeSchema,
+  timestamp: Type.String(),
+  straining: Type.Optional(Type.Boolean()),
+  id: Type.Optional(Type.Number()),
+  duration: Type.Optional(Type.Number()),
+  elimination_weight: Type.Optional(Type.Number()),
+  human_verified: Type.Optional(Type.Boolean()),
+  device_id: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
+  bout_durations: Type.Optional(
+    Type.Object({
+      urination: Type.Optional(Type.Number()),
+      defecation: Type.Optional(Type.Number()),
+    }),
+  ),
+});
+
+const LitterboxDailySummarySchema = Type.Object({
+  urinationCount: Type.Number(),
+  defecationCount: Type.Number(),
+  bothCount: Type.Number(),
+  noEliminationCount: Type.Number(),
+  unknownCount: Type.Number(),
+  strainingCount: Type.Number(),
+  totalEliminationWeight: Type.Number(),
+  avgEliminationWeight: Type.Union([Type.Number(), Type.Null()]),
+  medianEliminationWeight: Type.Union([Type.Number(), Type.Null()]),
+  avgDuration: Type.Union([Type.Number(), Type.Null()]),
+  medianDuration: Type.Union([Type.Number(), Type.Null()]),
+  maxDuration: Type.Union([Type.Number(), Type.Null()]),
+});
+export type LitterboxDailySummaryDTO = Static<typeof LitterboxDailySummarySchema>;
+
+const LitterboxChartPointSchema = Type.Object({
+  timestamp: Type.String(),
+  value: Type.Number(),
+  eventId: Type.Optional(Type.Number()),
+  straining: Type.Optional(Type.Boolean()),
+});
+export type LitterboxChartPointDTO = Static<typeof LitterboxChartPointSchema>;
+
+const LitterboxDailyCountPointSchema = Type.Object({
+  date: Type.String(),
+  value: Type.Number(),
+});
+export type LitterboxDailyCountPointDTO = Static<typeof LitterboxDailyCountPointSchema>;
+
+const LitterboxTrendAnalyticsSchema = Type.Object({
+  dailyUrinationCount: Type.Array(LitterboxDailyCountPointSchema),
+  dailyDefecationCount: Type.Array(LitterboxDailyCountPointSchema),
+  urinationDurationPoints: Type.Array(LitterboxChartPointSchema),
+  defecationDurationPoints: Type.Array(LitterboxChartPointSchema),
+  urinationWeightPoints: Type.Array(LitterboxChartPointSchema),
+  defecationWeightPoints: Type.Array(LitterboxChartPointSchema),
+  combinedEliminationWeightPoints: Type.Array(LitterboxChartPointSchema),
+});
+export type LitterboxTrendAnalyticsDTO = Static<typeof LitterboxTrendAnalyticsSchema>;
 
 export const LitterboxTrendsResponseSchema = Type.Object({
   days: Type.Array(
     Type.Object({
       date: Type.String(),
-      events: Type.Array(
-        Type.Object({
-          type: LitterboxUseEliminationTypeSchema,
-          timestamp: Type.String(),
-          straining: Type.Optional(Type.Boolean()),
-        }),
-      ),
+      events: Type.Array(LitterboxTrendEventSchema),
+      summary: Type.Optional(LitterboxDailySummarySchema),
     }),
   ),
   lastPee: Type.Union([Type.String(), Type.Null()]),
   lastPoop: Type.Union([Type.String(), Type.Null()]),
+  analytics: Type.Optional(LitterboxTrendAnalyticsSchema),
 });
 export type LitterboxTrendsResponseDTO = Static<typeof LitterboxTrendsResponseSchema>;

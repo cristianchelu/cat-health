@@ -8,6 +8,7 @@ import './DateNavigation.css';
 
 interface DateNavigationProps {
   date: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD
   onPrev: () => void;
   onNext: () => void;
   onReset: () => void;
@@ -20,6 +21,7 @@ interface DateNavigationProps {
 
 export const DateNavigation: React.FC<DateNavigationProps> = ({
   date,
+  endDate,
   onPrev,
   onNext,
   onReset,
@@ -46,7 +48,9 @@ export const DateNavigation: React.FC<DateNavigationProps> = ({
         <ChevronLeft size={20} />
       </Button>
       <span className="date-navigation-display">
-        {format(parseISO(date), dateFormat)}
+        {endDate && endDate !== date
+          ? `${format(parseISO(date), dateFormat)} - ${format(parseISO(endDate), dateFormat)}`
+          : format(parseISO(date), dateFormat)}
       </span>
       <Button
         variant="ghost"
