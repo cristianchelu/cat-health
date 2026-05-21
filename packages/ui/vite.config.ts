@@ -178,6 +178,13 @@ export default defineConfig({
       workbox: {
         // Precache built assets; png covers `public/` icons copied into dist (no separate icons/*.png glob).
         globPatterns: ['**/*.{js,css,html,svg,png}'],
+        // SPA fallback: serve cached index.html for any navigation that isn't a precached URL.
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api\//],
+        // Explicitly drop precache entries left by older SW versions.
+        cleanupOutdatedCaches: true,
+        // Vite already content-hashes filenames — skip Workbox's extra cache-bust query param.
+        dontCacheBustURLsMatching: /\.[\da-f]{8}\./,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
