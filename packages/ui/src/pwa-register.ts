@@ -19,15 +19,15 @@ function isBehindSubpathProxy(): boolean {
 let updateSW: ((reloadPage?: boolean) => Promise<void>) | undefined;
 
 if (isBehindSubpathProxy()) {
-  navigator.serviceWorker?.getRegistrations().then((registrations) => {
-    for (const r of registrations) {
-      r.unregister().then((ok) => {
-        if (ok) console.log('Unregistered stale service worker:', r.scope);
-      });
-    }
-    if (registrations.length > 0) {
-      window.location.reload();
-    }
+  navigator.serviceWorker?.getRegistrations().then(async (registrations) => {
+    if (registrations.length === 0) return;
+
+    await Promise.all(registrations.map((r) => r.unregister()));
+    // Flush Workbox caches so the reload fetches everything fresh from the network.
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+
+    window.location.reload();
   });
 } else {
   updateSW = registerSW({
