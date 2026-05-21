@@ -252,43 +252,4 @@
     background-color: rgba(from var(--color-error) r g b / 0.12);
     color: var(--color-error);
   }
-
-  @media (max-width: 768px) {
-    --timeline-icon-size: 40px;
-    --timeline-item-padding-y: var(--space-md);
-
-    .timeline-item {
-      column-gap: var(--space-sm);
-    }
-
-    .timeline-icon svg {
-      width: 20px;
-      height: 20px;
-    }
-
-    .timeline-timestamp {
-      font-size: var(--text-lg);
-    }
-
-    .timeline-value {
-      font-size: var(--text-xl);
-    }
-
-    .timeline-label {
-      font-size: var(--text-base);
-    }
-
-    .timeline-meta {
-      font-size: var(--text-base);
-    }
-
-    .timeline-meta-item svg {
-      width: 14px;
-      height: 14px;
-    }
-
-    .timeline-badge {
-      font-size: var(--text-sm);
-    }
-  }
 }
