@@ -26,6 +26,7 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-xs);
+    min-width: 0;
   }
 
   .card-title {
@@ -44,6 +45,7 @@
 
   .card-content {
     flex: 1;
+    min-width: 0;
 
     &.no-padding {
       margin-left: calc(-1 * var(--card-padding));

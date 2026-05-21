@@ -9,13 +9,17 @@ import './WaterConsumptionCard.css';
 
 interface WaterConsumptionCardProps {
   petId: number;
+  isPending?: boolean;
 }
 
 const WaterConsumptionCard: React.FC<WaterConsumptionCardProps> = ({
   petId,
+  isPending = false,
 }) => {
   const { t } = useTranslation();
-  const { data: waterData, isLoading, error } = usePetWaterTrends(petId, 7);
+  const { data: waterData, isLoading: isQueryLoading, error } =
+    usePetWaterTrends(petId, 7);
+  const isLoading = isQueryLoading || isPending;
 
   const showEmpty =
     !isLoading && (error || !waterData || waterData.length === 0);

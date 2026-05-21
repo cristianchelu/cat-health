@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { Cat } from 'lucide-react';
+import { Cat, Loader2 } from 'lucide-react';
 
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { Button } from '../ui/Button';
@@ -21,8 +21,14 @@ const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
 
   if (isLoading) {
     return (
-      <div className={cn('pet-selector', variant)}>
-        <div className="loading">{t('common.loading_pets')}</div>
+      <div
+        className={cn('pet-selector', variant)}
+        role="status"
+        aria-label={t('common.loading_pets')}
+      >
+        <div className="loading">
+          <Loader2 className="animate-spin" size={20} aria-hidden />
+        </div>
       </div>
     );
   }

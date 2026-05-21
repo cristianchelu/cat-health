@@ -16,6 +16,7 @@ import './LitterboxVisitsCard.css';
 
 interface LitterboxVisitsCardProps {
   petId: number;
+  isPending?: boolean;
 }
 
 const MAX_DOTS_PER_DAY = 4;
@@ -32,15 +33,23 @@ function formatShortDuration(date: Date): string {
   return `${minutes}m`;
 }
 
-const LitterboxVisitsCard: React.FC<LitterboxVisitsCardProps> = ({ petId }) => {
+const LitterboxVisitsCard: React.FC<LitterboxVisitsCardProps> = ({
+  petId,
+  isPending = false,
+}) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { startTime, endTime } = useDateWindowNavigation({ days: 7 });
 
-  const { data, isLoading, error } = usePetLitterboxTrends(petId, {
-    startTime,
-    endTime,
-  });
+  const { data, isLoading: isQueryLoading, error } = usePetLitterboxTrends(
+    petId,
+    {
+      startTime,
+      endTime,
+    },
+    petId > 0,
+  );
+  const isLoading = isQueryLoading || isPending;
 
   const timeSinceLastPee = data?.lastPee
     ? formatShortDuration(new Date(data.lastPee))

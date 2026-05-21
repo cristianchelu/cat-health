@@ -22,7 +22,9 @@ import type { GetEventDTO } from 'shared';
 
 const Overview: React.FC = () => {
   const { t } = useTranslation();
-  const { selectedPet } = usePetContext();
+  const { selectedPet, isLoading: isPetsLoading } = usePetContext();
+  const petId = selectedPet?.id ?? 0;
+  const showPetContent = !!selectedPet || isPetsLoading;
   const [selectedEvent, setSelectedEvent] = React.useState<GetEventDTO | null>(
     null,
   );
@@ -48,7 +50,9 @@ const Overview: React.FC = () => {
     data: eventsData,
     isLoading,
     isFetching,
-  } = usePetEvents(selectedPet?.id ?? 0, dateRange, !!selectedPet);
+  } = usePetEvents(petId, dateRange, !!selectedPet);
+
+  const isActivityLoading = isPetsLoading || isLoading || isFetching;
 
   const dateNavigation = (
     <DateNavigation
@@ -80,21 +84,29 @@ const Overview: React.FC = () => {
   return (
     <div className="page-overview">
       <section className="widget-grid">
-        {selectedPet && <WeightTrendCard petId={selectedPet.id} />}
-        {selectedPet && <WaterConsumptionCard petId={selectedPet.id} />}
-        {selectedPet && <FoodIntakeCard petId={selectedPet.id} />}
-        {selectedPet && <LitterboxVisitsCard petId={selectedPet.id} />}
+        {showPetContent && (
+          <WeightTrendCard petId={petId} isPending={isPetsLoading} />
+        )}
+        {showPetContent && (
+          <WaterConsumptionCard petId={petId} isPending={isPetsLoading} />
+        )}
+        {showPetContent && (
+          <FoodIntakeCard petId={petId} isPending={isPetsLoading} />
+        )}
+        {showPetContent && (
+          <LitterboxVisitsCard petId={petId} isPending={isPetsLoading} />
+        )}
       </section>
       <section>
         <SectionHeader icon={<Clock />} actions={activityActions}>
           {t('overview.activity')}
         </SectionHeader>
         <div className="overview-timeline-container">
-          <Timeline isLoading={isFetching || isLoading}>
-            {isLoading && (
+          <Timeline isLoading={isActivityLoading}>
+            {isActivityLoading && (
               <li className="overview-loading-activity">Loading...</li>
             )}
-            {!isLoading && eventsData?.data.length === 0 && (
+            {!isActivityLoading && eventsData?.data.length === 0 && (
               <li className="overview-empty-activity">
                 {t('overview.no_activity')}
               </li>

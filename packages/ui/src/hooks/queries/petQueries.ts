@@ -93,6 +93,7 @@ export function usePetWeightTrends(petId: number, days: number) {
   return useQuery({
     queryKey: ['weightTrends', petId, days, timezone],
     queryFn: () => getPetWeightTrends(petId, { days, timezone }),
+    enabled: petId > 0,
   });
 }
 
@@ -101,6 +102,7 @@ export function usePetWaterTrends(petId: number, days: number) {
   return useQuery({
     queryKey: ['waterTrends', petId, days, timezone],
     queryFn: () => getPetWaterTrends(petId, { days, timezone }),
+    enabled: petId > 0,
   });
 }
 

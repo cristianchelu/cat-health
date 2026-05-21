@@ -19,6 +19,7 @@ interface DayData {
 
 interface FoodIntakeCardProps {
   petId: number;
+  isPending?: boolean;
 }
 
 const DAYS = 7;
@@ -26,7 +27,10 @@ const DEFAULT_DAILY_TARGET_KCAL = 220;
 const TARGET_MIN = DEFAULT_DAILY_TARGET_KCAL * 0.8;
 const TARGET_MAX = DEFAULT_DAILY_TARGET_KCAL * 1.2;
 
-const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
+const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({
+  petId,
+  isPending = false,
+}) => {
   const { t } = useTranslation();
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const today = new Date();
@@ -46,11 +50,12 @@ const FoodIntakeCard: React.FC<FoodIntakeCardProps> = ({ petId }) => {
   const startTime = dateToTimeRange(startDate).start;
   const endTime = dateToTimeRange(today).end;
 
-  const { data: eventsResponse, isLoading, error } = useQuery({
+  const { data: eventsResponse, isLoading: isQueryLoading, error } = useQuery({
     queryKey: ['petEvents', petId, 'foodTrends', startTime, endTime, timezone],
     queryFn: () => getPetEvents(petId, startTime, endTime, 500),
     enabled: petId > 0,
   });
+  const isLoading = isQueryLoading || isPending;
 
   if (error && !isLoading) {
     return (

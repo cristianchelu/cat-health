@@ -10,6 +10,7 @@ import './WeightTrendCard.css';
 
 interface WeightTrendCardProps {
   petId: number;
+  isPending?: boolean;
 }
 
 // Catmull-Rom spline interpolation for smooth curves
@@ -78,9 +79,14 @@ const createAreaPath = (points: { x: number; y: number }[], height: number) => {
   return `${linePath} L ${points[points.length - 1].x} ${height} L 0 ${height} Z`;
 };
 
-const WeightTrendCard: React.FC<WeightTrendCardProps> = ({ petId }) => {
+const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
+  petId,
+  isPending = false,
+}) => {
   const { t } = useTranslation();
-  const { data: weightData, isLoading, error } = usePetWeightTrends(petId, 15);
+  const { data: weightData, isLoading: isQueryLoading, error } =
+    usePetWeightTrends(petId, 15);
+  const isLoading = isQueryLoading || isPending;
 
   const showEmpty =
     !isLoading && (error || !weightData || weightData.length === 0);

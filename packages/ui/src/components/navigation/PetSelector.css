@@ -1,11 +1,9 @@
-ul.pet-selector {
+.pet-selector {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
   list-style: none;
   padding: 0;
-  display: flex;
-  flex-direction: column;
   margin: 0;
 
   .item {
@@ -42,10 +40,20 @@ ul.pet-selector {
   .loading,
   .error,
   .empty {
-    padding: var(--space-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: var(--space-2xs);
     text-align: center;
     font-size: var(--text-sm);
     color: var(--color-text-muted);
+  }
+
+  .loading {
+    .animate-spin {
+      animation: pet-selector-spin 1s linear infinite;
+    }
   }
 
   .error {
@@ -76,5 +84,15 @@ ul.pet-selector {
     @media (max-width: 767px) {
       display: flex;
     }
+  }
+}
+
+@keyframes pet-selector-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
