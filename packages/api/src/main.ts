@@ -148,6 +148,11 @@ if (!isDev) {
     root: spaDistDir,
     prefix: '/',
     decorateReply: false,
+    setHeaders(reply, filePath) {
+      if (filePath.endsWith('/sw.js')) {
+        reply.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    },
   });
 
   fastify.setNotFoundHandler((request, reply) => {
