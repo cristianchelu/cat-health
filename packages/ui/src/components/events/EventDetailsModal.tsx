@@ -231,6 +231,32 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     }
   }, [event, eventFromServer]);
 
+  const hasMedia = Boolean(media?.length);
+
+  const { imageFrames, videoItems, hasTimelapse } = React.useMemo(() => {
+    if (!media?.length) {
+      return { imageFrames: [], videoItems: [], hasTimelapse: false };
+    }
+
+    const images = media.filter((m) => m.mime_type.startsWith('image/'));
+    const videos = media.filter((m) => m.mime_type.startsWith('video/'));
+    const timelapse =
+      images.length > 1 || images.some((m) => m.relation === 'timelapse');
+
+    return {
+      imageFrames: images,
+      videoItems: videos,
+      hasTimelapse: timelapse,
+    };
+  }, [media]);
+
+  const timelapseFrameUrls = React.useMemo(
+    () => imageFrames.map((m) => `api/media/${m.file_path}`),
+    [imageFrames],
+  );
+
+  const downloadMediaPath = imageFrames[0]?.file_path ?? media?.[0]?.file_path;
+
   if (!event || !displayEvent) {
     return null;
   }
@@ -292,32 +318,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       ...pets.map((p) => ({ value: String(p.id), label: p.name })),
     ]
     : [{ value: 'null', label: t('common.unknown') }];
-
-  const hasMedia = media && media.length > 0;
-
-  const { imageFrames, videoItems, hasTimelapse } = React.useMemo(() => {
-    if (!media?.length) {
-      return { imageFrames: [], videoItems: [], hasTimelapse: false };
-    }
-
-    const images = media.filter((m) => m.mime_type.startsWith('image/'));
-    const videos = media.filter((m) => m.mime_type.startsWith('video/'));
-    const timelapse =
-      images.length > 1 || images.some((m) => m.relation === 'timelapse');
-
-    return {
-      imageFrames: images,
-      videoItems: videos,
-      hasTimelapse: timelapse,
-    };
-  }, [media]);
-
-  const timelapseFrameUrls = React.useMemo(
-    () => imageFrames.map((m) => `api/media/${m.file_path}`),
-    [imageFrames],
-  );
-
-  const downloadMediaPath = imageFrames[0]?.file_path ?? media?.[0]?.file_path;
 
   const handleDelete = () => {
     if (!event) return;
