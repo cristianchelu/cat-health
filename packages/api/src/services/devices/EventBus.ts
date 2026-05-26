@@ -5,6 +5,11 @@ export interface ActivityStartEvent {
   timestamp: Date;
 }
 
+export interface ActivityEndEvent {
+  deviceId: number;
+  timestamp: Date;
+}
+
 export interface DeviceEvent {
   deviceId: number;
   eventId: number;

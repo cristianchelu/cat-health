@@ -19,10 +19,12 @@ import type {
 } from 'shared';
 import WeightSignalChart from './WeightSignalChart';
 import WaterSignalChart from './WaterSignalChart';
+import TimelapsePlayer from './TimelapsePlayer';
 import { decodeLitterboxRawData } from './decodeLitterboxRawData';
 import { decodeWaterRawData } from './decodeWaterRawData';
 import { analyzeWaterSegments } from './analyzeWaterSegments';
 import './EventDetailsModal.css';
+import './TimelapsePlayer.css';
 import {
   Loader2,
   Trash2,
@@ -293,6 +295,30 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   const hasMedia = media && media.length > 0;
 
+  const { imageFrames, videoItems, hasTimelapse } = React.useMemo(() => {
+    if (!media?.length) {
+      return { imageFrames: [], videoItems: [], hasTimelapse: false };
+    }
+
+    const images = media.filter((m) => m.mime_type.startsWith('image/'));
+    const videos = media.filter((m) => m.mime_type.startsWith('video/'));
+    const timelapse =
+      images.length > 1 || images.some((m) => m.relation === 'timelapse');
+
+    return {
+      imageFrames: images,
+      videoItems: videos,
+      hasTimelapse: timelapse,
+    };
+  }, [media]);
+
+  const timelapseFrameUrls = React.useMemo(
+    () => imageFrames.map((m) => `api/media/${m.file_path}`),
+    [imageFrames],
+  );
+
+  const downloadMediaPath = imageFrames[0]?.file_path ?? media?.[0]?.file_path;
+
   const handleDelete = () => {
     if (!event) return;
     if (!window.confirm(t('event_details.confirm_delete_event'))) return;
@@ -353,18 +379,24 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 </div>
               )}
               {!isLoadingMedia && hasMedia && (
-                <div className="media-gallery">
-                  {media.map((m) => (
-                    <div key={m.id} className="media-item">
-                      {m.mime_type.startsWith('image/') && (
-                        <img
-                          src={`api/media/${m.file_path}`}
-                          alt={t('event_details.event_media_alt')}
-                        />
-                      )}
-                      {m.mime_type.startsWith('video/') && (
-                        <video controls src={`api/media/${m.file_path}`} />
-                      )}
+                <div className="event-media-stack">
+                  {imageFrames.length > 0 && hasTimelapse && (
+                    <TimelapsePlayer
+                      frameUrls={timelapseFrameUrls}
+                      alt={t('event_details.event_media_alt')}
+                    />
+                  )}
+                  {imageFrames.length === 1 && !hasTimelapse && (
+                    <div className="event-media-static-image">
+                      <img
+                        src={`api/media/${imageFrames[0].file_path}`}
+                        alt={t('event_details.event_media_alt')}
+                      />
+                    </div>
+                  )}
+                  {videoItems.map((m) => (
+                    <div key={m.id} className="event-media-video">
+                      <video controls src={`api/media/${m.file_path}`} />
                     </div>
                   ))}
                 </div>
@@ -433,7 +465,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   <Trash2 size={20} />
                 )}
               </Button>
-              {hasMedia && (
+              {hasMedia && downloadMediaPath && (
                 <Button
                   variant="ghost"
                   icon
@@ -441,9 +473,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   title={t('event_details.download_media')}
                   onClick={() => {
                     const link = document.createElement('a');
-                    link.href = `api/media/${media[0].file_path}`;
+                    link.href = `api/media/${downloadMediaPath}`;
                     link.download =
-                      media[0].file_path.split('/').pop() || 'media';
+                      downloadMediaPath.split('/').pop() || 'media';
                     link.click();
                   }}
                 >

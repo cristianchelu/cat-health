@@ -1,0 +1,93 @@
+.timelapse-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+.timelapse-player-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.timelapse-player-controls {
+  position: absolute;
+  left: var(--space-sm);
+  bottom: var(--space-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  background: rgb(0 0 0 / 60%);
+  color: #fff;
+}
+
+.timelapse-player-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgb(255 255 255 / 15%);
+  color: inherit;
+  cursor: pointer;
+}
+
+.timelapse-player-button:hover {
+  background: rgb(255 255 255 / 25%);
+}
+
+.timelapse-player-counter {
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.event-media-stack {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.event-media-stack .timelapse-player,
+.event-media-stack .event-media-video {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.event-media-video {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+.event-media-static-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}

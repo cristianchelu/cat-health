@@ -190,7 +190,7 @@ export class FountainController
   private state: WaterFountainState = {
     waterLevel: 0,
   };
-  private captureInProgress = false;
+  private snapshotCaptureChain: Promise<Buffer | undefined> = Promise.resolve(undefined);
   private version = 1;
 
   constructor(device: Device, deps: ProviderDeps) {
@@ -341,6 +341,11 @@ export class FountainController
           console.log('Activity ended.');
 
           const activityEndTime = new Date();
+
+          this.deps.eventBus.publish('device.activity.end', {
+            deviceId: this.deviceId,
+            timestamp: activityEndTime,
+          });
 
           if (this.currentSession) {
             this.currentSession.endTime = activityEndTime;
@@ -563,19 +568,17 @@ export class FountainController
       return undefined;
     }
 
-    if (this.captureInProgress) {
-      console.warn(
-        `Camera capture already in progress for ${this.device.name}`,
-      );
-      return undefined;
-    }
+    const next = this.snapshotCaptureChain.then(() =>
+      this.requestSnapshotBuffer(),
+    );
+    this.snapshotCaptureChain = next.catch(() => undefined);
+    return next;
+  }
 
-    this.captureInProgress = true;
-
+  private requestSnapshotBuffer(): Promise<Buffer | undefined> {
     return new Promise<Buffer | undefined>((resolve) => {
       const timeout = setTimeout(() => {
         this.client.off('camera', onCameraImage);
-        this.captureInProgress = false;
         console.error(`Camera snapshot timed out for ${this.device.name}`);
         resolve(undefined);
       }, 5000); // 5 second timeout
@@ -593,7 +596,6 @@ export class FountainController
 
         clearTimeout(timeout);
         this.client.off('camera', onCameraImage);
-        this.captureInProgress = false;
         resolve(payload.image);
       };
 
@@ -604,7 +606,6 @@ export class FountainController
       } catch (error) {
         clearTimeout(timeout);
         this.client.off('camera', onCameraImage);
-        this.captureInProgress = false;
         console.error(
           `Failed to request camera image for ${this.device.name}:`,
           error,

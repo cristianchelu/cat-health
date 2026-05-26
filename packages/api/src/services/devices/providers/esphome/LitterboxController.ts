@@ -115,6 +115,11 @@ export class LitterboxController extends BaseESPHomeController {
     console.log(`Ending litterbox session for ${this.device.name}`);
     this.currentSession.endTime = new Date();
 
+    this.deps.eventBus.publish('device.activity.end', {
+      deviceId: this.deviceId,
+      timestamp: this.currentSession.endTime,
+    });
+
     const session = this.currentSession;
     this.currentSession = null;
 

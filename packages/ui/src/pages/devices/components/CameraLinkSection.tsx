@@ -84,6 +84,10 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
     [device.camera_link?.config?.acquisitionTypes],
   );
   const normalizedFetchDelay = device.camera_link?.config?.fetchDelay ?? 60;
+  const normalizedSnapshotInterval =
+    device.camera_link?.config?.snapshot?.intervalSec ?? 0;
+  const normalizedSnapshotFirstFrameDelay =
+    device.camera_link?.config?.snapshot?.firstFrameDelaySec ?? 0;
 
   const [selectedCameraId, setSelectedCameraId] = React.useState<number | ''>(
     linkedCamera,
@@ -99,6 +103,11 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
   const [fetchDelay, setFetchDelay] = React.useState<number>(
     normalizedFetchDelay,
   );
+  const [snapshotIntervalSec, setSnapshotIntervalSec] = React.useState<number>(
+    normalizedSnapshotInterval,
+  );
+  const [snapshotFirstFrameDelaySec, setSnapshotFirstFrameDelaySec] =
+    React.useState<number>(normalizedSnapshotFirstFrameDelay);
   const [snapshotKey, setSnapshotKey] = React.useState(0);
   const [aspectRatio, setAspectRatio] = React.useState(16 / 9);
 
@@ -130,6 +139,14 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
     setFetchDelay(normalizedFetchDelay);
   }, [normalizedFetchDelay]);
 
+  React.useEffect(() => {
+    setSnapshotIntervalSec(normalizedSnapshotInterval);
+  }, [normalizedSnapshotInterval]);
+
+  React.useEffect(() => {
+    setSnapshotFirstFrameDelaySec(normalizedSnapshotFirstFrameDelay);
+  }, [normalizedSnapshotFirstFrameDelay]);
+
   const cameras = React.useMemo(() => {
     return (allDevices || []).filter(
       (d) => d.type === 'camera' && d.id !== device.id,
@@ -144,25 +161,30 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
     linkedCameraDevice?.type === 'camera' &&
     linkedCameraDevice?.provider === 'thingino';
 
+  const buildConfig = (): DeviceCameraConfigDTO => ({
+    crop,
+    rotate,
+    acquisitionTypes: acquisitionTypes.length ? acquisitionTypes : ['snapshot'],
+    fetchDelay,
+    snapshot: acquisitionTypes.includes('snapshot')
+      ? {
+          intervalSec: snapshotIntervalSec,
+          firstFrameDelaySec: snapshotFirstFrameDelaySec,
+        }
+      : undefined,
+  });
+
   const handleLink = () => {
     if (typeof selectedCameraId !== 'number') return;
-    const config: DeviceCameraConfigDTO = {
-      crop,
-      rotate,
-      acquisitionTypes: acquisitionTypes.length ? acquisitionTypes : ['snapshot'],
-      fetchDelay,
-    };
-    linkMutation.mutate({ camera_id: selectedCameraId, config });
+    linkMutation.mutate({ camera_id: selectedCameraId, config: buildConfig() });
   };
 
   const handleSaveROI = () => {
-    const config: DeviceCameraConfigDTO = {
-      crop,
-      rotate,
-      acquisitionTypes: acquisitionTypes.length ? acquisitionTypes : ['snapshot'],
-      fetchDelay,
-    };
-    updateConfigMutation.mutate({ config });
+    updateConfigMutation.mutate({ config: buildConfig() });
+  };
+
+  const handleSaveAcquisition = () => {
+    updateConfigMutation.mutate({ config: buildConfig() });
   };
 
   const toggleAcquisitionType = (type: 'snapshot' | 'recording') => {
@@ -495,6 +517,55 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
                   <span>{t('camera_link.acquisition_recording')}</span>
                 </label>
               </div>
+              {acquisitionTypes.includes('snapshot') && (
+                <div className="snapshot-options-group">
+                  <label className="section-heading">
+                    {t('camera_link.snapshot_options')}
+                  </label>
+                  <div className="fetch-delay-group">
+                    <label className="label">
+                      {t('camera_link.snapshot_interval_label')}
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={snapshotIntervalSec}
+                      onChange={(e) =>
+                        setSnapshotIntervalSec(
+                          e.target.value === ''
+                            ? 0
+                            : Math.max(0, Number(e.target.value)),
+                        )
+                      }
+                    />
+                    <p className="help-text">
+                      {t('camera_link.snapshot_interval_help')}
+                    </p>
+                  </div>
+                  <div className="fetch-delay-group">
+                    <label className="label">
+                      {t('camera_link.snapshot_first_frame_delay_label')}
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={snapshotFirstFrameDelaySec}
+                      onChange={(e) =>
+                        setSnapshotFirstFrameDelaySec(
+                          e.target.value === ''
+                            ? 0
+                            : Math.max(0, Number(e.target.value)),
+                        )
+                      }
+                    />
+                    <p className="help-text">
+                      {t('camera_link.snapshot_first_frame_delay_help')}
+                    </p>
+                  </div>
+                </div>
+              )}
               <div className="fetch-delay-group">
                 <label className="label">
                   {t('camera_link.fetch_delay_label')}
@@ -514,6 +585,15 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
                 <p className="help-text">
                   {t('camera_link.fetch_delay_help')}
                 </p>
+              </div>
+              <div className="acquisition-save-group">
+                <Button
+                  variant="primary"
+                  onClick={handleSaveAcquisition}
+                  disabled={updateConfigMutation.isPending}
+                >
+                  {t('camera_link.save_acquisition_settings')}
+                </Button>
               </div>
             </div>
 

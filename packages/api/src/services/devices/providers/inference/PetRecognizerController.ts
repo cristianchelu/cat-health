@@ -280,7 +280,9 @@ export class PetRecognizerController implements DeviceController {
         .innerJoin('media', 'media.id', 'media_link.media_id')
         .where('media_link.entity_type', '=', 'event')
         .where('media_link.entity_id', '=', eventId.toString())
-        .select(['media.id'])
+        .select(['media.id', 'media_link.relation'])
+        .orderBy('media.created_at', 'asc')
+        .orderBy('media.id', 'asc')
         .execute();
 
       if (eventMedia.length === 0) {
@@ -290,8 +292,9 @@ export class PetRecognizerController implements DeviceController {
         return { pet_id: null, pet_name: 'unknown', raw_response: 'No media' };
       }
 
-      // Use the first image
-      const result = await this.identifyPetFromMedia(eventMedia[0].id);
+      const snapshotMedia = eventMedia.find((m) => m.relation === 'snapshot');
+      const mediaId = snapshotMedia?.id ?? eventMedia[0].id;
+      const result = await this.identifyPetFromMedia(mediaId);
 
       // Update event.pet_id if identified
       if (result.pet_id !== null) {

@@ -121,6 +121,16 @@ export const DeviceCameraCropSchema = Type.Object({
 });
 export type DeviceCameraCrop = Static<typeof DeviceCameraCropSchema>;
 
+export const DeviceCameraSnapshotConfigSchema = Type.Object({
+  /** Seconds between frames during activity. Omit or 0 = single shot at activity start. */
+  intervalSec: Type.Optional(Type.Number()),
+  /** Seconds to wait before the first frame (default 0). */
+  firstFrameDelaySec: Type.Optional(Type.Number()),
+});
+export type DeviceCameraSnapshotConfigDTO = Static<
+  typeof DeviceCameraSnapshotConfigSchema
+>;
+
 export const DeviceCameraConfigSchema = Type.Object({
   crop: Type.Optional(DeviceCameraCropSchema),
   rotate: Type.Optional(Type.Number()),
@@ -128,6 +138,8 @@ export const DeviceCameraConfigSchema = Type.Object({
   acquisitionTypes: Type.Optional(Type.Array(Type.String())),
   /** Seconds to wait after event ends before fetching recording (e.g. for cameras with minimum clip duration). */
   fetchDelay: Type.Optional(Type.Number()),
+  /** Snapshot capture options; timelapse when intervalSec > 0. */
+  snapshot: Type.Optional(DeviceCameraSnapshotConfigSchema),
 });
 export type DeviceCameraConfigDTO = Static<typeof DeviceCameraConfigSchema>;
 

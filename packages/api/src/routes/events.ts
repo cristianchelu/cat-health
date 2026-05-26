@@ -317,7 +317,10 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           'media.file_size',
           'media.description',
           'media.metadata',
+          'media_link.relation',
         ])
+        .orderBy('media.created_at', 'asc')
+        .orderBy('media.id', 'asc')
         .execute();
 
       return media.map((m) => ({

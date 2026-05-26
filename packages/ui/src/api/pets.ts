@@ -161,14 +161,25 @@ export async function getVerifiedEventMedia(
     },
   );
 
-  // For each event, fetch its media
+  // For each event, fetch its media and keep one representative snapshot frame
   const allMedia: GetEventMediaResponseDTO = [];
   for (const event of eventsResponse.data) {
     try {
       const { data: media } = await apiClient.get<GetEventMediaResponseDTO>(
         `/events/${event.id}/media`,
       );
-      allMedia.push(...media);
+      const images = media.filter((m) => m.mime_type.startsWith('image/'));
+      if (images.length === 0) continue;
+
+      const snapshotFrame =
+        images.find((m) => m.relation === 'snapshot') ??
+        images.reduce((earliest, item) => {
+          const earliestIndex = earliest.metadata?.frameIndex ?? 0;
+          const itemIndex = item.metadata?.frameIndex ?? Number.MAX_SAFE_INTEGER;
+          return itemIndex < earliestIndex ? item : earliest;
+        });
+
+      allMedia.push(snapshotFrame);
     } catch (error) {
       console.error(`Failed to fetch media for event ${event.id}:`, error);
     }
