@@ -34,6 +34,7 @@ import { ESPHomeProvider } from './services/devices/providers/esphome/ESPHomePro
 import { CameraProvider } from './services/devices/providers/camera/CameraProvider.ts';
 import { InferenceProvider } from './services/devices/providers/inference/InferenceProvider.ts';
 import { ThinginoProvider } from './services/devices/providers/thingino/ThinginoProvider.ts';
+import { SurePetProvider } from './services/devices/providers/surepet/SurePetProvider.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -208,6 +209,7 @@ const start = async () => {
     integrationManager.registerProvider(new CameraProvider());
     integrationManager.registerProvider(new ThinginoProvider());
     integrationManager.registerProvider(new InferenceProvider());
+    integrationManager.registerProvider(new SurePetProvider());
 
     // Start Integration Manager (loads accounts and devices)
     await integrationManager.initialize();

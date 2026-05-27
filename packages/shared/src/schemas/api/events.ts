@@ -21,6 +21,27 @@ export const LitterboxUseEliminationTypeSchema = Type.Union([
 export type LitterboxUseEliminationType =
   Static<typeof LitterboxUseEliminationTypeSchema>;
 
+/** Provider-specific metadata on events (discriminated by `provider`). */
+export const SurePetEventProviderDataSchema = Type.Object({
+  provider: Type.Literal("surepet"),
+  external_key: Type.String(),
+  tag_id: Type.Optional(Type.Number()),
+  /** SurePet cloud device id */
+  device_id: Type.Optional(Type.Number()),
+  /** SurePet cloud pet id */
+  pet_id: Type.Optional(Type.Number()),
+  duration_s: Type.Optional(Type.Number()),
+  timeline_entry_id: Type.Optional(Type.Number()),
+});
+export type SurePetEventProviderData = Static<
+  typeof SurePetEventProviderDataSchema
+>;
+
+export const EventProviderDataSchema = Type.Union([
+  SurePetEventProviderDataSchema,
+]);
+export type EventProviderData = Static<typeof EventProviderDataSchema>;
+
 /** Sample rate (Hz); must match `StateAnalyzer` on the device path. */
 export const LITTERBOX_SAMPLE_HZ = 10;
 

@@ -2,6 +2,7 @@ import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
 import type {
   LitterboxAnalysisStatePeriod,
   LitterboxUseEliminationType,
+  EventProviderData,
 } from 'shared';
 
 export interface WeightMeasurementEventData {
@@ -47,11 +48,13 @@ export interface LitterboxUseEventData {
 }
 
 export type FoodIntakeFoodType = 'dry' | 'wet' | 'treat' | 'unknown';
+
 export interface FoodIntakeEventData {
   type: 'food_intake';
   food_type: FoodIntakeFoodType;
   amount: number;
   food_id?: number;
+  provider_data?: EventProviderData;
   nutrients?: {
     calories?: number;
     moisture_ml?: number;
