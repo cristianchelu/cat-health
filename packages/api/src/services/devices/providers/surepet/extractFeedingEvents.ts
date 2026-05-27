@@ -1,5 +1,9 @@
 import { createHash } from 'node:crypto';
-import type { SurePetAccountConfig, SurePetPetLink } from 'shared';
+import type { ProviderPetLink, SurePetAccountConfig } from 'shared';
+import {
+  getLinkRemotePetId,
+  getLinkTagId,
+} from './petLinkResolvers.ts';
 import type { NormalizedFeedingDatapoint } from './types.ts';
 import { SubstanceType } from './constants.ts';
 import type {
@@ -181,13 +185,15 @@ export function resolveLocalPetId(
 
   if (datapoint.pet_id != null) {
     const byPetId = links.find(
-      (link) => link.surepet_pet_id === datapoint.pet_id,
+      (link) => getLinkRemotePetId(link) === datapoint.pet_id,
     );
     if (byPetId) return byPetId.pet_id;
   }
 
   if (datapoint.tag_id != null) {
-    const byTag = links.find((link) => link.tag_id === datapoint.tag_id);
+    const byTag = links.find(
+      (link) => getLinkTagId(link) === datapoint.tag_id,
+    );
     if (byTag) return byTag.pet_id;
   }
 
@@ -219,9 +225,9 @@ export function inferFoodTypeFromDeviceControl(
 }
 
 export function refreshPetLinkTagIds(
-  links: SurePetPetLink[],
+  links: ProviderPetLink[],
   pets: Array<{ id: number; tag_id?: number | null; tag?: { id: number } | null }>,
-): SurePetPetLink[] {
+): ProviderPetLink[] {
   if (!links.length) return links;
 
   const tagByPetId = new Map<number, number>();
@@ -231,8 +237,13 @@ export function refreshPetLinkTagIds(
   }
 
   return links.map((link) => {
-    const tagId = tagByPetId.get(link.surepet_pet_id);
+    const remotePetId = getLinkRemotePetId(link);
+    if (remotePetId == null) return link;
+    const tagId = tagByPetId.get(remotePetId);
     if (tagId == null) return link;
-    return { ...link, tag_id: tagId };
+    return {
+      ...link,
+      metadata: { ...(isRecord(link.metadata) ? link.metadata : {}), tag_id: tagId },
+    };
   });
 }

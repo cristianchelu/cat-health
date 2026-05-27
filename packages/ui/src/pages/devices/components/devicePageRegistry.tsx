@@ -2,6 +2,8 @@ import * as React from 'react';
 import type { EntityDTO, GetDeviceResponseDTO } from 'shared';
 import { getStringValue, isRecord } from '@/lib/utils';
 import { ESPHomeView } from './ESPHomeView';
+import { SureFeederView } from './SureFeederView';
+import { parseSurePetFeederState } from './surepet/parseSurePetFeederState';
 
 export interface DevicePageContext {
   device: GetDeviceResponseDTO;
@@ -58,6 +60,11 @@ const ESPHomeDevicePage: DevicePageComponent = ({ entities, sensors }) => {
   return <ESPHomeView entities={entities ?? []} sensors={sensors} />;
 };
 
+const SureFeederDevicePage: DevicePageComponent = ({ device }) => {
+  const state = parseSurePetFeederState(device.state);
+  return <SureFeederView state={state} />;
+};
+
 const devicePageRegistry: DevicePageRegistration[] = [
   {
     id: 'esphome-water-bowl-model',
@@ -81,6 +88,12 @@ const devicePageRegistry: DevicePageRegistration[] = [
     id: 'esphome-provider-fallback',
     provider: 'esphome',
     component: ESPHomeDevicePage,
+  },
+  {
+    id: 'surepet-feeder',
+    provider: 'surepet',
+    type: 'feeder',
+    component: SureFeederDevicePage,
   },
 ];
 

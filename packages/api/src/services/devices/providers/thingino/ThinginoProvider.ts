@@ -1,3 +1,4 @@
+import type { ProviderCapabilities } from 'shared';
 import type {
   AccountManager,
   DeviceProvider,
@@ -9,6 +10,10 @@ import { ThinginoAccountManager } from './ThinginoAccountManager.ts';
 export class ThinginoProvider implements DeviceProvider {
   readonly name = 'thingino';
   readonly internal = true;
+  readonly capabilities: ProviderCapabilities = {
+    skip_discovery: true,
+    supported_device_types: ['camera'],
+  };
 
   createAccountManager(
     account: ProviderAccount,

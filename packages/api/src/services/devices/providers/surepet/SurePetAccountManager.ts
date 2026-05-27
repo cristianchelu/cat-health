@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import {
   ProductId,
+  type ProviderRemotePet,
   type SurePetAccountConfig,
 } from 'shared';
 import type {
@@ -50,7 +51,7 @@ function parseAccountConfig(config: unknown): SurePetAccountConfig {
     throw new Error('SurePet account config requires password');
   }
 
-  return {
+  const parsed = {
     ...(config as unknown as SurePetAccountConfig),
     email,
     password,
@@ -59,6 +60,8 @@ function parseAccountConfig(config: unknown): SurePetAccountConfig {
         ? deviceId
         : randomUUID(),
   };
+
+  return parsed;
 }
 
 export class SurePetAccountManager implements AccountManager {
@@ -147,7 +150,53 @@ export class SurePetAccountManager implements AccountManager {
   }
 
   async discoverDevices(): Promise<DiscoveredDevice[]> {
-    return [];
+    const client = await this.ensureClient();
+    const householdId = this.config.household_id;
+    const devices = await client.getDevices(householdId ?? undefined);
+
+    return devices
+      .filter((device) => device.product_id === ProductId.FEEDER_CONNECT)
+      .map((device) => {
+        const household =
+          device.household_id ?? householdId ?? this.config.household_id;
+        const label =
+          device.name?.trim() ||
+          (device.serial_number
+            ? `SureFeed Connect (${device.serial_number})`
+            : `SureFeed Connect (${device.id})`);
+
+        return {
+          externalId: String(device.id),
+          name: label,
+          type: 'feeder' as const,
+          config: {
+            product_id: ProductId.FEEDER_CONNECT,
+            household_id: household,
+            ...(device.serial_number
+              ? { serial_number: device.serial_number }
+              : {}),
+          },
+        };
+      });
+  }
+
+  async listRemotePets(): Promise<ProviderRemotePet[]> {
+    const client = await this.ensureClient();
+    const pets = await client.getPets(this.config.household_id ?? undefined);
+    return pets.map((pet) => {
+      const tagId = pet.tag_id ?? pet.tag?.id ?? null;
+      return {
+        external_id: String(pet.id),
+        name: pet.name ?? null,
+        ...(tagId != null ? { metadata: { tag_id: tagId } } : {}),
+      };
+    });
+  }
+
+  async onDeviceRegistered(device: Device): Promise<void> {
+    if (device.type !== 'feeder') return;
+    const controller = this.instantiateDeviceController(device);
+    await controller.connect();
   }
 
   instantiateDeviceController(device: Device): DeviceController {

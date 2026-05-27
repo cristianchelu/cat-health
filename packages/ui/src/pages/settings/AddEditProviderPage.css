@@ -47,25 +47,10 @@
     border-radius: var(--radius-sm);
   }
 
-  .api-key-field {
-    position: relative;
-
-    .api-key-input {
-      padding-right: 40px;
-    }
-
-    .api-key-toggle {
-      position: absolute;
-      right: var(--space-xs);
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: var(--space-2xs);
-      display: flex;
-      align-items: center;
-    }
+  .help-text {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin: 0;
   }
 
   @media (max-width: 768px) {

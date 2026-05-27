@@ -1,5 +1,11 @@
 import type { Kysely } from 'kysely';
-import type { DeviceStatus, DeviceType, EventType } from 'shared';
+import type {
+  DeviceStatus,
+  DeviceType,
+  EventType,
+  GetProviderRemotePetsResponseDTO,
+  ProviderCapabilities,
+} from 'shared';
 import type { Database } from '../../database/index.ts';
 import type { Device } from '../../database/types/DeviceTable.ts';
 import type { ProviderAccount } from '../../database/types/ProviderAccountTable.ts';
@@ -87,11 +93,14 @@ export interface AccountManager {
     type: DeviceType;
     config: unknown;
   }): Promise<void>;
+  listRemotePets?(): Promise<GetProviderRemotePetsResponseDTO>;
+  onDeviceRegistered?(device: Device): Promise<void>;
 }
 
 export interface DeviceProvider {
   readonly name: string;
   readonly internal?: boolean;
+  readonly capabilities: ProviderCapabilities;
 
   createAccountManager(
     account: ProviderAccount,

@@ -5,5 +5,6 @@ export * from "./schemas/api/foods.ts";
 export * from "./schemas/api/pets.ts";
 export * from "./schemas/api/media.ts";
 export * from "./schemas/api/inference.ts";
+export * from "./schemas/api/integrations.ts";
 export * from "./schemas/api/surepet.ts";
 export * from "./constants/devices.ts";

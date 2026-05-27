@@ -1,0 +1,62 @@
+.provider-pet-links-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+
+  .section-title {
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  .section-desc {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+
+  .loading-row,
+  .error-row {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+
+  .error-row {
+    color: var(--color-error);
+  }
+
+  .links-table {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .link-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    align-items: end;
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .cloud-pet-name {
+    font-weight: 500;
+    color: var(--color-text);
+    margin-bottom: var(--space-xs);
+  }
+
+  .cloud-pet-meta {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+  }
+}

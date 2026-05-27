@@ -1,3 +1,4 @@
+import type { ProviderCapabilities } from 'shared';
 import type {
   DeviceProvider,
   ProviderAccount,
@@ -9,6 +10,10 @@ import { InferenceAccountManager } from './InferenceAccountManager.ts';
 export class InferenceProvider implements DeviceProvider {
   readonly name = 'inference';
   readonly internal = false; // User-visible in provider list
+  readonly capabilities: ProviderCapabilities = {
+    skip_discovery: true,
+    supported_device_types: ['pet_recognizer'],
+  };
 
   createAccountManager(
     account: ProviderAccount,

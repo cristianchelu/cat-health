@@ -13,6 +13,7 @@ import {
   PatchProviderAccountRequestSchema,
   GetProviderAccountParamsSchema,
   GetDiscoveredDevicesResponseSchema,
+  GetProviderRemotePetsResponseSchema,
   ProviderAccountSchema,
   GetProvidersResponseSchema,
   PutDeviceCameraRequestSchema,
@@ -254,6 +255,36 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   );
 
   fastify.get(
+    '/accounts/:id/remote-pets',
+    {
+      schema: {
+        params: GetProviderAccountParamsSchema,
+        response: {
+          '200': GetProviderRemotePetsResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params;
+      const account = await db
+        .selectFrom('provider_account')
+        .select('id')
+        .where('id', '=', id)
+        .executeTakeFirst();
+      if (!account) {
+        throw new Error('Account not found');
+      }
+
+      const manager = integrationManager.getAccountManager(id);
+      if (!manager?.listRemotePets) {
+        throw new Error('Remote pet listing is not supported for this account');
+      }
+
+      return await manager.listRemotePets();
+    },
+  );
+
+  fastify.get(
     '/accounts/:id/discover',
     {
       schema: {
@@ -344,7 +375,16 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('id', '=', provider_account_id)
         .executeTakeFirstOrThrow();
 
-      return await mapDevice({ ...result, provider: account.provider });
+      const mapped = await mapDevice({ ...result, provider: account.provider });
+
+      if (manager?.onDeviceRegistered) {
+        await manager.onDeviceRegistered({
+          ...result,
+          config: mapped.config,
+        });
+      }
+
+      return mapped;
     },
   );
 

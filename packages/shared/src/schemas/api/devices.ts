@@ -1,5 +1,6 @@
 import { Type, type Static } from '@fastify/type-provider-typebox';
 import { DeviceTypeSchema } from "../../constants/devices.ts";
+import { ProviderCapabilitiesSchema } from './integrations.ts';
 
 export const DeviceStatusSchema = Type.Union([
   Type.Literal("online"),
@@ -53,6 +54,7 @@ export type EntityDTO = Static<typeof EntitySchema>;
 export const ProviderInfoSchema = Type.Object({
   name: Type.String(),
   internal: Type.Boolean(),
+  capabilities: ProviderCapabilitiesSchema,
 });
 export type ProviderInfoDTO = Static<typeof ProviderInfoSchema>;
 

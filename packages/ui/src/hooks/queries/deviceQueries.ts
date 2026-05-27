@@ -9,6 +9,7 @@ import {
   createProviderAccount,
   updateProviderAccount,
   discoverDevices,
+  getRemotePets,
   addDevice,
   updateDevice,
   linkDeviceCamera,
@@ -161,6 +162,14 @@ export function useUpdateProviderAccount(accountId: number) {
         queryKey: ['providerAccount', accountId],
       });
     },
+  });
+}
+
+export function useRemotePets(accountId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['remotePets', accountId],
+    queryFn: () => getRemotePets(accountId),
+    enabled: enabled && accountId > 0,
   });
 }
 

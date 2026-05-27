@@ -15,6 +15,44 @@ export const SubstanceType = {
 
 export type SubstanceTypeId = (typeof SubstanceType)[keyof typeof SubstanceType];
 
+/** py-surepetcare `BowlType` — feeder bowl layout. */
+export const BowlType = {
+  LARGE: 1,
+  TWO_SMALL: 4,
+  NOT_DETERMINED: 5,
+} as const;
+
+/** py-surepetcare `BowlPosition`. */
+export const BowlPosition = {
+  ONE: 0,
+  TWO: 1,
+  BOTH: 2,
+} as const;
+
+/** py-surepetcare `FoodType` for bowl settings. */
+export const FoodType = {
+  NOT_SET: 0,
+  WET: 1,
+  DRY: 2,
+  BOTH: 3,
+} as const;
+
+/** py-surepetcare `FeederTrainingMode`. */
+export const FeederTrainingMode = {
+  DISABLED: 0,
+  STEP_1: 1,
+  STEP_2: 2,
+  STEP_3: 3,
+  STEP_4: 4,
+} as const;
+
+/** py-surepetcare `CloseDelay` — lid close delay in seconds. */
+export const CloseDelay = {
+  FASTER: 0,
+  NORMAL: 4,
+  SLOWER: 20,
+} as const;
+
 // TODO: Move to individual device
 export const SUREPET_BATTERY_VOLTAGE_FULL = 1.6;
 // TODO: Move to individual device

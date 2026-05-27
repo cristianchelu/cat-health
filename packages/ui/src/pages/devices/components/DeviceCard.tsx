@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/Card';
 import { Tooltip } from '@/components/ui/Tooltip';
 import WaterFountainStatus from './WaterFountainStatus';
+import { resolveDeviceCardStatus } from './deviceCardStatusRegistry';
 import { cn } from '@/lib/utils';
 import './DeviceCard.css';
 
@@ -53,6 +54,7 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
   const waterFountainState = device.state as unknown as
     | WaterFountainState
     | undefined;
+  const CardStatus = resolveDeviceCardStatus(device);
 
   return (
     <Card
@@ -77,13 +79,13 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
       </CardHeader>
 
       <CardContent>
-        {device.type === 'water_fountain' && waterFountainState && (
+        {CardStatus ? <CardStatus device={device} /> : null}
+        {!CardStatus && device.type === 'water_fountain' && waterFountainState && (
           <WaterFountainStatus state={waterFountainState} />
         )}
-        {device.type === 'water_fountain' && !waterFountainState && (
+        {!CardStatus && device.type === 'water_fountain' && !waterFountainState && (
           <div className="no-status-data">{t('devices.no_status_data')}</div>
         )}
-        {/* Add other device status components here */}
       </CardContent>
     </Card>
   );

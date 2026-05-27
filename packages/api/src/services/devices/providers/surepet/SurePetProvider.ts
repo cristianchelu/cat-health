@@ -1,3 +1,4 @@
+import type { ProviderCapabilities } from 'shared';
 import type {
   DeviceProvider,
   ProviderAccount,
@@ -13,6 +14,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export class SurePetProvider implements DeviceProvider {
   readonly name = 'surepet';
   readonly internal = false;
+  readonly capabilities: ProviderCapabilities = {
+    supports_discovery: true,
+    supports_pet_linking: true,
+    supported_device_types: ['feeder'],
+  };
 
   createAccountManager(
     account: ProviderAccount,

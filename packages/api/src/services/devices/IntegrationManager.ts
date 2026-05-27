@@ -1,4 +1,5 @@
 import type { Kysely } from 'kysely';
+import type { ProviderCapabilities } from 'shared';
 import { MediaManager } from '../media/MediaManager.ts';
 import type { Database } from '../../database/index.ts';
 import type { Device } from '../../database/types/DeviceTable.ts';
@@ -45,10 +46,15 @@ export class IntegrationManager implements DeviceDirectory {
     this.providers.set(provider.name, provider);
   }
 
-  getProviders(): { name: string; internal: boolean }[] {
+  getProviders(): {
+    name: string;
+    internal: boolean;
+    capabilities: ProviderCapabilities;
+  }[] {
     return Array.from(this.providers.values()).map((p) => ({
       name: p.name,
       internal: p.internal ?? false,
+      capabilities: p.capabilities,
     }));
   }
 

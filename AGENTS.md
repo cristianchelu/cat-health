@@ -187,6 +187,28 @@ export default const entityRoutes;
 - Handle migrations in `src/database/migrations/`
 - Use TypeBox for API schema validation
 
+#### Device providers and integration boundary
+
+External integrations (ESPHome, SurePet, inference, cameras, etc.) follow a **provider-agnostic wrapper** with the smallest blast radius: vendor-specific HTTP, auth, and payload shapes live under `packages/api/src/services/devices/providers/<name>/` only. Routes, shared DTOs, and UI must not grow per-provider snowflakes (no `/accounts/:id/<vendor>/…` endpoints, no `useSurePet*` hooks, no `provider === 'surepet'` feature gates).
+
+**Composable surface (shared + routes):**
+
+- **Capabilities** on each `DeviceProvider` and returned by `GET /devices/providers` — UI and wizards branch on flags (`supports_discovery`, `supports_pet_linking`, `skip_discovery`, `supported_device_types`, etc.), not hardcoded provider names.
+- **Generic account actions** — e.g. `GET /devices/accounts/:id/discover`, `GET /devices/accounts/:id/remote-pets`; the route resolves the account manager and calls optional methods (`discoverDevices`, `listRemotePets`) without checking `account.provider`.
+- **Normalized linking** — `ProviderRemotePet` / `ProviderPetLink` in `packages/shared/src/schemas/api/integrations.ts`; persisted links use `external_pet_id` and opaque `metadata` (e.g. tag IDs). Providers map to/from their cloud API inside the provider package only.
+- **Lifecycle hooks** on `AccountManager` when needed (e.g. `onDeviceRegistered`) instead of provider checks in route handlers.
+
+**Where provider-specific code is allowed:** provider package implementation, provider-scoped config/state schemas in shared when needed for validation (e.g. `surepet.ts` account credentials), provider-named UI **flow** modules under `packages/ui/.../flows/<provider>/` for registration forms only — not for transport types or API paths. Event `provider_data` may stay discriminated by provider for dedup/ingest; do not mirror that in generic settings or list APIs.
+
+**Provider state siloing (UI):** Only **provider-specific UI modules** may import provider-scoped shared schemas (e.g. `SureFeederState` from `surepet.ts`) or parse `device.state` / account config internals. Generic device surfaces — list cards, detail page shells, settings lists — must stay ignorant of vendor field names and enum values.
+
+- **Wire format:** `GetDeviceResponse.state` remains `Record<string, unknown>`. Live state from controllers should include a flat `provider` discriminant (same pattern as event `provider_data`), e.g. `{ provider: 'surepet', bowl_status, ... }`.
+- **Parsing:** Provider UI owns helpers like `parseSurePetFeederState(state)` that check `state.provider` and map enums to labels. Do not cast `device.state as SureFeederState` in generic components.
+- **Composition:** Use registries (e.g. `devicePageRegistry`, `deviceCardStatusRegistry`) keyed by `device.provider` + `device.type` to mount provider views. Registries import provider components; generic callers only call `resolveDevicePage(device)` / `resolveDeviceCardStatus(device)`.
+- **Colocation:** Provider device UI lives under `packages/ui/src/pages/devices/components/<provider>/` (detail views, card status widgets, formatters). Registration wizards stay under `.../flows/<provider>/`.
+
+When adding a new cloud provider, extend capabilities + optional `AccountManager` methods first; add a new generic route only if the capability is truly new and shared across future providers.
+
 ## Domain Context
 
 ### Core Entities

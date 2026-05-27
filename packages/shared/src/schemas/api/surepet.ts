@@ -1,4 +1,5 @@
 import { type Static, Type } from '@fastify/type-provider-typebox';
+import { ProviderPetLinkSchema } from './integrations.ts';
 
 /** SurePetcare device `product_id` values (py-surepetcare `ProductId`). */
 export const ProductId = {
@@ -14,14 +15,6 @@ export const ProductId = {
 
 export type ProductIdValue = (typeof ProductId)[keyof typeof ProductId];
 
-export const SurePetPetLinkSchema = Type.Object({
-  surepet_pet_id: Type.Number(),
-  pet_id: Type.Number(),
-  tag_id: Type.Optional(Type.Number()),
-  surepet_name: Type.Optional(Type.String()),
-});
-export type SurePetPetLink = Static<typeof SurePetPetLinkSchema>;
-
 export const SurePetSyncConfigSchema = Type.Object({
   last_timeline_since_id: Type.Optional(Type.Number()),
 });
@@ -34,7 +27,7 @@ export const SurePetAccountConfigSchema = Type.Object({
   token: Type.Optional(Type.String()),
   token_expires_at: Type.Optional(Type.String()),
   household_id: Type.Optional(Type.Number()),
-  pet_links: Type.Optional(Type.Array(SurePetPetLinkSchema)),
+  pet_links: Type.Optional(Type.Array(ProviderPetLinkSchema)),
   sync: Type.Optional(SurePetSyncConfigSchema),
 });
 export type SurePetAccountConfig = Static<typeof SurePetAccountConfigSchema>;
@@ -46,14 +39,24 @@ export const SurePetFeederConfigSchema = Type.Object({
 });
 export type SurePetFeederConfig = Static<typeof SurePetFeederConfigSchema>;
 
+export const SurePetBowlSettingSchema = Type.Object({
+  food_type: Type.Optional(Type.Number()),
+  target: Type.Optional(Type.Number()),
+});
+export type SurePetBowlSetting = Static<typeof SurePetBowlSettingSchema>;
+
 export const SurePetBowlStatusSchema = Type.Object({
   position: Type.Optional(Type.Number()),
   current_weight: Type.Optional(Type.Number()),
+  food_type: Type.Optional(Type.Number()),
 });
 export type SurePetBowlStatus = Static<typeof SurePetBowlStatusSchema>;
 
 export const SureFeederStateSchema = Type.Object({
   bowl_status: Type.Array(SurePetBowlStatusSchema),
+  bowl_type: Type.Optional(Type.Number()),
+  bowl_type_label: Type.Optional(Type.String()),
+  bowl_settings: Type.Optional(Type.Array(SurePetBowlSettingSchema)),
   fill_percentages: Type.Optional(
     Type.Object({
       total: Type.Union([Type.Number(), Type.Null()]),
@@ -67,3 +70,10 @@ export const SureFeederStateSchema = Type.Object({
   last_refreshed_at: Type.Optional(Type.String()),
 });
 export type SureFeederState = Static<typeof SureFeederStateSchema>;
+
+/** Wire shape for live feeder state on GetDeviceResponse.state */
+export const SurePetDeviceStateSchema = Type.Intersect([
+  Type.Object({ provider: Type.Literal('surepet') }),
+  SureFeederStateSchema,
+]);
+export type SurePetDeviceState = Static<typeof SurePetDeviceStateSchema>;

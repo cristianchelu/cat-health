@@ -9,6 +9,7 @@ import type {
   PatchProviderAccountRequestDTO,
   ProviderAccountDTO,
   GetDiscoveredDevicesResponseDTO,
+  GetProviderRemotePetsResponseDTO,
   GetProvidersResponseDTO,
   PutDeviceCameraRequestDTO,
   PatchDeviceCameraRequestDTO,
@@ -53,6 +54,13 @@ export async function updateProviderAccount(
   const { data } = await apiClient.patch<ProviderAccountDTO>(
     `/devices/accounts/${id}`,
     input,
+  );
+  return data;
+}
+
+export async function getRemotePets(accountId: number) {
+  const { data } = await apiClient.get<GetProviderRemotePetsResponseDTO>(
+    `/devices/accounts/${accountId}/remote-pets`,
   );
   return data;
 }

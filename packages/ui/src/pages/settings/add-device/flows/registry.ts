@@ -4,6 +4,7 @@ import { DefaultRegisterDeviceForm } from './DefaultRegisterDeviceForm';
 import { InferenceRegisterDeviceForm } from './InferenceRegisterDeviceForm';
 import { CameraRegisterDeviceForm } from './CameraRegisterDeviceForm';
 import { EsphomeRegisterDeviceForm } from './EsphomeRegisterDeviceForm';
+import { SurePetRegisterDeviceForm } from './surepet/SurePetRegisterDeviceForm';
 
 const ALL_DEVICE_TYPES: readonly DeviceType[] = [
   'litterbox',
@@ -36,11 +37,17 @@ const esphomeFlow: AddDeviceFlow = {
   RegisterDeviceForm: EsphomeRegisterDeviceForm,
 };
 
+const surepetFlow: AddDeviceFlow = {
+  supportedTypes: ['feeder'],
+  RegisterDeviceForm: SurePetRegisterDeviceForm,
+};
+
 const PROVIDER_FLOWS: Record<string, AddDeviceFlow> = {
   inference: inferenceFlow,
   camera: cameraFlow,
   thingino: cameraFlow,
   esphome: esphomeFlow,
+  surepet: surepetFlow,
 };
 
 export function getFlow(provider: string): AddDeviceFlow {

@@ -1,3 +1,4 @@
+import type { ProviderCapabilities } from 'shared';
 import type {
   DeviceProvider,
   ProviderAccount,
@@ -9,6 +10,11 @@ import { ESPHomeAccountManager } from './ESPHomeAccountManager.ts';
 export class ESPHomeProvider implements DeviceProvider {
   readonly name = 'esphome';
   readonly internal = true;
+  readonly capabilities: ProviderCapabilities = {
+    supports_discovery: true,
+    allows_direct_registration: true,
+    supported_device_types: ['litterbox', 'water_fountain'],
+  };
 
   createAccountManager(
     account: ProviderAccount,

@@ -3,6 +3,7 @@ import type { DeviceController, Device, ProviderDeps } from '../../types.ts';
 import type { SurePetDeviceDetailPayload } from './types.ts';
 import { computeFillPercentages } from './mapFeedingEvent.ts';
 import { computeBatteryPercent } from './constants.ts';
+import { normalizeFeederBowls } from './normalizeFeederBowls.ts';
 
 export class FeederController implements DeviceController {
   readonly deviceId: number;
@@ -10,7 +11,7 @@ export class FeederController implements DeviceController {
   private deps: ProviderDeps;
   private config: SurePetFeederConfig;
   private status: DeviceStatus = 'unknown';
-  private state: SureFeederState = { bowl_status: [] };
+  private feederState: SureFeederState = { bowl_status: [] };
   private lastControl: unknown;
 
   constructor(device: Device, deps: ProviderDeps) {
@@ -35,26 +36,28 @@ export class FeederController implements DeviceController {
   }
 
   getState(): Record<string, unknown> {
-    return this.state;
+    return { provider: 'surepet', ...this.feederState };
   }
 
   updateFromCloudPayload(payload: SurePetDeviceDetailPayload): void {
-    const bowlStatus = (payload.status?.bowl_status ?? []).map((bowl) => ({
-      position: bowl.position ?? undefined,
-      current_weight: bowl.current_weight ?? undefined,
-    }));
+    const normalized = normalizeFeederBowls(payload);
 
     const fillPercentages = computeFillPercentages(
-      payload.status?.bowl_status ?? undefined,
-      payload.control?.bowls?.settings ?? undefined,
+      normalized.bowlStatus,
+      normalized.bowlSettings,
     );
 
     const batteryPercent = computeBatteryPercent(
       payload.status?.battery ?? undefined,
     );
 
-    this.state = {
-      bowl_status: bowlStatus,
+    this.feederState = {
+      bowl_status: normalized.bowlStatus,
+      bowl_type: normalized.bowlType,
+      bowl_type_label: normalized.bowlTypeLabel,
+      bowl_settings: normalized.bowlSettings.length
+        ? normalized.bowlSettings
+        : undefined,
       fill_percentages: fillPercentages,
       lid_close_delay: payload.control?.lid?.close_delay ?? undefined,
       training_mode: payload.control?.training_mode ?? undefined,

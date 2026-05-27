@@ -1,3 +1,4 @@
+import type { ProviderCapabilities } from 'shared';
 import type {
   DeviceProvider,
   ProviderAccount,
@@ -9,6 +10,10 @@ import { CameraAccountManager } from './CameraAccountManager.ts';
 export class CameraProvider implements DeviceProvider {
   readonly name = 'camera';
   readonly internal = true;
+  readonly capabilities: ProviderCapabilities = {
+    skip_discovery: true,
+    supported_device_types: ['camera'],
+  };
 
   createAccountManager(
     account: ProviderAccount,
