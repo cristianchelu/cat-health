@@ -110,6 +110,9 @@ export class SurePetAccountManager implements AccountManager {
     await this.runFeedingSync().catch((error) => {
       this.deps.logger.error('SurePet initial feeding sync failed:', error);
     });
+    await this.backfillFeedingTimelineIfNeeded().catch((error) => {
+      this.deps.logger.error('SurePet feeding timeline backfill failed:', error);
+    });
 
     this.timelinePollTimer = setInterval(() => {
       void this.runFeedingSync().catch((error) => {
@@ -197,6 +200,16 @@ export class SurePetAccountManager implements AccountManager {
     if (device.type !== 'feeder') return;
     const controller = this.instantiateDeviceController(device);
     await controller.connect();
+
+    const surepetDeviceId = Number.parseInt(device.external_id, 10);
+    if (Number.isFinite(surepetDeviceId)) {
+      await this.backfillFeedingForCloudDevice(surepetDeviceId).catch((error) => {
+        this.deps.logger.error(
+          `SurePet feeding backfill failed for device ${device.name}:`,
+          error,
+        );
+      });
+    }
   }
 
   instantiateDeviceController(device: Device): DeviceController {
@@ -312,9 +325,9 @@ export class SurePetAccountManager implements AccountManager {
       if (isFirstSync) {
         try {
           const report = await client.getHouseholdReport(householdId);
-          datapoints.push(
-            ...extractFeedingDatapointsFromHouseholdReport(report),
-          );
+          const reportDatapoints =
+            extractFeedingDatapointsFromHouseholdReport(report);
+          datapoints.push(...reportDatapoints);
         } catch (error) {
           if (error instanceof SurePetClientError && error.status === 404) {
             this.deps.logger.log(
@@ -341,23 +354,7 @@ export class SurePetAccountManager implements AccountManager {
         return;
       }
 
-      const localDeviceMap = await this.buildLocalDeviceMap();
-
-      for (const datapoint of datapoints) {
-        const localDeviceId =
-          datapoint.device_id != null
-            ? localDeviceMap.get(datapoint.device_id)
-            : undefined;
-
-        if (localDeviceId == null) continue;
-
-        const controller = this.controllers.get(localDeviceId);
-        await this.ingestFeedingDatapoint(
-          datapoint,
-          localDeviceId,
-          controller?.getDeviceControl(),
-        );
-      }
+      await this.ingestFeedingDatapoints(datapoints);
 
       if (isFirstSync) {
         const nextSinceId = maxTimelineEntryId ?? 0;
@@ -380,6 +377,90 @@ export class SurePetAccountManager implements AccountManager {
     } finally {
       this.syncInProgress = false;
     }
+  }
+
+  private async backfillFeedingTimelineIfNeeded(): Promise<void> {
+    if (this.config.sync?.feeding_timeline_backfill_done) return;
+
+    await this.backfillFeedingTimeline();
+    this.config.sync = {
+      ...this.config.sync,
+      feeding_timeline_backfill_done: true,
+    };
+    await this.persistAccountConfig();
+  }
+
+  private async backfillFeedingForCloudDevice(
+    cloudDeviceId: number,
+  ): Promise<void> {
+    const client = await this.ensureClient();
+    const householdId = this.config.household_id;
+    if (householdId == null) return;
+
+    const timeline = await client.getTimeline(householdId, {});
+    const extracted = extractFeedingDatapointsFromTimeline(timeline);
+    const datapoints = extracted.datapoints.filter(
+      (datapoint) => datapoint.device_id === cloudDeviceId,
+    );
+    await this.ingestFeedingDatapoints(datapoints);
+  }
+
+  private async backfillFeedingTimeline(): Promise<{
+    timelineEntryCount: number;
+    extractedDatapointCount: number;
+    ingestAttempts: number;
+    skippedUnmapped: number;
+  }> {
+    const client = await this.ensureClient();
+    const householdId = this.config.household_id;
+    if (householdId == null) {
+      return {
+        timelineEntryCount: 0,
+        extractedDatapointCount: 0,
+        ingestAttempts: 0,
+        skippedUnmapped: 0,
+      };
+    }
+
+    const timeline = await client.getTimeline(householdId, {});
+    const extracted = extractFeedingDatapointsFromTimeline(timeline);
+    const ingestStats = await this.ingestFeedingDatapoints(extracted.datapoints);
+
+    return {
+      timelineEntryCount: timeline.length,
+      extractedDatapointCount: extracted.datapoints.length,
+      ...ingestStats,
+    };
+  }
+
+  private async ingestFeedingDatapoints(
+    datapoints: NormalizedFeedingDatapoint[],
+  ): Promise<{ ingestAttempts: number; skippedUnmapped: number }> {
+    const localDeviceMap = await this.buildLocalDeviceMap();
+    let skippedUnmapped = 0;
+    let ingestAttempts = 0;
+
+    for (const datapoint of datapoints) {
+      const localDeviceId =
+        datapoint.device_id != null
+          ? localDeviceMap.get(datapoint.device_id)
+          : undefined;
+
+      if (localDeviceId == null) {
+        skippedUnmapped += 1;
+        continue;
+      }
+      ingestAttempts += 1;
+
+      const controller = this.controllers.get(localDeviceId);
+      await this.ingestFeedingDatapoint(
+        datapoint,
+        localDeviceId,
+        controller?.getDeviceControl(),
+      );
+    }
+
+    return { ingestAttempts, skippedUnmapped };
   }
 
   private async buildLocalDeviceMap(): Promise<Map<number, number>> {

@@ -7,6 +7,46 @@ export const SUREPET_ME_START_URL = `${SUREPET_API_BASE}/me/start`;
 export const SUREPET_USER_AGENT =
   'pet-assistant https://github.com/cristianchelu/cat-health';
 
+/**
+ * SurePetcare household timeline `type` ids (reverse-engineered; not official API docs).
+ * @see https://github.com/DiniFarb/surepetcare — message events section
+ */
+export const TimelineEventType = {
+  /** Pet used a flap/door (in, out, or looked through). Payload: `movements`, `pets`. */
+  PET_MOVEMENT: 0,
+  /** Device battery below threshold. Payload: `devices`. */
+  BATTERY_LOW: 1,
+  /** Pet tag linked to a device (e.g. feeder assignment). Payload: `pets`, `tags`, `devices`. */
+  TAG_ATTACHED: 2,
+  /** Device linked or registered to the household. Payload: `devices`; `data.device_id`. */
+  DEVICE_LINKED: 3,
+  /** Unknown door/flap movement. Payload: `movements`. */
+  UNKNOWN_DOOR_MOVEMENT: 7,
+  /** Pet-related household event (e.g. profile). Payload: `pets`. */
+  PET_PROFILE: 13,
+  /** Bowl filled by a person (not a pet meal). Payload: `weights`, `data.weight`. */
+  BOWL_FILLED: 21,
+  /** Pet finished eating from a feeder. Payload: `weights` (negative frame `change`), `pets`, `tags`. */
+  PET_HAS_EATEN: 22,
+  /** Bowl target weights or food-type settings changed. Payload: `devices`; `data.target`, `data.food_type`. */
+  BOWL_SETTINGS_CHANGED: 23,
+  /** Feeder bowls tared / reset. Payload: `weights`; `data.tare_type`. */
+  FEEDER_RESET: 24,
+  /** Feeder training or lid mode transition. Payload: `devices`; `data.mode`, `data.last_mode`. */
+  FEEDER_MODE_CHANGED: 28,
+  /** Pet drank from a Felaqua. Payload: `weights`, `pets`. */
+  PET_DRANK: 29,
+  /** Felaqua refilled. Payload: `weights`, `devices`. */
+  FELAQUA_FILLED: 30,
+  /** Felaqua fresh-water reminder. Payload: `devices`. */
+  FELAQUA_WATER_REMINDER: 32,
+  /** Unidentified drinker at a Felaqua. Payload: `weights`, `devices`. */
+  FELAQUA_UNKNOWN_DRINKER: 34,
+} as const;
+
+export type TimelineEventTypeId =
+  (typeof TimelineEventType)[keyof typeof TimelineEventType];
+
 /** SurePetcare timeline consumption substance types (py-surepetcare `SubstanceType`). */
 export const SubstanceType = {
   WATER: 1,

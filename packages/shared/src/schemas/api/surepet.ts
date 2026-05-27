@@ -17,6 +17,8 @@ export type ProductIdValue = (typeof ProductId)[keyof typeof ProductId];
 
 export const SurePetSyncConfigSchema = Type.Object({
   last_timeline_since_id: Type.Optional(Type.Number()),
+  /** One-time full timeline parse after feeder payload shape support (type 22 weights). */
+  feeding_timeline_backfill_done: Type.Optional(Type.Boolean()),
 });
 export type SurePetSyncConfig = Static<typeof SurePetSyncConfigSchema>;
 

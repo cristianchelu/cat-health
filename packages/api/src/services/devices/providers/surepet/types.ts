@@ -60,10 +60,33 @@ export interface SurePetBowlStatusPayload {
   current_weight?: number | null;
 }
 
+export interface SurePetTimelineWeightFrame {
+  change?: number | null;
+  current_weight?: number | null;
+}
+
+export interface SurePetTimelineWeightRecord {
+  id?: number;
+  device_id?: number | null;
+  tag_id?: number | null;
+  duration?: number | null;
+  created_at?: string | null;
+  frames?: SurePetTimelineWeightFrame[] | null;
+}
+
+export interface SurePetTimelinePetRef {
+  id?: number;
+  tag_id?: number | null;
+}
+
 export interface SurePetTimelineEntry {
   id?: number;
+  type?: number | null;
+  created_at?: string | null;
   consumptions?: SurePetConsumptionRecord[] | null;
   feeding?: { datapoints?: SurePetFeedingDatapoint[] | null } | null;
+  weights?: SurePetTimelineWeightRecord[] | null;
+  pets?: SurePetTimelinePetRef[] | null;
 }
 
 export interface SurePetConsumptionRecord {

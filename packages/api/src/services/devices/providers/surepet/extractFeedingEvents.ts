@@ -5,12 +5,13 @@ import {
   getLinkTagId,
 } from './petLinkResolvers.ts';
 import type { NormalizedFeedingDatapoint } from './types.ts';
-import { SubstanceType } from './constants.ts';
+import { SubstanceType, TimelineEventType } from './constants.ts';
 import type {
   SurePetConsumptionRecord,
   SurePetFeedingDatapoint,
   SurePetHouseholdReportPair,
   SurePetTimelineEntry,
+  SurePetTimelineWeightRecord,
 } from './types.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -35,6 +36,64 @@ function parseDate(value: unknown): Date | undefined {
 function sumAbsoluteChanges(change: number[] | null | undefined): number {
   if (!change?.length) return 0;
   return change.reduce((sum, value) => sum + Math.abs(value), 0);
+}
+
+/** Bowl weight decreases (negative frame change) indicate food eaten. */
+function amountFromWeightFrames(
+  frames: SurePetTimelineWeightRecord['frames'],
+): number {
+  if (!frames?.length) return 0;
+
+  let eaten = 0;
+  for (const frame of frames) {
+    const change = getNumber(frame.change);
+    if (change != null && change < 0) {
+      eaten += Math.abs(change);
+    }
+  }
+  if (eaten > 0) return eaten;
+
+  const changes = frames
+    .map((frame) => getNumber(frame.change))
+    .filter((value): value is number => value != null);
+  return sumAbsoluteChanges(changes);
+}
+
+function resolvePetIdFromTimelineEntry(
+  entry: SurePetTimelineEntry,
+  tagId: number | undefined,
+): number | undefined {
+  if (tagId == null || !Array.isArray(entry.pets)) return undefined;
+  const pet = entry.pets.find((candidate) => getNumber(candidate.tag_id) === tagId);
+  return getNumber(pet?.id);
+}
+
+function normalizeTimelineWeightRecord(
+  record: SurePetTimelineWeightRecord,
+  entry: SurePetTimelineEntry,
+  timelineEntryId?: number,
+): NormalizedFeedingDatapoint | null {
+  const from =
+    parseDate(record.created_at) ?? parseDate(entry.created_at);
+  if (!from) return null;
+
+  const amount_g = amountFromWeightFrames(record.frames);
+  if (amount_g <= 0) return null;
+
+  const tag_id = getNumber(record.tag_id);
+  const device_id = getNumber(record.device_id);
+  const source_id = `timeline-weight:${timelineEntryId ?? ''}:${record.id ?? ''}:${from.toISOString()}:${device_id ?? ''}:${tag_id ?? ''}:${amount_g}`;
+
+  return {
+    from,
+    duration_s: getNumber(record.duration),
+    amount_g,
+    tag_id,
+    device_id,
+    pet_id: resolvePetIdFromTimelineEntry(entry, tag_id),
+    timeline_entry_id: timelineEntryId,
+    source_id,
+  };
 }
 
 export function buildFeedingExternalKey(input: {
@@ -145,6 +204,16 @@ export function extractFeedingDatapointsFromTimeline(
           timeline_entry_id: entryId,
           sourcePrefix: `timeline:${entryId ?? 'unknown'}`,
         });
+        if (normalized) datapoints.push(normalized);
+      }
+    }
+
+    if (
+      entry.type === TimelineEventType.PET_HAS_EATEN &&
+      Array.isArray(entry.weights)
+    ) {
+      for (const weight of entry.weights) {
+        const normalized = normalizeTimelineWeightRecord(weight, entry, entryId);
         if (normalized) datapoints.push(normalized);
       }
     }
