@@ -414,7 +414,7 @@ export class SurePetAccountManager implements AccountManager {
     const householdId = this.config.household_id;
     if (householdId == null) return;
 
-    const timeline = await client.getTimeline(householdId, {});
+    const timeline = await client.getFullTimeline(householdId);
     const extracted = extractFeedingDatapointsFromTimeline(timeline);
     const datapoints = extracted.datapoints.filter(
       (datapoint) => datapoint.device_id === cloudDeviceId,
@@ -439,7 +439,7 @@ export class SurePetAccountManager implements AccountManager {
       };
     }
 
-    const timeline = await client.getTimeline(householdId, {});
+    const timeline = await client.getFullTimeline(householdId);
     const extracted = extractFeedingDatapointsFromTimeline(timeline);
     const ingestStats = await this.ingestFeedingDatapoints(extracted.datapoints);
 

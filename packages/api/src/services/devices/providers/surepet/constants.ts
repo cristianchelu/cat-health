@@ -53,7 +53,8 @@ export const SubstanceType = {
   FOOD: 2,
 } as const;
 
-export type SubstanceTypeId = (typeof SubstanceType)[keyof typeof SubstanceType];
+export type SubstanceTypeId =
+  (typeof SubstanceType)[keyof typeof SubstanceType];
 
 /** py-surepetcare `BowlType` — feeder bowl layout. */
 export const BowlType = {
@@ -107,6 +108,9 @@ export const SUREPET_TOKEN_MAX_LENGTH = 448;
 
 export const SUREPET_TIMELINE_POLL_INTERVAL_MS = 3 * 60 * 1000;
 export const SUREPET_DEVICE_STATE_POLL_INTERVAL_MS = 60 * 1000;
+
+/** Pause between paginated timeline fetches during backfill (one-time, not polling). */
+export const SUREPET_TIMELINE_PAGE_DELAY_MS = 1000;
 
 export const SUREPET_REQUEST_TIMEOUT_MS = 45_000;
 

@@ -4,6 +4,7 @@ import {
   SUREPET_LOGIN_URL,
   SUREPET_ME_START_URL,
   SUREPET_REQUEST_TIMEOUT_MS,
+  SUREPET_TIMELINE_PAGE_DELAY_MS,
   tokenSeemsValid,
 } from './constants.ts';
 import type {
@@ -15,6 +16,10 @@ import type {
   SurePetMeStartData,
   SurePetTimelineEntry,
 } from './types.ts';
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export class SurePetClientError extends Error {
   readonly status?: number;
@@ -137,7 +142,7 @@ export class SurePetClient {
 
   async getTimeline(
     householdId: number,
-    options?: { sinceId?: number; beforeId?: number },
+    options?: { sinceId?: number; beforeId?: number; pageSize?: number },
   ): Promise<SurePetTimelineEntry[]> {
     const params = new URLSearchParams();
     if (options?.sinceId != null) {
@@ -146,6 +151,9 @@ export class SurePetClient {
     if (options?.beforeId != null) {
       params.set('before_id', String(options.beforeId));
     }
+    if (options?.pageSize != null) {
+      params.set('page_size', String(options.pageSize));
+    }
 
     const query = params.toString();
     const url = `${SUREPET_API_BASE}/timeline/household/${householdId}${query ? `?${query}` : ''}`;
@@ -153,7 +161,44 @@ export class SurePetClient {
       'GET',
       url,
     );
-    return response.data ?? [];
+    const entries = response.data ?? [];
+    return entries;
+  }
+
+  /** Walk backward through timeline pages until the API returns no entries. */
+  async getFullTimeline(
+    householdId: number,
+    options?: { pageSize?: number; pageDelayMs?: number },
+  ): Promise<SurePetTimelineEntry[]> {
+    const pageSize = options?.pageSize ?? 100;
+    const pageDelayMs = options?.pageDelayMs ?? SUREPET_TIMELINE_PAGE_DELAY_MS;
+    const allEntries: SurePetTimelineEntry[] = [];
+    let beforeId: number | undefined;
+
+    while (true) {
+      const page = await this.getTimeline(householdId, {
+        beforeId,
+        pageSize,
+      });
+      if (page.length === 0) break;
+
+      allEntries.push(...page);
+
+      const ids = page
+        .map((entry) => entry.id)
+        .filter((id): id is number => typeof id === 'number');
+      if (ids.length === 0) break;
+
+      const minId = Math.min(...ids);
+      if (beforeId != null && minId >= beforeId) break;
+      beforeId = minId;
+
+      if (pageDelayMs > 0) {
+        await delay(pageDelayMs);
+      }
+    }
+
+    return allEntries;
   }
 
   async getHouseholdReport(householdId: number): Promise<unknown> {
