@@ -5,6 +5,7 @@ import { BowlType } from '../constants.ts';
 import {
   buildFeedingExternalKey,
   expandTimelineWeightRecordToDatapoints,
+  resolveLocalPetId,
 } from '../extractFeedingEvents.ts';
 import { resolveSurePetFoodCompartmentId } from '../foodCompartments.ts';
 import type {
@@ -61,6 +62,48 @@ describe('expandTimelineWeightRecordToDatapoints', () => {
     assert.equal(datapoints[0]?.bowl_index, 0);
     assert.equal(datapoints[1]?.amount_g, 20);
     assert.equal(datapoints[1]?.bowl_index, 1);
+  });
+});
+
+describe('resolveLocalPetId', () => {
+  it('maps SurePet cloud pet_id from provider_data to local pet', () => {
+    const localPetId = resolveLocalPetId(
+      {
+        email: 'test@example.com',
+        password: 'secret',
+        pet_links: [
+          {
+            external_pet_id: '779257',
+            pet_id: 2,
+            metadata: { tag_id: 3662589 },
+          },
+        ],
+      },
+      {
+        from: new Date('2026-05-28T21:59:11.000Z'),
+        amount_g: 2,
+        pet_id: 779257,
+        tag_id: 3662589,
+      },
+    );
+    assert.equal(localPetId, 2);
+  });
+
+  it('returns null when pet_links are missing despite provider ids on datapoint', () => {
+    const localPetId = resolveLocalPetId(
+      {
+        email: 'test@example.com',
+        password: 'secret',
+        pet_links: [],
+      },
+      {
+        from: new Date('2026-05-28T21:59:11.000Z'),
+        amount_g: 2,
+        pet_id: 779257,
+        tag_id: 3662589,
+      },
+    );
+    assert.equal(localPetId, null);
   });
 });
 

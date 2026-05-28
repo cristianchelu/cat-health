@@ -362,3 +362,19 @@ export function refreshPetLinkTagIds(
     };
   });
 }
+
+export function resolveLocalPetIdFromProviderData(
+  config: SurePetAccountConfig,
+  providerData: {
+    tag_id?: number;
+    pet_id?: number;
+  },
+): number | null {
+  return resolveLocalPetId(config, {
+    from: new Date(0),
+    amount_g: 0,
+    source_id: 'backfill',
+    tag_id: providerData.tag_id,
+    pet_id: providerData.pet_id,
+  });
+}

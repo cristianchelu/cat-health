@@ -18,6 +18,7 @@ import {
   enrichFoodIntakeEventData,
   resolveFoodIdForCompartment,
 } from '../../../food/enrichFoodIntake.ts';
+import type { FoodIntakeEventData } from '../../../../database/types/EventTable.ts';
 import { SurePetClient, SurePetClientError } from './SurePetClient.ts';
 import { FeederController } from './FeederController.ts';
 import {
@@ -27,7 +28,7 @@ import {
 import {
   extractFeedingDatapointsFromHouseholdReport,
   extractFeedingDatapointsFromTimeline,
-  refreshPetLinkTagIds,
+  resolveLocalPetIdFromProviderData,
 } from './extractFeedingEvents.ts';
 import { resolveSurePetFoodCompartmentId } from './foodCompartments.ts';
 import {
@@ -112,6 +113,12 @@ export class SurePetAccountManager implements AccountManager {
     }
 
     await this.refreshFeederStates();
+    await this.reloadPetLinksFromDb().catch((error) => {
+      this.deps.logger.error('SurePet pet_links reload failed:', error);
+    });
+    await this.backfillSurePetFeedingEventPetIds().catch((error) => {
+      this.deps.logger.error('SurePet feeding pet_id backfill failed:', error);
+    });
     await this.runFeedingSync().catch((error) => {
       this.deps.logger.error('SurePet initial feeding sync failed:', error);
     });
@@ -284,16 +291,21 @@ export class SurePetAccountManager implements AccountManager {
       await this.persistAccountConfig();
     }
 
-    if (this.config.pet_links?.length) {
-      const pets = await this.client.getPets(this.config.household_id);
-      const refreshedLinks = refreshPetLinkTagIds(this.config.pet_links, pets);
-      if (JSON.stringify(refreshedLinks) !== JSON.stringify(this.config.pet_links)) {
-        this.config.pet_links = refreshedLinks;
-        await this.persistAccountConfig();
-      }
-    }
-
     return this.client;
+  }
+
+  /** pet_links are owned by provider account settings; always read fresh from DB before use. */
+  private async reloadPetLinksFromDb(): Promise<void> {
+    const row = await this.deps.db
+      .selectFrom('provider_account')
+      .select('config')
+      .where('id', '=', this.accountId)
+      .executeTakeFirst();
+
+    if (!row) return;
+
+    const config = parseAccountConfig(row.config);
+    this.config.pet_links = config.pet_links;
   }
 
   private async refreshFeederStates(): Promise<void> {
@@ -441,6 +453,7 @@ export class SurePetAccountManager implements AccountManager {
   private async ingestFeedingDatapoints(
     datapoints: NormalizedFeedingDatapoint[],
   ): Promise<{ ingestAttempts: number; skippedUnmapped: number }> {
+    await this.reloadPetLinksFromDb();
     const localDeviceMap = await this.buildLocalDeviceMap();
     let skippedUnmapped = 0;
     let ingestAttempts = 0;
@@ -548,7 +561,7 @@ export class SurePetAccountManager implements AccountManager {
 
     const existing = await this.deps.db
       .selectFrom('event')
-      .select('id')
+      .select(['id', 'pet_id'])
       .where('device_id', '=', localDevice.id)
       .where(
         sql<string>`json_extract(data, '$.provider_data.external_key')`,
@@ -562,7 +575,12 @@ export class SurePetAccountManager implements AccountManager {
       )
       .executeTakeFirst();
 
-    if (existing) return;
+    if (existing) {
+      if (existing.pet_id == null && event.pet_id != null) {
+        await this.assignPetIdToFeedingEvent(existing.id, event.pet_id);
+      }
+      return;
+    }
 
     const result = await this.deps.db
       .insertInto('event')
@@ -597,7 +615,77 @@ export class SurePetAccountManager implements AccountManager {
     });
   }
 
+  private async assignPetIdToFeedingEvent(
+    eventId: number,
+    petId: number,
+  ): Promise<void> {
+    await this.deps.db
+      .updateTable('event')
+      .set({ pet_id: petId })
+      .where('id', '=', eventId)
+      .execute();
+
+    await this.deps.db
+      .updateTable('event')
+      .set({ pet_id: petId })
+      .where('parent_event_id', '=', eventId)
+      .where('pet_id', 'is', null)
+      .execute();
+  }
+
+  private async backfillSurePetFeedingEventPetIds(): Promise<void> {
+    await this.reloadPetLinksFromDb();
+    const links = this.config.pet_links ?? [];
+    if (!links.length) return;
+
+    const events = await this.deps.db
+      .selectFrom('event')
+      .select(['id', 'data'])
+      .where('pet_id', 'is', null)
+      .where(
+        sql<string>`json_extract(data, '$.type')`,
+        '=',
+        'food_intake',
+      )
+      .where(
+        sql<string>`json_extract(data, '$.provider_data.provider')`,
+        '=',
+        'surepet',
+      )
+      .execute();
+
+    for (const row of events) {
+      const data =
+        typeof row.data === 'string'
+          ? (JSON.parse(row.data) as FoodIntakeEventData)
+          : (row.data as FoodIntakeEventData);
+      const providerData = data.provider_data;
+      if (providerData?.provider !== 'surepet') continue;
+
+      const resolvedPetId = resolveLocalPetIdFromProviderData(
+        this.config,
+        providerData,
+      );
+      if (resolvedPetId == null) continue;
+
+      await this.assignPetIdToFeedingEvent(row.id, resolvedPetId);
+    }
+  }
+
   private async persistAccountConfig(): Promise<void> {
+    const row = await this.deps.db
+      .selectFrom('provider_account')
+      .select('config')
+      .where('id', '=', this.accountId)
+      .executeTakeFirst();
+
+    if (row) {
+      const dbConfig = parseAccountConfig(row.config);
+      if (dbConfig.pet_links !== undefined) {
+        this.config.pet_links = dbConfig.pet_links;
+      }
+    }
+
     await this.deps.db
       .updateTable('provider_account')
       .set({
