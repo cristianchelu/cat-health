@@ -28,13 +28,16 @@ import {
   type FastifyPluginAsyncTypebox,
 } from '@fastify/type-provider-typebox';
 import { db } from '../database/index.ts';
-import type { Food } from '../database/types/FoodTable.ts';
 import { MediaManager } from '../services/media/MediaManager.ts';
+import {
+  buildMoistureChildEventValues,
+  calculateNutrientsFromFood,
+  enrichFoodIntakeEventData,
+} from '../services/food/enrichFoodIntake.ts';
+import type { FoodIntakeEventData } from '../database/types/EventTable.ts';
 import { computeLitterboxAnalysisData } from '../services/devices/providers/esphome/analyzeLitterboxUse.ts';
 import type { LitterboxUseEventData } from '../database/types/EventTable.ts';
 import { buildLitterboxTrendResult } from '../services/litterbox/litterboxAnalytics.ts';
-
-type FoodNutrientItem = { nutrient: string; unit: string; value: number };
 
 const Http404ResponseSchema = Type.Object({
   statusCode: Type.Literal(404),
@@ -47,38 +50,6 @@ const Http400BadRequestSchema = Type.Object({
   error: Type.Literal('Bad Request'),
   message: Type.String(),
 });
-
-function calculateNutrientsFromFood(
-  amount: number,
-  food: Food,
-): Record<string, number> {
-  const nutrients: Record<string, number> = {};
-  const nutrientsArray: FoodNutrientItem[] | null =
-    typeof food.nutrients === 'string'
-      ? (JSON.parse(food.nutrients) as FoodNutrientItem[])
-      : food.nutrients;
-
-  if (food.moisture_percent != null) {
-    nutrients.moisture_ml = amount * (food.moisture_percent / 100);
-  }
-  if (food.calories_per_100g != null) {
-    nutrients.calories = amount * (food.calories_per_100g / 100);
-  }
-  if (nutrientsArray && Array.isArray(nutrientsArray)) {
-    for (const item of nutrientsArray) {
-      const { nutrient, unit, value } = item;
-      if (value == null || typeof value !== 'number') continue;
-      if (unit === 'percent') {
-        nutrients[`${nutrient}_g`] = amount * (value / 100);
-      } else if (unit === 'g') {
-        nutrients[`${nutrient}_g`] = amount * (value / 100);
-      } else if (unit === 'mg') {
-        nutrients[`${nutrient}_mg`] = amount * (value / 100);
-      }
-    }
-  }
-  return nutrients;
-}
 
 const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
@@ -485,7 +456,10 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           .executeTakeFirst();
         if (food && typeof eventData.amount === 'number') {
           nutrients = calculateNutrientsFromFood(eventData.amount, food);
-          eventData = { ...eventData, nutrients };
+          eventData = enrichFoodIntakeEventData(
+            eventData as FoodIntakeEventData,
+            food,
+          );
         }
       }
 
@@ -510,19 +484,14 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       ) {
         await db
           .insertInto('event')
-          .values({
-            parent_event_id: result.id,
-            pet_id: result.pet_id,
-            device_id: null,
-            timestamp: result.timestamp,
-            data: {
-              type: 'water_intake',
-              amount: nutrients.moisture_ml,
-              source: 'food',
-            },
-            raw_data: null,
-            human_verified: true,
-          })
+          .values(
+            buildMoistureChildEventValues({
+              parentEventId: result.id,
+              petId: result.pet_id,
+              timestamp: result.timestamp,
+              moistureMl: nutrients.moisture_ml,
+            }),
+          )
           .execute();
       }
 

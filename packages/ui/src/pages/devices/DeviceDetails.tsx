@@ -7,6 +7,7 @@ import { DeviceHeader } from './components/DeviceHeader';
 import { ProviderDeviceView } from './components/ProviderDeviceView';
 import { DeviceTimeline } from './components/DeviceTimeline';
 import CameraLinkSection from './components/CameraLinkSection';
+import FeederFoodSection from './components/FeederFoodSection';
 import ReferenceImagesTab from './components/ReferenceImagesTab';
 import './DeviceDetails.css';
 import { useDevice } from '@/hooks/queries/deviceQueries';
@@ -58,7 +59,8 @@ const DeviceDetails: React.FC = () => {
           </TabsContent>
         )}
         <TabsContent value="settings">
-          <div className="device-content">
+          <div className="device-content device-settings-content">
+            {device.type === 'feeder' && <FeederFoodSection device={device} />}
             <CameraLinkSection device={device} />
           </div>
         </TabsContent>

@@ -9,6 +9,7 @@ import {
   inferFoodTypeFromDeviceControl,
   resolveLocalPetId,
 } from './extractFeedingEvents.ts';
+import { shouldIncludeBowlIndexOnProviderData } from './foodCompartments.ts';
 
 export function mapFeedingDatapointToEvent(options: {
   datapoint: NormalizedFeedingDatapoint;
@@ -24,7 +25,10 @@ export function mapFeedingDatapointToEvent(options: {
     from: datapoint.from,
     amount_g: datapoint.amount_g,
     source_id: datapoint.source_id,
+    bowl_index: datapoint.bowl_index,
   });
+
+  const includeBowlIndex = shouldIncludeBowlIndexOnProviderData(deviceControl);
 
   return {
     pet_id: resolveLocalPetId(accountConfig, datapoint),
@@ -42,6 +46,9 @@ export function mapFeedingDatapointToEvent(options: {
         pet_id: datapoint.pet_id,
         duration_s: datapoint.duration_s,
         timeline_entry_id: datapoint.timeline_entry_id,
+        ...(includeBowlIndex && datapoint.bowl_index != null
+          ? { bowl_index: datapoint.bowl_index }
+          : {}),
       },
     },
     raw_data: null,

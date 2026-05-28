@@ -32,6 +32,8 @@ export const SurePetEventProviderDataSchema = Type.Object({
   pet_id: Type.Optional(Type.Number()),
   duration_s: Type.Optional(Type.Number()),
   timeline_entry_id: Type.Optional(Type.Number()),
+  /** SurePet hardware bowl index (0 | 1); not a compartment id. */
+  bowl_index: Type.Optional(Type.Number()),
 });
 export type SurePetEventProviderData = Static<
   typeof SurePetEventProviderDataSchema

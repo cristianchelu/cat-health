@@ -1,5 +1,6 @@
 export * from "./binary/litterbox/index.ts";
 export * from "./schemas/api/devices.ts";
+export * from "./schemas/api/feederFoodCompartments.ts";
 export * from "./schemas/api/events.ts";
 export * from "./schemas/api/foods.ts";
 export * from "./schemas/api/pets.ts";

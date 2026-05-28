@@ -12,4 +12,10 @@
   .device-content {
     flex: 1;
   }
+
+  .device-settings-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+  }
 }

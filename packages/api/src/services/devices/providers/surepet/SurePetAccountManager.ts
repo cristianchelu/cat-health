@@ -13,7 +13,11 @@ import type {
   Device,
   ProviderAccount,
 } from '../../types.ts';
-import type { FoodIntakeEventData } from '../../../../database/types/EventTable.ts';
+import {
+  buildMoistureChildEventValues,
+  enrichFoodIntakeEventData,
+  resolveFoodIdForCompartment,
+} from '../../../food/enrichFoodIntake.ts';
 import { SurePetClient, SurePetClientError } from './SurePetClient.ts';
 import { FeederController } from './FeederController.ts';
 import {
@@ -25,6 +29,7 @@ import {
   extractFeedingDatapointsFromTimeline,
   refreshPetLinkTagIds,
 } from './extractFeedingEvents.ts';
+import { resolveSurePetFoodCompartmentId } from './foodCompartments.ts';
 import {
   mapFeedingDatapointToEvent,
   parseSurePetFeederConfig,
@@ -441,21 +446,21 @@ export class SurePetAccountManager implements AccountManager {
     let ingestAttempts = 0;
 
     for (const datapoint of datapoints) {
-      const localDeviceId =
+      const localDevice =
         datapoint.device_id != null
           ? localDeviceMap.get(datapoint.device_id)
           : undefined;
 
-      if (localDeviceId == null) {
+      if (localDevice == null) {
         skippedUnmapped += 1;
         continue;
       }
       ingestAttempts += 1;
 
-      const controller = this.controllers.get(localDeviceId);
+      const controller = this.controllers.get(localDevice.id);
       await this.ingestFeedingDatapoint(
         datapoint,
-        localDeviceId,
+        localDevice,
         controller?.getDeviceControl(),
       );
     }
@@ -463,20 +468,42 @@ export class SurePetAccountManager implements AccountManager {
     return { ingestAttempts, skippedUnmapped };
   }
 
-  private async buildLocalDeviceMap(): Promise<Map<number, number>> {
+  private parseDeviceConfig(config: unknown): Record<string, unknown> {
+    if (typeof config === 'string') {
+      try {
+        const parsed = JSON.parse(config) as unknown;
+        return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+          ? (parsed as Record<string, unknown>)
+          : {};
+      } catch {
+        return {};
+      }
+    }
+    if (typeof config === 'object' && config !== null && !Array.isArray(config)) {
+      return config as Record<string, unknown>;
+    }
+    return {};
+  }
+
+  private async buildLocalDeviceMap(): Promise<
+    Map<number, { id: number; config: Record<string, unknown> }>
+  > {
     const devices = await this.deps.db
       .selectFrom('device')
-      .select(['id', 'external_id'])
+      .select(['id', 'external_id', 'config'])
       .where('provider_account_id', '=', this.accountId)
       .where('type', '=', 'feeder')
       .where('enabled', '=', 1)
       .execute();
 
-    const map = new Map<number, number>();
+    const map = new Map<number, { id: number; config: Record<string, unknown> }>();
     for (const device of devices) {
       const surepetId = Number.parseInt(device.external_id, 10);
       if (Number.isFinite(surepetId)) {
-        map.set(surepetId, device.id);
+        map.set(surepetId, {
+          id: device.id,
+          config: this.parseDeviceConfig(device.config),
+        });
       }
     }
     return map;
@@ -484,15 +511,34 @@ export class SurePetAccountManager implements AccountManager {
 
   private async ingestFeedingDatapoint(
     datapoint: NormalizedFeedingDatapoint,
-    localDeviceId: number,
+    localDevice: { id: number; config: Record<string, unknown> },
     deviceControl?: unknown,
   ): Promise<void> {
-    const event = mapFeedingDatapointToEvent({
+    let event = mapFeedingDatapointToEvent({
       datapoint,
-      localDeviceId,
+      localDeviceId: localDevice.id,
       accountConfig: this.config,
       deviceControl,
     });
+
+    const compartmentId = resolveSurePetFoodCompartmentId(
+      deviceControl,
+      datapoint.bowl_index,
+    );
+    const foodId = resolveFoodIdForCompartment(localDevice.config, compartmentId);
+    if (foodId != null) {
+      const food = await this.deps.db
+        .selectFrom('food')
+        .selectAll()
+        .where('id', '=', foodId)
+        .executeTakeFirst();
+      if (food) {
+        event = {
+          ...event,
+          data: enrichFoodIntakeEventData(event.data, food),
+        };
+      }
+    }
 
     const externalKey =
       event.data.provider_data?.provider === 'surepet'
@@ -503,7 +549,7 @@ export class SurePetAccountManager implements AccountManager {
     const existing = await this.deps.db
       .selectFrom('event')
       .select('id')
-      .where('device_id', '=', localDeviceId)
+      .where('device_id', '=', localDevice.id)
       .where(
         sql<string>`json_extract(data, '$.provider_data.external_key')`,
         '=',
@@ -521,14 +567,29 @@ export class SurePetAccountManager implements AccountManager {
     const result = await this.deps.db
       .insertInto('event')
       .values(event)
-      .returning('id')
+      .returning(['id', 'pet_id', 'timestamp'])
       .executeTakeFirst();
 
     if (!result) return;
 
-    const eventData = event.data as FoodIntakeEventData;
+    const eventData = event.data;
+    const moistureMl = eventData.nutrients?.moisture_ml;
+    if (moistureMl != null) {
+      await this.deps.db
+        .insertInto('event')
+        .values(
+          buildMoistureChildEventValues({
+            parentEventId: result.id,
+            petId: result.pet_id,
+            timestamp: result.timestamp,
+            moistureMl,
+          }),
+        )
+        .execute();
+    }
+
     this.deps.eventBus.publish('device.event', {
-      deviceId: localDeviceId,
+      deviceId: localDevice.id,
       type: 'food_intake',
       data: eventData,
       timestamp: event.timestamp,

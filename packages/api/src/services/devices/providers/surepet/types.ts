@@ -61,6 +61,7 @@ export interface SurePetBowlStatusPayload {
 }
 
 export interface SurePetTimelineWeightFrame {
+  index?: number | null;
   change?: number | null;
   current_weight?: number | null;
 }
@@ -129,6 +130,8 @@ export interface NormalizedFeedingDatapoint {
   pet_id?: number;
   timeline_entry_id?: number;
   source_id: string;
+  /** SurePet hardware bowl index when consumption is per-bowl. */
+  bowl_index?: number;
 }
 
 export interface SurePetDeviceDetailPayload extends SurePetCloudDevice {

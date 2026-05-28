@@ -33,30 +33,15 @@ function parseDate(value: unknown): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-function sumAbsoluteChanges(change: number[] | null | undefined): number {
+function sumNegativeChanges(change: number[] | null | undefined): number {
   if (!change?.length) return 0;
-  return change.reduce((sum, value) => sum + Math.abs(value), 0);
-}
-
-/** Bowl weight decreases (negative frame change) indicate food eaten. */
-function amountFromWeightFrames(
-  frames: SurePetTimelineWeightRecord['frames'],
-): number {
-  if (!frames?.length) return 0;
-
   let eaten = 0;
-  for (const frame of frames) {
-    const change = getNumber(frame.change);
-    if (change != null && change < 0) {
-      eaten += Math.abs(change);
+  for (const value of change) {
+    if (typeof value === 'number' && value < 0) {
+      eaten += Math.abs(value);
     }
   }
-  if (eaten > 0) return eaten;
-
-  const changes = frames
-    .map((frame) => getNumber(frame.change))
-    .filter((value): value is number => value != null);
-  return sumAbsoluteChanges(changes);
+  return eaten;
 }
 
 function resolvePetIdFromTimelineEntry(
@@ -68,32 +53,43 @@ function resolvePetIdFromTimelineEntry(
   return getNumber(pet?.id);
 }
 
-function normalizeTimelineWeightRecord(
+export function expandTimelineWeightRecordToDatapoints(
   record: SurePetTimelineWeightRecord,
   entry: SurePetTimelineEntry,
   timelineEntryId?: number,
-): NormalizedFeedingDatapoint | null {
+): NormalizedFeedingDatapoint[] {
   const from =
     parseDate(record.created_at) ?? parseDate(entry.created_at);
-  if (!from) return null;
-
-  const amount_g = amountFromWeightFrames(record.frames);
-  if (amount_g <= 0) return null;
+  if (!from) return [];
 
   const tag_id = getNumber(record.tag_id);
   const device_id = getNumber(record.device_id);
-  const source_id = `timeline-weight:${timelineEntryId ?? ''}:${record.id ?? ''}:${from.toISOString()}:${device_id ?? ''}:${tag_id ?? ''}:${amount_g}`;
+  const pet_id = resolvePetIdFromTimelineEntry(entry, tag_id);
+  const duration_s = getNumber(record.duration);
+  const datapoints: NormalizedFeedingDatapoint[] = [];
 
-  return {
-    from,
-    duration_s: getNumber(record.duration),
-    amount_g,
-    tag_id,
-    device_id,
-    pet_id: resolvePetIdFromTimelineEntry(entry, tag_id),
-    timeline_entry_id: timelineEntryId,
-    source_id,
-  };
+  for (const frame of record.frames ?? []) {
+    const change = getNumber(frame.change);
+    if (change == null || change >= 0) continue;
+
+    const bowl_index = getNumber(frame.index) ?? 0;
+    const amount_g = Math.abs(change);
+    const source_id = `timeline-weight:${timelineEntryId ?? ''}:${record.id ?? ''}:${from.toISOString()}:${device_id ?? ''}:${tag_id ?? ''}:${bowl_index}:${amount_g}`;
+
+    datapoints.push({
+      from,
+      duration_s,
+      amount_g,
+      tag_id,
+      device_id,
+      pet_id,
+      timeline_entry_id: timelineEntryId,
+      source_id,
+      bowl_index,
+    });
+  }
+
+  return datapoints;
 }
 
 export function buildFeedingExternalKey(input: {
@@ -102,6 +98,7 @@ export function buildFeedingExternalKey(input: {
   from: Date;
   amount_g: number;
   source_id: string;
+  bowl_index?: number;
 }): string {
   const payload = [
     input.device_id ?? '',
@@ -109,70 +106,117 @@ export function buildFeedingExternalKey(input: {
     input.from.toISOString(),
     input.amount_g,
     input.source_id,
+    input.bowl_index ?? '',
   ].join('|');
   return createHash('sha256').update(payload).digest('hex').slice(0, 24);
 }
 
-function normalizeReportDatapoint(
+function expandReportDatapointToDatapoints(
   datapoint: SurePetFeedingDatapoint,
   options: {
     timeline_entry_id?: number;
     pet_id?: number;
     sourcePrefix: string;
   },
-): NormalizedFeedingDatapoint | null {
+): NormalizedFeedingDatapoint[] {
   const from = parseDate(datapoint.from);
-  if (!from) return null;
+  if (!from) return [];
+
+  const tag_id = getNumber(datapoint.tag_id);
+  const device_id = getNumber(datapoint.device_id);
+  const pet_id = getNumber(datapoint.pet_id) ?? options.pet_id;
+  const to = parseDate(datapoint.to);
+  const duration_s = getNumber(datapoint.duration);
+  const results: NormalizedFeedingDatapoint[] = [];
+
+  if (datapoint.weights?.length) {
+    for (let i = 0; i < datapoint.weights.length; i++) {
+      const amount_g = Math.abs(getNumber(datapoint.weights[i]?.weight) ?? 0);
+      if (amount_g <= 0) continue;
+
+      const source_id = `${options.sourcePrefix}:${datapoint.from}:${device_id ?? ''}:${tag_id ?? ''}:${i}:${amount_g}`;
+      results.push({
+        from,
+        to,
+        duration_s,
+        amount_g,
+        tag_id,
+        device_id,
+        pet_id,
+        timeline_entry_id: options.timeline_entry_id,
+        source_id,
+        bowl_index: i,
+      });
+    }
+    if (results.length > 0) return results;
+  }
 
   const amount =
     getNumber(datapoint.actual_weight) ??
-    (datapoint.weights?.length
-      ? Math.abs(
-          datapoint.weights.reduce(
-            (max, frame) =>
-              Math.max(max, Math.abs(getNumber(frame.weight) ?? 0)),
-            0,
-          ),
-        )
-      : undefined);
+    undefined;
+  if (amount == null || amount <= 0) return [];
 
-  if (amount == null || amount <= 0) return null;
-
-  const source_id = `${options.sourcePrefix}:${datapoint.from}:${datapoint.device_id ?? ''}:${datapoint.tag_id ?? ''}:${amount}`;
-
-  return {
+  const source_id = `${options.sourcePrefix}:${datapoint.from}:${device_id ?? ''}:${tag_id ?? ''}:${amount}`;
+  results.push({
     from,
-    to: parseDate(datapoint.to),
-    duration_s: getNumber(datapoint.duration),
+    to,
+    duration_s,
     amount_g: amount,
-    tag_id: getNumber(datapoint.tag_id),
-    device_id: getNumber(datapoint.device_id),
-    pet_id: getNumber(datapoint.pet_id) ?? options.pet_id,
+    tag_id,
+    device_id,
+    pet_id,
     timeline_entry_id: options.timeline_entry_id,
     source_id,
-  };
+  });
+
+  return results;
 }
 
-function normalizeConsumption(
+function expandConsumptionToDatapoints(
   record: SurePetConsumptionRecord,
   timelineEntryId?: number,
-): NormalizedFeedingDatapoint | null {
+): NormalizedFeedingDatapoint[] {
   const at = parseDate(record.at);
-  if (!at) return null;
+  if (!at) return [];
 
-  const amount = sumAbsoluteChanges(record.change ?? undefined);
-  if (amount <= 0) return null;
+  const tag_id = getNumber(record.tag_id);
+  const device_id = getNumber(record.device_id);
+  const changes = record.change ?? [];
+  const datapoints: NormalizedFeedingDatapoint[] = [];
 
-  const source_id = `consumption:${record.id ?? ''}:${at.toISOString()}:${record.device_id ?? ''}:${record.tag_id ?? ''}`;
+  for (let i = 0; i < changes.length; i++) {
+    const change = getNumber(changes[i]);
+    if (change == null || change >= 0) continue;
 
-  return {
-    from: at,
-    amount_g: amount,
-    tag_id: getNumber(record.tag_id),
-    device_id: getNumber(record.device_id),
-    timeline_entry_id: timelineEntryId,
-    source_id,
-  };
+    const amount_g = Math.abs(change);
+    const source_id = `consumption:${record.id ?? ''}:${at.toISOString()}:${device_id ?? ''}:${tag_id ?? ''}:${i}:${amount_g}`;
+    datapoints.push({
+      from: at,
+      amount_g,
+      tag_id,
+      device_id,
+      timeline_entry_id: timelineEntryId,
+      source_id,
+      bowl_index: i,
+    });
+  }
+
+  if (datapoints.length > 0) return datapoints;
+
+  const total = sumNegativeChanges(changes);
+  if (total <= 0) return [];
+
+  const source_id = `consumption:${record.id ?? ''}:${at.toISOString()}:${device_id ?? ''}:${tag_id ?? ''}:${total}`;
+  return [
+    {
+      from: at,
+      amount_g: total,
+      tag_id,
+      device_id,
+      timeline_entry_id: timelineEntryId,
+      source_id,
+    },
+  ];
 }
 
 export function extractFeedingDatapointsFromTimeline(
@@ -192,19 +236,19 @@ export function extractFeedingDatapointsFromTimeline(
         if (consumption.substance_type !== SubstanceType.FOOD) {
           continue;
         }
-        const normalized = normalizeConsumption(consumption, entryId);
-        if (normalized) datapoints.push(normalized);
+        datapoints.push(...expandConsumptionToDatapoints(consumption, entryId));
       }
     }
 
     const reportDatapoints = entry.feeding?.datapoints;
     if (Array.isArray(reportDatapoints)) {
       for (const datapoint of reportDatapoints) {
-        const normalized = normalizeReportDatapoint(datapoint, {
-          timeline_entry_id: entryId,
-          sourcePrefix: `timeline:${entryId ?? 'unknown'}`,
-        });
-        if (normalized) datapoints.push(normalized);
+        datapoints.push(
+          ...expandReportDatapointToDatapoints(datapoint, {
+            timeline_entry_id: entryId,
+            sourcePrefix: `timeline:${entryId ?? 'unknown'}`,
+          }),
+        );
       }
     }
 
@@ -213,8 +257,9 @@ export function extractFeedingDatapointsFromTimeline(
       Array.isArray(entry.weights)
     ) {
       for (const weight of entry.weights) {
-        const normalized = normalizeTimelineWeightRecord(weight, entry, entryId);
-        if (normalized) datapoints.push(normalized);
+        datapoints.push(
+          ...expandTimelineWeightRecordToDatapoints(weight, entry, entryId),
+        );
       }
     }
   }
@@ -235,11 +280,12 @@ export function extractFeedingDatapointsFromHouseholdReport(
     if (!Array.isArray(reportDatapoints)) continue;
 
     for (const datapoint of reportDatapoints) {
-      const normalized = normalizeReportDatapoint(datapoint, {
-        pet_id: cloudPetId,
-        sourcePrefix: `report:${cloudPetId ?? 'unknown'}:${pair.device_id ?? 'unknown'}`,
-      });
-      if (normalized) datapoints.push(normalized);
+      datapoints.push(
+        ...expandReportDatapointToDatapoints(datapoint, {
+          pet_id: cloudPetId,
+          sourcePrefix: `report:${cloudPetId ?? 'unknown'}:${pair.device_id ?? 'unknown'}`,
+        }),
+      );
     }
   }
 

@@ -467,6 +467,13 @@
             "training_mode_step_3": "Step 3",
             "training_mode_step_4": "Step 4",
             "training_mode_unknown": "Unknown ({{value}})",
+            "food_compartment_settings_title": "Food by compartment",
+            "food_compartment_settings_help": "Linked foods apply to new feeding events only. Changing food here does not update past events.",
+            "food_compartment_default": "Food",
+            "food_compartment_numbered": "Compartment {{number}}",
+            "food_compartment_unlinked": "Not linked",
+            "food_compartment_no_foods": "Add foods in settings first.",
+            "food_compartment_save_error": "Could not save food assignment.",
             "last_refreshed": "Last updated",
             "battery": {
                 "tooltip": "Battery: {{percent}}%"
