@@ -44,7 +44,8 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
     error,
   } = useDeviceEvents(deviceId, startTime, endTime, true);
 
-  const showSkeleton = isLoading && !events?.data?.length;
+  const eventItems = events?.data ?? [];
+  const showSkeleton = isLoading && eventItems.length === 0;
   const showOverlay = isFetching;
 
   return (

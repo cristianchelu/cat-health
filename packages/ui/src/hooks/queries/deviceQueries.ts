@@ -31,6 +31,7 @@ import type {
   PatchDeviceRequestDTO,
   PutDeviceCameraRequestDTO,
   PatchDeviceCameraRequestDTO,
+  GetEventsResponseDTO,
 } from 'shared';
 
 export function useDevices() {
@@ -65,7 +66,7 @@ export function useDeviceEvents(
   endTime: string,
   enabled: boolean,
 ) {
-  return useQuery({
+  return useQuery<GetEventsResponseDTO>({
     queryKey: ['deviceEvents', deviceId, startTime, endTime],
     queryFn: () => {
       return getDeviceEvents(deviceId, startTime, endTime);
