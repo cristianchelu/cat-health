@@ -21,20 +21,18 @@ const Devices: React.FC = () => {
 
   return (
     <div className="page-devices">
-      <div className="devices-grid">
-        {devices?.map((device) => (
-          <DeviceCard key={device.id} device={device} />
-        ))}
+      {devices?.map((device) => (
+        <DeviceCard key={device.id} device={device} />
+      ))}
 
-        {devices?.length === 0 && (
-          <div className="empty-state">
-            <p>{t('devices.no_devices_found')}</p>
-            <Button onClick={() => navigate('/settings/devices/new')}>
-              {t('settings.add_device')}
-            </Button>
-          </div>
-        )}
-      </div>
+      {devices?.length === 0 && (
+        <div className="empty-state">
+          <p>{t('devices.no_devices_found')}</p>
+          <Button onClick={() => navigate('/settings/devices/new')}>
+            {t('settings.add_device')}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
