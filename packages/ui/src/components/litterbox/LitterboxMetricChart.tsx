@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { addDays, format, isSameDay, startOfDay, startOfWeek, type Locale } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import './LitterboxMetricChart.css';
 
@@ -16,16 +18,51 @@ export interface LitterboxMetricChartSeries {
   points: LitterboxMetricChartPoint[];
 }
 
+export interface LitterboxMetricChartTimeRange {
+  startTime: string;
+  endTime: string;
+}
+
 interface LitterboxMetricChartProps extends React.ComponentProps<'div'> {
   title: string;
   unit: string;
   series: LitterboxMetricChartSeries[];
   emptyLabel: string;
+  timeRange?: LitterboxMetricChartTimeRange;
+  locale?: Locale;
 }
 
-function getX(timestamp: string, minTime: number, maxTime: number): number {
+function getX(time: number | string, minTime: number, maxTime: number): number {
+  const timestamp = typeof time === 'number' ? time : new Date(time).getTime();
   if (maxTime === minTime) return 50;
-  return ((new Date(timestamp).getTime() - minTime) / (maxTime - minTime)) * 100;
+  return ((timestamp - minTime) / (maxTime - minTime)) * 100;
+}
+
+function getDayBoundaryTimes(startTime: string, endTime: string): number[] {
+  const rangeStart = new Date(startTime).getTime();
+  const rangeEnd = new Date(endTime).getTime();
+  const boundaries: number[] = [];
+
+  let dayStart = addDays(startOfDay(new Date(startTime)), 1);
+  const lastDayStart = startOfDay(new Date(endTime));
+
+  while (dayStart.getTime() <= lastDayStart.getTime()) {
+    const time = dayStart.getTime();
+    if (time > rangeStart && time < rangeEnd) {
+      boundaries.push(time);
+    }
+    dayStart = addDays(dayStart, 1);
+  }
+
+  return boundaries;
+}
+
+function isWeekStartBoundary(dayStart: Date, locale: Locale): boolean {
+  return isSameDay(dayStart, startOfWeek(dayStart, { locale }));
+}
+
+function formatWeekBoundaryLabel(date: Date, locale: Locale): string {
+  return format(date, 'MMM d', { locale });
 }
 
 function getY(value: number, maxValue: number): number {
@@ -50,25 +87,54 @@ const LitterboxMetricChart: React.FC<LitterboxMetricChartProps> = ({
   unit,
   series,
   emptyLabel,
+  timeRange,
+  locale = enUS,
   ...props
 }) => {
   const allPoints = series.flatMap((item) => item.points);
   const values = allPoints.map((point) => point.value);
   const maxValue = Math.max(...values, 1);
   const times = allPoints.map((point) => new Date(point.timestamp).getTime());
-  const minTime = Math.min(...times);
-  const maxTime = Math.max(...times);
+  const dataMinTime = times.length > 0 ? Math.min(...times) : 0;
+  const dataMaxTime = times.length > 0 ? Math.max(...times) : 0;
+  const minTime = timeRange
+    ? new Date(timeRange.startTime).getTime()
+    : dataMinTime;
+  const maxTime = timeRange
+    ? new Date(timeRange.endTime).getTime()
+    : dataMaxTime;
   const hasData = allPoints.length > 0;
+  const dayBoundaries =
+    timeRange !== undefined
+      ? getDayBoundaryTimes(timeRange.startTime, timeRange.endTime)
+      : [];
   const tickValues = hasData
     ? [maxValue, maxValue * 0.75, maxValue * 0.5, maxValue * 0.25].filter(
         (value) => value > 0,
       )
     : [];
+  const weekBoundaryLabels = dayBoundaries.flatMap((boundaryTime) => {
+    const dayStart = new Date(boundaryTime);
+    if (!isWeekStartBoundary(dayStart, locale)) return [];
+
+    const x = getX(boundaryTime, minTime, maxTime);
+    if (x <= 0 || x >= 100) return [];
+
+    return [
+      {
+        time: boundaryTime,
+        x,
+        label: formatWeekBoundaryLabel(dayStart, locale),
+      },
+    ];
+  });
 
   return (
     <div className={cn('litterbox-metric-chart', className)} {...props}>
       {!hasData ? (
-        <div className="litterbox-metric-chart-empty">{emptyLabel}</div>
+        <div className="litterbox-metric-chart-plot litterbox-metric-chart-plot--empty">
+          <p className="litterbox-metric-chart-empty-label">{emptyLabel}</p>
+        </div>
       ) : (
         <div className="litterbox-metric-chart-plot">
           <div className="litterbox-metric-chart-ticks" aria-hidden>
@@ -81,12 +147,39 @@ const LitterboxMetricChart: React.FC<LitterboxMetricChartProps> = ({
               </span>
             ))}
           </div>
+          <div className="litterbox-metric-chart-week-labels" aria-hidden>
+            {weekBoundaryLabels.map(({ time, x, label }) => (
+              <span key={time} style={{ left: `${x}%` }}>
+                {label}
+              </span>
+            ))}
+          </div>
           <svg
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
             role="img"
             aria-label={title}
           >
+            {dayBoundaries.map((boundaryTime) => {
+              const x = getX(boundaryTime, minTime, maxTime);
+              if (x <= 0 || x >= 100) return null;
+
+              const dayStart = new Date(boundaryTime);
+              const isWeekStart = isWeekStartBoundary(dayStart, locale);
+
+              return (
+                <line
+                  key={boundaryTime}
+                  className={cn('litterbox-metric-chart-gridline', {
+                    'litterbox-metric-chart-gridline--day': !isWeekStart,
+                  })}
+                  x1={x}
+                  x2={x}
+                  y1={0}
+                  y2={100}
+                />
+              );
+            })}
             {tickValues.map((value) => (
               <line
                 key={value}

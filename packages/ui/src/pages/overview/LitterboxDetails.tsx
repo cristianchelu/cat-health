@@ -143,6 +143,7 @@ const LitterboxDetails: React.FC = () => {
     t('overview.defecation'),
     DEFECATION_COLOR,
   );
+  const chartTimeRange = { startTime, endTime };
 
   return (
     <div className="page-litterbox-details">
@@ -190,6 +191,8 @@ const LitterboxDetails: React.FC = () => {
                 title={t('litterbox_details.urination_frequency')}
                 unit={t('litterbox_details.hours_between')}
                 emptyLabel={t('litterbox_details.no_chart_data')}
+                timeRange={chartTimeRange}
+                locale={dateLocale}
                 series={[urinationIntervalSeries]}
               />
             </CardContent>
@@ -203,6 +206,8 @@ const LitterboxDetails: React.FC = () => {
                 title={t('litterbox_details.defecation_frequency')}
                 unit={t('litterbox_details.hours_between')}
                 emptyLabel={t('litterbox_details.no_chart_data')}
+                timeRange={chartTimeRange}
+                locale={dateLocale}
                 series={[defecationIntervalSeries]}
               />
             </CardContent>
@@ -216,6 +221,8 @@ const LitterboxDetails: React.FC = () => {
                 title={t('litterbox_details.urination_duration_chart')}
                 unit={t('litterbox_details.seconds')}
                 emptyLabel={t('litterbox_details.no_chart_data')}
+                timeRange={chartTimeRange}
+                locale={dateLocale}
                 series={
                   analytics
                     ? [
@@ -240,6 +247,8 @@ const LitterboxDetails: React.FC = () => {
                 title={t('litterbox_details.defecation_duration_chart')}
                 unit={t('litterbox_details.seconds')}
                 emptyLabel={t('litterbox_details.no_chart_data')}
+                timeRange={chartTimeRange}
+                locale={dateLocale}
                 series={
                   analytics
                     ? [

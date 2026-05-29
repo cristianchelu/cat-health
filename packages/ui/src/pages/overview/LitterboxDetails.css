@@ -1,4 +1,7 @@
 .page-litterbox-details {
+  --litterbox-details-dot-grid-min-stack-dots: 8;
+  --litterbox-details-metric-chart-height: 18rem;
+
   width: 100%;
   min-width: 0;
   max-width: var(--max-width-xl);
@@ -55,6 +58,34 @@
     padding: 0;
   }
 
+  .litterbox-details-chart-section:not(.litterbox-details-chart-section--wide) {
+    .litterbox-details-chart-card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-content {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .litterbox-metric-chart {
+      --litterbox-metric-chart-plot-height: var(--litterbox-details-metric-chart-height);
+      height: var(--litterbox-metric-chart-plot-height);
+      min-height: var(--litterbox-metric-chart-plot-height);
+    }
+
+    .litterbox-metric-chart-plot {
+      height: 100%;
+      min-height: 100%;
+    }
+
+    .litterbox-metric-chart svg {
+      min-height: 0;
+    }
+  }
+
   .litterbox-details-dot-timeline {
     width: 100%;
     max-width: 100%;
@@ -72,11 +103,19 @@
       justify-content: flex-start;
       --litterbox-dot-grid-dot-size: 1rem;
       --litterbox-dot-grid-gap: var(--space-sm);
+      min-height: calc(
+        var(--litterbox-details-dot-grid-min-stack-dots)
+          * var(--litterbox-dot-grid-dot-size)
+        + (var(--litterbox-details-dot-grid-min-stack-dots) - 1)
+          * var(--litterbox-dot-grid-gap)
+        + var(--litterbox-dot-grid-gap)
+        + 1.125rem
+      );
     }
 
     .litterbox-dot-grid-column {
       flex: 0 0 auto;
-      height: auto;
+      height: 100%;
       min-width: 1.25rem;
     }
   }

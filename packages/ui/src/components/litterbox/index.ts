@@ -12,4 +12,5 @@ export type { LitterboxTrendGridProps } from './LitterboxTrendGrid';
 export type {
   LitterboxMetricChartPoint,
   LitterboxMetricChartSeries,
+  LitterboxMetricChartTimeRange,
 } from './LitterboxMetricChart';
