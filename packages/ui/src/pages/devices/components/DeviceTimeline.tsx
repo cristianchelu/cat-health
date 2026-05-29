@@ -5,7 +5,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { useDeviceEvents } from '@/hooks/queries/deviceQueries';
 import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
-import { EventTimelineItem } from '@/components/events';
+import { EventTimelineItem, TimelineSkeleton } from '@/components/events';
 import './DeviceTimeline.css';
 import EventDetailsModal from '@/components/events/EventDetailsModal';
 import type { GetEventDTO } from 'shared';
@@ -44,6 +44,9 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
     error,
   } = useDeviceEvents(deviceId, startTime, endTime, true);
 
+  const showSkeleton = isLoading && !events?.data?.length;
+  const showOverlay = isFetching;
+
   return (
     <div className="device-timeline">
       <SectionHeader
@@ -64,10 +67,8 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
         )}
 
         {!error && (
-          <Timeline isLoading={isFetching && !isLoading}>
-            {isLoading && (
-              <li className="device-timeline-loading">{t('devices.loading_events')}</li>
-            )}
+          <Timeline isLoading={showOverlay}>
+            {showSkeleton && <TimelineSkeleton />}
             {!isLoading && (!events || events.data.length === 0) && (
               <li className="device-timeline-empty">
                 <p>{t('devices.no_events_for_device')}</p>

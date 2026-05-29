@@ -37,8 +37,7 @@
     }
   }
 
-  .overview-empty-activity,
-  .overview-loading-activity {
+  .overview-empty-activity {
     padding: var(--space-md);
     text-align: center;
     color: var(--color-text-muted);

@@ -1,4 +1,5 @@
 export { default as EventTimelineItem } from './EventTimelineItem';
+export { default as TimelineSkeleton } from './TimelineSkeleton';
 export { default as LitterboxEvent } from './LitterboxEvent';
 export { default as WeightEvent } from './WeightEvent';
 export { default as WaterEvent } from './WaterEvent';

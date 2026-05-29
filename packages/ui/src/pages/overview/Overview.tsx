@@ -8,7 +8,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { Button } from '@/components/ui/Button';
 import Timeline from '@/components/ui/Timeline';
-import { EventTimelineItem } from '@/components/events';
+import { EventTimelineItem, TimelineSkeleton } from '@/components/events';
 import EventDetailsModal from '@/components/events/EventDetailsModal';
 import LogFoodModal from '@/components/events/LogFoodModal';
 
@@ -53,6 +53,9 @@ const Overview: React.FC = () => {
   } = usePetEvents(petId, dateRange, !!selectedPet);
 
   const isActivityLoading = isPetsLoading || isLoading || isFetching;
+  const showActivitySkeleton =
+    (isPetsLoading || isLoading) && !eventsData?.data?.length;
+  const showActivityOverlay = isActivityLoading;
 
   const dateNavigation = (
     <DateNavigation
@@ -102,11 +105,9 @@ const Overview: React.FC = () => {
           {t('overview.activity')}
         </SectionHeader>
         <div className="overview-timeline-container">
-          <Timeline isLoading={isActivityLoading}>
-            {isActivityLoading && (
-              <li className="overview-loading-activity">Loading...</li>
-            )}
-            {!isActivityLoading && eventsData?.data.length === 0 && (
+          <Timeline isLoading={showActivityOverlay}>
+            {showActivitySkeleton && <TimelineSkeleton />}
+            {!showActivityOverlay && eventsData?.data.length === 0 && (
               <li className="overview-empty-activity">
                 {t('overview.no_activity')}
               </li>

@@ -6,7 +6,6 @@
     min-height: 200px;
   }
 
-  .device-timeline-loading,
   .device-timeline-error {
     display: flex;
     flex-direction: column;
