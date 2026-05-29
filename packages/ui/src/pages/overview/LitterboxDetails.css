@@ -61,18 +61,23 @@
     min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: var(--space-sm) var(--space-xs);
+    padding: var(--space-sm) var(--space-md) var(--space-md);
     overscroll-behavior-inline: contain;
     -webkit-overflow-scrolling: touch;
 
     .litterbox-dot-grid {
-      min-width: 42rem;
+      width: max-content;
+      min-width: 100%;
       height: auto;
+      justify-content: flex-start;
       --litterbox-dot-grid-dot-size: 1rem;
+      --litterbox-dot-grid-gap: var(--space-sm);
     }
 
     .litterbox-dot-grid-column {
+      flex: 0 0 auto;
       height: auto;
+      min-width: 1.25rem;
     }
   }
 

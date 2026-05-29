@@ -6,6 +6,7 @@ import type { LitterboxTrendsResponseDTO } from 'shared';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetLitterboxTrends } from '@/hooks/queries/petQueries';
 import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
+import { resolveDateFnsLocale } from '@/lib/formatRelativeTime';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Button } from '@/components/ui/Button';
@@ -83,7 +84,8 @@ function hoursBetweenEventsToSeries(
 }
 
 const LitterboxDetails: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dateLocale = resolveDateFnsLocale(i18n.language);
   const navigate = useNavigate();
   const { selectedPet } = usePetContext();
   const {
@@ -170,7 +172,11 @@ const LitterboxDetails: React.FC = () => {
                 </p>
               ) : (
                 <div className="litterbox-details-dot-timeline">
-                  <LitterboxTrendGrid days={data?.days ?? []} />
+                  <LitterboxTrendGrid
+                    days={data?.days ?? []}
+                    showColumnLabels
+                    locale={dateLocale}
+                  />
                 </div>
               )}
             </CardContent>

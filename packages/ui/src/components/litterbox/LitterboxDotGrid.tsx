@@ -5,6 +5,8 @@ import './LitterboxDotGrid.css';
 
 export type LitterboxDotType = Exclude<LitterboxUseEliminationType, 'both'>;
 
+export type LitterboxDotGridColumnFooterVariant = 'dow' | 'date' | 'month';
+
 export interface LitterboxDotGridDot {
   type: LitterboxDotType;
   straining?: boolean;
@@ -16,6 +18,10 @@ export interface LitterboxDotGridColumn {
   label?: string;
   dots: LitterboxDotGridDot[];
   overflowCount?: number;
+  footer?: {
+    text: string;
+    variant: LitterboxDotGridColumnFooterVariant;
+  };
 }
 
 interface LitterboxDotGridProps extends React.ComponentProps<'div'> {
@@ -101,6 +107,17 @@ const LitterboxDotGrid = React.forwardRef<HTMLDivElement, LitterboxDotGridProps>
                   );
                 })}
               </span>
+              {column.footer && (
+                <span
+                  className={cn(
+                    'litterbox-dot-grid-footer',
+                    column.footer.variant,
+                  )}
+                  aria-hidden
+                >
+                  {column.footer.text}
+                </span>
+              )}
             </ColumnElement>
           );
         })}
