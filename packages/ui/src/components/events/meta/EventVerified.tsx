@@ -1,15 +1,19 @@
 import * as React from 'react';
-import { CheckCircle } from 'lucide-react';
-import Timeline from '@/components/ui/Timeline';
+import { BadgeCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const EventVerified: React.FC = () => {
   const { t } = useTranslation();
+  const label = t('overview.verified');
+
   return (
-    <Timeline.MetaItem>
-      <CheckCircle />
-      {t('overview.verified')}
-    </Timeline.MetaItem>
+    <span
+      className="timeline-title-badge timeline-title-badge-verified"
+      title={label}
+      aria-label={label}
+    >
+      <BadgeCheck aria-hidden />
+    </span>
   );
 };
 

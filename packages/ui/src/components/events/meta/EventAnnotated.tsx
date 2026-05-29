@@ -1,15 +1,19 @@
 import * as React from 'react';
 import { ListChecks } from 'lucide-react';
-import Timeline from '@/components/ui/Timeline';
 import { useTranslation } from 'react-i18next';
 
 const EventAnnotated: React.FC = () => {
   const { t } = useTranslation();
+  const label = t('overview.annotated');
+
   return (
-    <Timeline.MetaItem>
-      <ListChecks />
-      {t('overview.annotated')}
-    </Timeline.MetaItem>
+    <span
+      className="timeline-title-badge timeline-title-badge-annotated"
+      title={label}
+      aria-label={label}
+    >
+      <ListChecks aria-hidden />
+    </span>
   );
 };
 

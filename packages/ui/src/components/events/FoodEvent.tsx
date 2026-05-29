@@ -35,14 +35,16 @@ const FoodEvent: React.FC<EventComponentProps> = ({
             {format(new Date(event.timestamp), 'HH:mm')}
           </Timeline.Timestamp>
           <Timeline.Value variant="success">{data.amount}g</Timeline.Value>
-          <Timeline.Title>{t('overview.food_intake')}</Timeline.Title>
+          <Timeline.TitleGroup>
+            {event.human_verified && <EventVerified />}
+            <Timeline.Title>{t('overview.food_intake')}</Timeline.Title>
+          </Timeline.TitleGroup>
         </Timeline.Header>
         <Timeline.Meta>
           {data.duration && <EventDuration duration={data.duration} />}
           {foodId != null && <EventFood foodId={foodId} />}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
           {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
-          {event.human_verified && <EventVerified />}
           {children}
         </Timeline.Meta>
       </Timeline.Content>

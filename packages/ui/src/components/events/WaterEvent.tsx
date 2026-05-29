@@ -40,7 +40,10 @@ const WaterEvent: React.FC<EventComponentProps> = ({
             {format(new Date(event.timestamp), 'HH:mm')}
           </Timeline.Timestamp>
           <Timeline.Value variant="primary">{data.amount}ml</Timeline.Value>
-          <Timeline.Title>{t('overview.water_intake')}</Timeline.Title>
+          <Timeline.TitleGroup>
+            {event.human_verified && <EventVerified />}
+            <Timeline.Title>{t('overview.water_intake')}</Timeline.Title>
+          </Timeline.TitleGroup>
         </Timeline.Header>
         <Timeline.Meta>
           {data.duration !== null && <EventDuration duration={data.duration} />}
@@ -52,7 +55,6 @@ const WaterEvent: React.FC<EventComponentProps> = ({
           )}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
           {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
-          {event.human_verified && <EventVerified />}
           {children}
         </Timeline.Meta>
       </Timeline.Content>

@@ -26,15 +26,17 @@ const GenericEvent: React.FC<EventComponentProps> = ({
           <Timeline.Timestamp>
             {format(new Date(event.timestamp), 'HH:mm')}
           </Timeline.Timestamp>
-          <Timeline.Title>
-            {hasType ? data.type : 'Unknown Event'}
-          </Timeline.Title>
+          <Timeline.TitleGroup>
+            {event.human_verified && <EventVerified />}
+            <Timeline.Title>
+              {hasType ? data.type : 'Unknown Event'}
+            </Timeline.Title>
+          </Timeline.TitleGroup>
         </Timeline.Header>
         <Timeline.Meta>
           {data?.duration && <EventDuration duration={data.duration} />}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
           {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
-          {event.human_verified && <EventVerified />}
           {children}
         </Timeline.Meta>
       </Timeline.Content>

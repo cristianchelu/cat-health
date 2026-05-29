@@ -90,6 +90,19 @@ const TimelineHeader = React.forwardRef<
   );
 });
 
+const TimelineTitleGroup = React.forwardRef<
+  HTMLSpanElement,
+  React.ComponentProps<'span'>
+>(({ className, ...props }, ref) => {
+  return (
+    <span
+      className={cn('timeline-title-group', className)}
+      ref={ref}
+      {...props}
+    />
+  );
+});
+
 const TimelineTitle = React.forwardRef<
   HTMLSpanElement,
   React.ComponentProps<'span'>
@@ -190,6 +203,7 @@ TimelineItem.displayName = 'Timeline.Item';
 TimelineIcon.displayName = 'Timeline.Icon';
 TimelineContent.displayName = 'Timeline.Content';
 TimelineHeader.displayName = 'Timeline.Header';
+TimelineTitleGroup.displayName = 'Timeline.TitleGroup';
 TimelineTitle.displayName = 'Timeline.Title';
 TimelineTimestamp.displayName = 'Timeline.Timestamp';
 TimelineValue.displayName = 'Timeline.Value';
@@ -204,6 +218,7 @@ const Timeline = Object.assign(TimelineRoot, {
   Icon: TimelineIcon,
   Content: TimelineContent,
   Header: TimelineHeader,
+  TitleGroup: TimelineTitleGroup,
   Title: TimelineTitle,
   Timestamp: TimelineTimestamp,
   Value: TimelineValue,
@@ -224,6 +239,7 @@ export {
   TimelineDescription,
   TimelineFooter,
   TimelineHeader,
+  TimelineTitleGroup,
   TimelineIcon,
   TimelineItem,
   TimelineMeta,

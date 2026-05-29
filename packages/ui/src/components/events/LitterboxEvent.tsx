@@ -110,7 +110,15 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
               )}
             </span>
           )}
-          <Timeline.Title>{title}</Timeline.Title>
+          <Timeline.TitleGroup>
+            {event.human_verified &&
+              (hasPersistedLitterboxAnnotation(data) ? (
+                <EventAnnotated />
+              ) : (
+                <EventVerified />
+              ))}
+            <Timeline.Title>{title}</Timeline.Title>
+          </Timeline.TitleGroup>
         </Timeline.Header>
         <Timeline.Meta>
           {data.duration && <EventDuration duration={data.duration} />}
@@ -119,12 +127,6 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
           )}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
           {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
-          {event.human_verified &&
-            (hasPersistedLitterboxAnnotation(data) ? (
-              <EventAnnotated />
-            ) : (
-              <EventVerified />
-            ))}
           {children}
         </Timeline.Meta>
       </Timeline.Content>
