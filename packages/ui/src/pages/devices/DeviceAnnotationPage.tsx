@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import AnnotationTab from './components/AnnotationTab';
 import { useDevice } from '@/hooks/queries/deviceQueries';
 import { isVisitAnnotationEnabled } from '@/lib/deviceAnnotation';
+import { cn } from '@/lib/utils';
 import './DeviceAnnotationPage.css';
 
 const DeviceAnnotationPage: React.FC = () => {
@@ -33,7 +34,14 @@ const DeviceAnnotationPage: React.FC = () => {
   }
 
   return (
-    <div className="device-annotate-page">
+    <div
+      className={cn(
+        'device-annotate-page',
+        'page-viewport-fill',
+        'page-shell-wide',
+        'page-shell-bleed',
+      )}
+    >
       <AnnotationTab deviceId={device.id} />
     </div>
   );

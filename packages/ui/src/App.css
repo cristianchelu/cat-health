@@ -11,7 +11,9 @@
 
   main {
     grid-area: main;
-    padding: var(--space-sm) var(--space-xl);
+    --page-shell-padding-block: var(--space-sm);
+    --page-shell-padding-inline: var(--space-xl);
+    padding: var(--page-shell-padding-block) var(--page-shell-padding-inline);
     overflow: auto;
     min-width: 0;
 
@@ -21,6 +23,10 @@
       width: 100%;
       min-width: 0;
     }
+
+    &:has(#content > .page-shell-wide) #content {
+      max-width: none;
+    }
   }
 
   /* Mobile responsiveness */
@@ -28,21 +34,40 @@
     display: flex;
     flex-direction: column;
 
+    /*
+     * Scroll on main; #content is block-sized to its page (no flex column — that capped
+     * flex children and clipped overflow while padding-bottom only added empty scroll range).
+     */
     main {
-      padding: var(--space-md);
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Lets full-height routes (e.g. device annotate) fill the pane below the header stack. */
-    main #content {
+      --page-shell-padding-block: var(--space-md);
+      --page-shell-padding-inline: var(--space-md);
+      padding: var(--page-shell-padding-block) var(--page-shell-padding-inline);
       flex: 1 1 0;
       min-height: 0;
-      display: flex;
-      flex-direction: column;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    main #content {
+      display: block;
       width: 100%;
     }
+
+    /* Routes that opt in with .page-viewport-fill on the #content child (see page-shell.css). */
+    main:has(#content > .page-viewport-fill) {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    main:has(#content > .page-viewport-fill) #content {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
   }
 }

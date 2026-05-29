@@ -60,6 +60,7 @@
 @media (max-width: 768px) {
   .page-devices {
     padding: 0;
+    height: auto;
 
     .devices-header {
       flex-direction: column;

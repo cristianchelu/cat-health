@@ -1,0 +1,22 @@
+/*
+ * Opt-in shell layout classes for the direct child of #content.
+ *
+ * Compose as needed:
+ * - .page-viewport-fill — fill height below the mobile header stack (see App.css).
+ * - .page-shell-wide — drop #content max-width so the page can use the full main column.
+ * - .page-shell-bleed — extend into main padding (uses --page-shell-padding-* on main).
+ */
+.page-viewport-fill {
+  @media (max-width: 767px) {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+}
+
+.page-shell-bleed {
+  box-sizing: border-box;
+  margin-block: calc(-1 * var(--page-shell-padding-block));
+  margin-inline: calc(-1 * var(--page-shell-padding-inline));
+  width: calc(100% + 2 * var(--page-shell-padding-inline));
+  max-width: none;
+}

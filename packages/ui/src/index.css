@@ -1,4 +1,5 @@
 @import './theme.css';
+@import './styles/page-shell.css';
 
 /* Base styles */
 html {
