@@ -1,6 +1,7 @@
 import type {
   GetEventsResponseDTO,
   GetEventDTO,
+  GetEventWithChildrenDTO,
   PostEventRequestDTO,
   DeleteEventResponseDTO,
   PatchEventRequestDTO,
@@ -76,7 +77,7 @@ export async function getPetEvents(
 }
 
 export async function getEventById(eventId: number) {
-  const { data } = await apiClient.get<GetEventDTO>(`/events/${eventId}`);
+  const { data } = await apiClient.get<GetEventWithChildrenDTO>(`/events/${eventId}`);
   return data;
 }
 

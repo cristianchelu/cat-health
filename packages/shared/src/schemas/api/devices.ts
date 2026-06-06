@@ -234,3 +234,23 @@ export const PostDeviceTestIdentifyResponseSchema = Type.Object({
   raw_response: Type.String(),
 });
 export type PostDeviceTestIdentifyResponseDTO = Static<typeof PostDeviceTestIdentifyResponseSchema>;
+
+// --- Litterbox visit re-identification ---
+
+export const ReidentifyLitterboxVisitsQuerySchema = Type.Object({
+  after: Type.Optional(Type.String({ format: 'date-time' })),
+});
+export type ReidentifyLitterboxVisitsQueryDTO = Static<
+  typeof ReidentifyLitterboxVisitsQuerySchema
+>;
+
+export const ReidentifyLitterboxVisitsResponseSchema = Type.Object({
+  processed: Type.Number(),
+  updated_pet: Type.Number(),
+  updated_weight: Type.Number(),
+  updated_analysis: Type.Number(),
+  skipped: Type.Number(),
+});
+export type ReidentifyLitterboxVisitsResponseDTO = Static<
+  typeof ReidentifyLitterboxVisitsResponseSchema
+>;

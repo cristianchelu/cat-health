@@ -1,11 +1,14 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { CheckCheck, AlertCircle, Trash2, Loader2, RotateCcw, Ban, Wrench, Video, Sparkles } from 'lucide-react';
+import { getEventById } from '@/api/pets';
 import { useAnalyzeLitterboxEvent, useEventMedia, usePatchEvent } from '@/hooks/queries/eventQueries';
 import { usePets } from '@/hooks/queries/petQueries';
 import { Select } from '@/components/ui/form/Select';
 import { Button } from '@/components/ui/Button';
 import WeightSignalChart from '@/components/events/WeightSignalChart';
+import LitterboxWeightBlock from '@/components/events/LitterboxWeightBlock';
 import { decodeLitterboxRawData } from '@/components/events/decodeLitterboxRawData';
 import { deriveDetectorBouts } from '@/lib/litterboxDetectorBouts';
 import type {
@@ -87,6 +90,11 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   const { mutateAsync: runAnalyzeAsync, isPending: isAnalyzing } = useAnalyzeLitterboxEvent();
   const { data: pets } = usePets();
   const { data: media, isLoading: isLoadingMedia } = useEventMedia(event.id);
+  const { data: eventDetail } = useQuery({
+    queryKey: ['event', event.id],
+    queryFn: () => getEventById(event.id),
+  });
+  const eventWithChildren = eventDetail ?? { ...event, children: [] };
 
   const data = event.data as {
     elimination_type?: LitterboxUseEliminationType;
@@ -752,6 +760,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
               </Button>
             </div>
           </div>
+          <LitterboxWeightBlock parentEvent={eventWithChildren} />
         </div>
 
         <div className="annotation-bouts-section">

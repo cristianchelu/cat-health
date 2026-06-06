@@ -133,6 +133,10 @@ export default ComponentName;
 - Always forward refs for reusable components
 - Export both component and prop types
 
+#### UI copy
+
+**UI copy — keep it quiet.** Default surfaces show label, value, and actions only. Do not add helper text, footnotes, or "why this matters" paragraphs unless the user explicitly asks or the interaction is genuinely non-obvious. Explanations belong in edit/confirm flows or docs — not stacked under every read-only field.
+
 ### API Patterns
 
 - Use TypeBox for request/response validation
@@ -186,6 +190,19 @@ export default const entityRoutes;
 - Define table types in `src/database/types/`
 - Handle migrations in `src/database/migrations/`
 - Use TypeBox for API schema validation
+
+#### Query performance (potato hardware)
+
+**Assume potato hardware.** This app runs on Raspberry Pis and other low-end hosts — not just dev laptops. Micro-lags compound: sequential awaits, N+1 queries, and extra HTTP hops that feel "free" locally add up fast under real load.
+
+**Default patterns:**
+
+- **Independent reads** → `Promise.all` (e.g. parent row + child rows when both keys are known upfront). Never await sequentially out of habit.
+- **Related rows for many parents** → one batched query (`WHERE parent_id IN (...)`), then group in JS. Never loop-query per row.
+- **API shape** → embed small related payloads (e.g. `children[]` on single-resource GET) instead of a second round-trip when the row count is tiny (0–2).
+- **Lists** → paginate flat; if nested relations are needed, batch-fetch for the page — not N+1 per item.
+
+SQLite is in-process, so JOIN vs two parallel queries is usually a wash for single-row lookups; prefer whichever keeps handler code simple. The win is avoiding *sequential* chains and *N+1* loops, not JOIN theology.
 
 #### Device providers and integration boundary
 

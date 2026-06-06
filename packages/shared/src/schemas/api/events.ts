@@ -67,7 +67,7 @@ export interface LitterboxEliminationBadgeSegment {
   end_s: number;
 }
 
-export const GetEventSchema = Type.Object({
+const GetEventFieldsSchema = Type.Object({
   id: Type.Number(),
   parent_event_id: Type.Union([Type.Number(), Type.Null()]),
   pet_id: Type.Union([Type.Number(), Type.Null()]),
@@ -77,12 +77,31 @@ export const GetEventSchema = Type.Object({
   raw_data: Type.Union([Type.Null(), Type.Array(Type.Number())]),
   human_verified: Type.Boolean(),
 });
+
+export const GetEventSchema = GetEventFieldsSchema;
 export type GetEventDTO = Static<typeof GetEventSchema>;
+
+/** Child row on GET /events/:id — same shape as parent, no nested children. */
+export const GetEventChildSchema = GetEventFieldsSchema;
+export type GetEventChildDTO = Static<typeof GetEventChildSchema>;
+
+export const GetEventWithChildrenSchema = Type.Intersect([
+  GetEventSchema,
+  Type.Object({
+    children: Type.Array(GetEventChildSchema),
+  }),
+]);
+export type GetEventWithChildrenDTO = Static<typeof GetEventWithChildrenSchema>;
 
 export const GetEventsSchema = Type.Array(GetEventSchema);
 export type GetEventsDTO = Static<typeof GetEventsSchema>;
 
-export const PostEventRequestSchema = Type.Omit(GetEventSchema, ["id", "timestamp", "raw_data"]);
+export const PostEventRequestSchema = Type.Intersect([
+  Type.Omit(GetEventSchema, ["id", "timestamp", "raw_data"]),
+  Type.Object({
+    timestamp: Type.Optional(Type.Any()),
+  }),
+]);
 export type PostEventRequestDTO = Static<typeof PostEventRequestSchema>;
 
 export const PatchEventParamsSchema = Type.Object({ eventId: Type.Number() });

@@ -6,11 +6,34 @@ import type { Kysely } from 'kysely';
 
 import { decodeLitterboxRawData } from 'shared';
 import { persistedLitterboxSegments } from './persistedLitterboxSegments.ts';
-import { StateAnalyzer, determineEliminationType } from './StateAnalyzer.ts';
+import {
+  StateAnalyzer,
+  determineEliminationType,
+  type StateResult,
+} from './StateAnalyzer.ts';
 
 const NO_ELIMINATION_THRESHOLD = 10;
 
-async function getLatestPetWeightsGrams(
+/** Merge `StateAnalyzer` output into persisted litterbox visit `data` (segments, type, straining). */
+export function mergeAnalyzerIntoLitterboxData(
+  existing: LitterboxUseEventData,
+  analysis: StateResult,
+): LitterboxUseEventData {
+  const eliminationType = determineEliminationType(analysis.periods);
+  const ew = existing.elimination_weight;
+  const straining =
+    eliminationType !== 'no_elimination' && ew < NO_ELIMINATION_THRESHOLD;
+  const segments = persistedLitterboxSegments(analysis.periods);
+
+  return {
+    ...existing,
+    elimination_type: eliminationType,
+    straining,
+    segments,
+  };
+}
+
+export async function getLatestPetWeightsGrams(
   db: Kysely<Database>,
   beforeTimestamp: Date,
 ): Promise<Map<number, number>> {
@@ -95,19 +118,8 @@ export async function computeLitterboxAnalysisData(
   const analyzer = new StateAnalyzer(knownWeights);
   const analysis = analyzer.processEvent(weights);
 
-  const eliminationType = determineEliminationType(analysis.periods);
-  const ew = params.existing.elimination_weight;
-  const straining =
-    eliminationType !== 'no_elimination' && ew < NO_ELIMINATION_THRESHOLD;
-
-  const segments = persistedLitterboxSegments(analysis.periods);
-
-  const data: LitterboxUseEventData = {
-    ...params.existing,
-    elimination_type: eliminationType,
-    straining,
-    segments,
+  return {
+    ok: true,
+    data: mergeAnalyzerIntoLitterboxData(params.existing, analysis),
   };
-
-  return { ok: true, data };
 }

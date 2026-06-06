@@ -20,8 +20,11 @@ import {
   PatchDeviceCameraRequestSchema,
   PostDeviceTestIdentifyRequestSchema,
   PostDeviceTestIdentifyResponseSchema,
+  ReidentifyLitterboxVisitsQuerySchema,
+  ReidentifyLitterboxVisitsResponseSchema,
 } from 'shared';
 import { db } from '../database/index.ts';
+import { reidentifyLitterboxVisits } from '../services/litterbox/reidentifyLitterboxVisits.ts';
 
 const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   const { integrationManager } = fastify;
@@ -429,6 +432,35 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       }
       await enrichReferenceMedia([mapped]);
       return mapped;
+    },
+  );
+
+  fastify.post(
+    '/:id/litterbox-visits/reidentify',
+    {
+      schema: {
+        params: GetDeviceParamsSchema,
+        querystring: ReidentifyLitterboxVisitsQuerySchema,
+        response: {
+          '200': ReidentifyLitterboxVisitsResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params;
+      const { after } = request.query;
+
+      const device = await db
+        .selectFrom('device')
+        .select('id')
+        .where('id', '=', id)
+        .executeTakeFirst();
+      if (!device) {
+        throw new Error('Device not found');
+      }
+
+      const afterDate = after ? new Date(after) : new Date(0);
+      return reidentifyLitterboxVisits(db, id, afterDate);
     },
   );
 

@@ -278,6 +278,8 @@
         "remove_avatar_label": "Remove selected avatar",
         "upload_avatar_label": "Upload avatar",
         "close": "Close",
+        "cancel": "Cancel",
+        "save": "Save",
         "unknown": "Unknown",
         "poop_icon_alt": "Poop icon",
         "water_fountain_icon_alt": "Water fountain icon",
@@ -315,7 +317,14 @@
         "water_spilled_label": "Spilled:",
         "water_spilled_amount": "{{amount}}ml",
         "chart_ending_weight": "end {{value}} g",
-        "analyze": "Analyze"
+        "analyze": "Analyze",
+        "weight": "Weight",
+        "edit_weight": "Edit weight",
+        "reidentify_later_visits": "Re-identify later visits on this device",
+        "weight_out_of_range": "Weight must be between 0.5 and 20 kg.",
+        "weight_save_failed": "Could not save weight.",
+        "delete_visit": "Delete visit",
+        "confirm_delete_visit": "Delete this visit?"
     },
     "device_types": {
         "litterbox": "Litterbox",

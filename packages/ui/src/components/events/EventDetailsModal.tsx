@@ -1,13 +1,15 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getEventById } from '@/api/pets';
+import { reidentifyLitterboxVisits } from '@/api/devices';
 import { usePets } from '@/hooks/queries/petQueries';
 import {
   useAnalyzeLitterboxEvent,
   useEventMedia,
   useUpdateEvent,
   useDeleteEvent,
+  invalidateQueriesAfterEventPatch,
 } from '@/hooks/queries/eventQueries';
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
@@ -23,6 +25,7 @@ import TimelapsePlayer from './TimelapsePlayer';
 import { decodeLitterboxRawData } from './decodeLitterboxRawData';
 import { decodeWaterRawData } from './decodeWaterRawData';
 import { analyzeWaterSegments } from './analyzeWaterSegments';
+import LitterboxWeightBlock from './LitterboxWeightBlock';
 import './EventDetailsModal.css';
 import './TimelapsePlayer.css';
 import {
@@ -131,6 +134,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { data: pets } = usePets();
 
   const eliminationTypeOptions: { value: LitterboxUseEliminationType; label: string }[] = [
@@ -160,6 +164,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     React.useState<LitterboxUseEliminationType>('unknown');
   const [selectedStraining, setSelectedStraining] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'media' | 'analysis'>('media');
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [reidentifyOnDelete, setReidentifyOnDelete] = React.useState(false);
 
   React.useEffect(() => {
     if (event) {
@@ -173,6 +179,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       }
       // Reset to media tab when event changes
       setActiveTab('media');
+      setShowDeleteConfirm(false);
+      setReidentifyOnDelete(false);
     }
   }, [event]);
 
@@ -319,11 +327,31 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     ]
     : [{ value: 'null', label: t('common.unknown') }];
 
-  const handleDelete = () => {
-    if (!event) return;
-    if (!window.confirm(t('event_details.confirm_delete_event'))) return;
-    deleteEventMutation(event.id, {
-      onSuccess: () => {
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm((prev) => !prev);
+    setReidentifyOnDelete(false);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
+    setReidentifyOnDelete(false);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!displayEvent) return;
+    const deviceId = displayEvent.device_id;
+    const after =
+      typeof displayEvent.timestamp === 'string'
+        ? displayEvent.timestamp
+        : new Date(displayEvent.timestamp as string | number | Date).toISOString();
+
+    deleteEventMutation(displayEvent.id, {
+      onSuccess: async () => {
+        if (reidentifyOnDelete && deviceId != null) {
+          await reidentifyLitterboxVisits(deviceId, after);
+          invalidateQueriesAfterEventPatch(queryClient);
+          await queryClient.invalidateQueries({ queryKey: ['litterboxTrends'] });
+        }
         onClose();
       },
     });
@@ -456,7 +484,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 icon
                 className="action-btn"
                 title={t('event_details.delete_event')}
-                onClick={handleDelete}
+                onClick={handleDeleteClick}
                 disabled={isDeleting}
               >
                 {isDeleting ? (
@@ -500,6 +528,49 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               />
             </div>
           </div>
+
+          {displayEvent.data?.type === 'litterbox_use' && (
+            <LitterboxWeightBlock parentEvent={displayEvent} />
+          )}
+
+          {showDeleteConfirm && (
+            <div className="event-delete-confirm">
+              <span>{t('event_details.confirm_delete_visit')}</span>
+              <label className="event-delete-checkbox">
+                <input
+                  type="checkbox"
+                  checked={reidentifyOnDelete}
+                  onChange={(e) => setReidentifyOnDelete(e.target.checked)}
+                  disabled={isDeleting || displayEvent.device_id == null}
+                />
+                <span>{t('event_details.reidentify_later_visits')}</span>
+              </label>
+              <div className="event-delete-actions">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleDeleteCancel}
+                  disabled={isDeleting}
+                >
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => void handleDeleteConfirm()}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <Loader2 size={16} className="animate-spin" aria-hidden />
+                  ) : (
+                    t('event_details.delete_visit')
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {displayEvent.data?.type === 'litterbox_use' && (
             <div className="event-section elimination-type-section">

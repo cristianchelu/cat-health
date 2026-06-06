@@ -15,6 +15,7 @@ import type {
   PatchDeviceCameraRequestDTO,
   PostDeviceTestIdentifyRequestDTO,
   PostDeviceTestIdentifyResponseDTO,
+  ReidentifyLitterboxVisitsResponseDTO,
 } from 'shared';
 import apiClient from './apiClient';
 
@@ -173,6 +174,15 @@ export async function testDeviceIdentification(
   const { data } = await apiClient.post<PostDeviceTestIdentifyResponseDTO>(
     `/devices/${deviceId}/test-identify`,
     input,
+  );
+  return data;
+}
+
+export async function reidentifyLitterboxVisits(deviceId: number, after: string) {
+  const { data } = await apiClient.post<ReidentifyLitterboxVisitsResponseDTO>(
+    `/devices/${deviceId}/litterbox-visits/reidentify`,
+    {},
+    { params: { after } },
   );
   return data;
 }

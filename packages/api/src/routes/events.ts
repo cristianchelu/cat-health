@@ -6,6 +6,7 @@ import {
   DeleteEventParamsSchema,
   DeleteEventResponseSchema,
   GetEventSchema,
+  GetEventWithChildrenSchema,
   GetEventsQuerySchema,
   GetEventsResponseSchema,
   PatchEventParamsSchema,
@@ -37,7 +38,16 @@ import {
 import type { FoodIntakeEventData } from '../database/types/EventTable.ts';
 import { computeLitterboxAnalysisData } from '../services/devices/providers/esphome/analyzeLitterboxUse.ts';
 import type { LitterboxUseEventData } from '../database/types/EventTable.ts';
+import type { EventTable } from '../database/types/EventTable.ts';
 import { buildLitterboxTrendResult } from '../services/litterbox/litterboxAnalytics.ts';
+import type { Selectable } from 'kysely';
+
+function serializeEventRow(event: Selectable<EventTable>) {
+  return {
+    ...event,
+    raw_data: event.raw_data ? Array.from(event.raw_data) : null,
+  };
+}
 
 const Http404ResponseSchema = Type.Object({
   statusCode: Type.Literal(404),
@@ -394,7 +404,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       schema: {
         params: PatchEventParamsSchema,
         response: {
-          '200': GetEventSchema,
+          '200': GetEventWithChildrenSchema,
           '404': Http404ResponseSchema,
         },
       },
@@ -402,12 +412,20 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     async (request, reply) => {
       const { eventId } = request.params;
 
-      const event = await db
-        .selectFrom('event')
-        .selectAll()
-        .where('id', '=', eventId)
-        .where('parent_event_id', 'is', null)
-        .executeTakeFirst();
+      const [event, children] = await Promise.all([
+        db
+          .selectFrom('event')
+          .selectAll()
+          .where('id', '=', eventId)
+          .where('parent_event_id', 'is', null)
+          .executeTakeFirst(),
+        db
+          .selectFrom('event')
+          .selectAll()
+          .where('parent_event_id', '=', eventId)
+          .orderBy('id')
+          .execute(),
+      ]);
 
       if (!event) {
         return reply.code(404).send({
@@ -418,8 +436,8 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       }
 
       return {
-        ...event,
-        raw_data: event.raw_data ? Array.from(event.raw_data) : null,
+        ...serializeEventRow(event),
+        children: children.map(serializeEventRow),
       };
     },
   );
@@ -440,6 +458,8 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         device_id,
         data,
         parent_event_id,
+        timestamp: bodyTimestamp,
+        human_verified: bodyHumanVerified,
       } = request.body;
 
       let eventData = data;
@@ -463,16 +483,22 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         }
       }
 
+      const eventTimestamp =
+        bodyTimestamp != null ? new Date(bodyTimestamp as string | number | Date) : new Date();
+      const humanVerified =
+        bodyHumanVerified ??
+        (eventData?.type === 'food_intake' ? true : false);
+
       const result = await db
         .insertInto('event')
         .values({
           parent_event_id: parent_event_id || null,
           pet_id,
           device_id,
-          timestamp: new Date(),
+          timestamp: eventTimestamp,
           data: eventData,
           raw_data: null,
-          human_verified: eventData?.type === 'food_intake' ? true : false,
+          human_verified: humanVerified,
         })
         .returningAll()
         .executeTakeFirstOrThrow();
