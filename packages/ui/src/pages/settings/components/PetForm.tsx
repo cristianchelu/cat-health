@@ -58,9 +58,22 @@ const PetForm: React.FC<PetFormProps> = ({
   const watchedBirthDate = watch('birth_date');
 
   const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
+  const [awayFromHome, setAwayFromHome] = React.useState(isAway);
 
-  const handleFormSubmit = (data: PostPetRequestDTO) => {
+  React.useEffect(() => {
+    setAwayFromHome(isAway);
+  }, [petId, isAway]);
+
+  const handleFormSubmit = async (data: PostPetRequestDTO) => {
+    if (petId != null && awayFromHome !== isAway) {
+      await togglePresenceMutation.mutateAsync();
+    }
     onSubmit(data, avatarFile);
+  };
+
+  const handleCancel = () => {
+    setAwayFromHome(isAway);
+    onCancel();
   };
 
   return (
@@ -138,10 +151,10 @@ const PetForm: React.FC<PetFormProps> = ({
         </FormField>
 
         {petId != null && (
-          <FormField label={t('settings.exclude_from_analytics')}>
+          <FormField label={t('settings.away_from_home')}>
             <Switch
-              checked={isAway}
-              onCheckedChange={() => togglePresenceMutation.mutate()}
+              checked={awayFromHome}
+              onCheckedChange={setAwayFromHome}
               disabled={
                 isSubmitting ||
                 isDeleting ||
@@ -165,16 +178,21 @@ const PetForm: React.FC<PetFormProps> = ({
           <Button
             type="button"
             variant="outline"
-            onClick={onCancel}
+            onClick={handleCancel}
             disabled={isSubmitting || isDeleting}
           >
             {t('settings.cancel')}
           </Button>
           <Button
             type="submit"
-            disabled={!isValid || isSubmitting || isDeleting}
+            disabled={
+              !isValid ||
+              isSubmitting ||
+              isDeleting ||
+              togglePresenceMutation.isPending
+            }
           >
-            {isSubmitting
+            {isSubmitting || togglePresenceMutation.isPending
               ? t('settings.saving')
               : title === t('settings.add_pet_title')
                 ? t('settings.add_pet_title')

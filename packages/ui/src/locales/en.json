@@ -175,7 +175,7 @@
         "breed_max": "Breed must be less than 50 characters",
         "birth_date": "Birth Date",
         "birth_date_desc": "Optional: Enter your pet's birth date for age tracking",
-        "exclude_from_analytics": "Exclude from analytics",
+        "away_from_home": "Away from home",
         "deleting": "Deleting…",
         "delete": "Delete",
         "cancel": "Cancel",

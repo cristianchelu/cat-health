@@ -74,6 +74,11 @@ const PetPresenceEvent: React.FC<EventComponentProps> = (props) => {
       ? 'events.pet_presence_home'
       : 'events.pet_presence_away';
 
+  const contextLabel =
+    presence.context && presence.context !== 'manual'
+      ? t(`events.pet_presence_context_${presence.context}`)
+      : undefined;
+
   return (
     <TimelineEventShell
       {...props}
@@ -82,11 +87,7 @@ const PetPresenceEvent: React.FC<EventComponentProps> = (props) => {
       iconVariant={PRESENCE_VARIANT[presence.state]}
       title={t(titleKey)}
       showDevice={false}
-      value={
-        presence.context
-          ? t(`events.pet_presence_context_${presence.context}`)
-          : undefined
-      }
+      value={contextLabel}
       valueVariant="default"
     />
   );

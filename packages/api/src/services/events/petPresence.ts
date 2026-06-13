@@ -77,17 +77,24 @@ export function buildToggledPresenceData(
   const currentState = latest?.state ?? 'unknown';
 
   if (currentState === 'away' || currentState === 'outside') {
+    const context =
+      latest?.context === 'vet' ||
+      latest?.context === 'travel' ||
+      latest?.context === 'friend'
+        ? latest.context
+        : undefined;
+
     return {
       type: 'pet_presence',
       state: 'home',
       previous_state,
+      ...(context ? { context } : {}),
     };
   }
 
   return {
     type: 'pet_presence',
     state: 'away',
-    context: 'manual',
     previous_state,
   };
 }
