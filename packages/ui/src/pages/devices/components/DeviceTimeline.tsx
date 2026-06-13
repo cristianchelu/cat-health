@@ -6,6 +6,7 @@ import { DateNavigation } from '@/components/ui/DateNavigation';
 import { useDeviceEvents } from '@/hooks/queries/deviceQueries';
 import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
 import { EventTimelineItem, TimelineSkeleton } from '@/components/events';
+import { isDeviceTimelineEvent } from '@/components/events/eventTimelineRegistry';
 import './DeviceTimeline.css';
 import EventDetailsModal from '@/components/events/EventDetailsModal';
 import type { GetEventDTO } from 'shared';
@@ -79,7 +80,7 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
               events &&
               events.data.length > 0 &&
               events.data
-                .filter((e) => e.data.type !== 'weight_measurement')
+                .filter((e) => isDeviceTimelineEvent(e))
                 .map((event) => (
                   <EventTimelineItem
                     key={event.id}

@@ -9,6 +9,7 @@ import { DateNavigation } from '@/components/ui/DateNavigation';
 import { Button } from '@/components/ui/Button';
 import Timeline from '@/components/ui/Timeline';
 import { EventTimelineItem, TimelineSkeleton } from '@/components/events';
+import { isPetOverviewActivityEvent } from '@/components/events/eventTimelineRegistry';
 import EventDetailsModal from '@/components/events/EventDetailsModal';
 import LogFoodModal from '@/components/events/LogFoodModal';
 
@@ -113,7 +114,7 @@ const Overview: React.FC = () => {
               </li>
             )}
             {eventsData?.data
-              .filter((ev) => ev.data.type !== 'weight_measurement')
+              .filter((ev) => isPetOverviewActivityEvent(ev))
               .map((event) => (
                 <EventTimelineItem
                   key={event.id}

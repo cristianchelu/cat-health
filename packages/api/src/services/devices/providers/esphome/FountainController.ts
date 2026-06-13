@@ -7,6 +7,7 @@ import type {
   NewEvent,
   WaterIntakeEventData,
 } from '../../../../database/types/EventTable.ts';
+import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
 import {
   BaseESPHomeController,
   type ReconnectConfig,
@@ -485,25 +486,15 @@ export class FountainController
     console.log('--------------------------');
 
     try {
-      const result = await this.deps.db
-        .insertInto('event')
-        .values(event)
-        .returning('id')
-        .executeTakeFirst();
-      console.log('Drink event inserted into DB.');
-
-      if (!result) {
-        return;
-      }
-
-      // Emit completed event
-      this.deps.eventBus.publish('device.event', {
+      await recordDeviceEvent(this.deps, {
         deviceId: this.deviceId,
-        type: 'water_intake',
-        data: eventData,
         timestamp: eventTimestamp,
-        eventId: result.id,
+        data: eventData,
+        pet_id: event.pet_id,
+        raw_data: event.raw_data,
+        human_verified: event.human_verified,
       });
+      console.log('Drink event inserted into DB.');
     } catch (err) {
       console.error('Failed to insert drink event:', err);
     }

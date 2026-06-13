@@ -1,23 +1,14 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Drumstick } from 'lucide-react';
-import { format } from 'date-fns';
-import Timeline from '@/components/ui/Timeline';
 import type { EventComponentProps } from './types';
-import EventDevice from './meta/EventDevice';
 import EventDuration from './meta/EventDuration';
 import EventFood from './meta/EventFood';
-import EventPet from './meta/EventPet';
-import EventVerified from './meta/EventVerified';
+import TimelineEventShell from './TimelineEventShell';
 
-const FoodEvent: React.FC<EventComponentProps> = ({
-  event,
-  children,
-  onClick,
-  showPet = true,
-  showDevice = true,
-}) => {
+const FoodEvent: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
+  const { event, children } = props;
   const { data } = event;
   const foodId =
     typeof (data as { food_id?: unknown }).food_id === 'number'
@@ -25,30 +16,18 @@ const FoodEvent: React.FC<EventComponentProps> = ({
       : undefined;
 
   return (
-    <Timeline.Item onClick={onClick}>
-      <Timeline.Icon variant="success">
-        <Drumstick />
-      </Timeline.Icon>
-      <Timeline.Content>
-        <Timeline.Header>
-          <Timeline.Timestamp>
-            {format(new Date(event.timestamp), 'HH:mm')}
-          </Timeline.Timestamp>
-          <Timeline.Value variant="success">{data.amount}g</Timeline.Value>
-          <Timeline.TitleGroup>
-            {event.human_verified && <EventVerified />}
-            <Timeline.Title>{t('overview.food_intake')}</Timeline.Title>
-          </Timeline.TitleGroup>
-        </Timeline.Header>
-        <Timeline.Meta>
-          {data.duration && <EventDuration duration={data.duration} />}
-          {foodId != null && <EventFood foodId={foodId} />}
-          {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
-          {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
-          {children}
-        </Timeline.Meta>
-      </Timeline.Content>
-    </Timeline.Item>
+    <TimelineEventShell
+      {...props}
+      icon={<Drumstick aria-hidden />}
+      iconVariant="success"
+      value={`${data.amount}g`}
+      valueVariant="success"
+      title={t('overview.food_intake')}
+    >
+      {data.duration && <EventDuration duration={data.duration} />}
+      {foodId != null && <EventFood foodId={foodId} />}
+      {children}
+    </TimelineEventShell>
   );
 };
 

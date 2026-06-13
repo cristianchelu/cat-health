@@ -7,6 +7,7 @@ export const EventTypeSchema = Type.Union([
   Type.Literal("litterbox_use"),
   Type.Literal("food_intake"),
   Type.Literal("litterbox_maintenance"),
+  Type.Literal("device_connectivity"),
 ]);
 export type EventType = Static<typeof EventTypeSchema>;
 
@@ -167,6 +168,26 @@ export const WaterIntakeEventDataSchema = Type.Object({
   filtered: Type.Optional(Type.Boolean()),
 });
 export type WaterIntakeEventDataDTO = Static<typeof WaterIntakeEventDataSchema>;
+
+export const DeviceConnectivityStateSchema = Type.Union([
+  Type.Literal("online"),
+  Type.Literal("offline"),
+  Type.Literal("error"),
+]);
+
+export const DeviceConnectivityPreviousStateSchema = Type.Union([
+  DeviceConnectivityStateSchema,
+  Type.Literal("unknown"),
+]);
+
+export const DeviceConnectivityEventDataSchema = Type.Object({
+  type: Type.Literal("device_connectivity"),
+  state: DeviceConnectivityStateSchema,
+  previous_state: Type.Optional(DeviceConnectivityPreviousStateSchema),
+});
+export type DeviceConnectivityEventDataDTO = Static<
+  typeof DeviceConnectivityEventDataSchema
+>;
 
 // Water trends
 export const WaterTrendParamsSchema = Type.Object({ petId: Type.Number() });

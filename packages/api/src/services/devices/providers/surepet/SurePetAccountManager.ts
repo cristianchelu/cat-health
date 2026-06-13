@@ -19,6 +19,7 @@ import {
   resolveFoodIdForCompartment,
 } from '../../../food/enrichFoodIntake.ts';
 import type { FoodIntakeEventData } from '../../../../database/types/EventTable.ts';
+import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
 import { SurePetClient, SurePetClientError } from './SurePetClient.ts';
 import { FeederController } from './FeederController.ts';
 import {
@@ -582,37 +583,29 @@ export class SurePetAccountManager implements AccountManager {
       return;
     }
 
-    const result = await this.deps.db
-      .insertInto('event')
-      .values(event)
-      .returning(['id', 'pet_id', 'timestamp'])
-      .executeTakeFirst();
+    const resultId = await recordDeviceEvent(this.deps, {
+      deviceId: localDevice.id,
+      timestamp: event.timestamp,
+      data: event.data,
+      pet_id: event.pet_id,
+      raw_data: event.raw_data,
+      human_verified: event.human_verified,
+    });
 
-    if (!result) return;
-
-    const eventData = event.data;
-    const moistureMl = eventData.nutrients?.moisture_ml;
+    const moistureMl = event.data.nutrients?.moisture_ml;
     if (moistureMl != null) {
       await this.deps.db
         .insertInto('event')
         .values(
           buildMoistureChildEventValues({
-            parentEventId: result.id,
-            petId: result.pet_id,
-            timestamp: result.timestamp,
+            parentEventId: resultId,
+            petId: event.pet_id ?? null,
+            timestamp: event.timestamp,
             moistureMl,
           }),
         )
         .execute();
     }
-
-    this.deps.eventBus.publish('device.event', {
-      deviceId: localDevice.id,
-      type: 'food_intake',
-      data: eventData,
-      timestamp: event.timestamp,
-      eventId: result.id,
-    });
   }
 
   private async assignPetIdToFeedingEvent(

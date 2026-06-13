@@ -1,7 +1,7 @@
 import { sql } from 'kysely';
 import { encodeLitterboxRawData } from 'shared';
-import type { NewEvent } from '../../../../database/types/EventTable.ts';
 import type { ProviderDeps, Device } from '../../types.ts';
+import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
 import {
   BaseESPHomeController,
   type ReconnectConfig,
@@ -184,9 +184,8 @@ export class LitterboxController extends BaseESPHomeController {
           `Detected maintenance event at ${session.startTime.toISOString()}: ${eliminationWeight}g`,
         );
 
-        const event: NewEvent = {
-          pet_id: null,
-          device_id: this.deviceId,
+        await recordDeviceEvent(this.deps, {
+          deviceId: this.deviceId,
           timestamp: session.startTime,
           data: {
             type: 'litterbox_maintenance',
@@ -194,20 +193,6 @@ export class LitterboxController extends BaseESPHomeController {
           },
           raw_data: rawData,
           human_verified: false,
-        };
-
-        const inserted = await this.deps.db
-          .insertInto('event')
-          .values(event)
-          .returning(['id'])
-          .executeTakeFirstOrThrow();
-
-        this.deps.eventBus.publish('device.event', {
-          deviceId: this.deviceId,
-          eventId: inserted.id,
-          type: 'litterbox_maintenance',
-          data: event.data,
-          timestamp: session.startTime,
         });
       } else {
         const weights = measurements.map((m) => m.weight);
@@ -246,9 +231,8 @@ export class LitterboxController extends BaseESPHomeController {
 
         const segments = persistedLitterboxSegments(analysis.periods);
 
-        const event: NewEvent = {
-          pet_id: petId,
-          device_id: this.deviceId,
+        const insertedEventId = await recordDeviceEvent(this.deps, {
+          deviceId: this.deviceId,
           timestamp: session.startTime,
           data: {
             type: 'litterbox_use',
@@ -258,21 +242,16 @@ export class LitterboxController extends BaseESPHomeController {
             straining,
             segments,
           },
+          pet_id: petId,
           raw_data: rawData,
           human_verified: false,
-        };
-
-        const insertedEvent = await this.deps.db
-          .insertInto('event')
-          .values(event)
-          .returning(['id'])
-          .executeTakeFirstOrThrow();
+        });
 
         if (petId !== null && analysis.catWeight > 0) {
           await this.deps.db
             .insertInto('event')
             .values({
-              parent_event_id: insertedEvent.id,
+              parent_event_id: insertedEventId,
               pet_id: petId,
               device_id: this.deviceId,
               timestamp: session.startTime,
@@ -285,14 +264,6 @@ export class LitterboxController extends BaseESPHomeController {
             })
             .execute();
         }
-
-        this.deps.eventBus.publish('device.event', {
-          deviceId: this.deviceId,
-          eventId: insertedEvent.id,
-          type: 'litterbox_use',
-          data: event.data,
-          timestamp: session.startTime,
-        });
 
         console.log(
           `Recorded litterbox use event for pet ${petId || 'unknown'}`,

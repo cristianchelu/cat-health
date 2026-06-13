@@ -13,6 +13,7 @@ import type {
   ProviderDeps,
 } from './types.ts';
 import { DevicePresence } from './DevicePresence.ts';
+import { recordDeviceEvent } from '../events/recordDeviceEvent.ts';
 
 export class IntegrationManager implements DeviceDirectory {
   private providers = new Map<string, DeviceProvider>();
@@ -23,7 +24,11 @@ export class IntegrationManager implements DeviceDirectory {
 
   constructor(db: Kysely<Database>, eventBus: EventBus) {
     this.mediaManager = new MediaManager(db);
-    this.presence = new DevicePresence(db);
+    this.presence = new DevicePresence({
+      db,
+      eventBus,
+      recordDeviceEvent: (input) => recordDeviceEvent({ db, eventBus }, input),
+    });
     this.deps = {
       db,
       eventBus,

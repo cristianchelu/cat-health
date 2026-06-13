@@ -38,6 +38,20 @@
         "log_food": "Log Food",
         "error_loading": "Could not load data"
     },
+    "events": {
+        "device_connectivity_online": "Device online",
+        "device_connectivity_offline": "Device offline",
+        "device_connectivity_error": "Device error",
+        "device_connectivity_from_online": "from online",
+        "device_connectivity_from_offline": "from offline",
+        "device_connectivity_from_error": "from error",
+        "device_connectivity_from_unknown": "from unknown",
+        "litterbox_maintenance": "Litterbox maintenance",
+        "litterbox_maintenance_scoop": "Scoop",
+        "litterbox_maintenance_deep_clean": "Deep clean",
+        "litterbox_maintenance_litter_change": "Litter change",
+        "litterbox_maintenance_litter_addition": "Litter added"
+    },
     "litterbox_details": {
         "title": "Litterbox visits",
         "analytics_title": "Litterbox Analytics",
@@ -294,6 +308,7 @@
         "water_intake": "Water Intake",
         "litterbox_usage": "Litterbox Usage",
         "litterbox_maintenance": "Litterbox Maintenance",
+        "device_connectivity": "Device connectivity",
         "event_detected": "Event Detected",
         "media": "Media",
         "analysis": "Analysis",

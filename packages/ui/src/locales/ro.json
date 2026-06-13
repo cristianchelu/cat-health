@@ -38,6 +38,20 @@
         "log_food": "Adaugă mâncare",
         "error_loading": "Datele nu au putut fi încărcate"
     },
+    "events": {
+        "device_connectivity_online": "Dispozitiv online",
+        "device_connectivity_offline": "Dispozitiv offline",
+        "device_connectivity_error": "Eroare dispozitiv",
+        "device_connectivity_from_online": "de la online",
+        "device_connectivity_from_offline": "de la offline",
+        "device_connectivity_from_error": "de la eroare",
+        "device_connectivity_from_unknown": "de la necunoscut",
+        "litterbox_maintenance": "Întreținere litieră",
+        "litterbox_maintenance_scoop": "Curățare",
+        "litterbox_maintenance_deep_clean": "Curățare profundă",
+        "litterbox_maintenance_litter_change": "Schimbare litieră",
+        "litterbox_maintenance_litter_addition": "Litieră adăugată"
+    },
     "litterbox_details": {
         "title": "Vizite la litieră",
         "analytics_title": "Analize litieră",
@@ -241,6 +255,7 @@
         "water_intake": "Consum apă",
         "litterbox_usage": "Utilizare litieră",
         "litterbox_maintenance": "Întreținere litieră",
+        "device_connectivity": "Conectivitate dispozitiv",
         "event_detected": "Eveniment detectat",
         "media": "Media",
         "analysis": "Analiză",

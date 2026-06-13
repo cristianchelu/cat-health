@@ -84,12 +84,24 @@ export interface LitterboxMaintenanceEventData {
   litter_amount?: number; // in grams, for litter_change/litter_addition
 }
 
+export type DeviceConnectivityState = 'online' | 'offline' | 'error';
+export type DeviceConnectivityPreviousState =
+  | DeviceConnectivityState
+  | 'unknown';
+
+export interface DeviceConnectivityEventData {
+  type: 'device_connectivity';
+  state: DeviceConnectivityState;
+  previous_state?: DeviceConnectivityPreviousState;
+}
+
 export type EventData =
   | WeightMeasurementEventData
   | WaterIntakeEventData
   | LitterboxUseEventData
   | FoodIntakeEventData
-  | LitterboxMaintenanceEventData;
+  | LitterboxMaintenanceEventData
+  | DeviceConnectivityEventData;
 
 export type EventTable<TData = EventData> = {
   id: Generated<number>;

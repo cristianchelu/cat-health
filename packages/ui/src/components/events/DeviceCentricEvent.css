@@ -1,0 +1,15 @@
+.device-centric-event {
+  &.device-connectivity-event {
+    .timeline-value {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-normal);
+      color: var(--color-text-muted);
+    }
+  }
+
+  &.litterbox-maintenance-event {
+    .timeline-icon {
+      color: var(--color-warning);
+    }
+  }
+}

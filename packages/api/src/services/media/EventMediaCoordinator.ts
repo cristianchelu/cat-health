@@ -302,6 +302,10 @@ export class EventMediaCoordinator {
   }
 
   private async handleDeviceEvent(event: DeviceEvent): Promise<void> {
+    if (event.type === 'device_connectivity') {
+      return;
+    }
+
     const { deviceId, eventId, timestamp } = event;
 
     const pending = this.pendingByDevice.get(deviceId);
