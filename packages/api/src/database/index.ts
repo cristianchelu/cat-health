@@ -12,6 +12,7 @@ import type { MediaLinkTable } from './types/MediaLinkTable.ts';
 import type { ProviderAccountTable } from './types/ProviderAccountTable.ts';
 import type { DeviceCameraTable } from './types/DeviceCameraTable.ts';
 import type { FoodTable } from './types/FoodTable.ts';
+import type { AppSettingTable } from './types/AppSettingTable.ts';
 
 export interface Database {
   pet: PetTable;
@@ -22,6 +23,7 @@ export interface Database {
   provider_account: ProviderAccountTable;
   device_camera: DeviceCameraTable;
   food: FoodTable;
+  app_setting: AppSettingTable;
 }
 
 const dir = dirname(fileURLToPath(import.meta.url));

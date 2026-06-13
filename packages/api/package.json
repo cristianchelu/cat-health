@@ -8,6 +8,7 @@
     "start": "node --watch --experimental-strip-types src/main.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:analyzer": "node --experimental-strip-types --test src/services/devices/providers/esphome/test/*.test.ts",
+    "test:coverage": "node --experimental-strip-types --test src/services/analytics/test/*.test.ts",
     "test:feeding": "node --experimental-strip-types --test src/services/devices/providers/surepet/test/*.test.ts src/services/food/test/*.test.ts",
     "migrate": "node --experimental-strip-types src/database/migrate.ts",
     "migrate:down": "node --experimental-strip-types src/database/migrate.ts --down",
