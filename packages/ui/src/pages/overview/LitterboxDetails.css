@@ -101,6 +101,7 @@
       min-width: 100%;
       height: auto;
       justify-content: flex-start;
+      align-items: stretch;
       --litterbox-dot-grid-dot-size: 1rem;
       --litterbox-dot-grid-gap: var(--space-sm);
       min-height: calc(
@@ -115,7 +116,8 @@
 
     .litterbox-dot-grid-column {
       flex: 0 0 auto;
-      height: 100%;
+      align-self: stretch;
+      height: auto;
       min-width: 1.25rem;
     }
   }

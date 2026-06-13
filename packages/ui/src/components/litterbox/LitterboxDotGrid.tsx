@@ -83,19 +83,16 @@ const LitterboxDotGrid = React.forwardRef<HTMLDivElement, LitterboxDotGridProps>
           return (
             <ColumnElement
               key={column.key}
-              className={cn('litterbox-dot-grid-column', {
-                'litterbox-dot-grid-column--untracked': column.tracked === false,
-              })}
+              className={cn('litterbox-dot-grid-column')}
               {...(isInteractive ? { type: 'button' as const } : {})}
               aria-label={column.label}
               onClick={() => onColumnClick?.(column)}
             >
-              <span
-                className={cn('litterbox-dot-grid-stack', {
-                  'untracked-pattern': column.tracked === false,
-                })}
-                aria-hidden
-              >
+              <span className="litterbox-dot-grid-plot" aria-hidden>
+                {column.tracked === false && (
+                  <span className="litterbox-dot-grid-untracked-fill untracked-pattern" />
+                )}
+                <span className="litterbox-dot-grid-stack">
                 {visibleDots.map((dot, dotIndex) => {
                   const isTopDot = dotIndex === visibleDots.length - 1;
                   return (
@@ -114,6 +111,7 @@ const LitterboxDotGrid = React.forwardRef<HTMLDivElement, LitterboxDotGridProps>
                     </span>
                   );
                 })}
+                </span>
               </span>
               {column.footer && (
                 <span

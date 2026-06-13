@@ -1,7 +1,8 @@
 .litterbox-dot-grid {
   --litterbox-dot-grid-max-height: 100%;
   --litterbox-dot-grid-dot-size: 0.9375rem;
-  --litterbox-dot-grid-gap: var(--space-2xs);
+  --litterbox-dot-grid-gap: var(--space-xs);
+  --litterbox-dot-grid-straining-ring: 2px;
 
   display: flex;
   align-items: flex-end;
@@ -18,12 +19,12 @@
     background: transparent;
     padding: 0;
     flex: 1;
-    min-width: var(--space-sm);
+    min-width: 0;
     height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: var(--litterbox-dot-grid-gap);
     color: inherit;
 
@@ -41,17 +42,32 @@
       pointer-events: none;
     }
 
-    &.litterbox-dot-grid-column--untracked {
-      .litterbox-dot-grid-stack {
-        flex: 1;
-        width: 100%;
-        min-height: var(--litterbox-dot-grid-dot-size);
-        border-radius: var(--radius-md);
-      }
-    }
+  }
+
+  .litterbox-dot-grid-plot {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: var(--litterbox-dot-grid-dot-size);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    position: relative;
+    overflow: visible;
+  }
+
+  .litterbox-dot-grid-untracked-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: calc(-1 * var(--litterbox-dot-grid-straining-ring));
+    border-radius: var(--radius-md);
+    pointer-events: none;
   }
 
   .litterbox-dot-grid-stack {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column-reverse;
     align-items: center;
@@ -71,7 +87,7 @@
   }
 
   .litterbox-dot-grid-dot--straining {
-    box-shadow: 0 0 0 2px var(--color-error);
+    box-shadow: 0 0 0 var(--litterbox-dot-grid-straining-ring) var(--color-error);
   }
 
   .litterbox-dot-grid-overflow {

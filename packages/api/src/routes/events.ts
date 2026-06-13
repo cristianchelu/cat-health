@@ -215,6 +215,8 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           }),
         ]);
 
+      const todayKey = formatInTimeZone(rangeEnd, timezone, 'yyyy-MM-dd');
+
       const points = weightEvents.map((event) => {
         const data = event.data as { type: string; weight: number };
         const date = formatInTimeZone(event.timestamp, timezone, 'yyyy-MM-dd');
@@ -233,6 +235,14 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           'hour',
           timezone,
         ),
+        untrackedDayIntervals: bucketsToUntrackedIntervals(
+          untrackedDayBuckets,
+          'day',
+          timezone,
+        ),
+        rangeStart: rangeStart.toISOString(),
+        rangeEnd: rangeEnd.toISOString(),
+        todayTracked: isBucketTracked(todayKey, untrackedDayBuckets),
       };
     },
   );

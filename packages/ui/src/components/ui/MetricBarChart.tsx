@@ -21,24 +21,10 @@ const MetricBarChart = React.forwardRef<HTMLDivElement, MetricBarChartProps>(
       <div className={cn('metric-bar-chart', className)} ref={ref} {...props}>
         <div className="bars-container">
           {data.map((day, index) => {
-            if (!day.tracked) {
-              // Untracked day - show diagonal stripes at full height
-              return (
-                <div key={index} className="bar-wrapper">
-                  <div className="bar-background">
-                    <div className="bar-fill untracked untracked-pattern" />
-                  </div>
-                </div>
-              );
-            }
-
             const currentLowerBound = day.lowerBound ?? lowerBound;
             const currentUpperBound = day.upperBound ?? upperBound;
-
-            // Calculate fill percentage relative to max value
             const fillPercent = (day.value / maxValue) * 100;
 
-            // Calculate reference line positions if bounds are provided
             const lowerLinePercent = currentLowerBound
               ? (currentLowerBound / maxValue) * 100
               : undefined;
@@ -60,7 +46,6 @@ const MetricBarChart = React.forwardRef<HTMLDivElement, MetricBarChartProps>(
                 ? (currentUpperBound / day.value) * 100
                 : undefined;
 
-            // Calculate status based on bounds
             let status: 'below' | 'within' | 'above' | undefined;
             if (
               currentLowerBound !== undefined &&
@@ -78,6 +63,12 @@ const MetricBarChart = React.forwardRef<HTMLDivElement, MetricBarChartProps>(
             return (
               <div key={index} className="bar-wrapper">
                 <div className="bar-background">
+                  {!day.tracked && (
+                    <div
+                      className="bar-untracked-background untracked-pattern"
+                      aria-hidden
+                    />
+                  )}
                   {lowerLinePercent !== undefined && !lowerLineFilled && (
                     <div
                       className="bar-reference-line lower"
@@ -90,29 +81,31 @@ const MetricBarChart = React.forwardRef<HTMLDivElement, MetricBarChartProps>(
                       style={{ bottom: `${upperLinePercent}%` }}
                     />
                   )}
-                  <div
-                    className={cn('bar-fill', status)}
-                    style={{ height: `${fillPercent}%` }}
-                  >
-                    {lowerLineFilled &&
-                      lowerLineInFillPercent !== undefined && (
-                        <div
-                          className="bar-reference-line lower in-fill"
-                          style={{
-                            bottom: `${lowerLineInFillPercent}%`,
-                          }}
-                        />
-                      )}
-                    {upperLineFilled &&
-                      upperLineInFillPercent !== undefined && (
-                        <div
-                          className="bar-reference-line upper in-fill"
-                          style={{
-                            bottom: `${upperLineInFillPercent}%`,
-                          }}
-                        />
-                      )}
-                  </div>
+                  {day.value > 0 && (
+                    <div
+                      className={cn('bar-fill', status)}
+                      style={{ height: `${fillPercent}%` }}
+                    >
+                      {lowerLineFilled &&
+                        lowerLineInFillPercent !== undefined && (
+                          <div
+                            className="bar-reference-line lower in-fill"
+                            style={{
+                              bottom: `${lowerLineInFillPercent}%`,
+                            }}
+                          />
+                        )}
+                      {upperLineFilled &&
+                        upperLineInFillPercent !== undefined && (
+                          <div
+                            className="bar-reference-line upper in-fill"
+                            style={{
+                              bottom: `${upperLineInFillPercent}%`,
+                            }}
+                          />
+                        )}
+                    </div>
+                  )}
                 </div>
               </div>
             );

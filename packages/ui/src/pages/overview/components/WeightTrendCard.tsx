@@ -4,8 +4,10 @@ import { usePetWeightTrends } from '@/hooks/queries/petQueries';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { ArrowRight, Scale } from 'lucide-react';
 import { formatRelative } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { cn } from '@/lib/utils';
 import UntrackedRegionOverlay from '@/components/charts/UntrackedRegionOverlay';
+import type { UntrackedIntervalDTO, WeightTrendPointDTO } from 'shared';
 
 import './WeightTrendCard.css';
 
@@ -14,77 +16,104 @@ interface WeightTrendCardProps {
   isPending?: boolean;
 }
 
-// Catmull-Rom spline interpolation for smooth curves
-const catmullRomSpline = (
-  p0: { x: number; y: number },
-  p1: { x: number; y: number },
-  p2: { x: number; y: number },
-  p3: { x: number; y: number },
-  t: number,
-) => {
-  const t2 = t * t;
-  const t3 = t2 * t;
+const CHART_WIDTH = 300;
+const CHART_HEIGHT = 75;
 
-  return {
-    x:
-      0.5 *
-      (2 * p1.x +
-        (-p0.x + p2.x) * t +
-        (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
-        (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-    y:
-      0.5 *
-      (2 * p1.y +
-        (-p0.y + p2.y) * t +
-        (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
-        (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
-  };
-};
+interface ChartPoint {
+  x: number;
+  y: number;
+  weight: number;
+  timestamp: string;
+}
 
-// Create path for the line using Catmull-Rom splines
-const createPath = (points: { x: number; y: number }[]) => {
-  if (points.length === 0) return '';
-  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
-  if (points.length === 2)
-    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
-
-  let path = `M ${points[0].x} ${points[0].y}`;
-
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[Math.max(0, i - 1)];
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = points[Math.min(points.length - 1, i + 2)];
-
-    const segments = 10;
-    for (let j = 0; j <= segments; j++) {
-      const t = j / segments;
-      const point = catmullRomSpline(p0, p1, p2, p3, t);
-
-      if (i === 0 && j === 0) {
-        continue;
-      }
-
-      path += ` L ${point.x} ${point.y}`;
-    }
+function timeToX(
+  time: number,
+  rangeStart: number,
+  rangeEnd: number,
+  width: number,
+): number {
+  if (rangeEnd <= rangeStart) {
+    return 0;
   }
 
-  return path;
-};
+  const clamped = Math.min(Math.max(time, rangeStart), rangeEnd);
+  return ((clamped - rangeStart) / (rangeEnd - rangeStart)) * width;
+}
 
-// Create area fill path
-const createAreaPath = (points: { x: number; y: number }[], height: number) => {
-  const linePath = createPath(points);
-  if (!linePath) return '';
+function buildWeightOverlayIntervals(
+  untrackedDayIntervals: UntrackedIntervalDTO[],
+  latestPoint: WeightTrendPointDTO | undefined,
+  rangeEndIso: string,
+): UntrackedIntervalDTO[] {
+  if (!latestPoint) {
+    return [...untrackedDayIntervals];
+  }
 
-  return `${linePath} L ${points[points.length - 1].x} ${height} L 0 ${height} Z`;
-};
+  const lastTime = new Date(latestPoint.timestamp).getTime();
+  const rangeEnd = new Date(rangeEndIso).getTime();
+
+  // Day-level hatch for coverage gaps before the last weigh-in (e.g. Monday outage).
+  const embedded = untrackedDayIntervals.filter((interval) => {
+    const start = new Date(interval.start).getTime();
+    return start < lastTime;
+  });
+
+  const intervals = [...embedded];
+
+  // Single tail from last weigh-in → now (vet + missing recent data).
+  if (rangeEnd > lastTime) {
+    intervals.push({
+      start: latestPoint.timestamp,
+      end: rangeEndIso,
+    });
+  }
+
+  return intervals;
+}
+
+function createLinearPath(points: ChartPoint[]): string {
+  if (points.length === 0) {
+    return '';
+  }
+
+  return points
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
+    .join(' ');
+}
+
+function createAreaPath(points: ChartPoint[], height: number): string {
+  const linePath = createLinearPath(points);
+  if (!linePath || points.length < 2) {
+    return '';
+  }
+
+  const last = points[points.length - 1];
+  const first = points[0];
+  return `${linePath} L ${last.x} ${height} L ${first.x} ${height} Z`;
+}
+
+function toChartPoints(
+  points: WeightTrendPointDTO[],
+  rangeStart: number,
+  rangeEnd: number,
+  paddedMinWeight: number,
+  paddedWeightRange: number,
+): ChartPoint[] {
+  return points.map((point) => ({
+    x: timeToX(new Date(point.timestamp).getTime(), rangeStart, rangeEnd, CHART_WIDTH),
+    y:
+      (1 - (point.weight - paddedMinWeight) / paddedWeightRange) * CHART_HEIGHT,
+    weight: point.weight,
+    timestamp: point.timestamp,
+  }));
+}
 
 const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
   petId,
   isPending = false,
 }) => {
   const { t } = useTranslation();
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const { data: weightData, isLoading: isQueryLoading, error } =
     usePetWeightTrends(petId, 15);
   const isLoading = isQueryLoading || isPending;
@@ -106,9 +135,6 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
     );
   }
 
-  const width = 100;
-  const height = 100;
-
   let chartBody: React.ReactNode = null;
   let headerRight: React.ReactNode = null;
 
@@ -123,18 +149,44 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
     chartBody = <div className="weight-chart" aria-hidden />;
   } else {
     const points = weightData.points;
+    const rangeStart = new Date(weightData.rangeStart).getTime();
+    const rangeEnd = new Date(weightData.rangeEnd).getTime();
+    const todayKey = formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');
+    const todayPoint = points.find((point) => point.date === todayKey);
     const latestPoint = points[points.length - 1];
-    const latestWeight = latestPoint?.weight;
-    const latestTracked = latestPoint?.tracked ?? true;
-    const oldestWeight = points[0]?.weight;
+
+    const weights = points.map((point) => point.weight);
+    const minWeight = Math.min(...weights);
+    const maxWeight = Math.max(...weights);
+    const weightRange = maxWeight - minWeight || 1;
+    const padding = weightRange * 0.1;
+    const paddedMinWeight = minWeight - padding;
+    const paddedWeightRange = maxWeight - minWeight + padding * 2 || 1;
+
+    const chartPoints = toChartPoints(
+      points,
+      rangeStart,
+      rangeEnd,
+      paddedMinWeight,
+      paddedWeightRange,
+    );
+    const areaPath = createAreaPath(chartPoints, CHART_HEIGHT);
+    const linePath = createLinearPath(chartPoints);
+
+    const overlayIntervals = buildWeightOverlayIntervals(
+      weightData.untrackedDayIntervals,
+      latestPoint,
+      weightData.rangeEnd,
+    );
+
+    const formatWeight = (weight: number) =>
+      `${(weight / 1000).toFixed(2)} kg`;
+
+    const oldestWeight = points[0]?.weight ?? 0;
+    const latestWeight = latestPoint?.weight ?? 0;
     const weightChange = latestWeight - oldestWeight;
     const weightChangePercent =
       oldestWeight > 0 ? (weightChange / oldestWeight) * 100 : 0;
-
-    const formatWeight = (weight: number) => {
-      const weightInKg = weight / 1000;
-      return `${weightInKg.toFixed(2)} kg`;
-    };
 
     const trendInfo =
       Math.abs(weightChangePercent) < 1
@@ -143,37 +195,15 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
           ? 'gaining'
           : 'losing';
 
-    const weights = points.map((d) => d.weight);
-    const minWeight = Math.min(...weights);
-    const maxWeight = Math.max(...weights);
+    const headerWeight = !weightData.todayTracked
+      ? null
+      : todayPoint?.weight ?? latestPoint?.weight ?? null;
 
-    const weightRange = maxWeight - minWeight || 1;
-    const padding = weightRange * 0.1;
-    const paddedMinWeight = minWeight - padding;
-    const paddedMaxWeight = maxWeight + padding;
-    const paddedWeightRange = paddedMaxWeight - paddedMinWeight;
-
-    const chartMinTime = new Date(points[0].timestamp).getTime();
-    const chartMaxTime = new Date(points[points.length - 1].timestamp).getTime();
-    const timeSpan = chartMaxTime - chartMinTime;
-
-    const getTimeX = (timestamp: string): number => {
-      if (timeSpan <= 0) return 0;
-      return (
-        ((new Date(timestamp).getTime() - chartMinTime) / timeSpan) * width
-      );
-    };
-
-    const chartPoints = points.map((data) => {
-      const x = getTimeX(data.timestamp);
-      const y =
-        (1 - (data.weight - paddedMinWeight) / paddedWeightRange) * height;
-      return { x, y, weight: data.weight };
-    });
-
-    const timestamp = latestPoint?.timestamp;
-    const timeLabel = timestamp
-      ? formatRelative(new Date(timestamp), new Date())
+    const headerTimestamp = todayPoint?.timestamp ?? latestPoint?.timestamp;
+    const timeLabel = headerTimestamp
+      ? todayPoint
+        ? formatRelative(new Date(headerTimestamp), new Date())
+        : formatInTimeZone(new Date(headerTimestamp), timezone, 'MMM d')
       : '';
 
     headerRight = (
@@ -181,10 +211,10 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
         <ArrowRight className={cn('trend-icon', trendInfo)} />
         <div
           className={cn('weight-value', {
-            'weight-value--untracked': !latestTracked,
+            'weight-value--untracked': headerWeight == null,
           })}
         >
-          {latestTracked ? formatWeight(latestWeight) : '-.-- kg'}
+          {headerWeight == null ? '-.-- kg' : formatWeight(headerWeight)}
         </div>
         <div className="weight-time">{timeLabel}</div>
       </div>
@@ -192,7 +222,7 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
 
     chartBody = (
       <svg
-        viewBox={`0 0 ${width} ${height}`}
+        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
         className="weight-chart"
         preserveAspectRatio="none"
       >
@@ -217,23 +247,27 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
           </linearGradient>
         </defs>
         <UntrackedRegionOverlay
-          intervals={weightData.untrackedIntervals}
-          minTime={chartMinTime}
-          maxTime={chartMaxTime}
+          intervals={overlayIntervals}
+          minTime={rangeStart}
+          maxTime={rangeEnd}
           patternId="weight-trend-untracked"
+          chartWidth={CHART_WIDTH}
+          chartHeight={CHART_HEIGHT}
+          fadeFromTop
         />
-        <path
-          d={createAreaPath(chartPoints, height)}
-          fill="url(#weightGradient)"
-        />
-        <path
-          d={createPath(chartPoints)}
-          fill="none"
-          stroke="var(--color-primary)"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        {areaPath ? (
+          <path d={areaPath} fill="url(#weightGradient)" />
+        ) : null}
+        {linePath ? (
+          <path
+            d={linePath}
+            fill="none"
+            stroke="var(--color-primary)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ) : null}
       </svg>
     );
   }

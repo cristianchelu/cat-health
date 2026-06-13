@@ -167,6 +167,10 @@ export type WeightTrendPointDTO = Static<typeof WeightTrendPointSchema>;
 export const WeightTrendsResponseSchema = Type.Object({
   points: Type.Array(WeightTrendPointSchema),
   untrackedIntervals: Type.Array(UntrackedIntervalSchema),
+  untrackedDayIntervals: Type.Array(UntrackedIntervalSchema),
+  rangeStart: Type.String({ format: 'date-time' }),
+  rangeEnd: Type.String({ format: 'date-time' }),
+  todayTracked: Type.Boolean(),
 });
 export type WeightTrendsResponseDTO = Static<typeof WeightTrendsResponseSchema>;
 
