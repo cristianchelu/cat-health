@@ -89,7 +89,7 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
   const isLoading = isQueryLoading || isPending;
 
   const showEmpty =
-    !isLoading && (error || !weightData || weightData.length === 0);
+    !isLoading && (error || !weightData || weightData.points.length === 0);
 
   if (showEmpty) {
     return (
@@ -121,8 +121,9 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
     );
     chartBody = <div className="weight-chart" aria-hidden />;
   } else {
-    const latestWeight = weightData[weightData.length - 1]?.weight;
-    const oldestWeight = weightData[0]?.weight;
+    const points = weightData.points;
+    const latestWeight = points[points.length - 1]?.weight;
+    const oldestWeight = points[0]?.weight;
     const weightChange = latestWeight - oldestWeight;
     const weightChangePercent =
       oldestWeight > 0 ? (weightChange / oldestWeight) * 100 : 0;
@@ -139,7 +140,7 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
           ? 'gaining'
           : 'losing';
 
-    const weights = weightData.map((d) => d.weight);
+    const weights = points.map((d) => d.weight);
     const minWeight = Math.min(...weights);
     const maxWeight = Math.max(...weights);
 
@@ -149,14 +150,14 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
     const paddedMaxWeight = maxWeight + padding;
     const paddedWeightRange = paddedMaxWeight - paddedMinWeight;
 
-    const points = weightData.map((data, index) => {
-      const x = (index / (weightData.length - 1)) * width;
+    const chartPoints = points.map((data, index) => {
+      const x = (index / (points.length - 1)) * width;
       const y =
         (1 - (data.weight - paddedMinWeight) / paddedWeightRange) * height;
       return { x, y, weight: data.weight };
     });
 
-    const timestamp = weightData.at(-1)?.timestamp;
+    const timestamp = points.at(-1)?.timestamp;
     const timeLabel = timestamp
       ? formatRelative(new Date(timestamp), new Date())
       : '';
@@ -196,11 +197,11 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
           </linearGradient>
         </defs>
         <path
-          d={createAreaPath(points, height)}
+          d={createAreaPath(chartPoints, height)}
           fill="url(#weightGradient)"
         />
         <path
-          d={createPath(points)}
+          d={createPath(chartPoints)}
           fill="none"
           stroke="var(--color-primary)"
           strokeWidth="2"

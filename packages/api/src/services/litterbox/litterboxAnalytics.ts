@@ -6,6 +6,7 @@ import {
   type LitterboxUseEliminationType,
 } from 'shared';
 
+import { isBucketTracked } from '../analytics/analyticsCoverage.ts';
 import type { LitterboxUseEventData } from '../../database/types/EventTable.ts';
 
 export interface LitterboxVisitRow {
@@ -48,6 +49,7 @@ export interface LitterboxDailySummary {
 
 export interface LitterboxTrendDay {
   date: string;
+  tracked: boolean;
   events: LitterboxTrendEvent[];
   summary?: LitterboxDailySummary;
 }
@@ -261,11 +263,16 @@ export function buildLitterboxTrendResult(input: {
   endTime: Date;
   timezone: string;
   includeDetails: boolean;
+  untrackedDayBuckets?: ReadonlySet<string>;
 }): LitterboxTrendResult {
   const dayMap = new Map<string, LitterboxTrendDay>();
 
   for (const date of createDateKeys(input.startTime, input.endTime, input.timezone)) {
-    dayMap.set(date, { date, events: [] });
+    dayMap.set(date, {
+      date,
+      tracked: isBucketTracked(date, input.untrackedDayBuckets ?? new Set()),
+      events: [],
+    });
   }
 
   let lastPee: Date | null = null;

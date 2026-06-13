@@ -11,6 +11,7 @@ import {
   getPets,
   getPetWeightTrends,
   getPetWaterTrends,
+  getPetFoodTrends,
   getPetLitterboxTrends,
   updateEvent,
   getPet,
@@ -104,6 +105,15 @@ export function usePetWaterTrends(petId: number, days: number) {
   return useQuery({
     queryKey: ['waterTrends', petId, days, timezone],
     queryFn: () => getPetWaterTrends(petId, { days, timezone }),
+    enabled: petId > 0,
+  });
+}
+
+export function usePetFoodTrends(petId: number, days: number) {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return useQuery({
+    queryKey: ['foodTrends', petId, days, timezone],
+    queryFn: () => getPetFoodTrends(petId, { days, timezone }),
     enabled: petId > 0,
   });
 }

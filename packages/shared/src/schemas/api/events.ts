@@ -150,13 +150,24 @@ export const WeightTrendQuerySchema = Type.Object({
 });
 export type WeightTrendQueryDTO = Static<typeof WeightTrendQuerySchema>;
 
-export const WeightTrendsResponseSchema = Type.Array(
-  Type.Object({
-    date: Type.String(),
-    weight: Type.Number(),
-    timestamp: Type.String(),
-  }),
-);
+export const UntrackedIntervalSchema = Type.Object({
+  start: Type.String({ format: "date-time" }),
+  end: Type.String({ format: "date-time" }),
+});
+export type UntrackedIntervalDTO = Static<typeof UntrackedIntervalSchema>;
+
+export const WeightTrendPointSchema = Type.Object({
+  date: Type.String(),
+  weight: Type.Number(),
+  timestamp: Type.String(),
+  tracked: Type.Boolean(),
+});
+export type WeightTrendPointDTO = Static<typeof WeightTrendPointSchema>;
+
+export const WeightTrendsResponseSchema = Type.Object({
+  points: Type.Array(WeightTrendPointSchema),
+  untrackedIntervals: Type.Array(UntrackedIntervalSchema),
+});
 export type WeightTrendsResponseDTO = Static<typeof WeightTrendsResponseSchema>;
 
 export const WaterIntakeEventDataSchema = Type.Object({
@@ -226,17 +237,30 @@ export const WaterTrendQuerySchema = Type.Object({
 });
 export type WaterTrendQueryDTO = Static<typeof WaterTrendQuerySchema>;
 
-export const WaterTrendsResponseSchema = Type.Array(
-  Type.Object({
-    date: Type.String(),
-    amount: Type.Number(),
-    tracked: Type.Boolean(),
-    lowerBound: Type.Number(),
-    upperBound: Type.Number(),
-    averageWeight: Type.Number(),
-  }),
-);
+const DailyMetricTrendDaySchema = Type.Object({
+  date: Type.String(),
+  amount: Type.Number(),
+  tracked: Type.Boolean(),
+  lowerBound: Type.Number(),
+  upperBound: Type.Number(),
+  averageWeight: Type.Number(),
+});
+export type DailyMetricTrendDayDTO = Static<typeof DailyMetricTrendDaySchema>;
+
+export const WaterTrendsResponseSchema = Type.Array(DailyMetricTrendDaySchema);
 export type WaterTrendsResponseDTO = Static<typeof WaterTrendsResponseSchema>;
+
+export const FoodTrendParamsSchema = Type.Object({ petId: Type.Number() });
+export type FoodTrendParamsDTO = Static<typeof FoodTrendParamsSchema>;
+
+export const FoodTrendQuerySchema = Type.Object({
+  days: Type.Optional(Type.Number({ minimum: 1 })),
+  timezone: Type.Optional(Type.String()),
+});
+export type FoodTrendQueryDTO = Static<typeof FoodTrendQuerySchema>;
+
+export const FoodTrendsResponseSchema = Type.Array(DailyMetricTrendDaySchema);
+export type FoodTrendsResponseDTO = Static<typeof FoodTrendsResponseSchema>;
 
 // Litterbox trends
 export const LitterboxTrendParamsSchema = Type.Object({ petId: Type.Number() });
@@ -312,6 +336,7 @@ export const LitterboxTrendsResponseSchema = Type.Object({
   days: Type.Array(
     Type.Object({
       date: Type.String(),
+      tracked: Type.Boolean(),
       events: Type.Array(LitterboxTrendEventSchema),
       summary: Type.Optional(LitterboxDailySummarySchema),
     }),

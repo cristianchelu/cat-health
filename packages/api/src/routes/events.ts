@@ -1,5 +1,5 @@
 import { sql } from 'kysely';
-import { subDays, startOfDay, addDays } from 'date-fns';
+import { subDays } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 
 import {
@@ -19,6 +19,9 @@ import {
   WaterTrendParamsSchema,
   WaterTrendQuerySchema,
   WaterTrendsResponseSchema,
+  FoodTrendParamsSchema,
+  FoodTrendQuerySchema,
+  FoodTrendsResponseSchema,
   LitterboxTrendParamsSchema,
   LitterboxTrendQuerySchema,
   LitterboxTrendsResponseSchema,
@@ -40,6 +43,15 @@ import { computeLitterboxAnalysisData } from '../services/devices/providers/esph
 import type { LitterboxUseEventData } from '../database/types/EventTable.ts';
 import type { EventTable } from '../database/types/EventTable.ts';
 import { buildLitterboxTrendResult } from '../services/litterbox/litterboxAnalytics.ts';
+import {
+  buildFoodTrends,
+  buildWaterTrends,
+} from '../services/analytics/dailyMetricTrends.ts';
+import {
+  bucketsToUntrackedIntervals,
+  computeUntrackedBuckets,
+} from '../services/analytics/trendCoverage.ts';
+import { isBucketTracked } from '../services/analytics/analyticsCoverage.ts';
 import type { Selectable } from 'kysely';
 
 function serializeEventRow(event: Selectable<EventTable>) {
@@ -77,110 +89,26 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const { petId } = request.params;
       const { days = 7, timezone = 'UTC' } = request.query;
 
-      const startDate = startOfDay(subDays(new Date(), days - 1));
-      const today = new Date();
+      return buildWaterTrends(db, petId, days, timezone);
+    },
+  );
 
-      // Fetch water intake events
-      const waterEvents = await db
-        .selectFrom('event')
-        .selectAll()
-        .where('pet_id', '=', petId)
-        .where(sql`json_extract(data, '$.type')`, '=', 'water_intake')
-        .where('timestamp', '>=', startDate)
-        .orderBy('timestamp', 'asc')
-        .execute();
+  fastify.get(
+    '/food-trends/:petId',
+    {
+      schema: {
+        params: FoodTrendParamsSchema,
+        querystring: FoodTrendQuerySchema,
+        response: {
+          '200': FoodTrendsResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { petId } = request.params;
+      const { days = 7, timezone = 'UTC' } = request.query;
 
-      // Fetch weight events for the period
-      const weightEvents = await db
-        .selectFrom('event')
-        .selectAll()
-        .where('pet_id', '=', petId)
-        .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
-        .where('timestamp', '>=', startDate)
-        .orderBy('timestamp', 'asc')
-        .execute();
-
-      // Fetch latest weight before start date
-      const lastWeightEvent = await db
-        .selectFrom('event')
-        .selectAll()
-        .where('pet_id', '=', petId)
-        .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
-        .where('timestamp', '<', startDate)
-        .orderBy('timestamp', 'desc')
-        .limit(1)
-        .executeTakeFirst();
-
-      let currentWeight = lastWeightEvent
-        ? (lastWeightEvent.data as { weight: number }).weight
-        : 0;
-
-      // If no previous weight, try to use the first weight in the period
-      if (currentWeight === 0 && weightEvents.length > 0) {
-        currentWeight = (weightEvents[0].data as { weight: number }).weight;
-      }
-
-      const dailyStats = new Map<string, { amount: number }>();
-
-      // Initialize days
-      for (let i = 0; i < days; i++) {
-        const d = subDays(today, days - 1 - i);
-        const dateStr = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
-        dailyStats.set(dateStr, { amount: 0 });
-      }
-
-      // Process water events
-      for (const event of waterEvents) {
-        const dateStr = formatInTimeZone(event.timestamp, timezone, 'yyyy-MM-dd');
-        if (dailyStats.has(dateStr)) {
-          const stats = dailyStats.get(dateStr)!;
-          const amount = (event.data as { amount: number }).amount || 0;
-          stats.amount += amount;
-        }
-      }
-
-      const result = [];
-      let weightEventIndex = 0;
-
-      for (let i = 0; i < days; i++) {
-        const d = subDays(today, days - 1 - i);
-        const dateStr = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
-        const dayStart = new Date(`${dateStr}T00:00:00Z`);
-        const nextDay = addDays(dayStart, 1);
-
-        // Find weights for this day
-        const dayWeights: number[] = [];
-        while (weightEventIndex < weightEvents.length) {
-          const we = weightEvents[weightEventIndex];
-          if (we.timestamp < nextDay) {
-            dayWeights.push((we.data as { weight: number }).weight);
-            weightEventIndex++;
-          } else {
-            break;
-          }
-        }
-
-        let avgWeight = currentWeight;
-        if (dayWeights.length > 0) {
-          const sum = dayWeights.reduce((a, b) => a + b, 0);
-          avgWeight = sum / dayWeights.length;
-          currentWeight = avgWeight; // Update current weight for next days
-        }
-
-        const stats = dailyStats.get(dateStr)!;
-        const weightInKg = avgWeight / 1000;
-
-        result.push({
-          date: dateStr,
-          amount: stats.amount,
-          tracked: true,
-          lowerBound: weightInKg * 40,
-          upperBound: weightInKg * 50,
-          averageWeight: avgWeight,
-        });
-      }
-
-      return result;
+      return buildFoodTrends(db, petId, days, timezone);
     },
   );
 
@@ -202,16 +130,24 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const startDate = new Date(startTime);
       const endDate = new Date(endTime);
 
-      // Fetch litterbox events
-      const litterboxEvents = await db
-        .selectFrom('event')
-        .selectAll()
-        .where('pet_id', '=', petId)
-        .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_use')
-        .where('timestamp', '>=', startDate)
-        .where('timestamp', '<=', endDate)
-        .orderBy('timestamp', 'asc')
-        .execute();
+      const [litterboxEvents, untrackedDayBuckets] = await Promise.all([
+        db
+          .selectFrom('event')
+          .selectAll()
+          .where('pet_id', '=', petId)
+          .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_use')
+          .where('timestamp', '>=', startDate)
+          .where('timestamp', '<=', endDate)
+          .orderBy('timestamp', 'asc')
+          .execute(),
+        computeUntrackedBuckets(db, {
+          petId,
+          deviceClass: 'litterbox',
+          range: { start: startDate, end: endDate },
+          resolution: 'day',
+          timezone,
+        }),
+      ]);
 
       return buildLitterboxTrendResult({
         visits: litterboxEvents.map((event) => ({
@@ -225,6 +161,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         endTime: endDate,
         timezone,
         includeDetails: detail,
+        untrackedDayBuckets,
       });
     },
   );
@@ -244,6 +181,10 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const { petId } = request.params;
       const { days = 30, timezone = 'UTC' } = request.query;
 
+      const rangeStart =
+        days < 9999 ? subDays(new Date(), days) : new Date(0);
+      const rangeEnd = new Date();
+
       let query = db
         .selectFrom('event')
         .selectAll()
@@ -251,24 +192,48 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
         .orderBy('timestamp', 'asc');
 
-      // Only apply date filter if days is reasonable (not "all time")
       if (days < 9999) {
-        const startDate = subDays(new Date(), days);
-        query = query.where('timestamp', '>=', startDate);
+        query = query.where('timestamp', '>=', rangeStart);
       }
 
-      const weightEvents = await query.execute();
+      const [weightEvents, untrackedDayBuckets, untrackedHourBuckets] =
+        await Promise.all([
+          query.execute(),
+          computeUntrackedBuckets(db, {
+            petId,
+            deviceClass: 'litterbox',
+            range: { start: rangeStart, end: rangeEnd },
+            resolution: 'day',
+            timezone,
+          }),
+          computeUntrackedBuckets(db, {
+            petId,
+            deviceClass: 'litterbox',
+            range: { start: rangeStart, end: rangeEnd },
+            resolution: 'hour',
+            timezone,
+          }),
+        ]);
 
-      const trends = weightEvents.map((event) => {
+      const points = weightEvents.map((event) => {
         const data = event.data as { type: string; weight: number };
+        const date = formatInTimeZone(event.timestamp, timezone, 'yyyy-MM-dd');
         return {
-          date: formatInTimeZone(event.timestamp, timezone, 'yyyy-MM-dd'),
+          date,
           weight: data.weight,
           timestamp: event.timestamp.toISOString(),
+          tracked: isBucketTracked(date, untrackedDayBuckets),
         };
       });
 
-      return trends;
+      return {
+        points,
+        untrackedIntervals: bucketsToUntrackedIntervals(
+          untrackedHourBuckets,
+          'hour',
+          timezone,
+        ),
+      };
     },
   );
 
