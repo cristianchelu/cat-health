@@ -11,12 +11,37 @@ import {
   GetPetsResponseSchema,
   PostPetRequestSchema,
   PatchPetRequestSchema,
+  TogglePetPresenceParamsSchema,
+  TogglePetPresenceResponseSchema,
   type PatchPetRequestDTO,
 } from 'shared';
 import {
   Type,
   type FastifyPluginAsyncTypebox,
 } from '@fastify/type-provider-typebox';
+import {
+  buildToggledPresenceData,
+  deriveIsAway,
+  fetchLatestPresenceByPetIds,
+  fetchLatestPresenceForPet,
+} from '../services/events/petPresence.ts';
+import { recordPetPresenceEvent } from '../services/events/recordPetPresenceEvent.ts';
+
+function serializeEventRow(event: {
+  id: number;
+  parent_event_id: number | null;
+  pet_id: number | null;
+  device_id: number | null;
+  timestamp: Date;
+  data: unknown;
+  raw_data: Buffer | null;
+  human_verified: boolean;
+}) {
+  return {
+    ...event,
+    raw_data: event.raw_data ? Array.from(event.raw_data) : null,
+  };
+}
 
 export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
@@ -46,6 +71,10 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           'media.file_path as avatar_file_path',
         ])
         .execute();
+      const presenceByPet = await fetchLatestPresenceByPetIds(
+        db,
+        rows.map((row) => row.id),
+      );
       return rows.map((r) => ({
         id: r.id,
         name: r.name,
@@ -55,6 +84,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         avatar_url: r.avatar_file_path
           ? `api/media/${r.avatar_file_path}`
           : undefined,
+        is_away: deriveIsAway(presenceByPet.get(r.id)),
       }));
     },
   );
@@ -77,7 +107,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .values({ name, breed, birth_date })
         .returningAll()
         .executeTakeFirstOrThrow();
-      return { ...result, avatar_url: undefined };
+      return { ...result, avatar_url: undefined, is_away: false };
     },
   );
   fastify.get(
@@ -111,6 +141,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('pet.id', '=', id)
         .executeTakeFirst();
       if (!row) throw new Error('Pet not found');
+      const latestPresence = await fetchLatestPresenceForPet(db, id);
       return {
         id: row.id,
         name: row.name,
@@ -119,6 +150,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         avatar_url: row.avatar_file_path
           ? `api/media/${row.avatar_file_path}`
           : undefined,
+        is_away: deriveIsAway(latestPresence),
       };
     },
   );
@@ -158,7 +190,20 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           .where('id', '=', id)
           .executeTakeFirst();
         if (!existing) throw new Error('Pet not found');
-        return existing;
+        const avatar = await db
+          .selectFrom('media_link')
+          .innerJoin('media', 'media.id', 'media_link.media_id')
+          .select(['media.file_path'])
+          .where('media_link.entity_type', '=', 'pet')
+          .where('media_link.entity_id', '=', String(id))
+          .where('media_link.relation', '=', 'avatar')
+          .executeTakeFirst();
+        const latestPresence = await fetchLatestPresenceForPet(db, id);
+        return {
+          ...existing,
+          avatar_url: avatar ? `api/media/${avatar.file_path}` : undefined,
+          is_away: deriveIsAway(latestPresence),
+        };
       }
 
       const result = await db
@@ -169,16 +214,74 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .executeTakeFirst();
 
       if (!result) throw new Error('Pet not found');
-      const avatar = await db
-        .selectFrom('media_link')
-        .innerJoin('media', 'media.id', 'media_link.media_id')
-        .select(['media.file_path'])
-        .where('media_link.entity_type', '=', 'pet')
-        .where('media_link.entity_id', '=', String(id))
-        .where('media_link.relation', '=', 'avatar')
-        .executeTakeFirst();
+      const [avatar, latestPresence] = await Promise.all([
+        db
+          .selectFrom('media_link')
+          .innerJoin('media', 'media.id', 'media_link.media_id')
+          .select(['media.file_path'])
+          .where('media_link.entity_type', '=', 'pet')
+          .where('media_link.entity_id', '=', String(id))
+          .where('media_link.relation', '=', 'avatar')
+          .executeTakeFirst(),
+        fetchLatestPresenceForPet(db, id),
+      ]);
       const avatar_url = avatar ? `api/media/${avatar.file_path}` : undefined;
-      return { ...result, avatar_url };
+      return {
+        ...result,
+        avatar_url,
+        is_away: deriveIsAway(latestPresence),
+      };
+    },
+  );
+
+  fastify.post(
+    '/:id/presence/toggle',
+    {
+      schema: {
+        params: TogglePetPresenceParamsSchema,
+        response: {
+          '200': TogglePetPresenceResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+
+      const pet = await db
+        .selectFrom('pet')
+        .select('id')
+        .where('id', '=', id)
+        .executeTakeFirst();
+      if (!pet) {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Pet not found',
+        });
+      }
+
+      const latestPresence = await fetchLatestPresenceForPet(db, id);
+      const data = buildToggledPresenceData(latestPresence);
+
+      const eventId = await recordPetPresenceEvent(
+        { db },
+        {
+          petId: id,
+          data,
+          human_verified: true,
+        },
+      );
+
+      const event = await db
+        .selectFrom('event')
+        .selectAll()
+        .where('id', '=', eventId)
+        .executeTakeFirstOrThrow();
+
+      return {
+        is_away: deriveIsAway(data),
+        event: serializeEventRow(event),
+      };
     },
   );
 

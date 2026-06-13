@@ -6,6 +6,7 @@ import WeightEvent from './WeightEvent';
 import WaterEvent from './WaterEvent';
 import FoodEvent from './FoodEvent';
 import DeviceCentricEvent from './DeviceCentricEvent';
+import PetPresenceEvent from './PetPresenceEvent';
 import GenericEvent from './GenericEvent';
 
 export type TimelineEventComponent = React.ComponentType<EventComponentProps>;
@@ -25,6 +26,11 @@ const timelineEventRegistry: TimelineEventRegistration[] = [
     id: 'device-connectivity',
     type: 'device_connectivity',
     component: DeviceCentricEvent,
+  },
+  {
+    id: 'pet-presence',
+    type: 'pet_presence',
+    component: PetPresenceEvent,
   },
   {
     id: 'litterbox-maintenance',

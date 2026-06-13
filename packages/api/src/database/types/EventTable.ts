@@ -95,13 +95,25 @@ export interface DeviceConnectivityEventData {
   previous_state?: DeviceConnectivityPreviousState;
 }
 
+export type PetPresenceState = 'away' | 'home' | 'outside';
+export type PetPresenceContext = 'vet' | 'travel' | 'friend' | 'manual';
+export type PetPresencePreviousState = PetPresenceState | 'unknown';
+
+export interface PetPresenceEventData {
+  type: 'pet_presence';
+  state: PetPresenceState;
+  context?: PetPresenceContext;
+  previous_state?: PetPresencePreviousState;
+}
+
 export type EventData =
   | WeightMeasurementEventData
   | WaterIntakeEventData
   | LitterboxUseEventData
   | FoodIntakeEventData
   | LitterboxMaintenanceEventData
-  | DeviceConnectivityEventData;
+  | DeviceConnectivityEventData
+  | PetPresenceEventData;
 
 export type EventTable<TData = EventData> = {
   id: Generated<number>;

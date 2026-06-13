@@ -50,7 +50,13 @@
         "litterbox_maintenance_scoop": "Curățare",
         "litterbox_maintenance_deep_clean": "Curățare profundă",
         "litterbox_maintenance_litter_change": "Schimbare litieră",
-        "litterbox_maintenance_litter_addition": "Litieră adăugată"
+        "litterbox_maintenance_litter_addition": "Litieră adăugată",
+        "pet_presence_home": "S-a întors acasă",
+        "pet_presence_away": "A plecat de acasă",
+        "pet_presence_context_vet": "Veterinar",
+        "pet_presence_context_travel": "Călătorie",
+        "pet_presence_context_friend": "Prieten",
+        "pet_presence_context_manual": "Manual"
     },
     "litterbox_details": {
         "title": "Vizite la litieră",
@@ -118,6 +124,7 @@
         "breed_max": "Rasa trebuie să aibă mai puțin de 50 de caractere",
         "birth_date": "Data nașterii",
         "birth_date_desc": "Opțional: Introdu data nașterii pentru urmărirea vârstei",
+        "exclude_from_analytics": "Exclude din analize",
         "deleting": "Se șterge...",
         "delete": "Șterge",
         "cancel": "Anulează",
@@ -256,6 +263,7 @@
         "litterbox_usage": "Utilizare litieră",
         "litterbox_maintenance": "Întreținere litieră",
         "device_connectivity": "Conectivitate dispozitiv",
+        "pet_presence": "Prezență animal",
         "event_detected": "Eveniment detectat",
         "media": "Media",
         "analysis": "Analiză",

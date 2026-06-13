@@ -8,6 +8,7 @@ export const EventTypeSchema = Type.Union([
   Type.Literal("food_intake"),
   Type.Literal("litterbox_maintenance"),
   Type.Literal("device_connectivity"),
+  Type.Literal("pet_presence"),
 ]);
 export type EventType = Static<typeof EventTypeSchema>;
 
@@ -188,6 +189,32 @@ export const DeviceConnectivityEventDataSchema = Type.Object({
 export type DeviceConnectivityEventDataDTO = Static<
   typeof DeviceConnectivityEventDataSchema
 >;
+
+export const PetPresenceStateSchema = Type.Union([
+  Type.Literal("away"),
+  Type.Literal("home"),
+  Type.Literal("outside"),
+]);
+
+export const PetPresenceContextSchema = Type.Union([
+  Type.Literal("vet"),
+  Type.Literal("travel"),
+  Type.Literal("friend"),
+  Type.Literal("manual"),
+]);
+
+export const PetPresencePreviousStateSchema = Type.Union([
+  PetPresenceStateSchema,
+  Type.Literal("unknown"),
+]);
+
+export const PetPresenceEventDataSchema = Type.Object({
+  type: Type.Literal("pet_presence"),
+  state: PetPresenceStateSchema,
+  context: Type.Optional(PetPresenceContextSchema),
+  previous_state: Type.Optional(PetPresencePreviousStateSchema),
+});
+export type PetPresenceEventDataDTO = Static<typeof PetPresenceEventDataSchema>;
 
 // Water trends
 export const WaterTrendParamsSchema = Type.Object({ petId: Type.Number() });

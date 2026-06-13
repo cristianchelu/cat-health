@@ -7,6 +7,7 @@ import type {
   PatchEventRequestDTO,
   GetPetsResponseDTO,
   GetPetResponseDTO,
+  TogglePetPresenceResponseDTO,
   WeightTrendsResponseDTO,
   WeightTrendQueryDTO,
   WaterTrendsResponseDTO,
@@ -51,6 +52,13 @@ export async function updatePet(id: number, input: PatchPetRequestDTO) {
 
 export async function deletePet(id: number) {
   const { data } = await apiClient.delete<DeletePetResponseDTO>(`/pets/${id}`);
+  return data;
+}
+
+export async function togglePetPresence(id: number) {
+  const { data } = await apiClient.post<TogglePetPresenceResponseDTO>(
+    `/pets/${id}/presence/toggle`,
+  );
   return data;
 }
 

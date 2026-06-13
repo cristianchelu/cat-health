@@ -113,6 +113,8 @@ function getEventTitle(event: GetEventDTO, t: (key: string) => string): string {
       return t('event_details.litterbox_maintenance');
     case 'device_connectivity':
       return t('event_details.device_connectivity');
+    case 'pet_presence':
+      return t('event_details.pet_presence');
     default:
       return t('event_details.event_detected');
   }

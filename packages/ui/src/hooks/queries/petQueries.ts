@@ -17,12 +17,14 @@ import {
   createPet,
   updatePet,
   deletePet,
+  togglePetPresence,
 } from '@/api/pets';
 import type {
   PostPetRequestDTO,
   PatchPetRequestDTO,
   PatchEventRequestDTO,
   LitterboxTrendQueryDTO,
+  GetPetResponseDTO,
 } from 'shared';
 import { dateRangeToTimeRange, type DateRange } from '@/lib/utils';
 
@@ -176,6 +178,20 @@ export function useDeletePet(petId: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pets'] });
       queryClient.removeQueries({ queryKey: ['pet', petId] });
+    },
+  });
+}
+
+export function useTogglePetPresence(petId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => togglePetPresence(petId),
+    onSuccess: (result) => {
+      queryClient.setQueryData(['pet', petId], (current: GetPetResponseDTO | undefined) =>
+        current ? { ...current, is_away: result.is_away } : current,
+      );
+      queryClient.invalidateQueries({ queryKey: ['pets'] });
+      queryClient.invalidateQueries({ queryKey: ['petEvents', petId] });
     },
   });
 }

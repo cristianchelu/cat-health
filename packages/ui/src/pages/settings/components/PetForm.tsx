@@ -4,8 +4,10 @@ import { useForm } from 'react-hook-form';
 import { FormField, Input, DatePicker } from '@/components/ui/form';
 import { Button } from '@/components/ui/Button';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Switch } from '@/components/ui/Switch';
 import { Cat } from 'lucide-react';
 import type { PostPetRequestDTO } from 'shared';
+import { useTogglePetPresence } from '@/hooks/queries/petQueries';
 import AvatarUpload from '@/components/pet/AvatarUpload';
 
 import './PetForm.css';
@@ -13,6 +15,8 @@ import './PetForm.css';
 interface PetFormProps {
   initialData?: Partial<PostPetRequestDTO>;
   existingAvatarUrl?: string | null;
+  petId?: number;
+  isAway?: boolean;
   onSubmit: (data: PostPetRequestDTO, avatarFile: File | null) => void;
   onCancel: () => void;
   onDelete?: () => void; // optional delete handler when editing
@@ -24,6 +28,8 @@ interface PetFormProps {
 const PetForm: React.FC<PetFormProps> = ({
   initialData,
   existingAvatarUrl,
+  petId,
+  isAway = false,
   onSubmit,
   onCancel,
   onDelete,
@@ -32,6 +38,7 @@ const PetForm: React.FC<PetFormProps> = ({
   title,
 }) => {
   const { t } = useTranslation();
+  const togglePresenceMutation = useTogglePetPresence(petId ?? 0);
   const {
     register,
     handleSubmit,
@@ -129,6 +136,20 @@ const PetForm: React.FC<PetFormProps> = ({
             disabled={isSubmitting}
           />
         </FormField>
+
+        {petId != null && (
+          <FormField label={t('settings.exclude_from_analytics')}>
+            <Switch
+              checked={isAway}
+              onCheckedChange={() => togglePresenceMutation.mutate()}
+              disabled={
+                isSubmitting ||
+                isDeleting ||
+                togglePresenceMutation.isPending
+              }
+            />
+          </FormField>
+        )}
 
         <div className="actions">
           {onDelete && (

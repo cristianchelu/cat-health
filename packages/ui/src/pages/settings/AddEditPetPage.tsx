@@ -78,6 +78,8 @@ const AddEditPetPage: React.FC = () => {
     <div className="page-add-edit-pet">
       <PetForm
         title={isEditing ? t('settings.edit_pet') : t('settings.add_pet_title')}
+        petId={isEditing ? petId : undefined}
+        isAway={pet?.is_away ?? false}
         initialData={pet || undefined}
         existingAvatarUrl={pet?.avatar_url ?? null}
         onSubmit={handleSubmit}

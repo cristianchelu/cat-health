@@ -487,7 +487,11 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         bodyTimestamp != null ? new Date(bodyTimestamp as string | number | Date) : new Date();
       const humanVerified =
         bodyHumanVerified ??
-        (eventData?.type === 'food_intake' ? true : false);
+        (eventData?.type === 'food_intake'
+          ? true
+          : eventData?.type === 'pet_presence'
+            ? eventData.context === 'manual'
+            : false);
 
       const result = await db
         .insertInto('event')

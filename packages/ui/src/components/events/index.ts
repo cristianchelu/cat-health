@@ -7,6 +7,7 @@ export { default as FoodEvent } from './FoodEvent';
 export { default as GenericEvent } from './GenericEvent';
 export { default as TimelineEventShell } from './TimelineEventShell';
 export { default as DeviceCentricEvent } from './DeviceCentricEvent';
+export { default as PetPresenceEvent } from './PetPresenceEvent';
 export * from './eventTimelineRegistry';
 export { default as EventDuration } from './meta/EventDuration';
 export { default as EventPet } from './meta/EventPet';

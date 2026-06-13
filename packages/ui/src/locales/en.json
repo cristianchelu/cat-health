@@ -50,7 +50,13 @@
         "litterbox_maintenance_scoop": "Scoop",
         "litterbox_maintenance_deep_clean": "Deep clean",
         "litterbox_maintenance_litter_change": "Litter change",
-        "litterbox_maintenance_litter_addition": "Litter added"
+        "litterbox_maintenance_litter_addition": "Litter added",
+        "pet_presence_home": "Returned home",
+        "pet_presence_away": "Left home",
+        "pet_presence_context_vet": "Vet",
+        "pet_presence_context_travel": "Travel",
+        "pet_presence_context_friend": "Friend",
+        "pet_presence_context_manual": "Manual"
     },
     "litterbox_details": {
         "title": "Litterbox visits",
@@ -167,6 +173,7 @@
         "breed_max": "Breed must be less than 50 characters",
         "birth_date": "Birth Date",
         "birth_date_desc": "Optional: Enter your pet's birth date for age tracking",
+        "exclude_from_analytics": "Exclude from analytics",
         "deleting": "Deleting…",
         "delete": "Delete",
         "cancel": "Cancel",
@@ -309,6 +316,7 @@
         "litterbox_usage": "Litterbox Usage",
         "litterbox_maintenance": "Litterbox Maintenance",
         "device_connectivity": "Device connectivity",
+        "pet_presence": "Pet presence",
         "event_detected": "Event Detected",
         "media": "Media",
         "analysis": "Analysis",
