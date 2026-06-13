@@ -5,6 +5,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { ArrowRight, Scale } from 'lucide-react';
 import { formatRelative } from 'date-fns';
 import { cn } from '@/lib/utils';
+import UntrackedRegionOverlay from '@/components/charts/UntrackedRegionOverlay';
 
 import './WeightTrendCard.css';
 
@@ -122,7 +123,9 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
     chartBody = <div className="weight-chart" aria-hidden />;
   } else {
     const points = weightData.points;
-    const latestWeight = points[points.length - 1]?.weight;
+    const latestPoint = points[points.length - 1];
+    const latestWeight = latestPoint?.weight;
+    const latestTracked = latestPoint?.tracked ?? true;
     const oldestWeight = points[0]?.weight;
     const weightChange = latestWeight - oldestWeight;
     const weightChangePercent =
@@ -157,15 +160,24 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
       return { x, y, weight: data.weight };
     });
 
-    const timestamp = points.at(-1)?.timestamp;
+    const timestamp = latestPoint?.timestamp;
     const timeLabel = timestamp
       ? formatRelative(new Date(timestamp), new Date())
       : '';
 
+    const chartMinTime = new Date(points[0].timestamp).getTime();
+    const chartMaxTime = new Date(points[points.length - 1].timestamp).getTime();
+
     headerRight = (
       <div className="weight-trend-info">
         <ArrowRight className={cn('trend-icon', trendInfo)} />
-        <div className="weight-value">{formatWeight(latestWeight)}</div>
+        <div
+          className={cn('weight-value', {
+            'weight-value--untracked': !latestTracked,
+          })}
+        >
+          {latestTracked ? formatWeight(latestWeight) : '-.-- kg'}
+        </div>
         <div className="weight-time">{timeLabel}</div>
       </div>
     );
@@ -196,6 +208,12 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
             />
           </linearGradient>
         </defs>
+        <UntrackedRegionOverlay
+          intervals={weightData.untrackedIntervals}
+          minTime={chartMinTime}
+          maxTime={chartMaxTime}
+          patternId="weight-trend-untracked"
+        />
         <path
           d={createAreaPath(chartPoints, height)}
           fill="url(#weightGradient)"

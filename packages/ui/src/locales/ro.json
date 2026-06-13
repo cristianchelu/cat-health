@@ -101,6 +101,8 @@
         "language_region_desc": "Setează limba preferată și setările regionale",
         "timezone": "Fus orar",
         "timezone_desc": "Configurează fusul orar local pentru urmărire precisă",
+        "tracking_gap_threshold_label": "Prag gol urmărire",
+        "tracking_gap_threshold_desc": "Minute fără date de la dispozitiv înainte ca o perioadă să fie marcată ca neurmărită",
         "notifications": "Notificări",
         "notifications_desc": "Gestionează alertele și mementourile pentru animale",
         "export_data": "Exportă date",

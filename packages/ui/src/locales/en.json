@@ -150,6 +150,8 @@
         "language_region_desc": "Set your preferred language and regional settings",
         "timezone": "Timezone",
         "timezone_desc": "Configure your local timezone for accurate tracking",
+        "tracking_gap_threshold_label": "Tracking gap threshold",
+        "tracking_gap_threshold_desc": "Minutes without device data before a period is marked untracked",
         "notifications": "Notifications",
         "notifications_desc": "Manage alerts and reminders for your pets",
         "export_data": "Export Data",

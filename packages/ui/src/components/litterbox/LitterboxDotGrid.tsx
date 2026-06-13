@@ -17,6 +17,7 @@ export interface LitterboxDotGridColumn {
   key: string;
   label?: string;
   dots: LitterboxDotGridDot[];
+  tracked?: boolean;
   overflowCount?: number;
   footer?: {
     text: string;
@@ -82,12 +83,19 @@ const LitterboxDotGrid = React.forwardRef<HTMLDivElement, LitterboxDotGridProps>
           return (
             <ColumnElement
               key={column.key}
-              className="litterbox-dot-grid-column"
+              className={cn('litterbox-dot-grid-column', {
+                'litterbox-dot-grid-column--untracked': column.tracked === false,
+              })}
               {...(isInteractive ? { type: 'button' as const } : {})}
               aria-label={column.label}
               onClick={() => onColumnClick?.(column)}
             >
-              <span className="litterbox-dot-grid-stack" aria-hidden>
+              <span
+                className={cn('litterbox-dot-grid-stack', {
+                  'untracked-pattern': column.tracked === false,
+                })}
+                aria-hidden
+              >
                 {visibleDots.map((dot, dotIndex) => {
                   const isTopDot = dotIndex === visibleDots.length - 1;
                   return (

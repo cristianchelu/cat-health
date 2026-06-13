@@ -34,6 +34,11 @@
     gap: var(--space-xl);
     grid-template-columns: 1fr;
 
+    .settings-tracking-gap-input {
+      width: 5.5rem;
+      text-align: right;
+    }
+
     @media (min-width: 768px) {
       grid-template-columns: repeat(2, 1fr);
     }

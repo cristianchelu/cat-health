@@ -4,6 +4,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { GlassWater } from 'lucide-react';
 import MetricBarChart from '@/components/ui/MetricBarChart';
 import { usePetWaterTrends } from '@/hooks/queries/petQueries';
+import { cn } from '@/lib/utils';
 
 import './WaterConsumptionCard.css';
 
@@ -38,14 +39,16 @@ const WaterConsumptionCard: React.FC<WaterConsumptionCardProps> = ({
     );
   }
 
-  let todayConsumption = 0;
+  let todayConsumption: number | null = null;
   let chart: React.ReactNode = null;
 
   if (isLoading) {
     chart = null;
   } else if (waterData) {
     const todayData = waterData[waterData.length - 1];
-    todayConsumption = Math.round(todayData.tracked ? todayData.amount : 0);
+    todayConsumption = todayData.tracked
+      ? Math.round(todayData.amount)
+      : null;
 
     const maxConsumption = Math.max(...waterData.map((d) => d.amount));
     const maxUpperBound = Math.max(...waterData.map((d) => d.upperBound));
@@ -63,6 +66,10 @@ const WaterConsumptionCard: React.FC<WaterConsumptionCardProps> = ({
 
   const headerValue = isLoading ? (
     <span className="consumption-value">--- ml</span>
+  ) : todayConsumption === null ? (
+    <span className={cn('consumption-value', 'consumption-value--untracked')}>
+      --- ml
+    </span>
   ) : (
     <span className="consumption-value">{todayConsumption} ml</span>
   );

@@ -40,6 +40,15 @@
     &:disabled {
       pointer-events: none;
     }
+
+    &.litterbox-dot-grid-column--untracked {
+      .litterbox-dot-grid-stack {
+        flex: 1;
+        width: 100%;
+        min-height: var(--litterbox-dot-grid-dot-size);
+        border-radius: var(--radius-md);
+      }
+    }
   }
 
   .litterbox-dot-grid-stack {

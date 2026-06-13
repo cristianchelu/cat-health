@@ -1,5 +1,6 @@
 @import './theme.css';
 @import './styles/page-shell.css';
+@import './styles/untracked-pattern.css';
 
 /* Base styles */
 html {

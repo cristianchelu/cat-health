@@ -1,7 +1,9 @@
 import * as React from 'react';
 import { addDays, format, isSameDay, startOfDay, startOfWeek, type Locale } from 'date-fns';
 import { enUS } from 'date-fns/locale';
+import type { UntrackedIntervalDTO } from 'shared';
 import { cn } from '@/lib/utils';
+import UntrackedRegionOverlay from '@/components/charts/UntrackedRegionOverlay';
 import './LitterboxMetricChart.css';
 
 export interface LitterboxMetricChartPoint {
@@ -29,6 +31,7 @@ interface LitterboxMetricChartProps extends React.ComponentProps<'div'> {
   series: LitterboxMetricChartSeries[];
   emptyLabel: string;
   timeRange?: LitterboxMetricChartTimeRange;
+  untrackedIntervals?: UntrackedIntervalDTO[];
   locale?: Locale;
 }
 
@@ -88,9 +91,11 @@ const LitterboxMetricChart: React.FC<LitterboxMetricChartProps> = ({
   series,
   emptyLabel,
   timeRange,
+  untrackedIntervals = [],
   locale = enUS,
   ...props
 }) => {
+  const patternId = React.useId().replace(/:/g, '');
   const allPoints = series.flatMap((item) => item.points);
   const values = allPoints.map((point) => point.value);
   const maxValue = Math.max(...values, 1);
@@ -160,6 +165,12 @@ const LitterboxMetricChart: React.FC<LitterboxMetricChartProps> = ({
             role="img"
             aria-label={title}
           >
+            <UntrackedRegionOverlay
+              intervals={untrackedIntervals}
+              minTime={minTime}
+              maxTime={maxTime}
+              patternId={`litterbox-metric-untracked-${patternId}`}
+            />
             {dayBoundaries.map((boundaryTime) => {
               const x = getX(boundaryTime, minTime, maxTime);
               if (x <= 0 || x >= 100) return null;

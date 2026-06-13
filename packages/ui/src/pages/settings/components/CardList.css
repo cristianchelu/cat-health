@@ -8,6 +8,14 @@
     cursor: pointer;
     transition: var(--transition-normal);
 
+    &.list-item--static {
+      cursor: default;
+
+      &:hover {
+        background-color: transparent;
+      }
+    }
+
     &:last-child {
       border-bottom: none;
     }
@@ -74,6 +82,10 @@
 
     .item-arrow {
       color: var(--color-text-subtle);
+      flex-shrink: 0;
+    }
+
+    .item-trailing {
       flex-shrink: 0;
     }
   }

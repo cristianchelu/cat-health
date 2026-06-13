@@ -79,6 +79,7 @@ function createLitterboxDotColumns(
       key: day.date,
       label: `${format(date, 'MMM d')}: ${dots.length} visits`,
       dots,
+      tracked: day.tracked,
       ...(showColumnLabels
         ? { footer: getColumnFooterLabel(date, locale) }
         : {}),

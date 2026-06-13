@@ -7,6 +7,7 @@ import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetLitterboxTrends } from '@/hooks/queries/petQueries';
 import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
 import { resolveDateFnsLocale } from '@/lib/formatRelativeTime';
+import { daysToUntrackedIntervals } from '@/lib/untrackedIntervals';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Button } from '@/components/ui/Button';
@@ -116,6 +117,11 @@ const LitterboxDetails: React.FC = () => {
 
   const analytics = data?.analytics;
   const allEvents = data?.days.flatMap((day) => day.events) ?? [];
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const untrackedIntervals = daysToUntrackedIntervals(
+    data?.days ?? [],
+    timezone,
+  );
 
   const rangeActions = (
     <DateNavigation
@@ -192,6 +198,7 @@ const LitterboxDetails: React.FC = () => {
                 unit={t('litterbox_details.hours_between')}
                 emptyLabel={t('litterbox_details.no_chart_data')}
                 timeRange={chartTimeRange}
+                untrackedIntervals={untrackedIntervals}
                 locale={dateLocale}
                 series={[urinationIntervalSeries]}
               />
@@ -207,6 +214,7 @@ const LitterboxDetails: React.FC = () => {
                 unit={t('litterbox_details.hours_between')}
                 emptyLabel={t('litterbox_details.no_chart_data')}
                 timeRange={chartTimeRange}
+                untrackedIntervals={untrackedIntervals}
                 locale={dateLocale}
                 series={[defecationIntervalSeries]}
               />
@@ -222,6 +230,7 @@ const LitterboxDetails: React.FC = () => {
                 unit={t('litterbox_details.seconds')}
                 emptyLabel={t('litterbox_details.no_chart_data')}
                 timeRange={chartTimeRange}
+                untrackedIntervals={untrackedIntervals}
                 locale={dateLocale}
                 series={
                   analytics
@@ -248,6 +257,7 @@ const LitterboxDetails: React.FC = () => {
                 unit={t('litterbox_details.seconds')}
                 emptyLabel={t('litterbox_details.no_chart_data')}
                 timeRange={chartTimeRange}
+                untrackedIntervals={untrackedIntervals}
                 locale={dateLocale}
                 series={
                   analytics

@@ -1,0 +1,10 @@
+.untracked-pattern {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    var(--color-text-muted) 4px,
+    var(--color-text-muted) 6px
+  );
+  opacity: 0.5;
+}

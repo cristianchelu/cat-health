@@ -13,6 +13,10 @@
     font-size: var(--text-2xl);
     font-weight: var(--font-bold);
     color: var(--color-text);
+
+    &.consumption-value--untracked {
+      color: var(--color-text-muted);
+    }
   }
 
   .metric-bar-chart {

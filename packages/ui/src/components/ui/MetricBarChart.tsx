@@ -26,7 +26,7 @@ const MetricBarChart = React.forwardRef<HTMLDivElement, MetricBarChartProps>(
               return (
                 <div key={index} className="bar-wrapper">
                   <div className="bar-background">
-                    <div className="bar-fill untracked" />
+                    <div className="bar-fill untracked untracked-pattern" />
                   </div>
                 </div>
               );

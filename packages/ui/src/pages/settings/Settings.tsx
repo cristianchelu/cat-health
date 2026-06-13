@@ -16,8 +16,14 @@ import {
   Cat,
   Server,
   Drumstick,
+  Timer,
 } from 'lucide-react';
 import { useFoods } from '@/hooks/queries/foodQueries';
+import {
+  useSettings,
+  useUpdateSettings,
+} from '@/hooks/queries/settingsQueries';
+import { Input } from '@/components/ui/form/Input';
 
 import './Settings.css';
 
@@ -27,12 +33,38 @@ const Settings: React.FC = () => {
   const { data: devices = [] } = useDevices();
   const { data: accounts = [] } = useProviderAccounts();
   const { data: foods = [] } = useFoods();
+  const { data: settings } = useSettings();
+  const updateSettings = useUpdateSettings();
   const navigate = useNavigate();
 
   const visibleAccounts = accounts.filter((a) => !a.internal);
 
   const handleAddPet = () => {
     navigate('/settings/pets/new');
+  };
+
+  const [trackingGapInput, setTrackingGapInput] = React.useState('');
+
+  React.useEffect(() => {
+    if (settings?.tracking_gap_threshold_minutes !== undefined) {
+      setTrackingGapInput(String(settings.tracking_gap_threshold_minutes));
+    }
+  }, [settings?.tracking_gap_threshold_minutes]);
+
+  const handleTrackingGapBlur = () => {
+    const value = Number.parseInt(trackingGapInput, 10);
+    if (Number.isNaN(value) || value < 0) {
+      setTrackingGapInput(
+        String(settings?.tracking_gap_threshold_minutes ?? ''),
+      );
+      return;
+    }
+
+    if (value === settings?.tracking_gap_threshold_minutes) {
+      return;
+    }
+
+    updateSettings.mutate({ tracking_gap_threshold_minutes: value });
   };
 
   return (
@@ -191,6 +223,27 @@ const Settings: React.FC = () => {
               <CardListContent
                 title={t('settings.timezone')}
                 description={t('settings.timezone_desc')}
+              />
+            </CardListItem>
+            <CardListItem
+              icon={<Timer size="1em" />}
+              trailing={
+                <Input
+                  className="settings-tracking-gap-input"
+                  type="number"
+                  inputSize="sm"
+                  min={0}
+                  step={15}
+                  value={trackingGapInput}
+                  onChange={(event) => setTrackingGapInput(event.target.value)}
+                  onBlur={handleTrackingGapBlur}
+                  aria-label={t('settings.tracking_gap_threshold_label')}
+                />
+              }
+            >
+              <CardListContent
+                title={t('settings.tracking_gap_threshold_label')}
+                description={t('settings.tracking_gap_threshold_desc')}
               />
             </CardListItem>
             <CardListItem icon={<SettingsIcon size="1em" />}>
