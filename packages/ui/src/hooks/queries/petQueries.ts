@@ -202,6 +202,14 @@ export function useTogglePetPresence(petId: number) {
       );
       queryClient.invalidateQueries({ queryKey: ['pets'] });
       queryClient.invalidateQueries({ queryKey: ['petEvents', petId] });
+      for (const trendKey of [
+        'weightTrends',
+        'waterTrends',
+        'foodTrends',
+        'litterboxTrends',
+      ] as const) {
+        queryClient.invalidateQueries({ queryKey: [trendKey, petId] });
+      }
     },
   });
 }

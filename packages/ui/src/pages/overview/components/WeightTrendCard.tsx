@@ -106,8 +106,8 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
     );
   }
 
-  const width = 300;
-  const height = 75;
+  const width = 100;
+  const height = 100;
 
   let chartBody: React.ReactNode = null;
   let headerRight: React.ReactNode = null;
@@ -153,8 +153,19 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
     const paddedMaxWeight = maxWeight + padding;
     const paddedWeightRange = paddedMaxWeight - paddedMinWeight;
 
-    const chartPoints = points.map((data, index) => {
-      const x = (index / (points.length - 1)) * width;
+    const chartMinTime = new Date(points[0].timestamp).getTime();
+    const chartMaxTime = new Date(points[points.length - 1].timestamp).getTime();
+    const timeSpan = chartMaxTime - chartMinTime;
+
+    const getTimeX = (timestamp: string): number => {
+      if (timeSpan <= 0) return 0;
+      return (
+        ((new Date(timestamp).getTime() - chartMinTime) / timeSpan) * width
+      );
+    };
+
+    const chartPoints = points.map((data) => {
+      const x = getTimeX(data.timestamp);
       const y =
         (1 - (data.weight - paddedMinWeight) / paddedWeightRange) * height;
       return { x, y, weight: data.weight };
@@ -164,9 +175,6 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
     const timeLabel = timestamp
       ? formatRelative(new Date(timestamp), new Date())
       : '';
-
-    const chartMinTime = new Date(points[0].timestamp).getTime();
-    const chartMaxTime = new Date(points[points.length - 1].timestamp).getTime();
 
     headerRight = (
       <div className="weight-trend-info">
@@ -186,7 +194,7 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
       <svg
         viewBox={`0 0 ${width} ${height}`}
         className="weight-chart"
-        preserveAspectRatio="xMaxYMax meet"
+        preserveAspectRatio="none"
       >
         <defs>
           <linearGradient

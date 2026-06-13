@@ -15,6 +15,14 @@ export function useUpdateSettings() {
     mutationFn: (body: PatchSettingsRequestDTO) => patchSettings(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });
+      for (const trendKey of [
+        'weightTrends',
+        'waterTrends',
+        'foodTrends',
+        'litterboxTrends',
+      ] as const) {
+        queryClient.invalidateQueries({ queryKey: [trendKey] });
+      }
     },
   });
 }
