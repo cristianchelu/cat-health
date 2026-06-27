@@ -124,7 +124,10 @@ export class SurePetAccountManager implements AccountManager {
       this.deps.logger.error('SurePet initial feeding sync failed:', error);
     });
     await this.backfillFeedingTimelineIfNeeded().catch((error) => {
-      this.deps.logger.error('SurePet feeding timeline backfill failed:', error);
+      this.deps.logger.error(
+        'SurePet feeding timeline backfill failed:',
+        error,
+      );
     });
 
     this.timelinePollTimer = setInterval(() => {
@@ -159,9 +162,17 @@ export class SurePetAccountManager implements AccountManager {
 
   async invalidateDeviceController(deviceId: number): Promise<void> {
     const controller = this.controllers.get(deviceId);
-    if (controller) {
-      await controller.disconnect();
-      this.controllers.delete(deviceId);
+    if (!(controller instanceof FeederController)) {
+      return;
+    }
+
+    const device = await this.deps.db
+      .selectFrom('device')
+      .selectAll()
+      .where('id', '=', deviceId)
+      .executeTakeFirst();
+    if (device) {
+      controller.updateDevice(device);
     }
   }
 
@@ -216,12 +227,14 @@ export class SurePetAccountManager implements AccountManager {
 
     const surepetDeviceId = Number.parseInt(device.external_id, 10);
     if (Number.isFinite(surepetDeviceId)) {
-      await this.backfillFeedingForCloudDevice(surepetDeviceId).catch((error) => {
-        this.deps.logger.error(
-          `SurePet feeding backfill failed for device ${device.name}:`,
-          error,
-        );
-      });
+      await this.backfillFeedingForCloudDevice(surepetDeviceId).catch(
+        (error) => {
+          this.deps.logger.error(
+            `SurePet feeding backfill failed for device ${device.name}:`,
+            error,
+          );
+        },
+      );
     }
   }
 
@@ -285,7 +298,9 @@ export class SurePetAccountManager implements AccountManager {
         bootstrap.pets?.find((p) => p.household_id != null)?.household_id;
 
       if (householdId == null) {
-        throw new Error('Could not determine SurePet household_id from me/start');
+        throw new Error(
+          'Could not determine SurePet household_id from me/start',
+        );
       }
 
       this.config.household_id = householdId;
@@ -442,7 +457,9 @@ export class SurePetAccountManager implements AccountManager {
 
     const timeline = await client.getFullTimeline(householdId);
     const extracted = extractFeedingDatapointsFromTimeline(timeline);
-    const ingestStats = await this.ingestFeedingDatapoints(extracted.datapoints);
+    const ingestStats = await this.ingestFeedingDatapoints(
+      extracted.datapoints,
+    );
 
     return {
       timelineEntryCount: timeline.length,
@@ -486,14 +503,20 @@ export class SurePetAccountManager implements AccountManager {
     if (typeof config === 'string') {
       try {
         const parsed = JSON.parse(config) as unknown;
-        return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+        return typeof parsed === 'object' &&
+          parsed !== null &&
+          !Array.isArray(parsed)
           ? (parsed as Record<string, unknown>)
           : {};
       } catch {
         return {};
       }
     }
-    if (typeof config === 'object' && config !== null && !Array.isArray(config)) {
+    if (
+      typeof config === 'object' &&
+      config !== null &&
+      !Array.isArray(config)
+    ) {
       return config as Record<string, unknown>;
     }
     return {};
@@ -510,7 +533,10 @@ export class SurePetAccountManager implements AccountManager {
       .where('enabled', '=', 1)
       .execute();
 
-    const map = new Map<number, { id: number; config: Record<string, unknown> }>();
+    const map = new Map<
+      number,
+      { id: number; config: Record<string, unknown> }
+    >();
     for (const device of devices) {
       const surepetId = Number.parseInt(device.external_id, 10);
       if (Number.isFinite(surepetId)) {
@@ -539,7 +565,10 @@ export class SurePetAccountManager implements AccountManager {
       deviceControl,
       datapoint.bowl_index,
     );
-    const foodId = resolveFoodIdForCompartment(localDevice.config, compartmentId);
+    const foodId = resolveFoodIdForCompartment(
+      localDevice.config,
+      compartmentId,
+    );
     if (foodId != null) {
       const food = await this.deps.db
         .selectFrom('food')
@@ -635,11 +664,7 @@ export class SurePetAccountManager implements AccountManager {
       .selectFrom('event')
       .select(['id', 'data'])
       .where('pet_id', 'is', null)
-      .where(
-        sql<string>`json_extract(data, '$.type')`,
-        '=',
-        'food_intake',
-      )
+      .where(sql<string>`json_extract(data, '$.type')`, '=', 'food_intake')
       .where(
         sql<string>`json_extract(data, '$.provider_data.provider')`,
         '=',

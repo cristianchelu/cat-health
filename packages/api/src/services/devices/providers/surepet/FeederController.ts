@@ -1,4 +1,8 @@
-import type { DeviceStatus, SurePetFeederConfig, SureFeederState } from 'shared';
+import type {
+  DeviceStatus,
+  SurePetFeederConfig,
+  SureFeederState,
+} from 'shared';
 import type { DeviceController, Device, ProviderDeps } from '../../types.ts';
 import type { SurePetDeviceDetailPayload } from './types.ts';
 import { computeFillPercentages } from './mapFeedingEvent.ts';
@@ -83,5 +87,11 @@ export class FeederController implements DeviceController {
 
   getDeviceControl(): unknown {
     return this.lastControl;
+  }
+
+  /** Refresh in-memory device row after PATCH without tearing down presence. */
+  updateDevice(device: Device): void {
+    this.device = device;
+    this.config = device.config as unknown as SurePetFeederConfig;
   }
 }

@@ -78,11 +78,15 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function enrichReferenceMedia(devices: any[]) {
     const allIds: number[] = [];
-    const petRecognizers: Array<{ mapped: Record<string, unknown>; refImages: Record<string, number[]> }> = [];
+    const petRecognizers: Array<{
+      mapped: Record<string, unknown>;
+      refImages: Record<string, number[]>;
+    }> = [];
 
     for (const mapped of devices) {
       if (mapped.type !== 'pet_recognizer') continue;
-      const refImages = (mapped.config as Record<string, unknown>)?.reference_images as Record<string, number[]> | undefined;
+      const refImages = (mapped.config as Record<string, unknown>)
+        ?.reference_images as Record<string, number[]> | undefined;
       if (!refImages) continue;
 
       const ids = Object.values(refImages).flat();
@@ -104,11 +108,16 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     const mediaById = new Map(mediaRows.map((m) => [m.id, m]));
 
     for (const { mapped, refImages } of petRecognizers) {
-      const referenceMedia: Record<string, Array<{ id: number; file_path: string }>> = {};
+      const referenceMedia: Record<
+        string,
+        Array<{ id: number; file_path: string }>
+      > = {};
       for (const [petId, ids] of Object.entries(refImages)) {
         const resolved = ids
           .map((id) => mediaById.get(id))
-          .filter((m): m is { id: number; file_path: string } => m !== undefined);
+          .filter(
+            (m): m is { id: number; file_path: string } => m !== undefined,
+          );
         if (resolved.length > 0) {
           referenceMedia[petId] = resolved;
         }
@@ -241,8 +250,10 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         updated_at: Math.floor(Date.now() / 1000),
       };
       if (updates.name !== undefined) updateData.name = updates.name;
-      if (updates.config !== undefined) updateData.config = JSON.stringify(updates.config);
-      if (updates.enabled !== undefined) updateData.enabled = updates.enabled ? 1 : 0;
+      if (updates.config !== undefined)
+        updateData.config = JSON.stringify(updates.config);
+      if (updates.enabled !== undefined)
+        updateData.enabled = updates.enabled ? 1 : 0;
       const result = await db
         .updateTable('provider_account')
         .set(updateData)
@@ -561,7 +572,11 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           .executeTakeFirstOrThrow(),
       );
 
-      if (!controller || !('identifyPetFromMedia' in controller) || typeof controller.identifyPetFromMedia !== 'function') {
+      if (
+        !controller ||
+        !('identifyPetFromMedia' in controller) ||
+        typeof controller.identifyPetFromMedia !== 'function'
+      ) {
         throw new Error('Device is not a pet recognizer');
       }
 

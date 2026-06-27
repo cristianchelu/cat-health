@@ -1,5 +1,8 @@
 import type { GetDeviceResponseDTO } from 'shared';
-import { buildFeederFoodCompartmentsPayload, parseFeederFoodCompartments } from 'shared';
+import {
+  buildFeederFoodCompartmentsPayload,
+  parseFeederFoodCompartments,
+} from 'shared';
 import { isRecord } from '@/lib/utils';
 import { resolveSurePetFeederFoodCompartments } from './surepet/resolveSurePetFeederFoodCompartments';
 
@@ -53,28 +56,16 @@ export function resolveFeederFoodCompartments(
   const registration =
     feederFoodCompartmentsRegistry.find(
       (candidate) =>
-        registrationMatchesDevice(candidate, device) && candidate.provider != null,
+        registrationMatchesDevice(candidate, device) &&
+        candidate.provider != null,
     ) ??
     feederFoodCompartmentsRegistry.find(
       (candidate) =>
-        registrationMatchesDevice(candidate, device) && candidate.provider == null,
+        registrationMatchesDevice(candidate, device) &&
+        candidate.provider == null,
     );
 
-  const resolved = registration?.resolve(device) ?? defaultResolve();
-
-  const configMap = parseFeederFoodCompartments(device.config);
-  const byId = new Map(resolved.map((row) => [row.id, row]));
-
-  for (const compartmentId of configMap.keys()) {
-    if (!byId.has(compartmentId)) {
-      byId.set(compartmentId, {
-        id: compartmentId,
-        labelKey: 'devices.feeder.food_compartment_numbered',
-      });
-    }
-  }
-
-  return [...byId.values()];
+  return registration?.resolve(device) ?? defaultResolve();
 }
 
 export function readFeederFoodAssignments(
