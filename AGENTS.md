@@ -348,6 +348,7 @@ Always reference these variables instead of hardcoding values to maintain design
 
 # General rules
 
+- **Commit messages** — use Conventional Commits with a package scope: `type(scope): imperative subject` (e.g. `fix(ui): hide stale compartment selectors`). Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci`, `build`. Scopes: `api`, `ui`, `shared`, or cross-cutting `docs` / `deps`. See [CONTRIBUTING.md](CONTRIBUTING.md#commit-messages).
 - Any summary .md or explanation of changes MUST go in the `{root}/summaries/`
   folder, so as not to pollute the git history.
 - Always assume Both the UI and API are running in the background when you want to run things.

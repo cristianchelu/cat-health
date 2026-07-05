@@ -54,8 +54,32 @@ Pet Assistant is licensed under the [GNU Affero General Public License v3.0](LIC
 
 Third-party components may use other licenses — see [NOTICE](NOTICE).
 
+## Commit messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) with a package scope:
+
+```
+type(scope): imperative subject
+```
+
+- **type** — `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci`, `build`
+- **scope** — `api`, `ui`, `shared`, or a cross-cutting scope such as `docs` or `deps`
+- **subject** — imperative mood, lowercase, no trailing period; start with a verb
+
+Examples:
+
+```
+fix(ui): hide stale SureFeed compartment selectors
+fix(api): refresh SurePet feeder config without disconnect
+feat(shared): add feeder food compartment schema
+docs(contributing): document semantic commit format
+```
+
+Use the body for context when the subject alone is not enough (what broke, why the change matters).
+
 ## Pull requests
 
 - Keep changes focused
+- Use semantic commit messages (see above); squash-merge PR titles should follow the same format
 - Match existing file and import conventions
 - Run `npm run lint` and `npm run typecheck` before submitting
