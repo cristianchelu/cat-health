@@ -9,44 +9,11 @@ export async function up(db: Kysely<Record<string, never>>): Promise<void> {
     .addColumn('birth_date', 'text', (col) => col.notNull())
     .execute();
 
-  await db
-    .insertInto('pet')
-    .values({
-      name: 'Jazz',
-      breed: 'Turkish Angora',
-      birth_date: '2021-03-25',
-    })
-    .execute();
-  await db
-    .insertInto('pet')
-    .values({
-      name: 'Luna',
-      breed: 'European Shorthair',
-      birth_date: '2023-03-30',
-    })
-    .execute();
-
   await db.schema
     .createTable('device')
     .addColumn('id', 'integer', (col) => col.primaryKey().autoIncrement())
     .addColumn('name', 'text', (col) => col.notNull())
     .addColumn('type', 'text', (col) => col.notNull())
-    .execute();
-
-  await db
-    .insertInto('device')
-    .values({
-      name: 'Main Litter Box',
-      type: 'litterbox',
-    })
-    .execute();
-
-  await db
-    .insertInto('device')
-    .values({
-      name: 'Hallway Water Fountain',
-      type: 'water_fountain',
-    })
     .execute();
 
   await db.schema

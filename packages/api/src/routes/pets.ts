@@ -241,6 +241,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         params: TogglePetPresenceParamsSchema,
         response: {
           '200': TogglePetPresenceResponseSchema,
+          '404': Type.Object({ error: Type.String() }),
         },
       },
     },
@@ -253,11 +254,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('id', '=', id)
         .executeTakeFirst();
       if (!pet) {
-        return reply.status(404).send({
-          statusCode: 404,
-          error: 'Not Found',
-          message: 'Pet not found',
-        });
+        return reply.status(404).send({ error: 'Pet not found' });
       }
 
       const latestPresence = await fetchLatestPresenceForPet(db, id);

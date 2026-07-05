@@ -5,11 +5,11 @@
  * Produce them with exportHumanVerifiedLitterboxFixtures.ts (--selection verified |
  * annotated | any); see that script for column definitions.
  *
- * Baseline workflow (guard against silent regressions):
- * 1. Run with fixtures: `npm run test:analyzer -w packages/api` → writes test/metrics_latest.json
- * 2. When satisfied: `cp src/services/devices/providers/esphome/test/metrics_latest.json \
- *      src/services/devices/providers/esphome/test/metrics_baseline.json` and commit the baseline.
- * 3. Future runs compare latest vs baseline; the test fails if elimination accuracy, cat accuracy,
+ * Baseline workflow (guard against silent regressions; optional, not committed):
+ * 1. Export fixtures locally (gitignored): visits.csv, streams/, bouts.csv — see exportHumanVerifiedLitterboxFixtures.ts
+ * 2. Run with fixtures: `npm run test:analyzer -w api` → writes test/metrics_latest.json
+ * 3. When satisfied: copy metrics_latest.json to metrics_baseline.json locally (do not commit — may contain household telemetry)
+ * 4. Future runs compare latest vs baseline; the test fails if elimination accuracy, cat accuracy,
  *    or bout F1 drops more than 5% relative to baseline (when those metrics exist in baseline).
  */
 
@@ -143,7 +143,10 @@ export async function loadVisits(dir: string): Promise<VisitRow[]> {
 }
 
 /** One tenth-gram integer per line → grams (float). */
-export async function loadStream(dir: string, relpath: string): Promise<number[]> {
+export async function loadStream(
+  dir: string,
+  relpath: string,
+): Promise<number[]> {
   const text = await readFile(path.join(dir, relpath), 'utf8');
   return text
     .split(/\r?\n/)
@@ -226,10 +229,7 @@ interface MetricsSnapshot {
       string,
       { accuracy: number; n: number }
     >;
-    by_straining: Record<
-      'true' | 'false',
-      { accuracy: number; n: number }
-    >;
+    by_straining: Record<'true' | 'false', { accuracy: number; n: number }>;
   };
   cat: {
     /** Nearest known weight to `catWeight` within 1%; GT session has elimination (not scratch). */
@@ -295,19 +295,22 @@ function printSummary(m: MetricsSnapshot): void {
   rows.push(['METRIC', 'VALUE']);
   rows.push(['visits', String(m.visit_count)]);
   rows.push(['elim accuracy', m.elimination.overallAccuracy.toFixed(4)]);
-  rows.push(['unknown abstain', m.elimination.unknownAbstentionRate.toFixed(4)]);
+  rows.push([
+    'unknown abstain',
+    m.elimination.unknownAbstentionRate.toFixed(4),
+  ]);
   rows.push([
     'cat slot wt 1%†',
     m.cat.accuracy_excluding_unknown_slot.toFixed(4),
   ]);
-  rows.push([
-    'pet slot (presence)',
-    m.cat.presence_slot_accuracy.toFixed(4),
-  ]);
+  rows.push(['pet slot (presence)', m.cat.presence_slot_accuracy.toFixed(4)]);
   rows.push(['cat eval n', String(m.cat.evaluated)]);
   rows.push(['weight eval n', String(m.cat.weight_evaluated)]);
   if (m.bouts.has_data) {
-    rows.push(['bout P/R/F1', `${m.bouts.precision.toFixed(3)}/${m.bouts.recall.toFixed(3)}/${m.bouts.f1.toFixed(3)}`]);
+    rows.push([
+      'bout P/R/F1',
+      `${m.bouts.precision.toFixed(3)}/${m.bouts.recall.toFixed(3)}/${m.bouts.f1.toFixed(3)}`,
+    ]);
   } else {
     rows.push(['bout P/R/F1', '(no bout rows)']);
   }
@@ -342,8 +345,7 @@ function printSummary(m: MetricsSnapshot): void {
   const labels = [...ELIMINATION_CLASSES];
   const cw = 12;
   console.log(
-    `${pad('', cw)}` +
-      labels.map((c) => pad(c.slice(0, 10), cw)).join(''),
+    `${pad('', cw)}` + labels.map((c) => pad(c.slice(0, 10), cw)).join(''),
   );
   for (const row of labels) {
     let line = pad(row.slice(0, 10), cw);
@@ -492,10 +494,7 @@ const harnessEnabled = fixturesAvailable();
 
         if (hasBoutData) {
           const gt = boutsByVisit.get(v.visit_id) ?? [];
-          const pred = predictedBoutsFromPeriods(
-            r.periods,
-            v.sample_rate_hz,
-          );
+          const pred = predictedBoutsFromPeriods(r.periods, v.sample_rate_hz);
           const { tp, fp, fn } = greedyBoutPairing(gt, pred, 0.5);
           boutTp += tp;
           boutFp += fp;
@@ -504,8 +503,7 @@ const harnessEnabled = fixturesAvailable();
       }
 
       const elimConf = buildConfusionAndRates(elimPairs);
-      const bySessionElim: Record<string, { accuracy: number; n: number }> =
-        {};
+      const bySessionElim: Record<string, { accuracy: number; n: number }> = {};
       for (const [k, b] of Object.entries(bySession)) {
         bySessionElim[k] = {
           accuracy: b.n ? b.elim_correct / b.n : 0,
@@ -530,8 +528,7 @@ const harnessEnabled = fixturesAvailable();
         },
       };
 
-      const bySessionCat: Record<string, { accuracy: number; n: number }> =
-        {};
+      const bySessionCat: Record<string, { accuracy: number; n: number }> = {};
       for (const [k, b] of Object.entries(bySession)) {
         bySessionCat[k] = {
           accuracy: b.cat_n ? b.cat_correct / b.cat_n : 0,
@@ -599,9 +596,7 @@ const harnessEnabled = fixturesAvailable();
           accuracy_excluding_unknown_slot: weightEvaluated
             ? catCorrect / weightEvaluated
             : 0,
-          presence_slot_accuracy: catEval
-            ? presenceSlotCorrect / catEval
-            : 0,
+          presence_slot_accuracy: catEval ? presenceSlotCorrect / catEval : 0,
           evaluated: catEval,
           weight_evaluated: weightEvaluated,
           by_session_elimination_type: bySessionCat,
@@ -686,7 +681,9 @@ const harnessEnabled = fixturesAvailable();
         if (typeof baseline.cat?.presence_slot_accuracy === 'number') {
           const bPresence = baseline.cat.presence_slot_accuracy;
           const d = relativeDelta(latestPresence, bPresence);
-          console.log(`delta pet slot presence (rel): ${(d * 100).toFixed(2)}%`);
+          console.log(
+            `delta pet slot presence (rel): ${(d * 100).toFixed(2)}%`,
+          );
           if (regressedBeyond(latestPresence, bPresence, TH)) {
             msgs.push(
               `pet slot (presence) regressed >${TH * 100}% rel: ${latestPresence} vs ${bPresence}`,
@@ -711,4 +708,5 @@ const harnessEnabled = fixturesAvailable();
         assert.equal(msgs.length, 0, msgs.join('\n'));
       }
     });
-  });
+  },
+);

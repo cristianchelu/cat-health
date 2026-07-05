@@ -3,3 +3,4 @@ streams/
 visits.csv
 bouts.csv
 metrics_latest.json
+metrics_baseline.json

@@ -1,13 +1,21 @@
 node_modules
 dist
 /data/
+recordings/
+images/
+.cursor/
+*.sqlite
+*.sqlite-*
+
 .vscode/*
 !.vscode/settings.json
 .env
+.env.*
+.env.local
 packages/api/.env
 
 # TypeScript incremental build info
 *.tsbuildinfo
 
 # AGENTS
-summaries
+summaries/

@@ -14,11 +14,11 @@ import type {
 } from '../types.ts';
 
 const TYPE_22_WEIGHT_RECORD: SurePetTimelineWeightRecord = {
-  id: 1476530307,
-  device_id: 916511,
-  tag_id: 3662632,
+  id: 100001,
+  device_id: 200001,
+  tag_id: 300001,
   duration: 75,
-  created_at: '2026-05-27T10:36:41+00:00',
+  created_at: '2030-01-15T10:36:41+00:00',
   frames: [
     { index: 0, change: -59, current_weight: -59 },
     { index: 1, change: 0, current_weight: 0 },
@@ -26,18 +26,18 @@ const TYPE_22_WEIGHT_RECORD: SurePetTimelineWeightRecord = {
 };
 
 const TYPE_22_ENTRY: SurePetTimelineEntry = {
-  id: 16495453285,
+  id: 400001,
   type: 22,
-  created_at: '2026-05-27T10:36:41+00:00',
-  pets: [{ id: 1, tag_id: 3662632 }],
+  created_at: '2030-01-15T10:36:41+00:00',
+  pets: [{ id: 1, tag_id: 300001 }],
 };
 
 describe('expandTimelineWeightRecordToDatapoints', () => {
-  it('emits one datapoint from live type-22 fixture (59g on index 0)', () => {
+  it('emits one datapoint from type-22 fixture (59g on index 0)', () => {
     const datapoints = expandTimelineWeightRecordToDatapoints(
       TYPE_22_WEIGHT_RECORD,
       TYPE_22_ENTRY,
-      16495453285,
+      400001,
     );
     assert.equal(datapoints.length, 1);
     assert.equal(datapoints[0]?.amount_g, 59);
@@ -73,17 +73,18 @@ describe('resolveLocalPetId', () => {
         password: 'secret',
         pet_links: [
           {
-            external_pet_id: '779257',
+            external_pet_id: '500001',
             pet_id: 2,
-            metadata: { tag_id: 3662589 },
+            metadata: { tag_id: 300002 },
           },
         ],
       },
       {
-        from: new Date('2026-05-28T21:59:11.000Z'),
+        from: new Date('2030-01-16T21:59:11.000Z'),
         amount_g: 2,
-        pet_id: 779257,
-        tag_id: 3662589,
+        pet_id: 500001,
+        tag_id: 300002,
+        source_id: 'test',
       },
     );
     assert.equal(localPetId, 2);
@@ -97,10 +98,11 @@ describe('resolveLocalPetId', () => {
         pet_links: [],
       },
       {
-        from: new Date('2026-05-28T21:59:11.000Z'),
+        from: new Date('2030-01-16T21:59:11.000Z'),
         amount_g: 2,
-        pet_id: 779257,
-        tag_id: 3662589,
+        pet_id: 500001,
+        tag_id: 300002,
+        source_id: 'test',
       },
     );
     assert.equal(localPetId, null);
@@ -127,25 +129,13 @@ describe('resolveSurePetFoodCompartmentId', () => {
   const twoSmallControl = { bowls: { type: BowlType.TWO_SMALL } };
 
   it('maps LARGE to default regardless of bowl index', () => {
-    assert.equal(
-      resolveSurePetFoodCompartmentId(largeControl, 0),
-      'default',
-    );
-    assert.equal(
-      resolveSurePetFoodCompartmentId(largeControl, 1),
-      'default',
-    );
+    assert.equal(resolveSurePetFoodCompartmentId(largeControl, 0), 'default');
+    assert.equal(resolveSurePetFoodCompartmentId(largeControl, 1), 'default');
   });
 
   it('maps TWO_SMALL to compartment id by index', () => {
-    assert.equal(
-      resolveSurePetFoodCompartmentId(twoSmallControl, 0),
-      '0',
-    );
-    assert.equal(
-      resolveSurePetFoodCompartmentId(twoSmallControl, 1),
-      '1',
-    );
+    assert.equal(resolveSurePetFoodCompartmentId(twoSmallControl, 0), '0');
+    assert.equal(resolveSurePetFoodCompartmentId(twoSmallControl, 1), '1');
   });
 });
 

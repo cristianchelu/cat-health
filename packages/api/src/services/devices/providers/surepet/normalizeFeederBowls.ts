@@ -40,7 +40,10 @@ export interface NormalizedFeederBowls {
 }
 
 function normalizeSettings(
-  settings: Array<{ food_type?: number | null; target?: number | null } | null> | null | undefined,
+  settings:
+    | Array<{ food_type?: number | null; target?: number | null } | null>
+    | null
+    | undefined,
 ): SurePetBowlSetting[] {
   if (!settings?.length) return [];
   return settings.map((setting) => ({
@@ -59,9 +62,7 @@ function resolveBowlTypeLabel(
   for (const option of BOWL_TYPE_OPTIONS) {
     if (option.bowlType !== bowlType) continue;
     if (option.foodTypes.length !== foodTypes.length) continue;
-    const matches = option.foodTypes.every(
-      (ft, i) => ft === foodTypes[i],
-    );
+    const matches = option.foodTypes.every((ft, i) => ft === foodTypes[i]);
     if (matches) return option.name;
   }
   return undefined;
@@ -74,7 +75,7 @@ export function normalizeFeederBowls(
   const bowlType = bowlsControl?.type ?? undefined;
   const bowlSettings = normalizeSettings(bowlsControl?.settings ?? undefined);
 
-  let rawStatus = payload.status?.bowl_status ?? [];
+  const rawStatus = payload.status?.bowl_status ?? [];
 
   let bowlStatus: SurePetBowlStatus[];
 

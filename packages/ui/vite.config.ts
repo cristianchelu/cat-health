@@ -239,7 +239,6 @@ export default defineConfig({
     }),
   ],
   server: {
-    allowedHosts: ['dev-pets.chelu.dev'],
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:3000',

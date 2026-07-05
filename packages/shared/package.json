@@ -2,6 +2,8 @@
   "name": "shared",
   "version": "0.0.1",
   "description": "Shared types and utilities for pet-health project",
+  "license": "AGPL-3.0-only",
+  "author": "Cristian Chelu",
   "type": "module",
   "sideEffects": false,
   "scripts": {

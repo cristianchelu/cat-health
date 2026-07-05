@@ -62,9 +62,9 @@ export class LitterboxController extends BaseESPHomeController {
     };
   }
 
-  protected onConnected(): void { }
+  protected onConnected(): void {}
 
-  protected onEntitiesReceived(): void { }
+  protected onEntitiesReceived(): void {}
 
   protected handleSensorUpdate(key: number, state: unknown): void {
     const activityKey = this.getEntityKey(SENSORS.ACTIVITY);
@@ -227,7 +227,9 @@ export class LitterboxController extends BaseESPHomeController {
         }
 
         const eliminationType = determineEliminationType(analysis.periods);
-        const straining = eliminationType !== 'no_elimination' && eliminationWeight < NO_ELIMINATION_THRESHOLD;
+        const straining =
+          eliminationType !== 'no_elimination' &&
+          eliminationWeight < NO_ELIMINATION_THRESHOLD;
 
         const segments = persistedLitterboxSegments(analysis.periods);
 
@@ -280,18 +282,22 @@ export class LitterboxController extends BaseESPHomeController {
     const deepCleanTimerKey = this.getEntityKey(SENSORS.DEEP_CLEAN_TIMER);
     const visitsKey = this.getEntityKey(SENSORS.VISITS);
 
-    const wasteWeight = wasteWeightKey !== null
-      ? (this.sensorValues.get(wasteWeightKey) as number) || 0
-      : 0;
-    const litterRemaining = litterRemainingKey !== null
-      ? ((this.sensorValues.get(litterRemainingKey) as number) || 0) * 1000 // kg to g
-      : 0;
-    const deepCleanTimer = deepCleanTimerKey !== null
-      ? (this.sensorValues.get(deepCleanTimerKey) as number) || 0
-      : 0;
-    const totalVisits = visitsKey !== null
-      ? (this.sensorValues.get(visitsKey) as number) || 0
-      : 0;
+    const wasteWeight =
+      wasteWeightKey !== null
+        ? (this.sensorValues.get(wasteWeightKey) as number) || 0
+        : 0;
+    const litterRemaining =
+      litterRemainingKey !== null
+        ? ((this.sensorValues.get(litterRemainingKey) as number) || 0) * 1000 // kg to g
+        : 0;
+    const deepCleanTimer =
+      deepCleanTimerKey !== null
+        ? (this.sensorValues.get(deepCleanTimerKey) as number) || 0
+        : 0;
+    const totalVisits =
+      visitsKey !== null
+        ? (this.sensorValues.get(visitsKey) as number) || 0
+        : 0;
 
     // Derived metrics
     const daysSinceLitterReplaced = Math.max(
@@ -301,7 +307,6 @@ export class LitterboxController extends BaseESPHomeController {
 
     // We don't have easy access to "last scoop time" without querying DB or keeping state.
     // For now, we'll set hoursSinceLastScoop to 0 or try to estimate if we want.
-    // The migrator queried InfluxDB for last time waste was 0.
     // We can skip this for now or implement it later.
     const hoursSinceLastScoop = 0;
 
@@ -366,5 +371,4 @@ export class LitterboxController extends BaseESPHomeController {
 
     return latestWeights;
   }
-
 }

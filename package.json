@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run test:analyzer -w api && npm run test:feeding -w api && npm run test:coverage -w api",
     "format": "prettier --write .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "concurrently -c blue,magenta -n api,ui \"npm run start -w api\" \"npm run start -w ui\"",
@@ -14,13 +14,16 @@
     "build": "npm run build --workspaces --if-present",
     "migrate": "npm run migrate -w api",
     "migrate:down": "npm run migrate:down -w api",
-    "sync": "npm run sync -w api",
     "reset-db": "npm run reset-db -w api",
     "backup-db": "npm run backup-db -w api",
     "restore-db": "npm run restore-db -w api"
   },
   "author": "Cristian Chelu",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cristianchelu/cat-health.git"
+  },
   "workspaces": [
     "packages/api",
     "packages/ui",

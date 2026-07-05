@@ -36,6 +36,7 @@ This is a **Pet Assistant** application focused on cat health monitoring through
 **NEVER** use `new Date().toISOString().split('T')[0]` or `date.toISOString().split('T')[0]` to obtain a local calendar date string. `toISOString()` returns UTC, which will produce the wrong calendar date for users in positive UTC offsets during the hours around midnight.
 
 **ALWAYS** use one of:
+
 - `format(date, 'yyyy-MM-dd')` from `date-fns` (uses local time)
 - `createDayRange(date?)` from `@/lib/utils` when you need a full `DateRange` for a single day
 
@@ -202,7 +203,7 @@ export default const entityRoutes;
 - **API shape** → embed small related payloads (e.g. `children[]` on single-resource GET) instead of a second round-trip when the row count is tiny (0–2).
 - **Lists** → paginate flat; if nested relations are needed, batch-fetch for the page — not N+1 per item.
 
-SQLite is in-process, so JOIN vs two parallel queries is usually a wash for single-row lookups; prefer whichever keeps handler code simple. The win is avoiding *sequential* chains and *N+1* loops, not JOIN theology.
+SQLite is in-process, so JOIN vs two parallel queries is usually a wash for single-row lookups; prefer whichever keeps handler code simple. The win is avoiding _sequential_ chains and _N+1_ loops, not JOIN theology.
 
 #### Device providers and integration boundary
 
@@ -253,7 +254,7 @@ When adding a new cloud provider, extend capabilities + optional `AccountManager
 ### Root workspace
 
 ```bash
-npm run test                    # Run tests
+npm run test                    # Run API test suites (see CONTRIBUTING.md)
 ```
 
 ### API (`packages/api`)
@@ -261,7 +262,6 @@ npm run test                    # Run tests
 ```bash
 npm run start                   # Start dev server with watch mode
 npm run migrate                 # Run database migrations
-npm run litterbox-migrate      # Run litterbox-specific migrations
 npm run reset-db               # Reset database and run migrations
 ```
 
@@ -304,7 +304,7 @@ import "./ComponentName.css";
 
 ```typescript
 // External libraries first
-import { Type } from '@fastify/type-provider-typebox';
+import { Type } from "@fastify/type-provider-typebox";
 
 // Internal imports with relative paths
 import { db } from "../database/index.ts";

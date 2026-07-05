@@ -1,0 +1,18 @@
+This project includes material from the following third parties:
+
+Lucide Icons (ISC License)
+The application logo at packages/ui/public/logo.svg is derived from the
+Lucide "paw-print" icon.
+https://lucide.dev/
+https://github.com/lucide-icons/lucide
+
+py-surepetcare / surepetcare (MIT License)
+SurePetcare cloud API constants and enumerations in
+packages/api/src/services/devices/providers/surepet/ were ported from
+community reverse-engineering work, including:
+https://github.com/DiniFarb/surepetcare
+
+See docs/integrations.md for integration disclaimers.
+
+This project is licensed under the GNU Affero General Public License v3.0. See LICENSE.
+Third-party components listed above remain under their respective licenses.
