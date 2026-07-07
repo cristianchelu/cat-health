@@ -36,7 +36,9 @@
     "today": "Azi",
     "food_intake": "Mâncare",
     "log_food": "Adaugă mâncare",
-    "error_loading": "Datele nu au putut fi încărcate"
+    "error_loading": "Datele nu au putut fi încărcate",
+    "no_pets_found": "Nu s-au găsit animale",
+    "no_devices_found": "Nu s-au găsit dispozitive"
   },
   "events": {
     "device_connectivity_online": "Dispozitiv online",

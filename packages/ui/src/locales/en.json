@@ -36,7 +36,9 @@
     "today": "Today",
     "food_intake": "Food intake",
     "log_food": "Log Food",
-    "error_loading": "Could not load data"
+    "error_loading": "Could not load data",
+    "no_pets_found": "No pets found",
+    "no_devices_found": "No devices found"
   },
   "events": {
     "device_connectivity_online": "Device online",

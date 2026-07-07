@@ -20,16 +20,25 @@
     }
   }
 
-  .avatar {
+  .avatar,
+  .add-item-icon {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 2.25rem;
     height: 2.25rem;
     border-radius: var(--radius-full);
-    background: var(--color-surface-highlight);
     flex-shrink: 0;
     overflow: hidden;
+  }
+
+  .avatar {
+    background: var(--color-surface-highlight);
+  }
+
+  .add-item-icon {
+    color: var(--color-text-muted);
+    border: 1px dashed var(--color-text-muted);
   }
 
   label {

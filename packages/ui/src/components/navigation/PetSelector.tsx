@@ -1,7 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 import { cn } from '@/lib/utils';
-import { Cat, Loader2 } from 'lucide-react';
+import { Cat, Loader2, Plus } from 'lucide-react';
 
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { Button } from '../ui/Button';
@@ -16,6 +17,7 @@ interface PetSelectorProps {
 
 const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { pets, isLoading, error, selectedPet, setSelectedPet } =
     usePetContext();
 
@@ -43,9 +45,19 @@ const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
 
   if (pets.length === 0) {
     return (
-      <div className={cn('pet-selector', variant)}>
-        <div className="empty">{t('common.no_pets_found')}</div>
-      </div>
+      <ul className={cn('pet-selector', variant)}>
+        <Button
+          variant="ghost"
+          className="item item--add"
+          onClick={() => navigate('/settings/pets/new')}
+          title={t('settings.add_pet')}
+        >
+          <div className="add-item-icon">
+            <Plus size={20} />
+          </div>
+          <label>{t('settings.add_pet')}</label>
+        </Button>
+      </ul>
     );
   }
 
