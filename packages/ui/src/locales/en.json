@@ -328,7 +328,7 @@
     "event_media_alt": "Event media",
     "timelapse_play": "Play timelapse",
     "timelapse_pause": "Pause timelapse",
-    "timelapse_frame_counter": "{{current}} / {{total}}",
+    "timelapse_seek": "Seek timelapse",
     "delete_event": "Delete Event",
     "confirm_delete_event": "Are you sure you want to delete this event? This cannot be undone.",
     "download_media": "Download Media",

@@ -275,7 +275,7 @@
     "event_media_alt": "Media eveniment",
     "timelapse_play": "Redă timelapse",
     "timelapse_pause": "Pauză timelapse",
-    "timelapse_frame_counter": "{{current}} / {{total}}",
+    "timelapse_seek": "Navighează în timelapse",
     "delete_event": "Șterge eveniment",
     "confirm_delete_event": "Sigur doriți să ștergeți acest eveniment? Această acțiune nu poate fi anulată.",
     "download_media": "Descarcă media",
