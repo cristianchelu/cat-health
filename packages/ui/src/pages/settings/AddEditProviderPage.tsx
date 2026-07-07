@@ -39,7 +39,8 @@ function configToJson(
     return '{}';
   }
   if (options?.omitPetLinks) {
-    const { pet_links: _petLinks, ...rest } = config as Record<string, unknown>;
+    const rest = { ...(config as Record<string, unknown>) };
+    delete rest.pet_links;
     return JSON.stringify(rest, null, 2);
   }
   return JSON.stringify(config, null, 2);
@@ -70,10 +71,11 @@ const AddEditProviderPage: React.FC = () => {
   const accountId = parseInt(id || '0', 10);
 
   const { data: providers = [] } = useProviders();
-  const { data: account, isLoading, error: loadError } = useProviderAccount(
-    accountId,
-    isEditing,
-  );
+  const {
+    data: account,
+    isLoading,
+    error: loadError,
+  } = useProviderAccount(accountId, isEditing);
   const createAccount = useCreateProviderAccount();
   const updateAccount = useUpdateProviderAccount(accountId);
 
@@ -170,7 +172,9 @@ const AddEditProviderPage: React.FC = () => {
   if (isEditing && isLoading) {
     return (
       <div className="add-edit-provider-page">
-        <div className="loading-state">{t('settings.loading_provider_data')}</div>
+        <div className="loading-state">
+          {t('settings.loading_provider_data')}
+        </div>
       </div>
     );
   }
@@ -248,9 +252,12 @@ const AddEditProviderPage: React.FC = () => {
           />
         </FormField>
 
-        {!isEditing && createProviderMeta?.capabilities.supports_pet_linking && (
-          <p className="help-text">{t('settings.pet_linking_after_create_hint')}</p>
-        )}
+        {!isEditing &&
+          createProviderMeta?.capabilities.supports_pet_linking && (
+            <p className="help-text">
+              {t('settings.pet_linking_after_create_hint')}
+            </p>
+          )}
 
         {showPetLinking && (
           <ProviderPetLinksEditor

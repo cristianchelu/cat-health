@@ -54,7 +54,7 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
   const waterFountainState = device.state as unknown as
     | WaterFountainState
     | undefined;
-  const CardStatus = resolveDeviceCardStatus(device);
+  const cardStatus = resolveDeviceCardStatus(device);
 
   return (
     <Card
@@ -79,13 +79,17 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
       </CardHeader>
 
       <CardContent>
-        {CardStatus ? <CardStatus device={device} /> : null}
-        {!CardStatus && device.type === 'water_fountain' && waterFountainState && (
-          <WaterFountainStatus state={waterFountainState} />
-        )}
-        {!CardStatus && device.type === 'water_fountain' && !waterFountainState && (
-          <div className="no-status-data">{t('devices.no_status_data')}</div>
-        )}
+        {cardStatus ? React.createElement(cardStatus, { device }) : null}
+        {!cardStatus &&
+          device.type === 'water_fountain' &&
+          waterFountainState && (
+            <WaterFountainStatus state={waterFountainState} />
+          )}
+        {!cardStatus &&
+          device.type === 'water_fountain' &&
+          !waterFountainState && (
+            <div className="no-status-data">{t('devices.no_status_data')}</div>
+          )}
       </CardContent>
     </Card>
   );

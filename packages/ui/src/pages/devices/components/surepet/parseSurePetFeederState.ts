@@ -7,7 +7,8 @@ export function parseSurePetFeederState(
   if (!isRecord(state) || state.provider !== 'surepet') {
     return undefined;
   }
-  const { provider: _provider, ...feederState } = state;
+  const feederState = { ...state };
+  delete feederState.provider;
   if (!Array.isArray(feederState.bowl_status)) {
     return undefined;
   }

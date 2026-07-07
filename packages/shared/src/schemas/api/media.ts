@@ -1,4 +1,4 @@
-import { type Static, Type } from '@fastify/type-provider-typebox';
+import { type Static, Type } from "@fastify/type-provider-typebox";
 
 // TODO: Remove from here; use real schema
 export const MediaMetadataSchema = Type.Object({
@@ -6,6 +6,11 @@ export const MediaMetadataSchema = Type.Object({
   height: Type.Optional(Type.Number()),
   duration: Type.Optional(Type.Number()),
   frameIndex: Type.Optional(Type.Number()),
+  /** Seconds from activity start when this frame was scheduled. */
+  captureOffsetSec: Type.Optional(Type.Number()),
+  /** Snapshot config at capture time (stored on first frame). */
+  intervalSec: Type.Optional(Type.Number()),
+  firstFrameDelaySec: Type.Optional(Type.Number()),
 });
 
 // TODO: Remove from here; use real schema
@@ -21,4 +26,6 @@ export const MediaSchema = Type.Object({
 });
 
 export const GetEventMediaResponseSchema = Type.Array(MediaSchema);
-export type GetEventMediaResponseDTO = Static<typeof GetEventMediaResponseSchema>;
+export type GetEventMediaResponseDTO = Static<
+  typeof GetEventMediaResponseSchema
+>;

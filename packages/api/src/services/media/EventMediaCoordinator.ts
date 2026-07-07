@@ -2,7 +2,11 @@ import type { Kysely } from 'kysely';
 import type { Database } from '../../database/index.ts';
 import type { DeviceCameraConfig } from '../../database/types/DeviceCameraTable.ts';
 import type { EventType } from 'shared';
-import type { Camera, DeviceDirectory, RecordingSource } from '../devices/types.ts';
+import type {
+  Camera,
+  DeviceDirectory,
+  RecordingSource,
+} from '../devices/types.ts';
 import type {
   EventBus,
   ActivityStartEvent,
@@ -17,6 +21,8 @@ const PENDING_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 interface PendingDeviceMedia {
   frames: PendingMedia[];
+  intervalSec: number;
+  firstFrameDelaySec: number;
   intervalId?: ReturnType<typeof setInterval>;
   firstFrameTimeoutId?: ReturnType<typeof setTimeout>;
   ttlTimer?: ReturnType<typeof setTimeout>;
@@ -26,10 +32,9 @@ interface PendingDeviceMedia {
 
 function getEventEndTime(event: DeviceEvent): Date {
   const data = event.data as { duration?: number };
-  const durationSeconds = typeof data?.duration === 'number' ? data.duration : 120;
-  return new Date(
-    event.timestamp.getTime() + durationSeconds * 1000,
-  );
+  const durationSeconds =
+    typeof data?.duration === 'number' ? data.duration : 120;
+  return new Date(event.timestamp.getTime() + durationSeconds * 1000);
 }
 
 function getSnapshotTransforms(config: DeviceCameraConfig | null) {
@@ -121,7 +126,9 @@ export class EventMediaCoordinator {
     pending.active = false;
   }
 
-  private async cleanupPendingFrames(pending: PendingDeviceMedia): Promise<void> {
+  private async cleanupPendingFrames(
+    pending: PendingDeviceMedia,
+  ): Promise<void> {
     await Promise.all(pending.frames.map((f) => f.cleanup().catch(() => {})));
     pending.frames = [];
   }
@@ -134,7 +141,10 @@ export class EventMediaCoordinator {
     if (pending?.captureInFlight) await pending.captureInFlight;
   }
 
-  private beginTrackedSnapshotWork(deviceId: number, work: Promise<void>): void {
+  private beginTrackedSnapshotWork(
+    deviceId: number,
+    work: Promise<void>,
+  ): void {
     this.snapshotWorkByDevice.set(deviceId, work);
     work.finally(() => {
       if (this.snapshotWorkByDevice.get(deviceId) === work) {
@@ -214,15 +224,18 @@ export class EventMediaCoordinator {
       await this.cleanupPendingFrames(existing);
     }
 
-    const pending: PendingDeviceMedia = {
-      frames: [],
-      active: true,
-    };
-    this.pendingByDevice.set(deviceId, pending);
-
     const transforms = getSnapshotTransforms(link.config);
     const intervalSec = link.config?.snapshot?.intervalSec ?? 0;
     const firstFrameDelaySec = link.config?.snapshot?.firstFrameDelaySec ?? 0;
+
+    const pending: PendingDeviceMedia = {
+      frames: [],
+      active: true,
+      intervalSec,
+      firstFrameDelaySec,
+    };
+    this.pendingByDevice.set(deviceId, pending);
+
     const firstFrameDelayMs = Math.max(0, firstFrameDelaySec) * 1000;
 
     const captureTick = () => {
@@ -241,7 +254,13 @@ export class EventMediaCoordinator {
       pending.firstFrameTimeoutId = setTimeout(() => {
         pending.firstFrameTimeoutId = undefined;
         if (!pending.active) return;
-        void this.captureFrame(deviceId, camera, timestamp, transforms, pending);
+        void this.captureFrame(
+          deviceId,
+          camera,
+          timestamp,
+          transforms,
+          pending,
+        );
       }, firstFrameDelayMs);
     }
   }
@@ -267,16 +286,18 @@ export class EventMediaCoordinator {
     })();
 
     pending.captureInFlight = work;
-    await work.finally(() => {
-      if (pending.captureInFlight === work) {
-        pending.captureInFlight = undefined;
-      }
-    }).catch((err) => {
-      console.error(
-        `[EventMediaCoordinator] captureFrame error for device ${deviceId}:`,
-        err,
-      );
-    });
+    await work
+      .finally(() => {
+        if (pending.captureInFlight === work) {
+          pending.captureInFlight = undefined;
+        }
+      })
+      .catch((err) => {
+        console.error(
+          `[EventMediaCoordinator] captureFrame error for device ${deviceId}:`,
+          err,
+        );
+      });
   }
 
   private onDeviceEvent(event: DeviceEvent): void {
@@ -337,9 +358,14 @@ export class EventMediaCoordinator {
         for (let i = 0; i < resolvedPending.frames.length; i++) {
           const frame = resolvedPending.frames[i];
           const relation = i === 0 ? 'snapshot' : 'timelapse';
+          const { intervalSec, firstFrameDelaySec } = resolvedPending;
+          const captureOffsetSec =
+            firstFrameDelaySec + i * (intervalSec > 0 ? intervalSec : 0);
           const metadata = {
             ...frame.metadata,
-            ...(i > 0 ? { frameIndex: i } : {}),
+            frameIndex: i,
+            captureOffsetSec,
+            ...(i === 0 ? { intervalSec, firstFrameDelaySec } : {}),
           };
 
           const media = await this.mediaManager.persistMedia(
@@ -355,7 +381,10 @@ export class EventMediaCoordinator {
           this.publishMediaReady(event, linkedMediaIds);
         }
       } catch (err) {
-        console.error('[EventMediaCoordinator] Failed to persist snapshot frames:', err);
+        console.error(
+          '[EventMediaCoordinator] Failed to persist snapshot frames:',
+          err,
+        );
         await this.cleanupPendingFrames(resolvedPending).catch(() => {});
       }
     } else if (resolvedPending) {
@@ -403,7 +432,9 @@ export class EventMediaCoordinator {
     startTime: Date,
     endTime: Date,
     eventType: EventType,
-    transforms: { crop?: DeviceCameraConfig['crop']; rotate?: number } | undefined,
+    transforms:
+      | { crop?: DeviceCameraConfig['crop']; rotate?: number }
+      | undefined,
   ): Promise<void> {
     try {
       const result = await camera.fetchRecording({

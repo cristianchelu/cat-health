@@ -3,8 +3,7 @@ import type { EventComponentProps } from './types';
 import { resolveTimelineEventComponent } from './eventTimelineRegistry';
 
 const EventTimelineItem: React.FC<EventComponentProps> = (props) => {
-  const Component = resolveTimelineEventComponent(props.event);
-  return <Component {...props} />;
+  return React.createElement(resolveTimelineEventComponent(props.event), props);
 };
 
 export default EventTimelineItem;

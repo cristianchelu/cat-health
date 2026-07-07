@@ -2,11 +2,16 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pause, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  frameIndexAtTimelineSec,
+  type TimelapseFrameInput,
+} from './buildTimelapseTimeline';
 import './TimelapsePlayer.css';
 
 interface TimelapsePlayerProps {
-  frameUrls: string[];
-  fps?: number;
+  frames: TimelapseFrameInput[];
+  durationSec: number;
+  intervalSec?: number;
   alt: string;
 }
 
@@ -21,19 +26,19 @@ function formatTimelapseTime(seconds: number): string {
   return `${minutes}:${secs.toString().padStart(2, '0')}`;
 }
 
-function frameIndexFromPointer(
+function timelineSecFromPointer(
   clientX: number,
   rect: DOMRect,
-  frameCount: number,
+  durationSec: number,
 ): number {
-  if (frameCount <= 1) return 0;
   const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
-  return Math.round(ratio * (frameCount - 1));
+  return ratio * durationSec;
 }
 
 const TimelapsePlayer: React.FC<TimelapsePlayerProps> = ({
-  frameUrls,
-  fps = 1,
+  frames,
+  durationSec,
+  intervalSec,
   alt,
 }) => {
   const { t } = useTranslation();
@@ -45,39 +50,58 @@ const TimelapsePlayer: React.FC<TimelapsePlayerProps> = ({
   const isScrubbingRef = React.useRef(false);
   const wasPlayingBeforeScrubRef = React.useRef(false);
 
-  const intervalMs = fps > 0 ? 1000 / fps : 1000;
-  const frameCount = frameUrls.length;
-  const progress = frameCount > 1 ? frameIndex / (frameCount - 1) : 0;
-  const elapsedSec = frameIndex / fps;
-  const totalSec = frameCount > 1 ? (frameCount - 1) / fps : 0;
+  const frameCount = frames.length;
+  const offsets = React.useMemo(
+    () => frames.map((frame) => frame.offsetSec),
+    [frames],
+  );
+  const playbackIntervalMs = React.useMemo(() => {
+    if (intervalSec && intervalSec > 0) {
+      return intervalSec * 1000;
+    }
+    if (frameCount > 0 && durationSec > 0) {
+      return Math.max((durationSec / frameCount) * 1000, 100);
+    }
+    return 1000;
+  }, [durationSec, frameCount, intervalSec]);
+
+  const safeDurationSec = durationSec > 0 ? durationSec : 0;
+  const currentOffsetSec = offsets[frameIndex] ?? 0;
+  const progress =
+    safeDurationSec > 0 ? clamp(currentOffsetSec / safeDurationSec, 0, 1) : 0;
 
   React.useEffect(() => {
     setFrameIndex(0);
     setIsPlaying(true);
-  }, [frameUrls]);
+  }, [frames, durationSec, intervalSec]);
 
   React.useEffect(() => {
     if (!isPlaying || frameCount <= 1) return;
 
     const timer = window.setInterval(() => {
       setFrameIndex((current) => (current + 1) % frameCount);
-    }, intervalMs);
+    }, playbackIntervalMs);
 
     return () => window.clearInterval(timer);
-  }, [frameCount, intervalMs, isPlaying]);
+  }, [frameCount, isPlaying, playbackIntervalMs]);
 
   const seekToClientX = React.useCallback(
     (clientX: number) => {
       const track = trackRef.current;
-      if (!track || frameCount <= 1) return;
-      const index = frameIndexFromPointer(
+      if (!track || frameCount <= 1 || safeDurationSec <= 0) return;
+      const targetSec = timelineSecFromPointer(
         clientX,
         track.getBoundingClientRect(),
-        frameCount,
+        safeDurationSec,
+      );
+      const index = frameIndexAtTimelineSec(
+        offsets,
+        safeDurationSec,
+        targetSec,
       );
       setFrameIndex(index);
     },
-    [frameCount],
+    [frameCount, offsets, safeDurationSec],
   );
 
   const handleTrackPointerDown = React.useCallback(
@@ -141,7 +165,7 @@ const TimelapsePlayer: React.FC<TimelapsePlayerProps> = ({
     return null;
   }
 
-  const currentUrl = frameUrls[frameIndex] ?? frameUrls[0];
+  const currentUrl = frames[frameIndex]?.url ?? frames[0].url;
 
   return (
     <div className="timelapse-player">
@@ -182,8 +206,8 @@ const TimelapsePlayer: React.FC<TimelapsePlayerProps> = ({
                 tabIndex={0}
                 aria-label={t('event_details.timelapse_seek')}
                 aria-valuemin={0}
-                aria-valuemax={frameCount - 1}
-                aria-valuenow={frameIndex}
+                aria-valuemax={Math.max(safeDurationSec, 0)}
+                aria-valuenow={currentOffsetSec}
                 onPointerDown={handleTrackPointerDown}
                 onPointerMove={handleTrackPointerMove}
                 onPointerUp={endScrub}
@@ -204,8 +228,8 @@ const TimelapsePlayer: React.FC<TimelapsePlayerProps> = ({
             </div>
 
             <span className="timelapse-player-time" aria-hidden>
-              {formatTimelapseTime(elapsedSec)} /{' '}
-              {formatTimelapseTime(totalSec)}
+              {formatTimelapseTime(currentOffsetSec)} /{' '}
+              {formatTimelapseTime(safeDurationSec)}
             </span>
           </div>
         </div>

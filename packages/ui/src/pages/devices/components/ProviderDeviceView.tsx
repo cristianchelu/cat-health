@@ -13,7 +13,10 @@ export const ProviderDeviceView: React.FC<ProviderDeviceViewProps> = ({
   const state = device.state as Record<string, unknown> | undefined;
   const entities = state?.entities as EntityDTO[] | undefined;
   const sensors = state?.sensors as Record<string, unknown> | undefined;
-  const DevicePage = resolveDevicePage(device);
 
-  return <DevicePage device={device} entities={entities} sensors={sensors} />;
+  return React.createElement(resolveDevicePage(device), {
+    device,
+    entities,
+    sensors,
+  });
 };

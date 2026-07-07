@@ -11,7 +11,12 @@ import {
   useDeleteEvent,
   invalidateQueriesAfterEventPatch,
 } from '@/hooks/queries/eventQueries';
-import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/Dialog';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/form/Select';
 import type {
@@ -22,6 +27,7 @@ import type {
 import WeightSignalChart from './WeightSignalChart';
 import WaterSignalChart from './WaterSignalChart';
 import TimelapsePlayer from './TimelapsePlayer';
+import { buildTimelapseTimeline } from './buildTimelapseTimeline';
 import { decodeLitterboxRawData } from './decodeLitterboxRawData';
 import { decodeWaterRawData } from './decodeWaterRawData';
 import { analyzeWaterSegments } from './analyzeWaterSegments';
@@ -58,14 +64,15 @@ const WaterIntakeDetails: React.FC<{ event: GetEventDTO }> = ({ event }) => {
     raw_amount?: number;
     excluded_amount?: number;
   };
-  const hasFiltering =
-    data.excluded_amount != null && data.excluded_amount > 0;
+  const hasFiltering = data.excluded_amount != null && data.excluded_amount > 0;
   return (
     <div className="event-specific-details">
       {data.duration != null && (
         <span className="detail-item">
           <Timer className="detail-item-icon" aria-hidden />
-          <span className="detail-item-label">{t('event_details.duration_label')}</span>
+          <span className="detail-item-label">
+            {t('event_details.duration_label')}
+          </span>
           <span className="detail-item-value">
             {t('event_details.duration_value', { seconds: data.duration })}
           </span>
@@ -74,7 +81,9 @@ const WaterIntakeDetails: React.FC<{ event: GetEventDTO }> = ({ event }) => {
       {data.amount != null && (
         <span className="detail-item">
           <GlassWater className="detail-item-icon" aria-hidden />
-          <span className="detail-item-label">{t('event_details.amount_label')}</span>
+          <span className="detail-item-label">
+            {t('event_details.amount_label')}
+          </span>
           <span className="detail-item-value">
             {t('event_details.amount_value', { amount: data.amount })}
           </span>
@@ -83,9 +92,13 @@ const WaterIntakeDetails: React.FC<{ event: GetEventDTO }> = ({ event }) => {
       {hasFiltering && (
         <span className="detail-item">
           <DropletOff className="detail-item-icon" aria-hidden />
-          <span className="detail-item-label">{t('event_details.water_spilled_label')}</span>
+          <span className="detail-item-label">
+            {t('event_details.water_spilled_label')}
+          </span>
           <span className="detail-item-value">
-            {t('event_details.water_spilled_amount', { amount: data.excluded_amount })}
+            {t('event_details.water_spilled_amount', {
+              amount: data.excluded_amount,
+            })}
           </span>
         </span>
       )}
@@ -99,7 +112,9 @@ const EventDetailsRenderer: React.FC<{ event: GetEventDTO }> = ({ event }) => {
     case 'water_intake':
       return <WaterIntakeDetails event={event} />;
     default:
-      return <p className="text-muted">{t('event_details.no_additional_details')}</p>;
+      return (
+        <p className="text-muted">{t('event_details.no_additional_details')}</p>
+      );
   }
 };
 
@@ -141,7 +156,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const queryClient = useQueryClient();
   const { data: pets } = usePets();
 
-  const eliminationTypeOptions: { value: LitterboxUseEliminationType; label: string }[] = [
+  const eliminationTypeOptions: {
+    value: LitterboxUseEliminationType;
+    label: string;
+  }[] = [
     { value: 'urination', label: t('overview.urination') },
     { value: 'defecation', label: t('overview.defecation') },
     { value: 'both', label: t('overview.both') },
@@ -153,8 +171,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     isOpen && event !== null,
   );
   const { mutate: updateEvent, isPending: isUpdating } = useUpdateEvent();
-  const { mutate: deleteEventMutation, isPending: isDeleting } = useDeleteEvent();
-  const { mutate: runAnalyze, isPending: isAnalyzing } = useAnalyzeLitterboxEvent();
+  const { mutate: deleteEventMutation, isPending: isDeleting } =
+    useDeleteEvent();
+  const { mutate: runAnalyze, isPending: isAnalyzing } =
+    useAnalyzeLitterboxEvent();
 
   const eventId = event?.id;
   const { data: eventFromServer } = useQuery({
@@ -167,7 +187,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const [selectedEliminationType, setSelectedEliminationType] =
     React.useState<LitterboxUseEliminationType>('unknown');
   const [selectedStraining, setSelectedStraining] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<'media' | 'analysis'>('media');
+  const [activeTab, setActiveTab] = React.useState<'media' | 'analysis'>(
+    'media',
+  );
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [reidentifyOnDelete, setReidentifyOnDelete] = React.useState(false);
 
@@ -194,12 +216,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const decodedRawData = React.useMemo(() => {
     if (displayEvent?.data?.type !== 'litterbox_use') return null;
     return decodeLitterboxRawData(displayEvent.raw_data);
-  }, [displayEvent?.data?.type, displayEvent?.raw_data]);
+  }, [displayEvent]);
 
   const decodedWaterData = React.useMemo(() => {
     if (displayEvent?.data?.type !== 'water_intake') return null;
     return decodeWaterRawData(displayEvent.raw_data);
-  }, [displayEvent?.data?.type, displayEvent?.raw_data]);
+  }, [displayEvent]);
 
   // Check if event has analysis data
   const hasAnalysisData =
@@ -234,7 +256,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   React.useEffect(() => {
     if (!eventFromServer || !event || eventFromServer.id !== event.id) return;
-    setSelectedPetId(eventFromServer.pet_id ? String(eventFromServer.pet_id) : 'null');
+    setSelectedPetId(
+      eventFromServer.pet_id ? String(eventFromServer.pet_id) : 'null',
+    );
     if (eventFromServer.data?.type === 'litterbox_use') {
       setSelectedEliminationType(
         eventFromServer.data.elimination_type ?? 'unknown',
@@ -262,10 +286,13 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     };
   }, [media]);
 
-  const timelapseFrameUrls = React.useMemo(
-    () => imageFrames.map((m) => `api/media/${m.file_path}`),
-    [imageFrames],
-  );
+  const timelapseTimeline = React.useMemo(() => {
+    const eventDurationSec =
+      typeof displayEvent?.data?.duration === 'number'
+        ? displayEvent.data.duration
+        : undefined;
+    return buildTimelapseTimeline(imageFrames, eventDurationSec);
+  }, [displayEvent, imageFrames]);
 
   const downloadMediaPath = imageFrames[0]?.file_path ?? media?.[0]?.file_path;
 
@@ -326,9 +353,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   const petOptions = pets
     ? [
-      { value: 'null', label: t('common.unknown') },
-      ...pets.map((p) => ({ value: String(p.id), label: p.name })),
-    ]
+        { value: 'null', label: t('common.unknown') },
+        ...pets.map((p) => ({ value: String(p.id), label: p.name })),
+      ]
     : [{ value: 'null', label: t('common.unknown') }];
 
   const handleDeleteClick = () => {
@@ -347,14 +374,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     const after =
       typeof displayEvent.timestamp === 'string'
         ? displayEvent.timestamp
-        : new Date(displayEvent.timestamp as string | number | Date).toISOString();
+        : new Date(
+            displayEvent.timestamp as string | number | Date,
+          ).toISOString();
 
     deleteEventMutation(displayEvent.id, {
       onSuccess: async () => {
         if (reidentifyOnDelete && deviceId != null) {
           await reidentifyLitterboxVisits(deviceId, after);
           invalidateQueriesAfterEventPatch(queryClient);
-          await queryClient.invalidateQueries({ queryKey: ['litterboxTrends'] });
+          await queryClient.invalidateQueries({
+            queryKey: ['litterboxTrends'],
+          });
         }
         onClose();
       },
@@ -412,9 +443,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               )}
               {!isLoadingMedia && hasMedia && (
                 <div className="event-media-stack">
-                  {imageFrames.length > 0 && hasTimelapse && (
+                  {timelapseTimeline && (
                     <TimelapsePlayer
-                      frameUrls={timelapseFrameUrls}
+                      frames={timelapseTimeline.frames}
+                      durationSec={timelapseTimeline.durationSec}
+                      intervalSec={timelapseTimeline.intervalSec}
                       alt={t('event_details.event_media_alt')}
                     />
                   )}
@@ -435,20 +468,24 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               )}
             </>
           )}
-          {activeTab === 'analysis' && hasLitterboxChartWeights && decodedRawData && (
-            <div className="event-details-litterbox-analysis">
-              <WeightSignalChart
-                weights={decodedRawData.weights}
-                periods={segmentPeriods ?? EMPTY_LITTERBOX_SEGMENT_PERIODS}
+          {activeTab === 'analysis' &&
+            hasLitterboxChartWeights &&
+            decodedRawData && (
+              <div className="event-details-litterbox-analysis">
+                <WeightSignalChart
+                  weights={decodedRawData.weights}
+                  periods={segmentPeriods ?? EMPTY_LITTERBOX_SEGMENT_PERIODS}
+                />
+              </div>
+            )}
+          {activeTab === 'analysis' &&
+            hasWaterChartWeights &&
+            decodedWaterData && (
+              <WaterSignalChart
+                weights={decodedWaterData.weights}
+                periods={waterPeriods}
               />
-            </div>
-          )}
-          {activeTab === 'analysis' && hasWaterChartWeights && decodedWaterData && (
-            <WaterSignalChart
-              weights={decodedWaterData.weights}
-              periods={waterPeriods}
-            />
-          )}
+            )}
         </div>
 
         <div className="event-details-body">
@@ -590,7 +627,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   className="elimination-type-select"
                   disabled={isUpdating}
                 />
-                <label className="straining-control" htmlFor="event-details-straining">
+                <label
+                  className="straining-control"
+                  htmlFor="event-details-straining"
+                >
                   <span>{t('annotation.straining')}</span>
                   <input
                     id="event-details-straining"

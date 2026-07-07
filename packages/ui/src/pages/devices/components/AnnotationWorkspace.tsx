@@ -1,9 +1,23 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { CheckCheck, AlertCircle, Trash2, Loader2, RotateCcw, Ban, Wrench, Video, Sparkles } from 'lucide-react';
+import {
+  CheckCheck,
+  AlertCircle,
+  Trash2,
+  Loader2,
+  RotateCcw,
+  Ban,
+  Wrench,
+  Video,
+  Sparkles,
+} from 'lucide-react';
 import { getEventById } from '@/api/pets';
-import { useAnalyzeLitterboxEvent, useEventMedia, usePatchEvent } from '@/hooks/queries/eventQueries';
+import {
+  useAnalyzeLitterboxEvent,
+  useEventMedia,
+  usePatchEvent,
+} from '@/hooks/queries/eventQueries';
 import { usePets } from '@/hooks/queries/petQueries';
 import { Select } from '@/components/ui/form/Select';
 import { Button } from '@/components/ui/Button';
@@ -16,7 +30,10 @@ import type {
   LitterboxAnalysisStatePeriod,
   LitterboxUseEliminationType,
 } from 'shared';
-import type { LitterboxBoutAnnotation, LitterboxAnnotation } from '@/types/litterbox';
+import type {
+  LitterboxBoutAnnotation,
+  LitterboxAnnotation,
+} from '@/types/litterbox';
 import './AnnotationWorkspace.css';
 
 /** Stable fallback so `periods` stays referentially equal when there are no analyzer segments. */
@@ -31,9 +48,16 @@ interface AnnotationWorkspaceProps {
   onConvertedToMaintenance?: () => void;
 }
 
-const BOUT_TYPES: LitterboxBoutAnnotation['bout_type'][] = ['urination', 'defecation', 'unknown'];
+const BOUT_TYPES: LitterboxBoutAnnotation['bout_type'][] = [
+  'urination',
+  'defecation',
+  'unknown',
+];
 
-const ELIMINATION_TYPES: { value: LitterboxUseEliminationType; label: string }[] = [
+const ELIMINATION_TYPES: {
+  value: LitterboxUseEliminationType;
+  label: string;
+}[] = [
   { value: 'urination', label: 'overview.urination' },
   { value: 'defecation', label: 'overview.defecation' },
   { value: 'both', label: 'overview.both' },
@@ -49,7 +73,10 @@ function getBouts(event: GetEventDTO): LitterboxBoutAnnotation[] {
 function hasPersistedBouts(event: GetEventDTO): boolean {
   const d = event.data as { annotation?: unknown };
   if (!d.annotation || typeof d.annotation !== 'object') return false;
-  return Object.prototype.hasOwnProperty.call(d.annotation as Record<string, unknown>, 'bouts');
+  return Object.prototype.hasOwnProperty.call(
+    d.annotation as Record<string, unknown>,
+    'bouts',
+  );
 }
 
 /** Select value "null" = unknown cat; only positive DB ids are sent (never 0/NaN — JSON would show null for NaN). */
@@ -87,7 +114,8 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   const { t } = useTranslation();
   /** Avoid `useMutation` here: it re-renders via useSyncExternalStore on every mutation state tick. */
   const { patchEvent, isPatching: isSaving } = usePatchEvent();
-  const { mutateAsync: runAnalyzeAsync, isPending: isAnalyzing } = useAnalyzeLitterboxEvent();
+  const { mutateAsync: runAnalyzeAsync, isPending: isAnalyzing } =
+    useAnalyzeLitterboxEvent();
   const { data: pets } = usePets();
   const { data: media, isLoading: isLoadingMedia } = useEventMedia(event.id);
   const { data: eventDetail } = useQuery({
@@ -103,7 +131,10 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     duration?: number;
   };
 
-  const decodedRaw = React.useMemo(() => decodeLitterboxRawData(event.raw_data), [event.raw_data]);
+  const decodedRaw = React.useMemo(
+    () => decodeLitterboxRawData(event.raw_data),
+    [event.raw_data],
+  );
   const weights = React.useMemo(() => decodedRaw?.weights ?? [], [decodedRaw]);
 
   const segmentsFromServer = (
@@ -125,17 +156,28 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     return deriveDetectorBouts(analysisResult.periods, sampleRate);
   }, [analysisResult, sampleRate]);
 
-  const [localBouts, setLocalBouts] = React.useState<LitterboxBoutAnnotation[]>(() => {
-    if (hasPersistedBouts(event)) return getBouts(event);
-    return detectorBouts;
-  });
-  const [selectedBoutIndex, setSelectedBoutIndex] = React.useState<number | null>(null);
-  const [petId, setPetId] = React.useState<string>(event.pet_id != null ? String(event.pet_id) : 'null');
-  const [eliminationType, setEliminationType] = React.useState<LitterboxUseEliminationType>(
-    data.elimination_type ?? 'unknown',
+  const [localBouts, setLocalBouts] = React.useState<LitterboxBoutAnnotation[]>(
+    () => {
+      if (hasPersistedBouts(event)) return getBouts(event);
+      return detectorBouts;
+    },
   );
-  const [straining, setStraining] = React.useState<boolean>(data.straining ?? false);
-  const [excluded, setExcluded] = React.useState<boolean>(data.annotation?.excluded ?? false);
+  const [selectedBoutIndex, setSelectedBoutIndex] = React.useState<
+    number | null
+  >(null);
+  const [petId, setPetId] = React.useState<string>(
+    event.pet_id != null ? String(event.pet_id) : 'null',
+  );
+  const [eliminationType, setEliminationType] =
+    React.useState<LitterboxUseEliminationType>(
+      data.elimination_type ?? 'unknown',
+    );
+  const [straining, setStraining] = React.useState<boolean>(
+    data.straining ?? false,
+  );
+  const [excluded, setExcluded] = React.useState<boolean>(
+    data.annotation?.excluded ?? false,
+  );
 
   // Reset state when event changes
   React.useEffect(() => {
@@ -153,12 +195,17 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     setExcluded(d.annotation?.excluded ?? false);
   }, [event.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const saveDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   /** Latest server event snapshot; avoids re-creating `save` when `event.data` identity changes (refetch / mutation). */
   const eventIdRef = React.useRef(event.id);
   const eventDataRef = React.useRef(event.data);
-  eventIdRef.current = event.id;
-  eventDataRef.current = event.data;
+
+  React.useEffect(() => {
+    eventIdRef.current = event.id;
+    eventDataRef.current = event.data;
+  });
 
   const flushSave = React.useCallback(
     async (
@@ -174,7 +221,8 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
       const eventData = eventDataRef.current;
       const eventId = eventIdRef.current;
       const resolvedPetId = resolvePetIdFromSelect(nextPetId);
-      const prevAnn = (eventData as { annotation?: LitterboxAnnotation }).annotation;
+      const prevAnn = (eventData as { annotation?: LitterboxAnnotation })
+        .annotation;
       await patchEvent({
         eventId,
         data: {
@@ -210,7 +258,8 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
         const eventData = eventDataRef.current;
         const eventId = eventIdRef.current;
         const resolvedPetId = resolvePetIdFromSelect(nextPetId);
-        const prevAnn = (eventData as { annotation?: LitterboxAnnotation }).annotation;
+        const prevAnn = (eventData as { annotation?: LitterboxAnnotation })
+          .annotation;
         void patchEvent({
           eventId,
           data: {
@@ -236,14 +285,28 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   const handleBoutsChange = React.useCallback(
     (bouts: LitterboxBoutAnnotation[]) => {
       setLocalBouts(bouts);
-      save(bouts, petId, eliminationType, straining, event.human_verified, excluded);
+      save(
+        bouts,
+        petId,
+        eliminationType,
+        straining,
+        event.human_verified,
+        excluded,
+      );
     },
     [petId, eliminationType, straining, event.human_verified, excluded, save],
   );
 
   const handlePetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setPetId(e.target.value);
-    save(localBouts, e.target.value, eliminationType, straining, event.human_verified, excluded);
+    save(
+      localBouts,
+      e.target.value,
+      eliminationType,
+      straining,
+      event.human_verified,
+      excluded,
+    );
   };
 
   const handleEliminationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -262,18 +325,39 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
 
   const handleStrainingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setStraining(e.target.checked);
-    save(localBouts, petId, eliminationType, e.target.checked, event.human_verified, excluded);
+    save(
+      localBouts,
+      petId,
+      eliminationType,
+      e.target.checked,
+      event.human_verified,
+      excluded,
+    );
   };
 
   const handleToggleVerified = async () => {
     const next = !event.human_verified;
-    await flushSave(localBouts, petId, eliminationType, straining, next, excluded);
+    await flushSave(
+      localBouts,
+      petId,
+      eliminationType,
+      straining,
+      next,
+      excluded,
+    );
   };
 
   const handleToggleExcluded = async () => {
     const next = !excluded;
     setExcluded(next);
-    await flushSave(localBouts, petId, eliminationType, straining, event.human_verified, next);
+    await flushSave(
+      localBouts,
+      petId,
+      eliminationType,
+      straining,
+      event.human_verified,
+      next,
+    );
   };
 
   const handleConvertToMaintenance = React.useCallback(async () => {
@@ -297,19 +381,28 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     onConvertedToMaintenance?.();
   }, [event.id, onConvertedToMaintenance, patchEvent, t]);
 
-  const handleBoutTypeChange = React.useCallback((idx: number, boutType: LitterboxBoutAnnotation['bout_type']) => {
-    const next = localBouts.map((b, i) => (i === idx ? { ...b, bout_type: boutType } : b));
-    handleBoutsChange(next);
-  }, [handleBoutsChange, localBouts]);
+  const handleBoutTypeChange = React.useCallback(
+    (idx: number, boutType: LitterboxBoutAnnotation['bout_type']) => {
+      const next = localBouts.map((b, i) =>
+        i === idx ? { ...b, bout_type: boutType } : b,
+      );
+      handleBoutsChange(next);
+    },
+    [handleBoutsChange, localBouts],
+  );
 
-  const handleDeleteBout = React.useCallback((idx: number) => {
-    const next = localBouts
-      .filter((_, i) => i !== idx)
-      .map((b, i) => ({ ...b, bout_index: i }));
-    if (selectedBoutIndex === idx) setSelectedBoutIndex(null);
-    else if (selectedBoutIndex !== null && selectedBoutIndex > idx) setSelectedBoutIndex(selectedBoutIndex - 1);
-    handleBoutsChange(next);
-  }, [handleBoutsChange, localBouts, selectedBoutIndex]);
+  const handleDeleteBout = React.useCallback(
+    (idx: number) => {
+      const next = localBouts
+        .filter((_, i) => i !== idx)
+        .map((b, i) => ({ ...b, bout_index: i }));
+      if (selectedBoutIndex === idx) setSelectedBoutIndex(null);
+      else if (selectedBoutIndex !== null && selectedBoutIndex > idx)
+        setSelectedBoutIndex(selectedBoutIndex - 1);
+      handleBoutsChange(next);
+    },
+    [handleBoutsChange, localBouts, selectedBoutIndex],
+  );
 
   const petOptions = [
     { value: 'null', label: t('common.unknown') },
@@ -339,11 +432,19 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
       };
 
       const periods = ud.segments ?? [];
-      const next = periods.length === 0 ? [] : deriveDetectorBouts(periods, sampleRate);
+      const next =
+        periods.length === 0 ? [] : deriveDetectorBouts(periods, sampleRate);
       setSelectedBoutIndex(next.length > 0 ? 0 : null);
       setLocalBouts(next);
 
-      await flushSave(next, petId, preserveElim, preserveStrain, updated.human_verified, excluded);
+      await flushSave(
+        next,
+        petId,
+        preserveElim,
+        preserveStrain,
+        updated.human_verified,
+        excluded,
+      );
     } catch {
       // Request failed (e.g. missing raw_data); list/detail queries still refresh on success path only.
     }
@@ -379,8 +480,12 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
 
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const videoTimeRafRef = React.useRef<number | null>(null);
-  const [videoDurationSec, setVideoDurationSec] = React.useState<number | null>(null);
-  const [playheadChartSec, setPlayheadChartSec] = React.useState<number | null>(null);
+  const [videoDurationSec, setVideoDurationSec] = React.useState<number | null>(
+    null,
+  );
+  const [playheadChartSec, setPlayheadChartSec] = React.useState<number | null>(
+    null,
+  );
 
   const chartDurationSec = React.useMemo(() => {
     if (!weights.length) return 0;
@@ -433,7 +538,8 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
 
   React.useEffect(
     () => () => {
-      if (videoTimeRafRef.current != null) cancelAnimationFrame(videoTimeRafRef.current);
+      if (videoTimeRafRef.current != null)
+        cancelAnimationFrame(videoTimeRafRef.current);
     },
     [],
   );
@@ -458,12 +564,19 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   );
 
   const chartMediaSync = React.useMemo(() => {
-    if (!hasVideo || !showMediaSection || chartDurationSec <= 0) return undefined;
+    if (!hasVideo || !showMediaSection || chartDurationSec <= 0)
+      return undefined;
     return {
       playheadChartSec,
       onAxisSeek: handleAxisSeek,
     };
-  }, [chartDurationSec, handleAxisSeek, hasVideo, playheadChartSec, showMediaSection]);
+  }, [
+    chartDurationSec,
+    handleAxisSeek,
+    hasVideo,
+    playheadChartSec,
+    showMediaSection,
+  ]);
 
   React.useEffect(() => {
     if (!showMediaSection || !hasVideo) return;
@@ -480,18 +593,46 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
       toggleStraining: () => {
         const next = !straining;
         setStraining(next);
-        save(localBouts, petId, eliminationType, next, event.human_verified, excluded);
+        save(
+          localBouts,
+          petId,
+          eliminationType,
+          next,
+          event.human_verified,
+          excluded,
+        );
       },
       toggleVerified: async () => {
-        await flushSave(localBouts, petId, eliminationType, straining, !event.human_verified, excluded);
+        await flushSave(
+          localBouts,
+          petId,
+          eliminationType,
+          straining,
+          !event.human_verified,
+          excluded,
+        );
       },
       toggleExcluded: async () => {
         const next = !excluded;
         setExcluded(next);
-        await flushSave(localBouts, petId, eliminationType, straining, event.human_verified, next);
+        await flushSave(
+          localBouts,
+          petId,
+          eliminationType,
+          straining,
+          event.human_verified,
+          next,
+        );
       },
       setVerified: async (next) => {
-        await flushSave(localBouts, petId, eliminationType, straining, next, excluded);
+        await flushSave(
+          localBouts,
+          petId,
+          eliminationType,
+          straining,
+          next,
+          excluded,
+        );
       },
       deleteSelectedBout: () => {
         if (selectedBoutIndex == null) return;
@@ -499,8 +640,12 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
       },
       selectAdjacentBout: (direction) => {
         if (!localBouts.length) return;
-        const idx = selectedBoutIndex ?? (direction === 1 ? -1 : localBouts.length);
-        const next = Math.max(0, Math.min(localBouts.length - 1, idx + direction));
+        const idx =
+          selectedBoutIndex ?? (direction === 1 ? -1 : localBouts.length);
+        const next = Math.max(
+          0,
+          Math.min(localBouts.length - 1, idx + direction),
+        );
         setSelectedBoutIndex(next);
       },
       clearAllBouts: async () => {
@@ -510,18 +655,34 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
         }
         setSelectedBoutIndex(null);
         setLocalBouts([]);
-        await flushSave([], petId, eliminationType, straining, event.human_verified, excluded);
+        await flushSave(
+          [],
+          petId,
+          eliminationType,
+          straining,
+          event.human_verified,
+          excluded,
+        );
       },
       resetToDetector: async () => {
         if (!analysisResult) return;
         if (localBouts.length > 0) {
-          const ok = window.confirm(t('annotation.confirm_reset_detector_bouts'));
+          const ok = window.confirm(
+            t('annotation.confirm_reset_detector_bouts'),
+          );
           if (!ok) return;
         }
         const next = deriveDetectorBouts(analysisResult.periods, sampleRate);
         setSelectedBoutIndex(next.length ? 0 : null);
         setLocalBouts(next);
-        await flushSave(next, petId, eliminationType, straining, event.human_verified, excluded);
+        await flushSave(
+          next,
+          petId,
+          eliminationType,
+          straining,
+          event.human_verified,
+          excluded,
+        );
       },
       setSelectedBoutType: (boutType) => {
         if (selectedBoutIndex == null) return;
@@ -561,10 +722,17 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   return (
     <div className="annotation-workspace">
       {showMediaSection && (
-        <div className="annotation-workspace-media" aria-label={t('event_details.media')}>
+        <div
+          className="annotation-workspace-media"
+          aria-label={t('event_details.media')}
+        >
           {isLoadingMedia && (
             <div className="annotation-media-loading">
-              <Loader2 size={28} aria-hidden className="annotation-media-spinner" />
+              <Loader2
+                size={28}
+                aria-hidden
+                className="annotation-media-spinner"
+              />
             </div>
           )}
           {!isLoadingMedia && hasVideo && (
@@ -579,16 +747,23 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
                       if (i !== 0) return;
                       const el = e.currentTarget;
                       const d = el.duration;
-                      setVideoDurationSec(Number.isFinite(d) && d > 0 ? d : null);
+                      setVideoDurationSec(
+                        Number.isFinite(d) && d > 0 ? d : null,
+                      );
                       const cDur = chartDurationSec;
                       if (cDur <= 0) return;
                       const vd = Number.isFinite(d) && d > 0 ? d : null;
                       if (vd != null) {
                         setPlayheadChartSec(
-                          Math.max(0, Math.min((el.currentTime / vd) * cDur, cDur)),
+                          Math.max(
+                            0,
+                            Math.min((el.currentTime / vd) * cDur, cDur),
+                          ),
                         );
                       } else {
-                        setPlayheadChartSec(Math.max(0, Math.min(el.currentTime, cDur)));
+                        setPlayheadChartSec(
+                          Math.max(0, Math.min(el.currentTime, cDur)),
+                        );
                       }
                     }}
                     onTimeUpdate={i === 0 ? onVideoTimeTick : undefined}
@@ -599,7 +774,9 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
             </div>
           )}
           {!isLoadingMedia && !hasVideo && (
-            <p className="annotation-media-empty">{t('annotation.no_event_video')}</p>
+            <p className="annotation-media-empty">
+              {t('annotation.no_event_video')}
+            </p>
           )}
         </div>
       )}
@@ -630,7 +807,9 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
         <div className="annotation-session-controls">
           <div className="annotation-session-main-row">
             <div className="annotation-control-group">
-              <label className="annotation-control-label">{t('annotation.pet_id_short')}</label>
+              <label className="annotation-control-label">
+                {t('annotation.pet_id_short')}
+              </label>
               <Select
                 options={petOptions}
                 value={petId}
@@ -640,7 +819,9 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
               />
             </div>
             <div className="annotation-control-group">
-              <label className="annotation-control-label">{t('annotation.session_type_short')}</label>
+              <label className="annotation-control-label">
+                {t('annotation.session_type_short')}
+              </label>
               <Select
                 options={eliminationOptions}
                 value={eliminationType}
@@ -650,7 +831,10 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
               />
             </div>
             <div className="annotation-control-group annotation-control-group--straining">
-              <label className="annotation-control-label" htmlFor="annotation-straining">
+              <label
+                className="annotation-control-label"
+                htmlFor="annotation-straining"
+              >
                 {t('annotation.straining')}
               </label>
               <input
@@ -671,7 +855,11 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
                 disabled={videoToggleDisabled}
                 className="annotation-icon-action-btn"
                 aria-pressed={videoOpen}
-                aria-label={videoOpen ? t('annotation.hide_video') : t('annotation.show_video')}
+                aria-label={
+                  videoOpen
+                    ? t('annotation.hide_video')
+                    : t('annotation.show_video')
+                }
                 title={
                   !videoOpen && !isLoadingMedia && !hasVideo && !isSaving
                     ? t('annotation.no_event_video')
@@ -705,8 +893,16 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
                 onClick={handleToggleVerified}
                 disabled={isSaving}
                 className="annotation-icon-action-btn"
-                aria-label={event.human_verified ? t('annotation.verified') : t('annotation.mark_verified')}
-                title={event.human_verified ? t('annotation.verified') : t('annotation.mark_verified')}
+                aria-label={
+                  event.human_verified
+                    ? t('annotation.verified')
+                    : t('annotation.mark_verified')
+                }
+                title={
+                  event.human_verified
+                    ? t('annotation.verified')
+                    : t('annotation.mark_verified')
+                }
               >
                 <CheckCheck size={16} aria-hidden />
               </Button>
@@ -765,67 +961,77 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
 
         <div className="annotation-bouts-section">
           <div className="annotation-bouts-header">
-            <div className="annotation-bouts-keys" aria-label={t('annotation.keyboard_hints_aria')}>
+            <div
+              className="annotation-bouts-keys"
+              aria-label={t('annotation.keyboard_hints_aria')}
+            >
               <span className="annotation-kbd-hint">
-                <kbd className="annotation-kbd">v</kbd>
-                {' '}
-                {t('annotation.kbd_v')}
+                <kbd className="annotation-kbd">v</kbd> {t('annotation.kbd_v')}
               </span>
-              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
+              <span className="annotation-kbd-hint-sep" aria-hidden>
+                ,
+              </span>
               <span className="annotation-kbd-hint">
                 <span className="annotation-kbd-cluster">
-                  <kbd className="annotation-kbd annotation-kbd--wide">Shift</kbd>
+                  <kbd className="annotation-kbd annotation-kbd--wide">
+                    Shift
+                  </kbd>
                   <span className="annotation-kbd-join">+</span>
                   <kbd className="annotation-kbd">V</kbd>
-                </span>
-                {' '}
+                </span>{' '}
                 {t('annotation.kbd_shift_v')}
               </span>
-              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
-              <span className="annotation-kbd-hint">
-                <kbd className="annotation-kbd">x</kbd>
-                {' '}
-                {t('annotation.kbd_x')}
+              <span className="annotation-kbd-hint-sep" aria-hidden>
+                ,
               </span>
-              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
               <span className="annotation-kbd-hint">
-                <kbd className="annotation-kbd">s</kbd>
-                {' '}
-                {t('annotation.kbd_s')}
+                <kbd className="annotation-kbd">x</kbd> {t('annotation.kbd_x')}
               </span>
-              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
+              <span className="annotation-kbd-hint-sep" aria-hidden>
+                ,
+              </span>
               <span className="annotation-kbd-hint">
-                <kbd className="annotation-kbd">r</kbd>
-                {' '}
-                {t('annotation.kbd_r')}
+                <kbd className="annotation-kbd">s</kbd> {t('annotation.kbd_s')}
               </span>
-              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
+              <span className="annotation-kbd-hint-sep" aria-hidden>
+                ,
+              </span>
+              <span className="annotation-kbd-hint">
+                <kbd className="annotation-kbd">r</kbd> {t('annotation.kbd_r')}
+              </span>
+              <span className="annotation-kbd-hint-sep" aria-hidden>
+                ,
+              </span>
               <span className="annotation-kbd-hint">
                 <span className="annotation-kbd-cluster">
-                  <kbd className="annotation-kbd annotation-kbd--wide">Shift</kbd>
+                  <kbd className="annotation-kbd annotation-kbd--wide">
+                    Shift
+                  </kbd>
                   <span className="annotation-kbd-join">+</span>
                   <kbd className="annotation-kbd">M</kbd>
-                </span>
-                {' '}
+                </span>{' '}
                 {t('annotation.kbd_shift_m')}
               </span>
-              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
-              <span className="annotation-kbd-hint">
-                <kbd className="annotation-kbd">g</kbd>
-                {' '}
-                {t('annotation.kbd_g')}
+              <span className="annotation-kbd-hint-sep" aria-hidden>
+                ,
               </span>
-              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
+              <span className="annotation-kbd-hint">
+                <kbd className="annotation-kbd">g</kbd> {t('annotation.kbd_g')}
+              </span>
+              <span className="annotation-kbd-hint-sep" aria-hidden>
+                ,
+              </span>
               <span className="annotation-kbd-hint">
                 <span className="annotation-kbd-cluster">
                   <kbd className="annotation-kbd">n</kbd>
                   <span className="annotation-kbd-join">/</span>
                   <kbd className="annotation-kbd">p</kbd>
-                </span>
-                {' '}
+                </span>{' '}
                 {t('annotation.kbd_np')}
               </span>
-              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
+              <span className="annotation-kbd-hint-sep" aria-hidden>
+                ,
+              </span>
               <span className="annotation-kbd-hint">
                 <span className="annotation-kbd-cluster">
                   <kbd className="annotation-kbd">1</kbd>
@@ -833,33 +1039,35 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
                   <kbd className="annotation-kbd">2</kbd>
                   <span className="annotation-kbd-join">/</span>
                   <kbd className="annotation-kbd">3</kbd>
-                </span>
-                {' '}
+                </span>{' '}
                 {t('annotation.kbd_123')}
               </span>
-              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
+              <span className="annotation-kbd-hint-sep" aria-hidden>
+                ,
+              </span>
               <span className="annotation-kbd-hint">
                 <span className="annotation-kbd-cluster">
                   <kbd className="annotation-kbd annotation-kbd--wide">Alt</kbd>
                   <span className="annotation-kbd-join">+</span>
                   <kbd className="annotation-kbd">1–5</kbd>
-                </span>
-                {' '}
+                </span>{' '}
                 {t('annotation.kbd_main_elim')}
               </span>
-              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
+              <span className="annotation-kbd-hint-sep" aria-hidden>
+                ,
+              </span>
               <span className="annotation-kbd-hint">
                 <span className="annotation-kbd-cluster">
                   <kbd className="annotation-kbd annotation-kbd--narrow">[</kbd>
                   <kbd className="annotation-kbd annotation-kbd--narrow">]</kbd>
-                </span>
-                {' '}
+                </span>{' '}
                 {t('annotation.kbd_brackets')}
               </span>
-              <span className="annotation-kbd-hint-sep" aria-hidden>,</span>
+              <span className="annotation-kbd-hint-sep" aria-hidden>
+                ,
+              </span>
               <span className="annotation-kbd-hint">
-                <kbd className="annotation-kbd annotation-kbd--wide">Del</kbd>
-                {' '}
+                <kbd className="annotation-kbd annotation-kbd--wide">Del</kbd>{' '}
                 {t('annotation.kbd_del')}
               </span>
             </div>
@@ -889,19 +1097,30 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
                     <td>
                       <select
                         value={bout.bout_type}
-                        onChange={(e) => handleBoutTypeChange(idx, e.target.value as LitterboxBoutAnnotation['bout_type'])}
+                        onChange={(e) =>
+                          handleBoutTypeChange(
+                            idx,
+                            e.target
+                              .value as LitterboxBoutAnnotation['bout_type'],
+                          )
+                        }
                         className="bout-type-select"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {BOUT_TYPES.map((bt) => (
-                          <option key={bt} value={bt}>{t(`annotation.bout_type_${bt}`)}</option>
+                          <option key={bt} value={bt}>
+                            {t(`annotation.bout_type_${bt}`)}
+                          </option>
                         ))}
                       </select>
                     </td>
                     <td>
                       <button
                         className="bout-delete-btn"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteBout(idx); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteBout(idx);
+                        }}
                         aria-label={t('annotation.delete_bout')}
                       >
                         <Trash2 size={13} />
