@@ -13,7 +13,8 @@ const WaterEvent: React.FC<EventComponentProps> = (props) => {
 
   const excludedAmount: number | undefined =
     typeof data.excluded_amount === 'number' ? data.excluded_amount : undefined;
-  const hasFiltered = data.filtered === true && excludedAmount != null && excludedAmount > 0;
+  const hasFiltered =
+    data.filtered === true && excludedAmount != null && excludedAmount > 0;
 
   return (
     <TimelineEventShell
@@ -29,9 +30,13 @@ const WaterEvent: React.FC<EventComponentProps> = (props) => {
         } as React.CSSProperties
       }
     >
-      {data.duration !== null && <EventDuration duration={data.duration} />}
+      {typeof data.duration === 'number' && (
+        <EventDuration duration={data.duration} />
+      )}
       {hasFiltered && (
-        <Timeline.MetaItem title={t('overview.water_spill_excluded', { amount: excludedAmount })}>
+        <Timeline.MetaItem
+          title={t('overview.water_spill_excluded', { amount: excludedAmount })}
+        >
           <DropletOff aria-hidden />
           {excludedAmount}ml
         </Timeline.MetaItem>
