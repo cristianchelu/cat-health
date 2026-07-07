@@ -15,6 +15,7 @@
     "reset-db": "rm -f data/database.sqlite && npm run migrate",
     "backup-db": "node --experimental-strip-types src/scripts/backup-database.ts",
     "restore-db": "node --experimental-strip-types src/scripts/restore-database.ts",
+    "seed:demo": "node --experimental-strip-types src/scripts/seed-demo/index.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc -b --force --noEmit"

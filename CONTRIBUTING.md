@@ -9,6 +9,8 @@ Requirements: Node.js (see `.nvmrc` if present), npm workspaces.
 ```bash
 npm install
 npm run migrate        # create / update SQLite schema
+npm run seed:demo      # demo household (empty DB); pet avatars from CATAAS when reachable
+npm run seed:demo -- --force   # replace existing data with demo household
 npm run dev            # API on :3000, UI via Vite
 ```
 
@@ -30,6 +32,7 @@ npm run typecheck      # TypeScript check
 npm run test           # API unit tests (see below)
 npm run migrate        # Run database migrations
 npm run reset-db       # Wipe DB and re-migrate
+npm run seed:demo      # Populate demo household (requires empty DB)
 ```
 
 ### API tests

@@ -16,7 +16,8 @@
     "migrate:down": "npm run migrate:down -w api",
     "reset-db": "npm run reset-db -w api",
     "backup-db": "npm run backup-db -w api",
-    "restore-db": "npm run restore-db -w api"
+    "restore-db": "npm run restore-db -w api",
+    "seed:demo": "npm run seed:demo -w api --"
   },
   "author": "Cristian Chelu",
   "license": "AGPL-3.0-only",
