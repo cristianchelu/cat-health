@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node --watch --experimental-strip-types src/main.ts",
     "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "node --experimental-strip-types --test 'src/**/test/*.test.ts'",
+    "test:unit": "node --experimental-strip-types --test 'src/**/test/*.test.ts' 'test/contracts/**/*.test.ts'",
     "test:integration": "node --experimental-strip-types --test 'test/integration/**/*.test.ts'",
     "migrate": "node --experimental-strip-types src/database/migrate.ts",
     "migrate:down": "node --experimental-strip-types src/database/migrate.ts --down",

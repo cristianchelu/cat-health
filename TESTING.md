@@ -142,5 +142,5 @@ node --experimental-strip-types --test 'src/services/**/surepet/**'
 | Test                                         | Type        | File                                                                             |
 | -------------------------------------------- | ----------- | -------------------------------------------------------------------------------- |
 | Known cat plateau → eliminating period       | Unit        | `packages/api/src/services/devices/providers/esphome/test/analyzerSmoke.test.ts` |
-| Pets CRUD via inject                         | Integration | `packages/api/test/integration/pets.test.ts` (Phase 2)                           |
+| Pets CRUD via inject                         | Integration | `packages/api/test/integration/pets.test.ts`                                       |
 | Litterbox encode → API serialize → UI decode | Contract    | `packages/api/test/contracts/` (Phase 2)                                         |
