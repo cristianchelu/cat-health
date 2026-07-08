@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 
-import { db } from '../../database/index.ts';
+import { getDb } from '../../database/index.ts';
 import { DEFAULT_SEED_DAYS } from './metrics.ts';
 import { runSeedDemo } from './insert.ts';
 import { hasDomainData, wipeDomainData } from './wipe.ts';
@@ -47,6 +47,7 @@ function parseArgs(argv: string[]): CliOptions {
 }
 
 async function main(): Promise<void> {
+  const db = getDb();
   const options = parseArgs(process.argv.slice(2));
   const domainDataExists = await hasDomainData(db);
 

@@ -101,7 +101,10 @@ async function getLatestPetWeightsGrams(
       const petId = event.pet_id;
       const prev = petLatest.get(petId);
       if (!prev || event.timestamp > prev.timestamp) {
-        petLatest.set(petId, { weight: eventData.weight, timestamp: event.timestamp });
+        petLatest.set(petId, {
+          weight: eventData.weight,
+          timestamp: event.timestamp,
+        });
       }
     }
   }
@@ -124,7 +127,12 @@ function groundTruthCatSlot(
 
 async function exportFixtures(
   db: Kysely<Database>,
-  opts: { outDir: string; limit: number; clean: boolean; selection: FixtureSelection },
+  opts: {
+    outDir: string;
+    limit: number;
+    clean: boolean;
+    selection: FixtureSelection;
+  },
 ) {
   const { outDir, limit, clean, selection } = opts;
   const streamsDir = path.join(outDir, 'streams');
@@ -152,23 +160,23 @@ async function exportFixtures(
   const events =
     selection === 'verified'
       ? await base
-        .where('human_verified', '=', true)
-        .orderBy('timestamp', 'desc')
-        .limit(limit)
-        .execute()
-      : selection === 'annotated'
-        ? await base
-          .where(sql`json_extract(data, '$.annotation')`, 'is not', null)
+          .where('human_verified', '=', true)
           .orderBy('timestamp', 'desc')
           .limit(limit)
           .execute()
+      : selection === 'annotated'
+        ? await base
+            .where(sql`json_extract(data, '$.annotation')`, 'is not', null)
+            .orderBy('timestamp', 'desc')
+            .limit(limit)
+            .execute()
         : await base
-          .where(
-            sql<boolean>`(human_verified = 1 OR json_extract(data, '$.annotation') IS NOT NULL)`,
-          )
-          .orderBy('timestamp', 'desc')
-          .limit(limit)
-          .execute();
+            .where(
+              sql<boolean>`(human_verified = 1 OR json_extract(data, '$.annotation') IS NOT NULL)`,
+            )
+            .orderBy('timestamp', 'desc')
+            .limit(limit)
+            .execute();
 
   const visitRows: string[] = [
     [
@@ -214,13 +222,14 @@ async function exportFixtures(
 
     const visitId = `e${event.id}`;
     const streamRel = `streams/${visitId}.txt`;
-    const householdId =
-      event.device_id !== null ? `d${event.device_id}` : 'd0';
+    const householdId = event.device_id !== null ? `d${event.device_id}` : 'd0';
 
     const latest = await getLatestPetWeightsGrams(db, event.timestamp);
     const pairs = [...latest.entries()].map(([petId, g]) => ({ petId, g }));
     pairs.sort((a, b) => a.g - b.g);
-    const knownKgJson = JSON.stringify(pairs.map((p) => Math.round((p.g / 1000) * 1e6) / 1e6));
+    const knownKgJson = JSON.stringify(
+      pairs.map((p) => Math.round((p.g / 1000) * 1e6) / 1e6),
+    );
     const sortedPetIds = pairs.map((p) => p.petId);
     const catSlot = groundTruthCatSlot(event.pet_id, sortedPetIds);
 
@@ -241,8 +250,7 @@ async function exportFixtures(
     await writeFile(path.join(outDir, streamRel), `${body}\n`, 'utf8');
 
     const annBouts = data.annotation?.bouts ?? [];
-    const boutLevel =
-      annBouts.length > 0 ? 'per_bout' : 'session_only';
+    const boutLevel = annBouts.length > 0 ? 'per_bout' : 'session_only';
 
     visitRows.push(
       [
@@ -259,7 +267,9 @@ async function exportFixtures(
       ].join(','),
     );
 
-    const sortedBouts = [...annBouts].sort((a, b) => a.bout_index - b.bout_index);
+    const sortedBouts = [...annBouts].sort(
+      (a, b) => a.bout_index - b.bout_index,
+    );
     for (const bout of sortedBouts) {
       boutRows.push(
         [
@@ -275,8 +285,16 @@ async function exportFixtures(
     exported++;
   }
 
-  await writeFile(path.join(outDir, 'visits.csv'), visitRows.join('\n') + '\n', 'utf8');
-  await writeFile(path.join(outDir, 'bouts.csv'), boutRows.join('\n') + '\n', 'utf8');
+  await writeFile(
+    path.join(outDir, 'visits.csv'),
+    visitRows.join('\n') + '\n',
+    'utf8',
+  );
+  await writeFile(
+    path.join(outDir, 'bouts.csv'),
+    boutRows.join('\n') + '\n',
+    'utf8',
+  );
 
   console.log(
     `Wrote ${exported} visits to ${outDir} (streams/, visits.csv, bouts.csv). Skipped ${skipped}. selection=${selection}`,
@@ -291,7 +309,8 @@ async function main() {
   if (opts.dbPath) {
     process.env.SQLITE_PATH = opts.dbPath;
   }
-  const { db } = await import('../../../../../database/index.ts');
+  const { createDb } = await import('../../../../../database/index.ts');
+  const db = createDb();
   try {
     await exportFixtures(db, opts);
   } finally {

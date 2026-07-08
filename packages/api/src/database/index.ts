@@ -26,16 +26,24 @@ export interface Database {
   app_setting: AppSettingTable;
 }
 
-const dir = dirname(fileURLToPath(import.meta.url));
-const dbPath =
-  process.env.SQLITE_PATH ??
-  resolve(dir, '..', '..', '..', '..', 'data', 'database.sqlite');
+function getDefaultDbPath(): string {
+  const dir = dirname(fileURLToPath(import.meta.url));
+  return resolve(dir, '..', '..', '..', '..', 'data', 'database.sqlite');
+}
 
-export const dialect = new SqliteDialect({
-  database: new SQLite(dbPath, { readonly: false, fileMustExist: false }),
-});
+export function createDb(path?: string): Kysely<Database> {
+  const dbPath = path ?? process.env.SQLITE_PATH ?? getDefaultDbPath();
+  return new Kysely<Database>({
+    dialect: new SqliteDialect({
+      database: new SQLite(dbPath, { readonly: false, fileMustExist: false }),
+    }),
+    plugins: [new SerializePlugin()],
+  });
+}
 
-export const db = new Kysely<Database>({
-  dialect,
-  plugins: [new SerializePlugin()],
-});
+let _db: Kysely<Database> | undefined;
+
+/** Lazy singleton for scripts (seed, backup, migrate CLI). */
+export function getDb(): Kysely<Database> {
+  return (_db ??= createDb());
+}

@@ -31,7 +31,6 @@ import {
   Type,
   type FastifyPluginAsyncTypebox,
 } from '@fastify/type-provider-typebox';
-import { db } from '../database/index.ts';
 import { MediaManager } from '../services/media/MediaManager.ts';
 import {
   buildMoistureChildEventValues,
@@ -74,6 +73,7 @@ const Http400BadRequestSchema = Type.Object({
 });
 
 const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
+  const { db } = fastify;
   fastify.get(
     '/water-trends/:petId',
     {
@@ -125,7 +125,12 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     },
     async (request) => {
       const { petId } = request.params;
-      const { startTime, endTime, timezone = 'UTC', detail = false } = request.query;
+      const {
+        startTime,
+        endTime,
+        timezone = 'UTC',
+        detail = false,
+      } = request.query;
 
       const startDate = new Date(startTime);
       const endDate = new Date(endTime);
@@ -181,8 +186,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const { petId } = request.params;
       const { days = 30, timezone = 'UTC' } = request.query;
 
-      const rangeStart =
-        days < 9999 ? subDays(new Date(), days) : new Date(0);
+      const rangeStart = days < 9999 ? subDays(new Date(), days) : new Date(0);
       const rangeEnd = new Date();
 
       let query = db
@@ -459,7 +463,9 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       }
 
       const eventTimestamp =
-        bodyTimestamp != null ? new Date(bodyTimestamp as string | number | Date) : new Date();
+        bodyTimestamp != null
+          ? new Date(bodyTimestamp as string | number | Date)
+          : new Date();
       const humanVerified =
         bodyHumanVerified ??
         (eventData?.type === 'food_intake'
@@ -649,9 +655,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       if (body.pet_id !== undefined && body.pet_id !== null) {
         const p = body.pet_id;
         const invalidPetId =
-          typeof p !== 'number' ||
-          !Number.isInteger(p) ||
-          p < 1;
+          typeof p !== 'number' || !Number.isInteger(p) || p < 1;
         if (invalidPetId) {
           patchBody = { ...body, pet_id: null };
         } else {
@@ -704,7 +708,10 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         const eventMedia = await trx
           .selectFrom('media_link')
           .innerJoin('media', 'media.id', 'media_link.media_id')
-          .select(['media_link.media_id as media_id', 'media.file_path as file_path'])
+          .select([
+            'media_link.media_id as media_id',
+            'media.file_path as file_path',
+          ])
           .where('media_link.entity_type', '=', 'event')
           .where('media_link.entity_id', '=', eventIdStr)
           .execute();
@@ -735,7 +742,9 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const mediaManager = new MediaManager(db);
       await Promise.all(
-        filesToUnlink.map((filePath) => mediaManager.unlinkPersistedFile(filePath)),
+        filesToUnlink.map((filePath) =>
+          mediaManager.unlinkPersistedFile(filePath),
+        ),
       );
 
       return { success: true };

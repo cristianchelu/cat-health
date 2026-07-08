@@ -23,11 +23,10 @@ import {
   ReidentifyLitterboxVisitsQuerySchema,
   ReidentifyLitterboxVisitsResponseSchema,
 } from 'shared';
-import { db } from '../database/index.ts';
 import { reidentifyLitterboxVisits } from '../services/litterbox/reidentifyLitterboxVisits.ts';
 
 const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
-  const { integrationManager } = fastify;
+  const { db, integrationManager } = fastify;
 
   // --- Helpers ---
 

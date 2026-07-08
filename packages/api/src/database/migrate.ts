@@ -1,25 +1,25 @@
 import path from 'path';
 import { promises as fs } from 'fs';
 import { Kysely, Migrator, FileMigrationProvider } from 'kysely';
-import { dialect, type Database } from './index.ts';
 import { fileURLToPath } from 'url';
 
-// TODO: Transform to fastify plugin?
-export async function migrateToLatest(closeConnection = false) {
-  const database = new Kysely<Database>({
-    dialect,
-  });
+import { createDb, type Database } from './index.ts';
 
+function createMigrator(db: Kysely<Database>) {
   const dir = path.dirname(fileURLToPath(import.meta.url));
 
-  const migrator = new Migrator({
-    db: database,
+  return new Migrator({
+    db,
     provider: new FileMigrationProvider({
       fs,
       path,
       migrationFolder: path.resolve(dir, 'migrations'),
     }),
   });
+}
+
+export async function migrateToLatest(db: Kysely<Database>) {
+  const migrator = createMigrator(db);
 
   const { error, results } = await migrator.migrateToLatest();
 
@@ -37,27 +37,10 @@ export async function migrateToLatest(closeConnection = false) {
     await migrator.migrateDown();
     process.exit(1);
   }
-
-  if (closeConnection) {
-    await database.destroy();
-  }
 }
 
-export async function migrateDown(closeConnection = false) {
-  const database = new Kysely<Database>({
-    dialect,
-  });
-
-  const dir = path.dirname(fileURLToPath(import.meta.url));
-
-  const migrator = new Migrator({
-    db: database,
-    provider: new FileMigrationProvider({
-      fs,
-      path,
-      migrationFolder: path.resolve(dir, 'migrations'),
-    }),
-  });
+export async function migrateDown(db: Kysely<Database>) {
+  const migrator = createMigrator(db);
 
   const { error, results } = await migrator.migrateDown();
 
@@ -74,17 +57,17 @@ export async function migrateDown(closeConnection = false) {
     console.error(error);
     process.exit(1);
   }
-
-  if (closeConnection) {
-    await database.destroy();
-  }
 }
 
-// Run migration if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  if (process.argv.includes('--down')) {
-    migrateDown(true);
-  } else {
-    migrateToLatest(true);
+  const db = createDb();
+  try {
+    if (process.argv.includes('--down')) {
+      await migrateDown(db);
+    } else {
+      await migrateToLatest(db);
+    }
+  } finally {
+    await db.destroy();
   }
 }

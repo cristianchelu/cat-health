@@ -8,10 +8,11 @@ import {
   DeleteFoodResponseSchema,
 } from 'shared';
 import { type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
-import { db } from '../database/index.ts';
 import type { PatchFoodRequestDTO } from 'shared';
 
 const foodRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
+  const { db } = fastify;
+
   fastify.get(
     '/',
     {
@@ -129,7 +130,9 @@ const foodRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         const value = data[key];
         if (value !== undefined) {
           update[key] =
-            key === 'nutrients' && value != null ? JSON.stringify(value) : value;
+            key === 'nutrients' && value != null
+              ? JSON.stringify(value)
+              : value;
         }
       }
 

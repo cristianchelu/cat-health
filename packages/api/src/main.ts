@@ -2,31 +2,12 @@ import { config } from 'dotenv';
 
 config();
 
-import path from 'node:path';
 import fs from 'node:fs/promises';
 
-import { getMediaPath, getMediaTempPath } from './mediaPaths.ts';
-
-import Fastify from 'fastify';
-import { type TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
-import cors from '@fastify/cors';
-import multipart from '@fastify/multipart';
-import fastifyStatic from '@fastify/static';
-
-const isDev = process.env.NODE_ENV !== 'production';
-
-// Ensure required directories exist (defaults under repo `data/` if unset)
-await fs.mkdir(getMediaPath(), { recursive: true });
-await fs.mkdir(getMediaTempPath(), { recursive: true });
-
+import { createDb } from './database/index.ts';
 import { migrateToLatest } from './database/migrate.ts';
-import { db } from './database/index.ts';
-
-import petRoutes from './routes/pets.ts';
-import eventRoutes from './routes/events.ts';
-import deviceRoutes from './routes/devices.ts';
-import foodRoutes from './routes/foods.ts';
-import settingsRoutes from './routes/settings.ts';
+import { getMediaPath, getMediaTempPath } from './mediaPaths.ts';
+import { buildApp, registerProductionSpa } from './app.ts';
 
 import { EventBus } from './services/devices/EventBus.ts';
 import { IntegrationManager } from './services/devices/IntegrationManager.ts';
@@ -37,205 +18,42 @@ import { InferenceProvider } from './services/devices/providers/inference/Infere
 import { ThinginoProvider } from './services/devices/providers/thingino/ThinginoProvider.ts';
 import { SurePetProvider } from './services/devices/providers/surepet/SurePetProvider.ts';
 
-declare module 'fastify' {
-  interface FastifyInstance {
-    integrationManager: IntegrationManager;
-  }
-}
+const isDev = process.env.NODE_ENV !== 'production';
 
-const fastify = Fastify({
-  logger: true,
-  trustProxy: true,
-}).withTypeProvider<TypeBoxTypeProvider>();
+await fs.mkdir(getMediaPath(), { recursive: true });
+await fs.mkdir(getMediaTempPath(), { recursive: true });
 
-function getCorsAllowedOrigins(): Set<string> {
-  const raw = process.env.CORS_ALLOWED_ORIGINS;
-  if (!raw?.trim()) return new Set();
-  const set = new Set<string>();
-  for (const part of raw.split(',')) {
-    const origin = part.trim();
-    if (origin) set.add(origin);
-  }
-  return set;
-}
+const db = createDb();
+await migrateToLatest(db);
 
-const corsAllowedOrigins = getCorsAllowedOrigins();
+const eventBus = new EventBus();
+const integrationManager = new IntegrationManager(db, eventBus);
 
-fastify.addHook('onRequest', (req, _reply, done) => {
-  const ingressPath = req.headers['x-ingress-path'];
-  if (
-    typeof ingressPath === 'string' &&
-    ingressPath !== '/' &&
-    req.url?.startsWith(ingressPath)
-  ) {
-    req.raw.url = req.url.slice(ingressPath.length) || '/';
-  }
-  done();
-});
+integrationManager.registerProvider(new ESPHomeProvider());
+integrationManager.registerProvider(new CameraProvider());
+integrationManager.registerProvider(new ThinginoProvider());
+integrationManager.registerProvider(new InferenceProvider());
+integrationManager.registerProvider(new SurePetProvider());
 
-await fastify.register(cors, {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
+await integrationManager.initialize();
 
-    if (corsAllowedOrigins.has(origin)) {
-      return callback(null, true);
-    }
+const eventMediaCoordinator = new EventMediaCoordinator(
+  db,
+  eventBus,
+  integrationManager.getMediaManager(),
+  integrationManager,
+);
+await eventMediaCoordinator.initialize();
 
-    // Development mode: Allow any localhost/127.0.0.1 and any IP on port 5173
-    if (process.env.NODE_ENV !== 'production') {
-      const allowedPatterns = [
-        /^http:\/\/localhost:5173$/,
-        /^http:\/\/127\.0\.0\.1:5173$/,
-        /^http:\/\/\d+\.\d+\.\d+\.\d+:5173$/, // Any IPv4 address on port 5173
-        /^http:\/\/\[[\da-f:]+\]:5173$/i, // IPv6 addresses on port 5173
-      ];
-
-      const isAllowed = allowedPatterns.some((pattern) => pattern.test(origin));
-      if (isAllowed) {
-        return callback(null, true);
-      }
-    }
-
-    callback(null, false);
-  },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-});
-
-// Multipart (file upload) support – 2MB avatar limit
-await fastify.register(multipart, {
-  limits: {
-    fileSize: 2_000_000, // 2MB max
-    files: 1,
-  },
-});
-
-// Serve video recordings & snapshots statically
-await fastify.register(fastifyStatic, {
-  root: getMediaPath(),
-  prefix: '/api/media/',
-});
-
-// Healthcheck endpoint
-fastify.get('/api/healthcheck', async (request, reply) => {
-  return reply.send({ status: 'ok' });
-});
-
-// SPA serving - only in production (in dev, use Vite's dev server on port 5173)
-let indexHtmlRaw: string | undefined;
+const app = await buildApp({ db, integrationManager });
 
 if (!isDev) {
-  const spaDistDir = path.resolve(import.meta.dirname, '../../ui/dist');
-
-  // Load the built index.html once
-  const indexHtmlPath = path.join(spaDistDir, 'index.html');
-  indexHtmlRaw = await fs.readFile(indexHtmlPath, 'utf8');
-
-  fastify.get('/', async (request, reply) => {
-    // Prefer X-Ingress-Path (HA), fallback to X-Forwarded-Prefix if present
-    const ingress =
-      (request.headers['x-ingress-path'] as string | undefined) ||
-      (request.headers['x-forwarded-prefix'] as string | undefined);
-
-    if (ingress && ingress !== '/') {
-      const html = injectBase(indexHtmlRaw!, ingress);
-      return reply.type('text/html; charset=utf-8').send(html);
-    }
-
-    // Normal mode (no ingress) -> serve the unmodified file
-    return reply.sendFile('index.html', spaDistDir);
-  });
-
-  fastify.register(fastifyStatic, {
-    root: spaDistDir,
-    prefix: '/',
-    decorateReply: false,
-    setHeaders(reply, filePath) {
-      if (filePath.endsWith('/sw.js')) {
-        reply.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      }
-    },
-  });
-
-  fastify.setNotFoundHandler((request, reply) => {
-    // Only fallback for GET requests not starting with /api or /api/recordings
-    const url = request.raw.url || '';
-    const isSpaRoute =
-      request.raw.method === 'GET' &&
-      !url.startsWith('/api') &&
-      !url.startsWith('/api/recordings') &&
-      !url.startsWith('/api/images');
-
-    if (!isSpaRoute) {
-      return reply.status(404).send({ error: 'Not Found' });
-    }
-
-    // Prefer X-Ingress-Path (HA), fallback to X-Forwarded-Prefix if present
-    const ingress =
-      (request.headers['x-ingress-path'] as string | undefined) ||
-      (request.headers['x-forwarded-prefix'] as string | undefined);
-
-    if (ingress && ingress !== '/') {
-      const html = injectBase(indexHtmlRaw!, ingress);
-      return reply.type('text/html; charset=utf-8').send(html);
-    }
-
-    // Normal mode (no ingress) -> serve the unmodified file
-    return reply.sendFile('index.html', spaDistDir);
-  });
+  await registerProductionSpa(app);
 }
 
-function ensureSlashEnd(s: string) {
-  return s.endsWith('/') ? s : s + '/';
+try {
+  await app.listen({ port: 3000, host: '0.0.0.0' });
+} catch (err) {
+  app.log.error(err);
+  process.exit(1);
 }
-
-function injectBase(html: string, baseHref: string) {
-  const href = ensureSlashEnd(baseHref).replace(/"/g, '&quot;');
-  return html.replace(
-    '<base href="/" />',
-    `<base href="${href}"><script>window.baseUrl = "${href}";</script>`,
-  );
-}
-
-const start = async () => {
-  try {
-    await migrateToLatest();
-
-    // Initialize Device System
-    const eventBus = new EventBus();
-    const integrationManager = new IntegrationManager(db, eventBus);
-
-    // Register Providers
-    integrationManager.registerProvider(new ESPHomeProvider());
-    integrationManager.registerProvider(new CameraProvider());
-    integrationManager.registerProvider(new ThinginoProvider());
-    integrationManager.registerProvider(new InferenceProvider());
-    integrationManager.registerProvider(new SurePetProvider());
-
-    // Start Integration Manager (loads accounts and devices)
-    await integrationManager.initialize();
-
-    const eventMediaCoordinator = new EventMediaCoordinator(
-      db,
-      eventBus,
-      integrationManager.getMediaManager(),
-      integrationManager,
-    );
-    await eventMediaCoordinator.initialize();
-
-    fastify.decorate('integrationManager', integrationManager);
-
-    fastify.register(petRoutes, { prefix: '/api/pets' });
-    fastify.register(eventRoutes, { prefix: '/api/events' });
-    fastify.register(deviceRoutes, { prefix: '/api/devices' });
-    fastify.register(foodRoutes, { prefix: '/api/foods' });
-    fastify.register(settingsRoutes, { prefix: '/api/settings' });
-
-    await fastify.listen({ port: 3000, host: '0.0.0.0' });
-  } catch (err) {
-    fastify.log.error(err);
-    process.exit(1);
-  }
-};
-
-start();

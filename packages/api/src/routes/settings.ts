@@ -1,15 +1,13 @@
-import {
-  GetSettingsResponseSchema,
-  PatchSettingsRequestSchema,
-} from 'shared';
+import { GetSettingsResponseSchema, PatchSettingsRequestSchema } from 'shared';
 import { type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
-import { db } from '../database/index.ts';
 import {
   getTrackingGapThresholdMinutes,
   setTrackingGapThresholdMinutes,
 } from '../services/settings/appSettings.ts';
 
 const settingsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
+  const { db } = fastify;
+
   fastify.get(
     '/',
     {

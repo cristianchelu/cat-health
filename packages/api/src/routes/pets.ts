@@ -1,4 +1,3 @@
-import { db } from '../database/index.ts';
 import { getMediaPath } from '../mediaPaths.ts';
 import { sql } from 'kysely';
 import path from 'node:path';
@@ -44,6 +43,8 @@ function serializeEventRow(event: {
 }
 
 export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
+  const { db } = fastify;
+
   fastify.get(
     '/',
     {
