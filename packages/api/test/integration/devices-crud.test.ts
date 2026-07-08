@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
 
-import { createStubAccountManager } from '../helpers/accountManagerDoubles.ts';
+import {
+  createDeviceFriendlyAccountManager,
+  createStubAccountManager,
+} from '../helpers/accountManagerDoubles.ts';
 import { insertDevice, insertProviderAccount } from '../helpers/fixtures.ts';
 import { createTestIntegrationManager } from '../helpers/integrationManager.ts';
 import {
@@ -11,15 +14,6 @@ import {
   destroyTestDb,
   type TestDbContext,
 } from '../helpers/testDb.ts';
-
-function createDeviceFriendlyManager(accountId: number) {
-  return createStubAccountManager({
-    accountId,
-    instantiateDeviceController: () => ({
-      getState: () => ({ waterLevel: 0 }),
-    }),
-  });
-}
 
 describe('devices API CRUD', () => {
   describe('provider accounts', () => {
@@ -80,7 +74,7 @@ describe('devices API CRUD', () => {
         provider: 'inference',
         name: 'Inference account',
       });
-      const manager = createDeviceFriendlyManager(account.id);
+      const manager = createDeviceFriendlyAccountManager(account.id);
       const app = await createTestApp(ctx, {
         integrationManager: createTestIntegrationManager(ctx.db, {
           accountManagers: new Map([[account.id, manager]]),
@@ -125,7 +119,7 @@ describe('devices API CRUD', () => {
         provider: 'inference',
         name: 'Register account',
       });
-      const manager = createDeviceFriendlyManager(account.id);
+      const manager = createDeviceFriendlyAccountManager(account.id);
       const app = await createTestApp(ctx, {
         integrationManager: createTestIntegrationManager(ctx.db, {
           accountManagers: new Map([[account.id, manager]]),
