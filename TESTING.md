@@ -75,7 +75,9 @@ after(async () => {
 3. `app.inject({ method, url, payload })` — assert status + behavioral fields
 4. `destroyTestDb(ctx)` — `db.destroy()`, remove temp dir
 
-**Seed factories** (`fixtures.ts`): `insertPet()`, `insertLitterboxEvent()`, etc. First argument is always the `db` instance.
+**Seed factories** (`fixtures.ts`): `insertPet()`, `insertLitterboxEvent()`, etc. First argument is always the `db` instance. Factory inputs are **derived** from Kysely `New*` row types and shared event data shapes (`Partial<Pick<NewPet, …>>`, `Pick<LitterboxUseEventData, …>`) — do not add parallel `Insert*Options` interfaces.
+
+**Integration manager in tests:** use `createTestIntegrationManager(db)` (same provider registry as production). Stub account-level behavior via `registerAccountManager` on the real manager — never cast a hand-rolled object to `IntegrationManager`.
 
 **What is in the slice:** Fastify routes, real migrations, real SQLite, TypeBox response validation.
 
@@ -116,6 +118,8 @@ after(async () => {
 - Schema golden JSON fixtures
 - Real cloud calls in CI
 - Testing implementation details (internal call order, private helpers)
+- Parallel `Insert*Options` / fixture interfaces that duplicate Kysely `New*` or shared event types
+- `as unknown as IntegrationManager` test doubles — inject account managers on the real manager instead
 - `toISOString().split('T')[0]` in test fixtures (use `date-fns` `format` for local calendar dates)
 
 ## Commands

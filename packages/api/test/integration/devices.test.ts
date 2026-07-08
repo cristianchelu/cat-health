@@ -1,20 +1,20 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
+import type { GetProvidersResponseDTO } from 'shared';
 
+import {
+  createDiscoverableAccountManager,
+  createStubAccountManager,
+} from '../helpers/accountManagerDoubles.ts';
+import { insertProviderAccount } from '../helpers/fixtures.ts';
+import { createTestIntegrationManager } from '../helpers/integrationManager.ts';
 import {
   createTestApp,
   createTestDb,
   destroyTestDb,
   type TestDbContext,
 } from '../helpers/testDb.ts';
-import { createTestIntegrationManager } from '../helpers/integrationManager.ts';
-import {
-  createDiscoverableAccountManager,
-  createMockIntegrationManager,
-  createStubAccountManager,
-} from '../helpers/mockIntegrationManager.ts';
-import { insertProviderAccount } from '../helpers/fixtures.ts';
 
 describe('devices API', () => {
   describe('providers', () => {
@@ -37,12 +37,9 @@ describe('devices API', () => {
       const res = await app.inject({ method: 'GET', url: '/api/devices/providers' });
       assert.equal(res.statusCode, 200);
 
-      const providers = res.json() as Array<{
-        name: string;
-        capabilities: Record<string, unknown>;
-      }>;
-
+      const providers = res.json<GetProvidersResponseDTO>();
       const byName = new Map(providers.map((provider) => [provider.name, provider]));
+
       assert.ok(byName.has('esphome'));
       assert.equal(byName.get('esphome')?.capabilities.supports_discovery, true);
       assert.ok(byName.has('surepet'));
@@ -74,7 +71,7 @@ describe('devices API', () => {
       ]);
 
       const app = await createTestApp(ctx, {
-        integrationManager: createMockIntegrationManager({
+        integrationManager: createTestIntegrationManager(ctx.db, {
           accountManagers: new Map([[1, manager]]),
         }),
       });
@@ -97,7 +94,7 @@ describe('devices API', () => {
 
     it('fails when the account manager is not registered', async () => {
       const app = await createTestApp(ctx, {
-        integrationManager: createMockIntegrationManager(),
+        integrationManager: createTestIntegrationManager(ctx.db),
       });
 
       try {
@@ -116,7 +113,7 @@ describe('devices API', () => {
       const account = await insertProviderAccount(ctx.db, { provider: 'esphome' });
       const manager = createStubAccountManager({ accountId: account.id });
       const app = await createTestApp(ctx, {
-        integrationManager: createMockIntegrationManager({
+        integrationManager: createTestIntegrationManager(ctx.db, {
           accountManagers: new Map([[account.id, manager]]),
         }),
       });

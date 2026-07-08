@@ -1,52 +1,68 @@
 import type { Kysely } from 'kysely';
 
 import type { Database } from '../../src/database/index.ts';
-import type { Event, EventData } from '../../src/database/types/EventTable.ts';
-import type { Pet } from '../../src/database/types/PetTable.ts';
-import type { ProviderAccount } from '../../src/database/types/ProviderAccountTable.ts';
+import type {
+  Event,
+  EventData,
+  LitterboxUseEventData,
+  WaterIntakeEventData,
+} from '../../src/database/types/EventTable.ts';
+import type { NewPet, Pet } from '../../src/database/types/PetTable.ts';
+import type {
+  NewProviderAccount,
+  ProviderAccount,
+} from '../../src/database/types/ProviderAccountTable.ts';
 
-export interface InsertPetOptions {
-  name?: string;
-  breed?: string;
-  birth_date?: Date;
-}
+type PetSeed = Partial<Pick<NewPet, 'name' | 'breed' | 'birth_date'>>;
+
+type ProviderAccountSeed = Partial<
+  Pick<NewProviderAccount, 'provider' | 'name' | 'config' | 'enabled' | 'internal'>
+>;
+
+type LitterboxEventSeed = {
+  pet_id: number;
+  device_id?: number | null;
+  timestamp?: Date;
+  human_verified?: boolean;
+  raw_data?: Buffer | null;
+} & Partial<
+  Pick<LitterboxUseEventData, 'elimination_type' | 'elimination_weight' | 'duration'>
+>;
+
+type WaterIntakeEventSeed = {
+  pet_id: number;
+  device_id?: number | null;
+  timestamp?: Date;
+} & Pick<WaterIntakeEventData, 'amount'>;
 
 export async function insertPet(
   db: Kysely<Database>,
-  options: InsertPetOptions = {},
+  seed: PetSeed = {},
 ): Promise<Pet> {
   return db
     .insertInto('pet')
     .values({
-      name: options.name ?? 'Mochi',
-      breed: options.breed ?? 'Domestic Shorthair',
-      birth_date: options.birth_date ?? new Date('2020-01-01'),
+      name: seed.name ?? 'Mochi',
+      breed: seed.breed ?? 'Domestic Shorthair',
+      birth_date: seed.birth_date ?? new Date('2020-01-01'),
     })
     .returningAll()
     .executeTakeFirstOrThrow();
 }
 
-export interface InsertProviderAccountOptions {
-  provider?: string;
-  name?: string;
-  config?: Record<string, unknown>;
-  enabled?: boolean;
-  internal?: boolean;
-}
-
 export async function insertProviderAccount(
   db: Kysely<Database>,
-  options: InsertProviderAccountOptions = {},
+  seed: ProviderAccountSeed = {},
 ): Promise<ProviderAccount> {
   const now = Math.floor(Date.now() / 1000);
   return db
     .insertInto('provider_account')
     .values({
-      provider: options.provider ?? 'esphome',
-      name: options.name ?? 'Test account',
-      config: options.config ?? {},
-      enabled: options.enabled === false ? 0 : 1,
-      internal: options.internal ? 1 : 0,
+      provider: seed.provider ?? 'esphome',
+      name: seed.name ?? 'Test account',
+      config: seed.config ?? {},
+      enabled: seed.enabled ?? 1,
+      internal: seed.internal ?? 0,
       created_at: now,
       updated_at: now,
     })
@@ -54,71 +70,48 @@ export async function insertProviderAccount(
     .executeTakeFirstOrThrow();
 }
 
-export interface InsertLitterboxEventOptions {
-  pet_id: number;
-  device_id?: number | null;
-  timestamp?: Date;
-  elimination_type?:
-    | 'urination'
-    | 'defecation'
-    | 'both'
-    | 'no_elimination'
-    | 'unknown';
-  elimination_weight?: number;
-  duration?: number;
-  raw_data?: Buffer | null;
-  human_verified?: boolean;
-}
-
 export async function insertLitterboxEvent(
   db: Kysely<Database>,
-  options: InsertLitterboxEventOptions,
+  seed: LitterboxEventSeed,
 ): Promise<Event> {
-  const data = {
-    type: 'litterbox_use' as const,
-    elimination_type: options.elimination_type ?? 'urination',
-    elimination_weight: options.elimination_weight ?? 30,
-    duration: options.duration ?? 60,
+  const data: LitterboxUseEventData = {
+    type: 'litterbox_use',
+    elimination_type: seed.elimination_type ?? 'urination',
+    elimination_weight: seed.elimination_weight ?? 30,
+    duration: seed.duration ?? 60,
   };
 
   return db
     .insertInto('event')
     .values({
-      pet_id: options.pet_id,
-      device_id: options.device_id ?? null,
+      pet_id: seed.pet_id,
+      device_id: seed.device_id ?? null,
       parent_event_id: null,
-      timestamp: options.timestamp ?? new Date(),
+      timestamp: seed.timestamp ?? new Date(),
       data: data satisfies EventData,
-      raw_data: options.raw_data ?? null,
-      human_verified: options.human_verified ?? false,
+      raw_data: seed.raw_data ?? null,
+      human_verified: seed.human_verified ?? false,
     })
     .returningAll()
     .executeTakeFirstOrThrow();
 }
 
-export interface InsertWaterIntakeEventOptions {
-  pet_id: number;
-  amount: number;
-  timestamp?: Date;
-  device_id?: number | null;
-}
-
 export async function insertWaterIntakeEvent(
   db: Kysely<Database>,
-  options: InsertWaterIntakeEventOptions,
+  seed: WaterIntakeEventSeed,
 ): Promise<Event> {
-  const data = {
-    type: 'water_intake' as const,
-    amount: options.amount,
+  const data: WaterIntakeEventData = {
+    type: 'water_intake',
+    amount: seed.amount,
   };
 
   return db
     .insertInto('event')
     .values({
-      pet_id: options.pet_id,
-      device_id: options.device_id ?? null,
+      pet_id: seed.pet_id,
+      device_id: seed.device_id ?? null,
       parent_event_id: null,
-      timestamp: options.timestamp ?? new Date(),
+      timestamp: seed.timestamp ?? new Date(),
       data: data satisfies EventData,
       raw_data: null,
       human_verified: false,

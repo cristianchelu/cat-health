@@ -128,6 +128,11 @@ export class IntegrationManager implements DeviceDirectory {
     return this.accountManagers.get(accountId);
   }
 
+  /** Inject a pre-built account manager without provider initialization (test seam). */
+  registerAccountManager(accountId: number, manager: AccountManager): void {
+    this.accountManagers.set(accountId, manager);
+  }
+
   /** Teardown cached controller for a device so next use gets fresh config (e.g. after PATCH device). */
   async invalidateDeviceController(deviceId: number): Promise<void> {
     const device = await this.deps.db
