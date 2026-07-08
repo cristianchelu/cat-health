@@ -2,7 +2,9 @@ import { type Entity as EspHomeEntity } from 'esphome-client';
 import sharp from 'sharp';
 import {
   analyzeDrinkingFromSamples,
+  encodeWaterRawData,
   type DrinkingAnalysis,
+  WATER_RAW_DATA_VERSION_1,
   type WaterFountainState,
 } from 'shared';
 import type { Camera, ProviderDeps, Device } from '../../types.ts';
@@ -91,7 +93,6 @@ export class FountainController
   };
   private snapshotCaptureChain: Promise<Buffer | undefined> =
     Promise.resolve(undefined);
-  private version = 1;
 
   constructor(device: Device, deps: ProviderDeps) {
     super(device, deps);
@@ -268,7 +269,7 @@ export class FountainController
               `[Fountain] Processing session with ${session.measurements.length} raw samples`,
             );
             const analysis = analyzeDrinkingSegments(session.measurements);
-            const rawData = this.encodeWaterRawData(
+            const rawData = this.buildWaterRawDataBuffer(
               session.startTime,
               session.measurements,
             );
@@ -426,61 +427,25 @@ export class FountainController
     );
   }
 
-  /**
-   * Encodes raw HX711 weight measurements into a compact binary buffer.
-   *
-   * Format v2:
-   *   [version:1]   uint8  — 2
-   *   [startTs:8]   uint64 BE — ms since epoch
-   *   [context:4]   bytes  — [waterLevel:1 (0-100, 255=null)][reserved:3]
-   *   [count:4]     uint32 BE — number of samples
-   *   [weights:N*4] int32 BE each — centgrams (grams × 100), 0.01 g resolution
-   */
-  private encodeWaterRawData(
+  private buildWaterRawDataBuffer(
     startTime: Date,
     measurements: RawMeasurement[],
   ): Buffer {
-    const count = measurements.length;
-    const buf = Buffer.allocUnsafe(1 + 8 + 4 + 4 + count * 4);
-
-    let off = 0;
-
-    buf.writeUInt8(this.version, off);
-    off += 1;
-    buf.writeBigUInt64BE(BigInt(startTime.getTime()), off);
-    off += 8;
-
-    // Context: water level percent (0-100), 255 = unknown
     const waterLevelKey = this.getEntityKey(SENSORS.WATER_LEVEL);
-    const waterLevel =
-      waterLevelKey !== null
-        ? Math.min(
-            100,
-            Math.max(
-              0,
-              Math.round(
-                (this.sensorValues.get(waterLevelKey) as number) ?? 255,
-              ),
-            ),
-          )
-        : 255;
-    buf.writeUInt8(waterLevel, off);
-    off += 1;
-    buf.writeUInt8(0, off);
-    off += 1; // reserved
-    buf.writeUInt16BE(0, off);
-    off += 2; // reserved
-
-    buf.writeUInt32BE(count, off);
-    off += 4;
-
-    for (const m of measurements) {
-      // Store as centgrams (×100) in int32 — 0.01 g resolution, range ±21 Mg
-      buf.writeInt32BE(Math.round(m.weight * 100), off);
-      off += 4;
+    let waterLevel: number | null = null;
+    if (waterLevelKey !== null) {
+      const raw = this.sensorValues.get(waterLevelKey) as number | undefined;
+      waterLevel = Math.min(100, Math.max(0, Math.round(raw ?? 255)));
     }
 
-    return buf;
+    const encoded = encodeWaterRawData({
+      version: WATER_RAW_DATA_VERSION_1,
+      startTimeMs: startTime.getTime(),
+      context: { waterLevel },
+      weights: measurements.map((measurement) => measurement.weight),
+    });
+
+    return Buffer.from(encoded);
   }
 
   async getSnapshotBuffer(): Promise<Buffer | undefined> {
