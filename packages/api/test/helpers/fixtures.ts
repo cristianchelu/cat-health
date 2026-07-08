@@ -3,6 +3,7 @@ import type { Kysely } from 'kysely';
 import type { Database } from '../../src/database/index.ts';
 import type { Event, EventData } from '../../src/database/types/EventTable.ts';
 import type { Pet } from '../../src/database/types/PetTable.ts';
+import type { ProviderAccount } from '../../src/database/types/ProviderAccountTable.ts';
 
 export interface InsertPetOptions {
   name?: string;
@@ -20,6 +21,34 @@ export async function insertPet(
       name: options.name ?? 'Mochi',
       breed: options.breed ?? 'Domestic Shorthair',
       birth_date: options.birth_date ?? new Date('2020-01-01'),
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
+
+export interface InsertProviderAccountOptions {
+  provider?: string;
+  name?: string;
+  config?: Record<string, unknown>;
+  enabled?: boolean;
+  internal?: boolean;
+}
+
+export async function insertProviderAccount(
+  db: Kysely<Database>,
+  options: InsertProviderAccountOptions = {},
+): Promise<ProviderAccount> {
+  const now = Math.floor(Date.now() / 1000);
+  return db
+    .insertInto('provider_account')
+    .values({
+      provider: options.provider ?? 'esphome',
+      name: options.name ?? 'Test account',
+      config: options.config ?? {},
+      enabled: options.enabled === false ? 0 : 1,
+      internal: options.internal ? 1 : 0,
+      created_at: now,
+      updated_at: now,
     })
     .returningAll()
     .executeTakeFirstOrThrow();
@@ -62,6 +91,37 @@ export async function insertLitterboxEvent(
       data: data satisfies EventData,
       raw_data: options.raw_data ?? null,
       human_verified: options.human_verified ?? false,
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
+
+export interface InsertWaterIntakeEventOptions {
+  pet_id: number;
+  amount: number;
+  timestamp?: Date;
+  device_id?: number | null;
+}
+
+export async function insertWaterIntakeEvent(
+  db: Kysely<Database>,
+  options: InsertWaterIntakeEventOptions,
+): Promise<Event> {
+  const data = {
+    type: 'water_intake' as const,
+    amount: options.amount,
+  };
+
+  return db
+    .insertInto('event')
+    .values({
+      pet_id: options.pet_id,
+      device_id: options.device_id ?? null,
+      parent_event_id: null,
+      timestamp: options.timestamp ?? new Date(),
+      data: data satisfies EventData,
+      raw_data: null,
+      human_verified: false,
     })
     .returningAll()
     .executeTakeFirstOrThrow();
