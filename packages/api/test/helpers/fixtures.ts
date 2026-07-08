@@ -16,7 +16,10 @@ import type {
 type PetSeed = Partial<Pick<NewPet, 'name' | 'breed' | 'birth_date'>>;
 
 type ProviderAccountSeed = Partial<
-  Pick<NewProviderAccount, 'provider' | 'name' | 'config' | 'enabled' | 'internal'>
+  Pick<
+    NewProviderAccount,
+    'provider' | 'name' | 'config' | 'enabled' | 'internal'
+  >
 >;
 
 type LitterboxEventSeed = {
@@ -26,7 +29,10 @@ type LitterboxEventSeed = {
   human_verified?: boolean;
   raw_data?: Buffer | null;
 } & Partial<
-  Pick<LitterboxUseEventData, 'elimination_type' | 'elimination_weight' | 'duration'>
+  Pick<
+    LitterboxUseEventData,
+    'elimination_type' | 'elimination_weight' | 'duration'
+  >
 >;
 
 type WaterIntakeEventSeed = {

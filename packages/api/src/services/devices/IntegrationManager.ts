@@ -1,5 +1,4 @@
 import type { Kysely } from 'kysely';
-import type { ProviderCapabilities } from 'shared';
 import { MediaManager } from '../media/MediaManager.ts';
 import type { Database } from '../../database/index.ts';
 import type { Device } from '../../database/types/DeviceTable.ts';
@@ -9,13 +8,17 @@ import type {
   Camera,
   DeviceController,
   DeviceDirectory,
+  DeviceIntegrationContext,
   DeviceProvider,
   ProviderDeps,
+  ProviderListing,
 } from './types.ts';
 import { DevicePresence } from './DevicePresence.ts';
 import { recordDeviceEvent } from '../events/recordDeviceEvent.ts';
 
-export class IntegrationManager implements DeviceDirectory {
+export class IntegrationManager
+  implements DeviceDirectory, DeviceIntegrationContext
+{
   private providers = new Map<string, DeviceProvider>();
   private accountManagers = new Map<number, AccountManager>();
   private deps: ProviderDeps;
@@ -51,11 +54,7 @@ export class IntegrationManager implements DeviceDirectory {
     this.providers.set(provider.name, provider);
   }
 
-  getProviders(): {
-    name: string;
-    internal: boolean;
-    capabilities: ProviderCapabilities;
-  }[] {
+  getProviders(): ProviderListing[] {
     return Array.from(this.providers.values()).map((p) => ({
       name: p.name,
       internal: p.internal ?? false,

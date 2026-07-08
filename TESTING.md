@@ -77,7 +77,7 @@ after(async () => {
 
 **Seed factories** (`fixtures.ts`): `insertPet()`, `insertLitterboxEvent()`, etc. First argument is always the `db` instance. Factory inputs are **derived** from Kysely `New*` row types and shared event data shapes (`Partial<Pick<NewPet, …>>`, `Pick<LitterboxUseEventData, …>`) — do not add parallel `Insert*Options` interfaces.
 
-**Integration manager in tests:** use `createTestIntegrationManager(db)` (same provider registry as production). Stub account-level behavior via `registerAccountManager` on the real manager — never cast a hand-rolled object to `IntegrationManager`.
+**Integration manager in tests:** use `createTestIntegrationManager(db)` (same provider registry as production). Routes depend on `DeviceIntegrationContext` — the narrow port implemented by `IntegrationManager`. Stub account-level behavior via `registerAccountManager` on the real manager.
 
 **What is in the slice:** Fastify routes, real migrations, real SQLite, TypeBox response validation.
 

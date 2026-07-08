@@ -108,3 +108,20 @@ export interface DeviceProvider {
   ): AccountManager;
   validateAccountConfig(config: unknown): boolean;
 }
+
+export type ProviderListing = {
+  name: string;
+  internal: boolean;
+  capabilities: ProviderCapabilities;
+};
+
+/** Route-facing slice of IntegrationManager (device routes + tests). */
+export interface DeviceIntegrationContext {
+  getPresence(): DevicePresence;
+  getProviders(): ProviderListing[];
+  initializeAccount(accountId: number): Promise<void>;
+  getAccountManager(accountId: number): AccountManager | undefined;
+  instantiateDeviceController(device: Device): DeviceController | undefined;
+  invalidateDeviceController(deviceId: number): Promise<void>;
+  instantiateController(deviceId: number): Promise<DeviceController | undefined>;
+}

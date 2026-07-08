@@ -15,18 +15,18 @@ import eventRoutes from './routes/events.ts';
 import deviceRoutes from './routes/devices.ts';
 import foodRoutes from './routes/foods.ts';
 import settingsRoutes from './routes/settings.ts';
-import type { IntegrationManager } from './services/devices/IntegrationManager.ts';
+import type { DeviceIntegrationContext } from './services/devices/types.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
     db: Kysely<Database>;
-    integrationManager: IntegrationManager;
+    integrationManager: DeviceIntegrationContext;
   }
 }
 
 export interface BuildAppOptions {
   db: Kysely<Database>;
-  integrationManager?: IntegrationManager;
+  integrationManager?: DeviceIntegrationContext;
   logger?: boolean;
 }
 
