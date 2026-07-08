@@ -25,12 +25,12 @@ npm run restore-db       # restore from backup
 ## Tests
 
 ```bash
-npm run test:analyzer    # StateAnalyzer smoke + optional local fixture harness
-npm run test:feeding     # SurePet feeding + food logic
-npm run test:coverage    # Analytics coverage
+npm run test              # unit + integration
+npm run test:unit         # all unit tests under src/**/test/
+npm run test:integration  # route + DB tests (test/integration/)
 ```
 
-The ESPHome fixture harness requires locally exported fixtures (gitignored). See `src/services/devices/providers/esphome/test/analyzerHarness.test.ts`.
+See [TESTING.md](../../TESTING.md) for focused runs (`node --test <path>`) and the opt-in ESPHome fixture harness.
 
 ## Integrations
 

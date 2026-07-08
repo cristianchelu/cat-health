@@ -254,7 +254,9 @@ When adding a new cloud provider, extend capabilities + optional `AccountManager
 ### Root workspace
 
 ```bash
-npm run test                    # Run API test suites (see CONTRIBUTING.md)
+npm run test                    # All workspaces (see TESTING.md)
+npm run test:unit               # Unit tests only
+npm run test:integration        # API integration tests
 ```
 
 ### API (`packages/api`)
@@ -349,6 +351,7 @@ Always reference these variables instead of hardcoding values to maintain design
 # General rules
 
 - **Commit messages** — use Conventional Commits with a package scope: `type(scope): imperative subject` (e.g. `fix(ui): hide stale compartment selectors`). Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci`, `build`. Scopes: `api`, `ui`, `shared`, or cross-cutting `docs` / `deps`. See [CONTRIBUTING.md](CONTRIBUTING.md#commit-messages).
+- **Testing** — see [TESTING.md](TESTING.md) for boundaries, harness usage, TDD workflow, and anti-patterns. Commands live in [CONTRIBUTING.md](CONTRIBUTING.md#tests).
 - Any summary .md or explanation of changes MUST go in the `{root}/summaries/`
   folder, so as not to pollute the git history.
 - Always assume Both the UI and API are running in the background when you want to run things.

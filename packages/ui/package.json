@@ -12,7 +12,9 @@
     "format": "prettier --write .",
     "preview": "vite preview",
     "icons": "node scripts/generate-icons.js",
-    "typecheck": "tsc -b --force --noEmit"
+    "typecheck": "tsc -b --force --noEmit",
+    "test": "npm run test:unit",
+    "test:unit": "node --experimental-strip-types --test 'src/**/test/*.test.ts'"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.99.0",

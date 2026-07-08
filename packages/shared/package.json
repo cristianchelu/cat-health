@@ -11,7 +11,9 @@
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:unit",
+    "test:unit": "node --experimental-strip-types --test 'test/**/*.test.ts'"
   },
   "exports": {
     ".": "./src/index.ts"

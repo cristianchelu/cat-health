@@ -3,7 +3,9 @@
   "version": "0.0.1",
   "description": "",
   "scripts": {
-    "test": "npm run test:analyzer -w api && npm run test:feeding -w api && npm run test:coverage -w api",
+    "test": "npm run test -w shared && npm run test -w api && npm run test -w ui",
+    "test:unit": "npm run test:unit -w shared && npm run test:unit -w api && npm run test:unit -w ui",
+    "test:integration": "npm run test:integration -w api",
     "format": "prettier --write .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "concurrently -c blue,magenta -n api,ui \"npm run start -w api\" \"npm run start -w ui\"",

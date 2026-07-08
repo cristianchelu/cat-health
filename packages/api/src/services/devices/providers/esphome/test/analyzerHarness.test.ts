@@ -7,7 +7,7 @@
  *
  * Baseline workflow (guard against silent regressions; optional, not committed):
  * 1. Export fixtures locally (gitignored): visits.csv, streams/, bouts.csv — see exportHumanVerifiedLitterboxFixtures.ts
- * 2. Run with fixtures: `npm run test:analyzer -w api` → writes test/metrics_latest.json
+ * 2. Run with fixtures: `node --experimental-strip-types --test src/services/devices/providers/esphome/test/analyzerHarness.test.ts` → writes test/metrics_latest.json
  * 3. When satisfied: copy metrics_latest.json to metrics_baseline.json locally (do not commit — may contain household telemetry)
  * 4. Future runs compare latest vs baseline; the test fails if elimination accuracy, cat accuracy,
  *    or bout F1 drops more than 5% relative to baseline (when those metrics exist in baseline).

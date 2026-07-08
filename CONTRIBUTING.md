@@ -29,23 +29,29 @@ Environment: copy `packages/api/.env.example` to `packages/api/.env` and set `CO
 ```bash
 npm run lint           # ESLint across workspaces
 npm run typecheck      # TypeScript check
-npm run test           # API unit tests (see below)
+npm run test           # all workspaces (see TESTING.md)
 npm run migrate        # Run database migrations
 npm run reset-db       # Wipe DB and re-migrate
 npm run seed:demo      # Populate demo household (requires empty DB)
 ```
 
-### API tests
+### Tests
 
-The root `npm test` runs API test suites. Individual suites:
+See [TESTING.md](TESTING.md) for philosophy, boundaries, and harness usage.
 
 ```bash
-npm run test:analyzer -w api   # StateAnalyzer smoke + optional fixture harness
-npm run test:feeding -w api    # SurePet feeding + food logic
-npm run test:coverage -w api   # Analytics coverage tests
+npm test                       # all workspaces
+npm run test:unit              # unit tests only
+npm run test:integration       # API route + DB tests
 ```
 
-The ESPHome fixture harness (`analyzerHarness.test.ts`) is skipped unless you export local fixtures (`visits.csv`, `streams/`, `bouts.csv`). Those paths are gitignored and may contain household telemetry.
+To run a single file or directory, pass a path to `node --test` (from `packages/api`):
+
+```bash
+node --experimental-strip-types --test src/services/devices/providers/esphome/test/analyzerSmoke.test.ts
+```
+
+The ESPHome fixture harness is skipped unless you export local fixtures (`visits.csv`, `streams/`, `bouts.csv`). Those paths are gitignored and may contain household telemetry.
 
 ## Code conventions
 
