@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { format, getDate, isSameDay, startOfWeek, type Locale } from 'date-fns';
-import { enUS } from 'date-fns/locale';
 import type {
   LitterboxTrendsResponseDTO,
   LitterboxUseEliminationType,
