@@ -1,8 +1,15 @@
 import * as React from 'react';
-import { addDays, format, isSameDay, startOfDay, startOfWeek, type Locale } from 'date-fns';
+import {
+  addDays,
+  isSameDay,
+  startOfDay,
+  startOfWeek,
+  type Locale,
+} from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import type { UntrackedIntervalDTO } from 'shared';
 import { cn } from '@/lib/utils';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import UntrackedRegionOverlay from '@/components/charts/UntrackedRegionOverlay';
 import './LitterboxMetricChart.css';
 
@@ -64,8 +71,11 @@ function isWeekStartBoundary(dayStart: Date, locale: Locale): boolean {
   return isSameDay(dayStart, startOfWeek(dayStart, { locale }));
 }
 
-function formatWeekBoundaryLabel(date: Date, locale: Locale): string {
-  return format(date, 'MMM d', { locale });
+function formatWeekBoundaryLabel(
+  date: Date,
+  formatDate: (date: Date, style?: 'short' | 'medium' | 'long') => string,
+): string {
+  return formatDate(date, 'short');
 }
 
 function getY(value: number, maxValue: number): number {
@@ -73,10 +83,17 @@ function getY(value: number, maxValue: number): number {
   return 90 - (value / maxValue) * 80;
 }
 
-function formatTickValue(value: number, unit: string): string {
-  const formatted = new Intl.NumberFormat(undefined, {
+function formatTickValue(
+  value: number,
+  unit: string,
+  formatNumber: (
+    value: number,
+    options?: { maximumFractionDigits?: number },
+  ) => string,
+): string {
+  const formatted = formatNumber(value, {
     maximumFractionDigits: value >= 10 ? 0 : 1,
-  }).format(value);
+  });
 
   if (unit.toLowerCase().includes('hour')) return `${formatted}h`;
   if (unit.toLowerCase().includes('second')) return `${formatted}s`;
@@ -92,9 +109,11 @@ const LitterboxMetricChart: React.FC<LitterboxMetricChartProps> = ({
   emptyLabel,
   timeRange,
   untrackedIntervals = [],
-  locale = enUS,
+  locale: localeProp = enUS,
   ...props
 }) => {
+  const { formatNumber, formatDate, dateFnsLocale } = useFormatters();
+  const locale = localeProp ?? dateFnsLocale;
   const patternId = React.useId().replace(/:/g, '');
   const allPoints = series.flatMap((item) => item.points);
   const values = allPoints.map((point) => point.value);
@@ -129,7 +148,7 @@ const LitterboxMetricChart: React.FC<LitterboxMetricChartProps> = ({
       {
         time: boundaryTime,
         x,
-        label: formatWeekBoundaryLabel(dayStart, locale),
+        label: formatWeekBoundaryLabel(dayStart, formatDate),
       },
     ];
   });
@@ -144,11 +163,8 @@ const LitterboxMetricChart: React.FC<LitterboxMetricChartProps> = ({
         <div className="litterbox-metric-chart-plot">
           <div className="litterbox-metric-chart-ticks" aria-hidden>
             {tickValues.map((value) => (
-              <span
-                key={value}
-                style={{ top: `${getY(value, maxValue)}%` }}
-              >
-                {formatTickValue(value, unit)}
+              <span key={value} style={{ top: `${getY(value, maxValue)}%` }}>
+                {formatTickValue(value, unit, formatNumber)}
               </span>
             ))}
           </div>

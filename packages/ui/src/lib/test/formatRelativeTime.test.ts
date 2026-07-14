@@ -5,6 +5,7 @@ import { enUS, ro } from 'date-fns/locale';
 import {
   coerceEpochDate,
   formatRelativeTimeAgo,
+  isMeaningfulLastSeen,
   resolveDateFnsLocale,
 } from '../formatRelativeTime.ts';
 
@@ -35,6 +36,20 @@ describe('coerceEpochDate', () => {
   it('returns null for invalid inputs', () => {
     assert.equal(coerceEpochDate(null), null);
     assert.equal(coerceEpochDate('not-a-date'), null);
+  });
+});
+
+describe('isMeaningfulLastSeen', () => {
+  it('rejects epoch-garbage and accepts recent timestamps', () => {
+    assert.equal(
+      isMeaningfulLastSeen(new Date('1970-01-21T15:34:13.443Z')),
+      false,
+    );
+    assert.equal(
+      isMeaningfulLastSeen(new Date('2026-07-14T12:00:00.000Z')),
+      true,
+    );
+    assert.equal(isMeaningfulLastSeen(null), false);
   });
 });
 

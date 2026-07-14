@@ -1,11 +1,14 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePetWeightTrends } from '@/hooks/queries/petQueries';
+import {
+  useRegionalPreferences,
+  useFormatters,
+} from '@/contexts/RegionalPreferencesProvider';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { ArrowRight, Scale } from 'lucide-react';
 import { formatRelative } from 'date-fns';
-import { formatInTimeZone } from 'date-fns-tz';
-import { cn } from '@/lib/utils';
+import { cn, formatCalendarDate } from '@/lib/utils';
 import UntrackedRegionOverlay from '@/components/charts/UntrackedRegionOverlay';
 import type { UntrackedIntervalDTO, WeightTrendPointDTO } from 'shared';
 
@@ -100,7 +103,12 @@ function toChartPoints(
   paddedWeightRange: number,
 ): ChartPoint[] {
   return points.map((point) => ({
-    x: timeToX(new Date(point.timestamp).getTime(), rangeStart, rangeEnd, CHART_WIDTH),
+    x: timeToX(
+      new Date(point.timestamp).getTime(),
+      rangeStart,
+      rangeEnd,
+      CHART_WIDTH,
+    ),
     y:
       (1 - (point.weight - paddedMinWeight) / paddedWeightRange) * CHART_HEIGHT,
     weight: point.weight,
@@ -113,9 +121,13 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
   isPending = false,
 }) => {
   const { t } = useTranslation();
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const { data: weightData, isLoading: isQueryLoading, error } =
-    usePetWeightTrends(petId, 15);
+  const { timezone } = useRegionalPreferences();
+  const { formatDate } = useFormatters();
+  const {
+    data: weightData,
+    isLoading: isQueryLoading,
+    error,
+  } = usePetWeightTrends(petId, 15);
   const isLoading = isQueryLoading || isPending;
 
   const showEmpty =
@@ -151,7 +163,7 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
     const points = weightData.points;
     const rangeStart = new Date(weightData.rangeStart).getTime();
     const rangeEnd = new Date(weightData.rangeEnd).getTime();
-    const todayKey = formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');
+    const todayKey = formatCalendarDate(new Date(), timezone);
     const todayPoint = points.find((point) => point.date === todayKey);
     const latestPoint = points[points.length - 1];
 
@@ -179,8 +191,7 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
       weightData.rangeEnd,
     );
 
-    const formatWeight = (weight: number) =>
-      `${(weight / 1000).toFixed(2)} kg`;
+    const formatWeight = (weight: number) => `${(weight / 1000).toFixed(2)} kg`;
 
     const oldestWeight = points[0]?.weight ?? 0;
     const latestWeight = latestPoint?.weight ?? 0;
@@ -197,13 +208,13 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
 
     const headerWeight = !weightData.todayTracked
       ? null
-      : todayPoint?.weight ?? latestPoint?.weight ?? null;
+      : (todayPoint?.weight ?? latestPoint?.weight ?? null);
 
     const headerTimestamp = todayPoint?.timestamp ?? latestPoint?.timestamp;
     const timeLabel = headerTimestamp
       ? todayPoint
         ? formatRelative(new Date(headerTimestamp), new Date())
-        : formatInTimeZone(new Date(headerTimestamp), timezone, 'MMM d')
+        : formatDate(new Date(headerTimestamp), 'short')
       : '';
 
     headerRight = (
@@ -227,13 +238,7 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
         preserveAspectRatio="none"
       >
         <defs>
-          <linearGradient
-            id="weightGradient"
-            x1="0%"
-            y1="0%"
-            x2="0%"
-            y2="100%"
-          >
+          <linearGradient id="weightGradient" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop
               offset="0%"
               stopColor="var(--color-primary)"
@@ -255,9 +260,7 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
           chartHeight={CHART_HEIGHT}
           fadeFromTop
         />
-        {areaPath ? (
-          <path d={areaPath} fill="url(#weightGradient)" />
-        ) : null}
+        {areaPath ? <path d={areaPath} fill="url(#weightGradient)" /> : null}
         {linePath ? (
           <path
             d={linePath}

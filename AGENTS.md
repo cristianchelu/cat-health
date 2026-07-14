@@ -40,6 +40,12 @@ This is a **Pet Assistant** application focused on cat health monitoring through
 - `format(date, 'yyyy-MM-dd')` from `date-fns` (uses local time)
 - `createDayRange(date?)` from `@/lib/utils` when you need a full `DateRange` for a single day
 
+### Regional formatting (display)
+
+**NEVER** format user-visible dates, times, or grouped numbers with raw `format(…, 'HH:mm')`, `Intl.NumberFormat(undefined)`, or hardcoded locales in components.
+
+**ALWAYS** use `useFormatters()` from `@/contexts/RegionalPreferencesProvider` for display formatting. Calendar math (`yyyy-MM-dd` ranges, API query windows) uses `date-fns` + `useRegionalPreferences().timezone` — not display prefs.
+
 ### CSS Architecture
 
 **IMPORTANT**: We prioritize native, semantic CSS with minimal inline styles. NO FUCKING TAILWIND.

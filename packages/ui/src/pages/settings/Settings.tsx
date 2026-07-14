@@ -143,7 +143,10 @@ const Settings: React.FC = () => {
           </SectionHeader>
           <CardList>
             {devices.map((device) => {
-              const icon = getDeviceIcon(device.type, <SettingsIcon size="1em" />);
+              const icon = getDeviceIcon(
+                device.type,
+                <SettingsIcon size="1em" />,
+              );
               return (
                 <CardListItem
                   key={device.id}
@@ -213,16 +216,13 @@ const Settings: React.FC = () => {
             {t('settings.app_settings')}
           </SectionHeader>
           <CardList>
-            <CardListItem icon={<Globe size="1em" />}>
+            <CardListItem
+              icon={<Globe size="1em" />}
+              onClick={() => navigate('/settings/language-region')}
+            >
               <CardListContent
                 title={t('settings.language_region')}
                 description={t('settings.language_region_desc')}
-              />
-            </CardListItem>
-            <CardListItem icon={<Smartphone size="1em" />}>
-              <CardListContent
-                title={t('settings.timezone')}
-                description={t('settings.timezone_desc')}
               />
             </CardListItem>
             <CardListItem

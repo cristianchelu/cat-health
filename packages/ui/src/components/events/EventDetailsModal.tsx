@@ -32,6 +32,7 @@ import { decodeLitterboxRawData } from './decodeLitterboxRawData';
 import { decodeWaterRawData } from './decodeWaterRawData';
 import { analyzeWaterSegments } from './analyzeWaterSegments';
 import LitterboxWeightBlock from './LitterboxWeightBlock';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import './EventDetailsModal.css';
 import './TimelapsePlayer.css';
 import {
@@ -135,24 +136,13 @@ function getEventTitle(event: GetEventDTO, t: (key: string) => string): string {
   }
 }
 
-const formatEventTime = (timestamp: string | number | Date) => {
-  if (!timestamp) return '';
-  const date = new Date(timestamp);
-  return new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: true,
-    month: 'short',
-    day: 'numeric',
-  }).format(date);
-};
-
 const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   event,
   isOpen,
   onClose,
 }) => {
   const { t } = useTranslation();
+  const { formatDateTime } = useFormatters();
   const queryClient = useQueryClient();
   const { data: pets } = usePets();
 
@@ -495,7 +485,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 {getEventTitle(displayEvent, t)}
               </DialogTitle>
               <span className="event-time">
-                {formatEventTime(displayEvent.timestamp)}
+                {displayEvent.timestamp
+                  ? formatDateTime(new Date(displayEvent.timestamp))
+                  : ''}
               </span>
             </div>
             <div className="event-actions">

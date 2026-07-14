@@ -28,6 +28,7 @@ import type {
   GetPetResponseDTO,
 } from 'shared';
 import { dateRangeToTimeRange, type DateRange } from '@/lib/utils';
+import { useRegionalPreferences } from '@/contexts/RegionalPreferencesProvider';
 
 export function usePets() {
   return useQuery({
@@ -50,10 +51,14 @@ export function usePetEvents(
   currentDateRange: DateRange,
   enabled: boolean,
 ) {
+  const { timezone } = useRegionalPreferences();
   return useQuery({
-    queryKey: ['petEvents', petId, currentDateRange],
+    queryKey: ['petEvents', petId, currentDateRange, timezone],
     queryFn: () => {
-      const { startTime, endTime } = dateRangeToTimeRange(currentDateRange);
+      const { startTime, endTime } = dateRangeToTimeRange(
+        currentDateRange,
+        timezone,
+      );
       return getPetEvents(petId, startTime, endTime, 5000);
     },
     enabled,
@@ -92,7 +97,7 @@ export function useUpdateEvent(petId: number, currentDateRange: DateRange) {
 }
 
 export function usePetWeightTrends(petId: number, days: number) {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const { timezone } = useRegionalPreferences();
   return useQuery({
     queryKey: ['weightTrends', petId, days, timezone],
     queryFn: () => getPetWeightTrends(petId, { days, timezone }),
@@ -101,7 +106,7 @@ export function usePetWeightTrends(petId: number, days: number) {
 }
 
 export function usePetWaterTrends(petId: number, days: number) {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const { timezone } = useRegionalPreferences();
   return useQuery({
     queryKey: ['waterTrends', petId, days, timezone],
     queryFn: () => getPetWaterTrends(petId, { days, timezone }),
@@ -110,7 +115,7 @@ export function usePetWaterTrends(petId: number, days: number) {
 }
 
 export function usePetFoodTrends(petId: number, days: number) {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const { timezone } = useRegionalPreferences();
   return useQuery({
     queryKey: ['foodTrends', petId, days, timezone],
     queryFn: () => getPetFoodTrends(petId, { days, timezone }),
@@ -123,7 +128,7 @@ export function usePetLitterboxTrends(
   query: Omit<LitterboxTrendQueryDTO, 'timezone'>,
   enabled = true,
 ) {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const { timezone } = useRegionalPreferences();
   const requestQuery = { ...query, timezone };
   return useQuery({
     queryKey: ['litterboxTrends', petId, requestQuery],
@@ -197,8 +202,10 @@ export function useTogglePetPresence(petId: number) {
   return useMutation({
     mutationFn: () => togglePetPresence(petId),
     onSuccess: (result) => {
-      queryClient.setQueryData(['pet', petId], (current: GetPetResponseDTO | undefined) =>
-        current ? { ...current, is_away: result.is_away } : current,
+      queryClient.setQueryData(
+        ['pet', petId],
+        (current: GetPetResponseDTO | undefined) =>
+          current ? { ...current, is_away: result.is_away } : current,
       );
       queryClient.invalidateQueries({ queryKey: ['pets'] });
       queryClient.invalidateQueries({ queryKey: ['petEvents', petId] });

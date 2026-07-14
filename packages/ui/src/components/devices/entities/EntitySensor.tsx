@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { formatSensorNumericDisplay } from '@/lib/formatSensorNumericDisplay';
 import { cn } from '@/lib/utils';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import './EntityControl.css';
 
 interface EntitySensorProps {
@@ -33,12 +34,14 @@ export const EntitySensor: React.FC<EntitySensorProps> = ({
   icon,
   className,
 }) => {
+  const { formatNumber } = useFormatters();
   const displayValue =
     typeof value === 'number'
       ? formatSensorNumericDisplay(value, {
           accuracyDecimals,
           unit,
           deviceClass,
+          formatGroupedNumber: (numericValue) => formatNumber(numericValue),
         })
       : value;
 
@@ -49,10 +52,7 @@ export const EntitySensor: React.FC<EntitySensorProps> = ({
         <span className="entity-label">{label}</span>
       </div>
       <div
-        className={cn(
-          'entity-value',
-          valueVariant === 'body' && 'is-body',
-        )}
+        className={cn('entity-value', valueVariant === 'body' && 'is-body')}
         title={valueTitle}
       >
         {displayValue}

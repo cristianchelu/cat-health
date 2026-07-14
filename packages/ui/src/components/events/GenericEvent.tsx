@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Clock, AlertTriangle } from 'lucide-react';
-import { format } from 'date-fns';
 import Timeline from '@/components/ui/Timeline';
 import type { EventComponentProps } from './types';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import EventDevice from './meta/EventDevice';
 import EventDuration from './meta/EventDuration';
 import EventPet from './meta/EventPet';
@@ -15,6 +15,7 @@ const GenericEvent: React.FC<EventComponentProps> = ({
   showPet = true,
   showDevice = true,
 }) => {
+  const { formatTime } = useFormatters();
   const { data } = event;
   const hasType = data && data.type;
 
@@ -24,7 +25,7 @@ const GenericEvent: React.FC<EventComponentProps> = ({
       <Timeline.Content>
         <Timeline.Header>
           <Timeline.Timestamp>
-            {format(new Date(event.timestamp), 'HH:mm')}
+            {formatTime(new Date(event.timestamp))}
           </Timeline.Timestamp>
           <Timeline.TitleGroup>
             {event.human_verified && <EventVerified />}
@@ -36,7 +37,9 @@ const GenericEvent: React.FC<EventComponentProps> = ({
         <Timeline.Meta>
           {data?.duration && <EventDuration duration={data.duration} />}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
-          {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
+          {showDevice && event.device_id && (
+            <EventDevice deviceId={event.device_id} />
+          )}
           {children}
         </Timeline.Meta>
       </Timeline.Content>

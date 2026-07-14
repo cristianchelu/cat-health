@@ -1,12 +1,5 @@
 import * as React from 'react';
-import {
-  format,
-  getDate,
-  isSameDay,
-  parseISO,
-  startOfWeek,
-  type Locale,
-} from 'date-fns';
+import { format, getDate, isSameDay, startOfWeek, type Locale } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import type {
   LitterboxTrendsResponseDTO,
@@ -17,6 +10,8 @@ import LitterboxDotGrid, {
   type LitterboxDotGridColumnFooterVariant,
   type LitterboxDotGridDot,
 } from './LitterboxDotGrid';
+import { parseCalendarDate } from '@/lib/utils';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 
 type DotType = LitterboxDotGridDot['type'];
 
@@ -69,15 +64,17 @@ function createLitterboxDotColumns(
   days: LitterboxTrendsResponseDTO['days'],
   showColumnLabels: boolean,
   locale: Locale,
+  timezone: string,
+  formatDateLabel: (date: Date, style?: 'short' | 'medium') => string,
 ): LitterboxDotGridColumn[] {
   return days.map((day) => {
     const dots = day.events.flatMap(toDots);
     dots.sort((a, b) => DOT_PRIORITY[a.type] - DOT_PRIORITY[b.type]);
-    const date = parseISO(day.date);
+    const date = parseCalendarDate(day.date, timezone);
 
     return {
       key: day.date,
-      label: `${format(date, 'MMM d')}: ${dots.length} visits`,
+      label: `${formatDateLabel(date, 'medium')}: ${dots.length} visits`,
       dots,
       tracked: day.tracked,
       ...(showColumnLabels
@@ -87,8 +84,10 @@ function createLitterboxDotColumns(
   });
 }
 
-interface LitterboxTrendGridProps
-  extends Omit<React.ComponentProps<typeof LitterboxDotGrid>, 'columns'> {
+interface LitterboxTrendGridProps extends Omit<
+  React.ComponentProps<typeof LitterboxDotGrid>,
+  'columns'
+> {
   days: LitterboxTrendsResponseDTO['days'];
   showColumnLabels?: boolean;
   locale?: Locale;
@@ -97,10 +96,19 @@ interface LitterboxTrendGridProps
 const LitterboxTrendGrid = React.forwardRef<
   HTMLDivElement,
   LitterboxTrendGridProps
->(({ days, showColumnLabels = false, locale = enUS, ...props }, ref) => {
+>(({ days, showColumnLabels = false, locale: localeProp, ...props }, ref) => {
+  const { dateFnsLocale, formatDate, timezone } = useFormatters();
+  const locale = localeProp ?? dateFnsLocale;
   const columns = React.useMemo(
-    () => createLitterboxDotColumns(days, showColumnLabels, locale),
-    [days, showColumnLabels, locale],
+    () =>
+      createLitterboxDotColumns(
+        days,
+        showColumnLabels,
+        locale,
+        timezone,
+        (date, style) => formatDate(date, style ?? 'medium'),
+      ),
+    [days, formatDate, locale, showColumnLabels, timezone],
   );
   return <LitterboxDotGrid ref={ref} columns={columns} {...props} />;
 });

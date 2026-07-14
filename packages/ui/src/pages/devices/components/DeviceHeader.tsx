@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 import { ArrowLeft, ListChecks, Pencil } from 'lucide-react';
 import type { GetDeviceResponseDTO } from 'shared';
-import { format } from 'date-fns';
 import { Button } from '@/components/ui/Button';
 import {
   coerceEpochDate,
   formatRelativeTimeAgo,
-  resolveDateFnsLocale,
+  isMeaningfulLastSeen,
 } from '@/lib/formatRelativeTime';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import { cn } from '@/lib/utils';
 import { isVisitAnnotationEnabled } from '@/lib/deviceAnnotation';
 import './DeviceHeader.css';
@@ -23,29 +23,30 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
   device,
   className,
 }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const dateLocale = resolveDateFnsLocale(i18n.language);
+  const { formatDateTime, dateFnsLocale } = useFormatters();
 
   const formatType = (type: string) => {
     return type.replace(/_/g, ' ');
   };
 
-  const lastSeenDate = device.last_seen
+  const lastSeenCandidate = device.last_seen
     ? coerceEpochDate(device.last_seen)
+    : null;
+  const lastSeenDate = isMeaningfulLastSeen(lastSeenCandidate)
+    ? lastSeenCandidate
     : null;
   const lastSeenRelative =
     lastSeenDate != null
-      ? formatRelativeTimeAgo(lastSeenDate, { locale: dateLocale })
+      ? formatRelativeTimeAgo(lastSeenDate, { locale: dateFnsLocale })
       : null;
   const lastSeenAbsolute =
-    lastSeenDate != null
-      ? format(lastSeenDate, 'PPpp', { locale: dateLocale })
-      : undefined;
+    lastSeenDate != null ? formatDateTime(lastSeenDate) : undefined;
 
   const statusLabel =
     device.status === 'offline'
-      ? device.last_seen
+      ? lastSeenDate != null
         ? t('devices.last_seen', {
             time: lastSeenRelative ?? lastSeenAbsolute ?? '—',
           })

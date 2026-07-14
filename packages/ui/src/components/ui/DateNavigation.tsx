@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/Button';
-import { cn } from '@/lib/utils';
+import { cn, parseCalendarDate } from '@/lib/utils';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import './DateNavigation.css';
 
 interface DateNavigationProps {
@@ -13,7 +13,6 @@ interface DateNavigationProps {
   onNext: () => void;
   onReset: () => void;
   isToday: boolean;
-  dateFormat?: string;
   showTodayLabel?: boolean;
   todayLabel?: string;
   className?: string;
@@ -26,10 +25,14 @@ export const DateNavigation: React.FC<DateNavigationProps> = ({
   onNext,
   onReset,
   isToday,
-  dateFormat = 'MMM d',
   className,
 }) => {
   const { t } = useTranslation();
+  const { formatDate, timezone } = useFormatters();
+
+  const formatNavDate = (value: string) =>
+    formatDate(parseCalendarDate(value, timezone), 'short');
+
   return (
     <div className={cn('date-navigation', className)}>
       {!isToday && (
@@ -49,8 +52,8 @@ export const DateNavigation: React.FC<DateNavigationProps> = ({
       </Button>
       <span className="date-navigation-display">
         {endDate && endDate !== date
-          ? `${format(parseISO(date), dateFormat)} - ${format(parseISO(endDate), dateFormat)}`
-          : format(parseISO(date), dateFormat)}
+          ? `${formatNavDate(date)} - ${formatNavDate(endDate)}`
+          : formatNavDate(date)}
       </span>
       <Button
         variant="ghost"

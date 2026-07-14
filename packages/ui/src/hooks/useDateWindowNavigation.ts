@@ -1,10 +1,13 @@
 import * as React from 'react';
-import { addDays, format, parseISO, subDays } from 'date-fns';
 import {
+  addCalendarDays,
   dateRangeToTimeRange,
+  formatCalendarDate,
+  parseCalendarDate,
   type DateRange,
   type TimeRangeType,
 } from '@/lib/utils';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 
 interface UseDateWindowNavigationOptions {
   days?: number;
@@ -16,11 +19,13 @@ function createWindowRange(
   endDate: Date,
   days: number,
   type: TimeRangeType,
+  timezone: string,
 ): DateRange {
-  const startDate = subDays(endDate, days - 1);
+  const endDateStr = formatCalendarDate(endDate, timezone);
+  const startDateStr = addCalendarDays(endDateStr, -(days - 1), timezone);
   return {
-    startDate: format(startDate, 'yyyy-MM-dd'),
-    endDate: format(endDate, 'yyyy-MM-dd'),
+    startDate: startDateStr,
+    endDate: endDateStr,
     type,
   };
 }
@@ -30,36 +35,59 @@ export function useDateWindowNavigation({
   initialEndDate = new Date(),
   type = days === 1 ? 'day' : 'custom',
 }: UseDateWindowNavigationOptions = {}) {
+  const { timezone } = useFormatters();
+
   const todayRange = React.useMemo(
-    () => createWindowRange(new Date(), days, type),
-    [days, type],
+    () => createWindowRange(new Date(), days, type, timezone),
+    [days, type, timezone],
   );
   const [dateRange, setDateRange] = React.useState<DateRange>(() =>
-    createWindowRange(initialEndDate, days, type),
+    createWindowRange(initialEndDate, days, type, timezone),
   );
+
+  React.useEffect(() => {
+    setDateRange((current) =>
+      createWindowRange(
+        parseCalendarDate(current.endDate, timezone),
+        days,
+        type,
+        timezone,
+      ),
+    );
+  }, [days, timezone, type]);
 
   const goToPreviousWindow = React.useCallback(() => {
     setDateRange((current) => {
-      const endDate = subDays(parseISO(current.endDate), days);
-      return createWindowRange(endDate, days, type);
+      const endDateStr = addCalendarDays(current.endDate, -days, timezone);
+      return createWindowRange(
+        parseCalendarDate(endDateStr, timezone),
+        days,
+        type,
+        timezone,
+      );
     });
-  }, [days, type]);
+  }, [days, timezone, type]);
 
   const goToNextWindow = React.useCallback(() => {
     setDateRange((current) => {
-      const endDate = addDays(parseISO(current.endDate), days);
-      const nextRange = createWindowRange(endDate, days, type);
+      const endDateStr = addCalendarDays(current.endDate, days, timezone);
+      const nextRange = createWindowRange(
+        parseCalendarDate(endDateStr, timezone),
+        days,
+        type,
+        timezone,
+      );
       return nextRange.endDate > todayRange.endDate ? todayRange : nextRange;
     });
-  }, [days, todayRange, type]);
+  }, [days, todayRange, timezone, type]);
 
   const resetToCurrentWindow = React.useCallback(() => {
     setDateRange(todayRange);
   }, [todayRange]);
 
   const timeRange = React.useMemo(
-    () => dateRangeToTimeRange(dateRange),
-    [dateRange],
+    () => dateRangeToTimeRange(dateRange, timezone),
+    [dateRange, timezone],
   );
 
   const isCurrentWindow =

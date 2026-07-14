@@ -7,10 +7,12 @@ import { useDeviceAnnotationEvents } from '@/hooks/queries/deviceQueries';
 import { usePets } from '@/hooks/queries/petQueries';
 import type { GetEventDTO, LitterboxUseEliminationType } from 'shared';
 import type { LitterboxAnnotation } from '@/types/litterbox';
-import AnnotationWorkspace, { type AnnotationWorkspaceActions } from './AnnotationWorkspace';
+import AnnotationWorkspace, {
+  type AnnotationWorkspaceActions,
+} from './AnnotationWorkspace';
 import './AnnotationTab.css';
 import { CheckCheck, ListChecks, CircleDot, Ban } from 'lucide-react';
-import { format } from 'date-fns';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 
 type VerifiedFilter = 'all' | 'verified' | 'unverified';
 type EliminationFilter = LitterboxUseEliminationType | 'all';
@@ -32,7 +34,9 @@ const MAIN_ELIM_ALT_DIGIT_CODE_INDEX: Record<string, number> = {
   Digit5: 4,
 };
 
-function getAnnotationStatus(event: GetEventDTO): 'excluded' | 'bout' | 'session' | 'none' {
+function getAnnotationStatus(
+  event: GetEventDTO,
+): 'excluded' | 'bout' | 'session' | 'none' {
   const d = event.data as { annotation?: LitterboxAnnotation };
   if (d.annotation?.excluded === true) return 'excluded';
   if (!event.human_verified) return 'none';
@@ -83,6 +87,7 @@ function parsePageParam(raw: string | null): number {
 
 const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
   const { t } = useTranslation();
+  const { formatDate, formatTime } = useFormatters();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const selectedEventId = React.useMemo(
@@ -174,7 +179,10 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
   React.useEffect(() => {
     const raw = searchParams.get(ELIM_QUERY_KEY);
     if (raw == null || raw === '') return;
-    if (raw !== 'all' && !(ELIMINATION_TYPES as readonly string[]).includes(raw)) {
+    if (
+      raw !== 'all' &&
+      !(ELIMINATION_TYPES as readonly string[]).includes(raw)
+    ) {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
@@ -203,7 +211,9 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
     }
   }, [searchParams, setSearchParams]);
 
-  const verifiedFilter = parseVerifiedFilterParam(searchParams.get(VERIFIED_QUERY_KEY));
+  const verifiedFilter = parseVerifiedFilterParam(
+    searchParams.get(VERIFIED_QUERY_KEY),
+  );
   const elimFilter = parseElimFilterParam(searchParams.get(ELIM_QUERY_KEY));
   const page = parsePageParam(searchParams.get(PAGE_QUERY_KEY));
   const offset = (page - 1) * LIMIT;
@@ -256,7 +266,9 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
     [setSearchParams],
   );
 
-  const workspaceActionsRef = React.useRef<AnnotationWorkspaceActions | null>(null);
+  const workspaceActionsRef = React.useRef<AnnotationWorkspaceActions | null>(
+    null,
+  );
 
   const videoOpen = searchParams.get(VIDEO_QUERY_KEY) === '1';
 
@@ -285,7 +297,10 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
     return opts;
   }, [verifiedFilter, offset]);
 
-  const { data: eventsPage, isLoading } = useDeviceAnnotationEvents(deviceId, queryOpts);
+  const { data: eventsPage, isLoading } = useDeviceAnnotationEvents(
+    deviceId,
+    queryOpts,
+  );
   const { data: pets } = usePets();
 
   const petMap = React.useMemo(() => {
@@ -299,7 +314,10 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
     return eventsPage.data.filter((e) => {
       if (e.data.type !== 'litterbox_use') return false;
       if (elimFilter === 'all') return true;
-      return (e.data as { elimination_type?: string }).elimination_type === elimFilter;
+      return (
+        (e.data as { elimination_type?: string }).elimination_type ===
+        elimFilter
+      );
     });
   }, [eventsPage, elimFilter]);
 
@@ -333,7 +351,10 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
     if (litterboxEventOnPage) return litterboxEventOnPage;
     if (selectedEventFetched) {
       if (selectedEventFetched.device_id !== deviceId) return null;
-      if ((selectedEventFetched.data as { type?: string }).type !== 'litterbox_use') {
+      if (
+        (selectedEventFetched.data as { type?: string }).type !==
+        'litterbox_use'
+      ) {
         return null;
       }
       return selectedEventFetched;
@@ -344,14 +365,18 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
   const workspaceAwaitingSelection =
     selectedEventId != null &&
     selectedEvent == null &&
-    (isLoading || (shouldFetchSelectedEventById && isPendingSelectedEventDetail));
+    (isLoading ||
+      (shouldFetchSelectedEventById && isPendingSelectedEventDetail));
 
   const handleNavigate = React.useCallback(
     (direction: 'prev' | 'next') => {
       if (!selectedEventId) return;
       const idx = filteredEvents.findIndex((e) => e.id === selectedEventId);
       if (idx === -1) return;
-      const next = direction === 'next' ? filteredEvents[idx + 1] : filteredEvents[idx - 1];
+      const next =
+        direction === 'next'
+          ? filteredEvents[idx + 1]
+          : filteredEvents[idx - 1];
       if (next) setSelectedEventId(next.id);
     },
     [filteredEvents, selectedEventId, setSelectedEventId],
@@ -378,7 +403,8 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
       const idx = filteredEvents.findIndex((ev) => ev.id === selectedEventId);
       if (e.key === 'ArrowDown' || e.key === 'j') {
         e.preventDefault();
-        const next = filteredEvents[Math.min(idx + 1, filteredEvents.length - 1)];
+        const next =
+          filteredEvents[Math.min(idx + 1, filteredEvents.length - 1)];
         if (next) setSelectedEventId(next.id);
       } else if (e.key === 'ArrowUp' || e.key === 'k') {
         e.preventDefault();
@@ -415,13 +441,16 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
     }
   }, [isLoading, eventsPage, page, setSearchParams]);
 
-  const eventNavIndex = filteredEvents.findIndex((e) => e.id === selectedEventId);
+  const eventNavIndex = filteredEvents.findIndex(
+    (e) => e.id === selectedEventId,
+  );
 
   React.useEffect(() => {
     function isEditableTarget(target: EventTarget | null): boolean {
       if (!target || !(target instanceof HTMLElement)) return false;
       const tag = target.tagName.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+      if (tag === 'input' || tag === 'textarea' || tag === 'select')
+        return true;
       return target.isContentEditable;
     }
 
@@ -519,7 +548,9 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
         const idx = MAIN_ELIM_ALT_DIGIT_CODE_INDEX[e.code];
         if (idx !== undefined) {
           e.preventDefault();
-          workspaceActionsRef.current?.setEventEliminationType(ELIMINATION_TYPES[idx]);
+          workspaceActionsRef.current?.setEventEliminationType(
+            ELIMINATION_TYPES[idx],
+          );
           return;
         }
       }
@@ -558,7 +589,9 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
     const root = listRef.current;
     if (!root) return;
     if (!filteredEvents.some((e) => e.id === selectedEventId)) return;
-    const el = root.querySelector(`[data-event-id="${String(selectedEventId)}"]`);
+    const el = root.querySelector(
+      `[data-event-id="${String(selectedEventId)}"]`,
+    );
     if (!(el instanceof HTMLElement)) return;
     el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
   }, [selectedEventId, listLoadingInitial, filteredEvents]);
@@ -580,7 +613,9 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
             <button
               type="button"
               className="annotation-event-nav-btn"
-              disabled={eventNavIndex < 0 || eventNavIndex >= filteredEvents.length - 1}
+              disabled={
+                eventNavIndex < 0 || eventNavIndex >= filteredEvents.length - 1
+              }
               onClick={() => handleNavigate('next')}
               aria-label={t('annotation.next_event')}
             >
@@ -593,20 +628,30 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
           <select
             className="annotation-filter-select"
             value={verifiedFilter}
-            onChange={(e) => { setVerifiedFilter(e.target.value as VerifiedFilter); }}
+            onChange={(e) => {
+              setVerifiedFilter(e.target.value as VerifiedFilter);
+            }}
           >
             <option value="all">{t('annotation.filter_all')}</option>
-            <option value="verified">{t('annotation.filter_verified_only')}</option>
-            <option value="unverified">{t('annotation.filter_unverified_only')}</option>
+            <option value="verified">
+              {t('annotation.filter_verified_only')}
+            </option>
+            <option value="unverified">
+              {t('annotation.filter_unverified_only')}
+            </option>
           </select>
           <select
             className="annotation-filter-select"
             value={elimFilter}
-            onChange={(e) => { setElimFilter(e.target.value as EliminationFilter); }}
+            onChange={(e) => {
+              setElimFilter(e.target.value as EliminationFilter);
+            }}
           >
             <option value="all">{t('annotation.filter_all_types')}</option>
             {ELIMINATION_TYPES.map((et) => (
-              <option key={et} value={et}>{t(`overview.${et}`)}</option>
+              <option key={et} value={et}>
+                {t(`overview.${et}`)}
+              </option>
             ))}
           </select>
         </div>
@@ -631,7 +676,9 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
           ) : (
             <>
               {filteredEvents.map((event) => {
-                const d = event.data as { elimination_type?: LitterboxUseEliminationType };
+                const d = event.data as {
+                  elimination_type?: LitterboxUseEliminationType;
+                };
                 const status = getAnnotationStatus(event);
                 const statusLabel =
                   status === 'excluded'
@@ -641,7 +688,9 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
                       : status === 'session'
                         ? t('annotation.status_session')
                         : t('annotation.status_none');
-                const petName = event.pet_id ? petMap.get(event.pet_id) : undefined;
+                const petName = event.pet_id
+                  ? petMap.get(event.pet_id)
+                  : undefined;
                 const isSelected = event.id === selectedEventId;
 
                 return (
@@ -661,7 +710,7 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
                   >
                     <div className="annotation-item-header">
                       <span className="annotation-item-time">
-                        {format(new Date(event.timestamp), 'MMM d, HH:mm')}
+                        {`${formatDate(new Date(event.timestamp), 'short')}, ${formatTime(new Date(event.timestamp))}`}
                       </span>
                       <span
                         className={`annotation-item-status status-${status}`}
@@ -669,15 +718,25 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
                         aria-label={statusLabel}
                       >
                         {status === 'excluded' && <Ban size={14} aria-hidden />}
-                        {status === 'bout' && <ListChecks size={14} aria-hidden />}
-                        {status === 'session' && <CheckCheck size={14} aria-hidden />}
-                        {status === 'none' && <CircleDot size={14} aria-hidden />}
+                        {status === 'bout' && (
+                          <ListChecks size={14} aria-hidden />
+                        )}
+                        {status === 'session' && (
+                          <CheckCheck size={14} aria-hidden />
+                        )}
+                        {status === 'none' && (
+                          <CircleDot size={14} aria-hidden />
+                        )}
                       </span>
                     </div>
                     <div className="annotation-item-meta">
-                      {petName && <span className="annotation-item-pet">{petName}</span>}
+                      {petName && (
+                        <span className="annotation-item-pet">{petName}</span>
+                      )}
                       {d.elimination_type && (
-                        <span className={`annotation-elim-badge elim-${d.elimination_type}`}>
+                        <span
+                          className={`annotation-elim-badge elim-${d.elimination_type}`}
+                        >
                           {t(`overview.${d.elimination_type}`)}
                         </span>
                       )}
@@ -686,7 +745,9 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
                 );
               })}
               {filteredEvents.length === 0 && (
-                <li className="annotation-list-empty">{t('annotation.no_events')}</li>
+                <li className="annotation-list-empty">
+                  {t('annotation.no_events')}
+                </li>
               )}
             </>
           )}
@@ -701,7 +762,12 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
             >
               ‹
             </button>
-            <span>{t('annotation.page_of', { current: currentPage, total: totalPages })}</span>
+            <span>
+              {t('annotation.page_of', {
+                current: currentPage,
+                total: totalPages,
+              })}
+            </span>
             <button
               className="annotation-page-btn"
               disabled={!eventsPage?.hasMore}

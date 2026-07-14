@@ -1,6 +1,6 @@
 import { clsx } from 'clsx';
-import { format } from 'date-fns';
-import { fromZonedTime } from 'date-fns-tz';
+import { addDays, format } from 'date-fns';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 export const cn = clsx;
 
@@ -29,9 +29,37 @@ export interface DateRange {
  * Create a DateRange for a single local calendar day. Defaults to today.
  * Always use this instead of new Date().toISOString().split('T')[0] to avoid UTC date drift.
  */
-export function createDayRange(date: Date = new Date()): DateRange {
-  const dateStr = format(date, 'yyyy-MM-dd');
+export function createDayRange(
+  date: Date = new Date(),
+  timezone?: string,
+): DateRange {
+  const dateStr = timezone
+    ? formatCalendarDate(date, timezone)
+    : format(date, 'yyyy-MM-dd');
   return { startDate: dateStr, endDate: dateStr, type: 'day' };
+}
+
+/**
+ * Format an instant as YYYY-MM-DD in the given IANA timezone.
+ */
+export function formatCalendarDate(date: Date, timezone: string): string {
+  return formatInTimeZone(date, timezone, 'yyyy-MM-dd');
+}
+
+/**
+ * Parse a calendar date string as noon in the given timezone (avoids DST edge cases).
+ */
+export function parseCalendarDate(dateStr: string, timezone: string): Date {
+  return fromZonedTime(`${dateStr}T12:00:00.000`, timezone);
+}
+
+export function addCalendarDays(
+  dateStr: string,
+  deltaDays: number,
+  timezone: string,
+): string {
+  const base = parseCalendarDate(dateStr, timezone);
+  return formatCalendarDate(addDays(base, deltaDays), timezone);
 }
 
 /**
@@ -40,13 +68,13 @@ export function createDayRange(date: Date = new Date()): DateRange {
  * @param dateStr Date string in YYYY-MM-DD format
  * @returns Object with startTime and endTime ISO strings
  */
-export function dateToTimeRange(dateStr: string): {
+export function dateToTimeRange(
+  dateStr: string,
+  timezone: string,
+): {
   startTime: string;
   endTime: string;
 } {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  
-  // Create date objects for the start and end of the day in the user's timezone
   const startOfDay = fromZonedTime(`${dateStr}T00:00:00.000`, timezone);
   const endOfDay = fromZonedTime(`${dateStr}T23:59:59.999`, timezone);
 
@@ -58,17 +86,19 @@ export function dateToTimeRange(dateStr: string): {
 
 /**
  * Convert a date range to start and end ISO timestamp strings
- * in the user's local timezone
- * @param dateRange DateRange object with startDate and endDate
- * @returns Object with startTime and endTime ISO strings
+ * in the configured timezone
  */
-export function dateRangeToTimeRange(dateRange: DateRange): {
+export function dateRangeToTimeRange(
+  dateRange: DateRange,
+  timezone: string,
+): {
   startTime: string;
   endTime: string;
 } {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  
-  const startOfDay = fromZonedTime(`${dateRange.startDate}T00:00:00.000`, timezone);
+  const startOfDay = fromZonedTime(
+    `${dateRange.startDate}T00:00:00.000`,
+    timezone,
+  );
   const endOfDay = fromZonedTime(`${dateRange.endDate}T23:59:59.999`, timezone);
 
   return {

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { format } from 'date-fns';
 import type { EntityDTO } from 'shared';
 import { DashboardTile } from '@/components/layout/DashboardTile';
 import { ResponsiveTileGrid } from '@/components/layout/ResponsiveTileGrid';
@@ -17,8 +16,8 @@ import { formatStructuredValue } from '@/lib/formatStructuredValue';
 import {
   coerceEpochDate,
   formatRelativeTimeAgo,
-  resolveDateFnsLocale,
 } from '@/lib/formatRelativeTime';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import './ESPHomeView.css';
 
 interface ESPHomeViewProps {
@@ -40,7 +39,8 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
   entities,
   sensors,
 }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { formatDateTime, dateFnsLocale, formatNumber } = useFormatters();
   const grouped = React.useMemo(
     () => groupEntitiesForDashboard(entities),
     [entities],
@@ -53,12 +53,12 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
       switch (entity.type) {
         case 'sensor': {
           if (entity.deviceClass === 'timestamp') {
-            const locale = resolveDateFnsLocale(i18n.language);
             const ts = coerceEpochDate(value);
-            const absolute =
-              ts != null ? format(ts, 'PPpp', { locale }) : undefined;
+            const absolute = ts != null ? formatDateTime(ts) : undefined;
             const relative =
-              ts != null ? formatRelativeTimeAgo(ts, { locale }) : null;
+              ts != null
+                ? formatRelativeTimeAgo(ts, { locale: dateFnsLocale })
+                : null;
             return (
               <EntitySensor
                 label={entity.name}
@@ -144,7 +144,9 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
             />
           );
         default: {
-          const formatted = formatStructuredValue(value);
+          const formatted = formatStructuredValue(value, {
+            formatGroupedNumber: (numericValue) => formatNumber(numericValue),
+          });
           const meta =
             entity.deviceClass !== undefined && entity.deviceClass !== ''
               ? entity.deviceClass
@@ -163,7 +165,7 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
         }
       }
     },
-    [i18n.language, sensors, t],
+    [dateFnsLocale, formatDateTime, formatNumber, sensors, t],
   );
 
   const renderEntityTile = React.useCallback(
@@ -185,7 +187,9 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
   if (entities.length === 0) {
     return (
       <div className="esphome-view">
-        <p className="esphome-view-empty">{t('devices.esphome.empty_entities')}</p>
+        <p className="esphome-view-empty">
+          {t('devices.esphome.empty_entities')}
+        </p>
       </div>
     );
   }
@@ -197,9 +201,7 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
   } = grouped;
 
   const showPrimary =
-    controls.length > 0 ||
-    sensorEntities.length > 0 ||
-    primaryOther.length > 0;
+    controls.length > 0 || sensorEntities.length > 0 || primaryOther.length > 0;
 
   return (
     <div className="esphome-view">
@@ -209,7 +211,9 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
           aria-label={t('devices.esphome.section_primary')}
         >
           <div className="esphome-view-panel">
-            <SectionHeader>{t('devices.esphome.section_primary')}</SectionHeader>
+            <SectionHeader>
+              {t('devices.esphome.section_primary')}
+            </SectionHeader>
             {controls.length > 0 ? (
               <div className="esphome-view-subsection">
                 <h3 className="esphome-view-subsection-title">
@@ -227,7 +231,9 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
               </div>
             ) : null}
             {primaryOther.length > 0 ? (
-              <div className="esphome-view-subsection">{renderGrid(primaryOther)}</div>
+              <div className="esphome-view-subsection">
+                {renderGrid(primaryOther)}
+              </div>
             ) : null}
           </div>
         </section>
@@ -251,7 +257,9 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
           aria-label={t('devices.esphome.section_diagnostic')}
         >
           <div className="esphome-view-panel">
-            <SectionHeader>{t('devices.esphome.section_diagnostic')}</SectionHeader>
+            <SectionHeader>
+              {t('devices.esphome.section_diagnostic')}
+            </SectionHeader>
             {renderGrid(diagnostic)}
           </div>
         </section>

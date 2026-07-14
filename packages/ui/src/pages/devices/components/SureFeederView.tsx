@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { format } from 'date-fns';
 import type { SureFeederState } from 'shared';
 import { DashboardTile } from '@/components/layout/DashboardTile';
 import { ResponsiveTileGrid } from '@/components/layout/ResponsiveTileGrid';
@@ -9,8 +8,8 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import {
   coerceEpochDate,
   formatRelativeTimeAgo,
-  resolveDateFnsLocale,
 } from '@/lib/formatRelativeTime';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import SureFeederStatus from './SureFeederStatus';
 import {
   formatCloseDelay,
@@ -32,7 +31,8 @@ function formatFillPercent(value: number | null | undefined): string {
 }
 
 export const SureFeederView: React.FC<SureFeederViewProps> = ({ state }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { formatDateTime, dateFnsLocale } = useFormatters();
 
   if (!state || state.bowl_status.length === 0) {
     return (
@@ -42,14 +42,13 @@ export const SureFeederView: React.FC<SureFeederViewProps> = ({ state }) => {
     );
   }
 
-  const locale = resolveDateFnsLocale(i18n.language);
   const refreshedAt = coerceEpochDate(state.last_refreshed_at);
   const refreshedRelative =
     refreshedAt != null
-      ? formatRelativeTimeAgo(refreshedAt, { locale })
+      ? formatRelativeTimeAgo(refreshedAt, { locale: dateFnsLocale })
       : null;
   const refreshedAbsolute =
-    refreshedAt != null ? format(refreshedAt, 'PPpp', { locale }) : undefined;
+    refreshedAt != null ? formatDateTime(refreshedAt) : undefined;
 
   const perBowlFill = state.fill_percentages?.per_bowl ?? {};
   const hasSettings =
@@ -83,26 +82,21 @@ export const SureFeederView: React.FC<SureFeederViewProps> = ({ state }) => {
                 return (
                   <DashboardTile key={bowlKey}>
                     <EntitySensor
-                      label={getBowlLabel(
-                        bowl,
-                        index,
-                        state.bowl_type,
-                        t,
-                      )}
+                      label={getBowlLabel(bowl, index, state.bowl_type, t)}
                       value={
                         bowl.current_weight != null
                           ? bowl.current_weight
                           : t('devices.feeder.no_reading')
                       }
-                      unit={
-                        bowl.current_weight != null ? 'g' : undefined
-                      }
+                      unit={bowl.current_weight != null ? 'g' : undefined}
                       valueVariant={
                         bowl.current_weight != null ? 'metric' : 'body'
                       }
                     />
                     {foodSubtitle ? (
-                      <p className="sure-feeder-view-bowl-meta">{foodSubtitle}</p>
+                      <p className="sure-feeder-view-bowl-meta">
+                        {foodSubtitle}
+                      </p>
                     ) : null}
                     <p className="sure-feeder-view-bowl-fill">
                       {t('devices.feeder.bowl_fill', {
@@ -123,7 +117,9 @@ export const SureFeederView: React.FC<SureFeederViewProps> = ({ state }) => {
           aria-label={t('devices.feeder.section_settings')}
         >
           <div className="sure-feeder-view-panel">
-            <SectionHeader>{t('devices.feeder.section_settings')}</SectionHeader>
+            <SectionHeader>
+              {t('devices.feeder.section_settings')}
+            </SectionHeader>
             <ResponsiveTileGrid>
               {state.lid_close_delay != null ? (
                 <DashboardTile>

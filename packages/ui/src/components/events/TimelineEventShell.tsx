@@ -1,14 +1,19 @@
 import * as React from 'react';
-import { format } from 'date-fns';
 import Timeline from '@/components/ui/Timeline';
 import { cn } from '@/lib/utils';
 import type { GetEventDTO } from 'shared';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import EventDevice from './meta/EventDevice';
 import EventPet from './meta/EventPet';
 import EventVerified from './meta/EventVerified';
 import './TimelineEventShell.css';
 
-type TimelineShellVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger';
+type TimelineShellVariant =
+  | 'default'
+  | 'primary'
+  | 'success'
+  | 'warning'
+  | 'danger';
 
 export interface TimelineEventShellProps {
   event: GetEventDTO;
@@ -25,7 +30,10 @@ export interface TimelineEventShellProps {
   itemStyle?: React.CSSProperties;
 }
 
-const TimelineEventShell = React.forwardRef<HTMLLIElement, TimelineEventShellProps>(
+const TimelineEventShell = React.forwardRef<
+  HTMLLIElement,
+  TimelineEventShellProps
+>(
   (
     {
       event,
@@ -43,6 +51,7 @@ const TimelineEventShell = React.forwardRef<HTMLLIElement, TimelineEventShellPro
     },
     ref,
   ) => {
+    const { formatTime } = useFormatters();
     return (
       <Timeline.Item
         ref={ref}
@@ -54,7 +63,7 @@ const TimelineEventShell = React.forwardRef<HTMLLIElement, TimelineEventShellPro
         <Timeline.Content>
           <Timeline.Header>
             <Timeline.Timestamp>
-              {format(new Date(event.timestamp), 'HH:mm')}
+              {formatTime(new Date(event.timestamp))}
             </Timeline.Timestamp>
             {value != null && (
               <Timeline.Value variant={valueVariant}>{value}</Timeline.Value>

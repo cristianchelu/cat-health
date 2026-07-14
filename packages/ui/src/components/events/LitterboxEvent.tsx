@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Droplets, Gift, Toilet } from 'lucide-react';
-import { format } from 'date-fns';
 import Timeline from '@/components/ui/Timeline';
 import type { EventComponentProps } from './types';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import EventDevice from './meta/EventDevice';
 import EventDuration from './meta/EventDuration';
 import EventPet from './meta/EventPet';
@@ -43,11 +43,14 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
   showDevice = true,
 }) => {
   const { t } = useTranslation();
+  const { formatTime } = useFormatters();
   const { data } = event;
-  const persistedSegments = (data as { segments?: LitterboxAnalysisStatePeriod[] | null })
-    .segments;
+  const persistedSegments = (
+    data as { segments?: LitterboxAnalysisStatePeriod[] | null }
+  ).segments;
   const badgeSegments = React.useMemo(
-    () => eliminationBadgeRowsFromSegments(persistedSegments, LITTERBOX_SAMPLE_HZ),
+    () =>
+      eliminationBadgeRowsFromSegments(persistedSegments, LITTERBOX_SAMPLE_HZ),
     [persistedSegments],
   );
 
@@ -89,7 +92,7 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
       <Timeline.Content>
         <Timeline.Header>
           <Timeline.Timestamp>
-            {format(new Date(event.timestamp), 'HH:mm')}
+            {formatTime(new Date(event.timestamp))}
           </Timeline.Timestamp>
           {(data.elimination_weight !== undefined || data.straining) && (
             <span className="timeline-value-group">
@@ -106,7 +109,9 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
                 </Timeline.Value>
               )}
               {data.straining && (
-                <Timeline.Badge variant="warning">{t('overview.straining')}</Timeline.Badge>
+                <Timeline.Badge variant="warning">
+                  {t('overview.straining')}
+                </Timeline.Badge>
               )}
             </span>
           )}
@@ -126,7 +131,9 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
             <EventEliminationSegments segments={badgeSegments} />
           )}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
-          {showDevice && event.device_id && <EventDevice deviceId={event.device_id} />}
+          {showDevice && event.device_id && (
+            <EventDevice deviceId={event.device_id} />
+          )}
           {children}
         </Timeline.Meta>
       </Timeline.Content>

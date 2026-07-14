@@ -7,6 +7,8 @@ export interface SensorNumericFormatOptions {
   unit?: string;
   /** ESPHome `device_class` — improves rounding when firmware omits `accuracy_decimals`. */
   deviceClass?: string;
+  /** Regional number formatter for the Intl fallback path. */
+  formatGroupedNumber?: (value: number) => string;
 }
 
 const MAX_ACCURACY_DECIMALS = 15;
@@ -36,10 +38,7 @@ const DEVICE_CLASS_DECIMALS: Readonly<Record<string, number>> = {
 };
 
 function clampAccuracyDecimals(n: number): number {
-  return Math.min(
-    MAX_ACCURACY_DECIMALS,
-    Math.max(0, Math.floor(n)),
-  );
+  return Math.min(MAX_ACCURACY_DECIMALS, Math.max(0, Math.floor(n)));
 }
 
 function roundToDecimals(value: number, decimals: number): number {
@@ -174,8 +173,11 @@ export function formatSensorNumericDisplay(
     return s;
   }
 
-  return new Intl.NumberFormat(undefined, {
-    maximumSignificantDigits: FALLBACK_MAX_SIG_DIGITS,
-    maximumFractionDigits: FALLBACK_MAX_FRACTION_DIGITS,
-  }).format(value);
+  return (
+    options?.formatGroupedNumber?.(value) ??
+    new Intl.NumberFormat(undefined, {
+      maximumSignificantDigits: FALLBACK_MAX_SIG_DIGITS,
+      maximumFractionDigits: FALLBACK_MAX_FRACTION_DIGITS,
+    }).format(value)
+  );
 }

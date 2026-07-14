@@ -9,23 +9,29 @@ export interface FormattedStructuredValue {
   raw?: string;
 }
 
+export interface FormatStructuredValueOptions {
+  formatGroupedNumber?: (value: number) => string;
+}
+
 const SUMMARY_MAX_LEN = 96;
 
-export function formatStructuredValue(value: unknown): FormattedStructuredValue {
+export function formatStructuredValue(
+  value: unknown,
+  options?: FormatStructuredValueOptions,
+): FormattedStructuredValue {
   if (value === undefined || value === null) {
     return { summary: '—' };
   }
 
-  if (
-    typeof value === 'string' ||
-    typeof value === 'boolean'
-  ) {
+  if (typeof value === 'string' || typeof value === 'boolean') {
     return { summary: String(value) };
   }
 
   if (typeof value === 'number') {
     return {
-      summary: formatSensorNumericDisplay(value),
+      summary: formatSensorNumericDisplay(value, {
+        formatGroupedNumber: options?.formatGroupedNumber,
+      }),
     };
   }
 

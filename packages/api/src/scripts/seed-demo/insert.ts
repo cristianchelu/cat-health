@@ -122,8 +122,8 @@ async function insertDevices(
         type: device.type,
         config,
         enabled: 1,
-        last_seen: Math.floor(Date.now() / 1000),
-        status: 'online',
+        last_seen: null,
+        status: 'offline',
       })
       .returningAll()
       .executeTakeFirstOrThrow();

@@ -14,6 +14,7 @@ import Devices from './pages/devices/Devices.tsx';
 import DeviceDetails from './pages/devices/DeviceDetails.tsx';
 import DeviceAnnotationPage from './pages/devices/DeviceAnnotationPage.tsx';
 import Settings from './pages/settings/Settings.tsx';
+import LanguageRegionPage from './pages/settings/LanguageRegionPage.tsx';
 import AddEditPetPage from './pages/settings/AddEditPetPage.tsx';
 import AddEditProviderPage from './pages/settings/AddEditProviderPage.tsx';
 import AddDevicePage from './pages/settings/AddDevicePage.tsx';
@@ -45,6 +46,7 @@ const router = createBrowserRouter(
         { path: '/devices/:id/annotate', element: <DeviceAnnotationPage /> },
         { path: '/devices/:id', element: <DeviceDetails /> },
         { path: '/settings', element: <Settings /> },
+        { path: '/settings/language-region', element: <LanguageRegionPage /> },
         { path: '/settings/pets/new', element: <AddEditPetPage /> },
         { path: '/settings/pets/:id', element: <AddEditPetPage /> },
         { path: '/settings/providers/new', element: <AddEditProviderPage /> },

@@ -6,7 +6,7 @@ import type { LitterboxTrendsResponseDTO } from 'shared';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetLitterboxTrends } from '@/hooks/queries/petQueries';
 import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
-import { resolveDateFnsLocale } from '@/lib/formatRelativeTime';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import { daysToUntrackedIntervals } from '@/lib/untrackedIntervals';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -85,8 +85,8 @@ function hoursBetweenEventsToSeries(
 }
 
 const LitterboxDetails: React.FC = () => {
-  const { t, i18n } = useTranslation();
-  const dateLocale = resolveDateFnsLocale(i18n.language);
+  const { t } = useTranslation();
+  const { dateFnsLocale, timezone } = useFormatters();
   const navigate = useNavigate();
   const { selectedPet } = usePetContext();
   const {
@@ -117,7 +117,6 @@ const LitterboxDetails: React.FC = () => {
 
   const analytics = data?.analytics;
   const allEvents = data?.days.flatMap((day) => day.events) ?? [];
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const untrackedIntervals = daysToUntrackedIntervals(
     data?.days ?? [],
     timezone,
@@ -131,7 +130,6 @@ const LitterboxDetails: React.FC = () => {
       onNext={goToNextWindow}
       onReset={resetToCurrentWindow}
       isToday={isCurrentWindow}
-      dateFormat="MMM d"
     />
   );
 
@@ -171,7 +169,10 @@ const LitterboxDetails: React.FC = () => {
       <section className="litterbox-details-chart-grid">
         <section className="litterbox-details-chart-section litterbox-details-chart-section--wide">
           <SectionHeader>{t('litterbox_details.timeline')}</SectionHeader>
-          <Card className="litterbox-details-chart-card" isLoading={isFetching && !isLoading}>
+          <Card
+            className="litterbox-details-chart-card"
+            isLoading={isFetching && !isLoading}
+          >
             <CardContent>
               {error ? (
                 <p className="litterbox-details-empty">
@@ -182,7 +183,7 @@ const LitterboxDetails: React.FC = () => {
                   <LitterboxTrendGrid
                     days={data?.days ?? []}
                     showColumnLabels
-                    locale={dateLocale}
+                    locale={dateFnsLocale}
                   />
                 </div>
               )}
@@ -190,7 +191,9 @@ const LitterboxDetails: React.FC = () => {
           </Card>
         </section>
         <section className="litterbox-details-chart-section">
-          <SectionHeader>{t('litterbox_details.urination_frequency')}</SectionHeader>
+          <SectionHeader>
+            {t('litterbox_details.urination_frequency')}
+          </SectionHeader>
           <Card className="litterbox-details-chart-card">
             <CardContent>
               <LitterboxMetricChart
@@ -199,14 +202,16 @@ const LitterboxDetails: React.FC = () => {
                 emptyLabel={t('litterbox_details.no_chart_data')}
                 timeRange={chartTimeRange}
                 untrackedIntervals={untrackedIntervals}
-                locale={dateLocale}
+                locale={dateFnsLocale}
                 series={[urinationIntervalSeries]}
               />
             </CardContent>
           </Card>
         </section>
         <section className="litterbox-details-chart-section">
-          <SectionHeader>{t('litterbox_details.defecation_frequency')}</SectionHeader>
+          <SectionHeader>
+            {t('litterbox_details.defecation_frequency')}
+          </SectionHeader>
           <Card className="litterbox-details-chart-card">
             <CardContent>
               <LitterboxMetricChart
@@ -215,14 +220,16 @@ const LitterboxDetails: React.FC = () => {
                 emptyLabel={t('litterbox_details.no_chart_data')}
                 timeRange={chartTimeRange}
                 untrackedIntervals={untrackedIntervals}
-                locale={dateLocale}
+                locale={dateFnsLocale}
                 series={[defecationIntervalSeries]}
               />
             </CardContent>
           </Card>
         </section>
         <section className="litterbox-details-chart-section">
-          <SectionHeader>{t('litterbox_details.urination_duration_chart')}</SectionHeader>
+          <SectionHeader>
+            {t('litterbox_details.urination_duration_chart')}
+          </SectionHeader>
           <Card className="litterbox-details-chart-card">
             <CardContent>
               <LitterboxMetricChart
@@ -231,7 +238,7 @@ const LitterboxDetails: React.FC = () => {
                 emptyLabel={t('litterbox_details.no_chart_data')}
                 timeRange={chartTimeRange}
                 untrackedIntervals={untrackedIntervals}
-                locale={dateLocale}
+                locale={dateFnsLocale}
                 series={
                   analytics
                     ? [
@@ -249,7 +256,9 @@ const LitterboxDetails: React.FC = () => {
           </Card>
         </section>
         <section className="litterbox-details-chart-section">
-          <SectionHeader>{t('litterbox_details.defecation_duration_chart')}</SectionHeader>
+          <SectionHeader>
+            {t('litterbox_details.defecation_duration_chart')}
+          </SectionHeader>
           <Card className="litterbox-details-chart-card">
             <CardContent>
               <LitterboxMetricChart
@@ -258,7 +267,7 @@ const LitterboxDetails: React.FC = () => {
                 emptyLabel={t('litterbox_details.no_chart_data')}
                 timeRange={chartTimeRange}
                 untrackedIntervals={untrackedIntervals}
-                locale={dateLocale}
+                locale={dateFnsLocale}
                 series={
                   analytics
                     ? [

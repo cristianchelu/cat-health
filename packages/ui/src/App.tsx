@@ -5,6 +5,7 @@ import Sidebar from './components/layout/Sidebar';
 import MobileNav from './components/navigation/MobileNav';
 import PetSelector from './components/navigation/PetSelector';
 import { PetProvider } from './contexts/PetProvider';
+import RegionalPreferencesProvider from './contexts/RegionalPreferencesProvider';
 import { matchShowsPetSelector } from './router/routeHandle';
 
 import './App.css';
@@ -22,20 +23,22 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <PetProvider>
-        <div id="app">
-          <Sidebar
-            isCollapsed={isSidebarCollapsed}
-            onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            showPetSelector={showPetSelector}
-          />
-          {showPetSelector ? <PetSelector variant="mobile" /> : null}
-          <main>
-            <div id="content">
-              <Outlet />
-            </div>
-          </main>
-          <MobileNav />
-        </div>
+        <RegionalPreferencesProvider>
+          <div id="app">
+            <Sidebar
+              isCollapsed={isSidebarCollapsed}
+              onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              showPetSelector={showPetSelector}
+            />
+            {showPetSelector ? <PetSelector variant="mobile" /> : null}
+            <main>
+              <div id="content">
+                <Outlet />
+              </div>
+            </main>
+            <MobileNav />
+          </div>
+        </RegionalPreferencesProvider>
       </PetProvider>
     </QueryClientProvider>
   );

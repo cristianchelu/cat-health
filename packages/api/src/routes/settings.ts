@@ -1,9 +1,18 @@
 import { GetSettingsResponseSchema, PatchSettingsRequestSchema } from 'shared';
-import { type FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import {
-  getTrackingGapThresholdMinutes,
-  setTrackingGapThresholdMinutes,
+  Type,
+  type FastifyPluginAsyncTypebox,
+} from '@fastify/type-provider-typebox';
+import {
+  applySettingsPatch,
+  getAllSettings,
 } from '../services/settings/appSettings.ts';
+
+const Http400BadRequestSchema = Type.Object({
+  statusCode: Type.Literal(400),
+  error: Type.Literal('Bad Request'),
+  message: Type.String(),
+});
 
 const settingsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   const { db } = fastify;
@@ -18,10 +27,7 @@ const settingsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       },
     },
     async () => {
-      const tracking_gap_threshold_minutes =
-        await getTrackingGapThresholdMinutes(db);
-
-      return { tracking_gap_threshold_minutes };
+      return await getAllSettings(db);
     },
   );
 
@@ -32,23 +38,20 @@ const settingsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PatchSettingsRequestSchema,
         response: {
           '200': GetSettingsResponseSchema,
+          '400': Http400BadRequestSchema,
         },
       },
     },
-    async (request) => {
-      const { tracking_gap_threshold_minutes } = request.body;
-
-      if (tracking_gap_threshold_minutes !== undefined) {
-        await setTrackingGapThresholdMinutes(
-          db,
-          tracking_gap_threshold_minutes,
-        );
+    async (request, reply) => {
+      try {
+        return await applySettingsPatch(db, request.body);
+      } catch (error) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: error instanceof Error ? error.message : 'Invalid settings',
+        });
       }
-
-      return {
-        tracking_gap_threshold_minutes:
-          await getTrackingGapThresholdMinutes(db),
-      };
     },
   );
 };
