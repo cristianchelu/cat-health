@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Test providers and render helpers are not Fast Refresh boundaries. */
 import * as React from 'react';
 import { render, type RenderOptions } from '@testing-library/react';
 import { I18nextProvider, initReactI18next } from 'react-i18next';

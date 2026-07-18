@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Registry intentionally colocates private view adapters with resolution logic. */
 import * as React from 'react';
 import type { EntityDTO, GetDeviceResponseDTO } from 'shared';
 import { getStringValue, isRecord } from '@/lib/utils';
@@ -21,11 +22,7 @@ interface DevicePageRegistration {
   component: DevicePageComponent;
 }
 
-type DevicePageMatch =
-  | 'provider-model'
-  | 'provider-type'
-  | 'provider'
-  | 'type';
+type DevicePageMatch = 'provider-model' | 'provider-type' | 'provider' | 'type';
 
 const ESPHOME_WATER_BOWL_MODEL = 'CristianChelu.PetBowlMonitor';
 const PETLIBRO_FOUNTAIN_MODEL = 'Petlibro.PLWF105';
@@ -42,14 +39,19 @@ const getDeviceConfig = (
   return isRecord(device.config) ? device.config : undefined;
 };
 
-export const getDeviceModel = (device: GetDeviceResponseDTO): string | undefined => {
+export const getDeviceModel = (
+  device: GetDeviceResponseDTO,
+): string | undefined => {
   const config = getDeviceConfig(device);
 
   if (!config) {
     return undefined;
   }
 
-  return getStringValue(config, 'projectName') ?? getStringValue(config, 'project_name');
+  return (
+    getStringValue(config, 'projectName') ??
+    getStringValue(config, 'project_name')
+  );
 };
 
 const GenericDeviceFallback: DevicePageComponent = ({ device }) => (
@@ -125,15 +127,23 @@ const registrationMatchesResolutionStep = (
     case 'provider-model':
       return Boolean(registration.provider && registration.model);
     case 'provider-type':
-      return Boolean(registration.provider && registration.type && !registration.model);
+      return Boolean(
+        registration.provider && registration.type && !registration.model,
+      );
     case 'provider':
-      return Boolean(registration.provider && !registration.model && !registration.type);
+      return Boolean(
+        registration.provider && !registration.model && !registration.type,
+      );
     case 'type':
-      return Boolean(registration.type && !registration.provider && !registration.model);
+      return Boolean(
+        registration.type && !registration.provider && !registration.model,
+      );
   }
 };
 
-export const resolveDevicePage = (device: GetDeviceResponseDTO): DevicePageComponent => {
+export const resolveDevicePage = (
+  device: GetDeviceResponseDTO,
+): DevicePageComponent => {
   const model = getDeviceModel(device);
 
   for (const match of pageResolutionOrder) {

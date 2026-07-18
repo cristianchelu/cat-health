@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Field and its shared accessibility hook form one UI primitive. */
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import './FormField.css';

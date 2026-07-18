@@ -137,7 +137,6 @@ const AddEditFoodPage: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch() for derived form UI (nutrients list, barcode)
   const nutrients = watch('nutrients');
   const barcodeEan13 = watch('barcode_ean13');
   const barcodeRegistration = register('barcode_ean13');

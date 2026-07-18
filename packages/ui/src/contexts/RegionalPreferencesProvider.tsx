@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Context provider and its consumer hooks share one boundary. */
 import * as React from 'react';
 import type { Locale } from 'date-fns';
 import {
