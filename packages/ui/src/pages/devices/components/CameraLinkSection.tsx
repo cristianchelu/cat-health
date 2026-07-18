@@ -2,6 +2,8 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import {
   Card,
   CardContent,
@@ -9,8 +11,8 @@ import {
   CardTitle,
   CardAction,
 } from '@/components/ui/Card';
-import { Select } from '@/components/ui/form/Select';
-import { Input } from '@/components/ui/form/Input';
+import { FormShell, Input, Select } from '@/components/ui/form';
+import { useDraftForm } from '@/hooks/form';
 import {
   useDevices,
   useLinkDeviceCamera,
@@ -22,6 +24,16 @@ import './CameraLinkSection.css';
 
 interface CameraLinkSectionProps {
   device: GetDeviceResponseDTO;
+  onDirtyChange?: (dirty: boolean) => void;
+}
+
+interface CameraConfigDraft {
+  crop: Required<DeviceCameraConfigDTO>['crop'];
+  rotate: number | undefined;
+  acquisitionTypes: string[];
+  fetchDelay: number;
+  snapshotIntervalSec: number;
+  snapshotFirstFrameDelaySec: number;
 }
 
 const DEFAULT_CROP: DeviceCameraConfigDTO['crop'] = {
@@ -61,7 +73,30 @@ function ensureCrop(
   };
 }
 
-const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
+function cameraConfigEqual(
+  a: CameraConfigDraft,
+  b: CameraConfigDraft,
+): boolean {
+  return (
+    a.rotate === b.rotate &&
+    a.fetchDelay === b.fetchDelay &&
+    a.snapshotIntervalSec === b.snapshotIntervalSec &&
+    a.snapshotFirstFrameDelaySec === b.snapshotFirstFrameDelaySec &&
+    a.crop.left === b.crop.left &&
+    a.crop.top === b.crop.top &&
+    a.crop.width === b.crop.width &&
+    a.crop.height === b.crop.height &&
+    a.acquisitionTypes.length === b.acquisitionTypes.length &&
+    a.acquisitionTypes.every(
+      (type, index) => type === b.acquisitionTypes[index],
+    )
+  );
+}
+
+const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({
+  device,
+  onDirtyChange,
+}) => {
   const { t } = useTranslation();
   const { data: allDevices } = useDevices();
   const linkMutation = useLinkDeviceCamera(device.id);
@@ -71,43 +106,41 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
   const linkedCamera = device.camera_link?.camera_id ?? '';
   const hasIntegratedCamera = device.state?.hasCamera ?? false;
 
-  const normalizedCrop = React.useMemo(
-    () => ensureCrop(device.camera_link?.config?.crop),
-    [device.camera_link?.config?.crop],
-  );
-  const normalizedRotate = device.camera_link?.config?.rotate;
-  const normalizedAcquisitionTypes = React.useMemo(
-    () =>
-      device.camera_link?.config?.acquisitionTypes?.length
-        ? device.camera_link.config.acquisitionTypes
-        : ['snapshot'],
-    [device.camera_link?.config?.acquisitionTypes],
-  );
-  const normalizedFetchDelay = device.camera_link?.config?.fetchDelay ?? 60;
-  const normalizedSnapshotInterval =
-    device.camera_link?.config?.snapshot?.intervalSec ?? 0;
-  const normalizedSnapshotFirstFrameDelay =
-    device.camera_link?.config?.snapshot?.firstFrameDelaySec ?? 0;
-
   const [selectedCameraId, setSelectedCameraId] = React.useState<number | ''>(
     linkedCamera,
   );
-  const [crop, setCrop] =
-    React.useState<Required<DeviceCameraConfigDTO>['crop']>(normalizedCrop);
-  const [rotate, setRotate] = React.useState<number | undefined>(
-    normalizedRotate,
-  );
-  const [acquisitionTypes, setAcquisitionTypes] = React.useState<string[]>(
-    normalizedAcquisitionTypes,
-  );
-  const [fetchDelay, setFetchDelay] = React.useState<number>(
-    normalizedFetchDelay,
-  );
-  const [snapshotIntervalSec, setSnapshotIntervalSec] = React.useState<number>(
-    normalizedSnapshotInterval,
-  );
-  const [snapshotFirstFrameDelaySec, setSnapshotFirstFrameDelaySec] =
-    React.useState<number>(normalizedSnapshotFirstFrameDelay);
+  const configBaselineKey = JSON.stringify(device.camera_link?.config ?? {});
+  const configBaseline = React.useMemo((): CameraConfigDraft => {
+    const config = device.camera_link?.config;
+    return {
+      crop: ensureCrop(config?.crop),
+      rotate: config?.rotate,
+      acquisitionTypes: config?.acquisitionTypes?.length
+        ? [...config.acquisitionTypes]
+        : ['snapshot'],
+      fetchDelay: config?.fetchDelay ?? 60,
+      snapshotIntervalSec: config?.snapshot?.intervalSec ?? 0,
+      snapshotFirstFrameDelaySec: config?.snapshot?.firstFrameDelaySec ?? 0,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- baselineKey drives sync
+  }, [configBaselineKey]);
+  const {
+    draft: configDraft,
+    setDraft: setConfigDraft,
+    patchDraft,
+    isDirty,
+    requestReset,
+    discardConfirm,
+  } = useDraftForm(configBaseline, {
+    baselineKey: configBaselineKey,
+    isEqual: cameraConfigEqual,
+  });
+
+  React.useEffect(() => {
+    onDirtyChange?.(isDirty);
+    return () => onDirtyChange?.(false);
+  }, [isDirty, onDirtyChange]);
+  const [unlinkConfirmOpen, setUnlinkConfirmOpen] = React.useState(false);
   const [snapshotKey, setSnapshotKey] = React.useState(0);
   const [aspectRatio, setAspectRatio] = React.useState(16 / 9);
 
@@ -123,30 +156,6 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
     setSelectedCameraId(linkedCamera);
   }, [linkedCamera]);
 
-  React.useEffect(() => {
-    setCrop(normalizedCrop);
-  }, [normalizedCrop]);
-
-  React.useEffect(() => {
-    setRotate(normalizedRotate);
-  }, [normalizedRotate]);
-
-  React.useEffect(() => {
-    setAcquisitionTypes(normalizedAcquisitionTypes);
-  }, [normalizedAcquisitionTypes]);
-
-  React.useEffect(() => {
-    setFetchDelay(normalizedFetchDelay);
-  }, [normalizedFetchDelay]);
-
-  React.useEffect(() => {
-    setSnapshotIntervalSec(normalizedSnapshotInterval);
-  }, [normalizedSnapshotInterval]);
-
-  React.useEffect(() => {
-    setSnapshotFirstFrameDelaySec(normalizedSnapshotFirstFrameDelay);
-  }, [normalizedSnapshotFirstFrameDelay]);
-
   const cameras = React.useMemo(() => {
     return (allDevices || []).filter(
       (d) => d.type === 'camera' && d.id !== device.id,
@@ -161,43 +170,53 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
     linkedCameraDevice?.type === 'camera' &&
     linkedCameraDevice?.provider === 'thingino';
 
-  const buildConfig = (): DeviceCameraConfigDTO => ({
-    crop,
-    rotate,
-    acquisitionTypes: acquisitionTypes.length ? acquisitionTypes : ['snapshot'],
-    fetchDelay,
-    snapshot: acquisitionTypes.includes('snapshot')
+  const buildConfig = (
+    source: CameraConfigDraft = configDraft,
+  ): DeviceCameraConfigDTO => ({
+    crop: source.crop,
+    rotate: source.rotate,
+    acquisitionTypes: source.acquisitionTypes.length
+      ? source.acquisitionTypes
+      : ['snapshot'],
+    fetchDelay: source.fetchDelay,
+    snapshot: source.acquisitionTypes.includes('snapshot')
       ? {
-          intervalSec: snapshotIntervalSec,
-          firstFrameDelaySec: snapshotFirstFrameDelaySec,
+          intervalSec: source.snapshotIntervalSec,
+          firstFrameDelaySec: source.snapshotFirstFrameDelaySec,
         }
       : undefined,
   });
 
   const handleLink = () => {
     if (typeof selectedCameraId !== 'number') return;
-    linkMutation.mutate({ camera_id: selectedCameraId, config: buildConfig() });
+    linkMutation.mutate({
+      camera_id: selectedCameraId,
+      config: buildConfig(configBaseline),
+    });
   };
 
-  const handleSaveROI = () => {
-    updateConfigMutation.mutate({ config: buildConfig() });
-  };
-
-  const handleSaveAcquisition = () => {
+  const handleSaveConfig = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!isDirty) return;
     updateConfigMutation.mutate({ config: buildConfig() });
   };
 
   const toggleAcquisitionType = (type: 'snapshot' | 'recording') => {
-    setAcquisitionTypes((prev) =>
-      prev.includes(type)
-        ? prev.filter((t) => t !== type)
-        : [...prev, type].sort(),
-    );
+    setConfigDraft((current) => ({
+      ...current,
+      acquisitionTypes: current.acquisitionTypes.includes(type)
+        ? current.acquisitionTypes.filter((currentType) => currentType !== type)
+        : [...current.acquisitionTypes, type].sort(),
+    }));
   };
 
   const handleUnlink = () => {
-    unlinkMutation.mutate();
-    setSelectedCameraId('');
+    unlinkMutation.mutate(undefined, {
+      onSuccess: () => {
+        setSelectedCameraId('');
+        setUnlinkConfirmOpen(false);
+      },
+    });
   };
 
   const handleRefreshSnapshot = () => {
@@ -252,7 +271,9 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
 
     const bounds = containerRef.current.getBoundingClientRect();
     const { clientX: startX, clientY: startY } = getClientCoordinates(ev);
-    const startCrop = { ...crop } as Required<DeviceCameraConfigDTO>['crop'];
+    const startCrop = {
+      ...configDraft.crop,
+    } as Required<DeviceCameraConfigDTO>['crop'];
 
     const onMove = (moveEv: MouseEvent | TouchEvent) => {
       const { clientX, clientY } = getClientCoordinates(moveEv);
@@ -267,7 +288,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
         // Ensure we don't go out of bounds (width/height are fixed)
         if (next.left + next.width > 1) next.left = 1 - next.width;
         if (next.top + next.height > 1) next.top = 1 - next.height;
-        setCrop(next);
+        patchDraft({ crop: next });
       } else if (mode === 'resize' && corner) {
         let newLeft = startCrop.left;
         let newTop = startCrop.top;
@@ -292,11 +313,13 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
           );
         }
 
-        setCrop({
-          left: newLeft,
-          top: newTop,
-          width: newRight - newLeft,
-          height: newBottom - newTop,
+        patchDraft({
+          crop: {
+            left: newLeft,
+            top: newTop,
+            width: newRight - newLeft,
+            height: newBottom - newTop,
+          },
         });
       }
     };
@@ -316,10 +339,10 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
 
   const renderROI = () => {
     const viewboxHeight = VIEWBOX_WIDTH / aspectRatio;
-    const x = crop.left * VIEWBOX_WIDTH;
-    const y = crop.top * viewboxHeight;
-    const w = crop.width * VIEWBOX_WIDTH;
-    const h = crop.height * viewboxHeight;
+    const x = configDraft.crop.left * VIEWBOX_WIDTH;
+    const y = configDraft.crop.top * viewboxHeight;
+    const w = configDraft.crop.width * VIEWBOX_WIDTH;
+    const h = configDraft.crop.height * viewboxHeight;
 
     return (
       <div className="roi-container" ref={containerRef}>
@@ -362,15 +385,18 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
         {/* HTML Handles */}
         <div
           className="roi-handle nw"
-          style={{ left: `${crop.left * 100}%`, top: `${crop.top * 100}%` }}
+          style={{
+            left: `${configDraft.crop.left * 100}%`,
+            top: `${configDraft.crop.top * 100}%`,
+          }}
           onMouseDown={(e) => handleInteractionStart(e, 'resize', 'nw')}
           onTouchStart={(e) => handleInteractionStart(e, 'resize', 'nw')}
         />
         <div
           className="roi-handle ne"
           style={{
-            left: `${(crop.left + crop.width) * 100}%`,
-            top: `${crop.top * 100}%`,
+            left: `${(configDraft.crop.left + configDraft.crop.width) * 100}%`,
+            top: `${configDraft.crop.top * 100}%`,
           }}
           onMouseDown={(e) => handleInteractionStart(e, 'resize', 'ne')}
           onTouchStart={(e) => handleInteractionStart(e, 'resize', 'ne')}
@@ -378,8 +404,8 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
         <div
           className="roi-handle sw"
           style={{
-            left: `${crop.left * 100}%`,
-            top: `${(crop.top + crop.height) * 100}%`,
+            left: `${configDraft.crop.left * 100}%`,
+            top: `${(configDraft.crop.top + configDraft.crop.height) * 100}%`,
           }}
           onMouseDown={(e) => handleInteractionStart(e, 'resize', 'sw')}
           onTouchStart={(e) => handleInteractionStart(e, 'resize', 'sw')}
@@ -387,8 +413,8 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
         <div
           className="roi-handle se"
           style={{
-            left: `${(crop.left + crop.width) * 100}%`,
-            top: `${(crop.top + crop.height) * 100}%`,
+            left: `${(configDraft.crop.left + configDraft.crop.width) * 100}%`,
+            top: `${(configDraft.crop.top + configDraft.crop.height) * 100}%`,
           }}
           onMouseDown={(e) => handleInteractionStart(e, 'resize', 'se')}
           onTouchStart={(e) => handleInteractionStart(e, 'resize', 'se')}
@@ -406,7 +432,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
             <Button
               variant="secondary"
               size="sm"
-              onClick={handleUnlink}
+              onClick={() => setUnlinkConfirmOpen(true)}
               disabled={unlinkMutation.isPending}
             >
               {t('camera_link.unlink')}
@@ -428,7 +454,12 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
               options={[
                 { value: '', label: t('camera_link.no_camera') },
                 ...(hasIntegratedCamera
-                  ? [{ value: String(device.id), label: t('camera_link.integrated_camera') }]
+                  ? [
+                      {
+                        value: String(device.id),
+                        label: t('camera_link.integrated_camera'),
+                      },
+                    ]
                   : []),
                 ...cameras.map((cam) => ({
                   value: String(cam.id),
@@ -441,176 +472,203 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({ device }) => {
             onClick={handleLink}
             disabled={!selectedCameraId || linkMutation.isPending}
           >
-            {linkedCamera ? t('camera_link.update_link') : t('camera_link.link_camera')}
+            {linkedCamera
+              ? t('camera_link.update_link')
+              : t('camera_link.link_camera')}
           </Button>
         </div>
 
         {selectedCameraId && (
-          <div className="roi-section">
-            <div className="roi-header">
-              <label className="roi-header-label">
-                {t('camera_link.roi_label')}
-              </label>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={handleRefreshSnapshot}
-              >
-                {t('camera_link.refresh_snapshot')}
-              </Button>
-            </div>
-
-            <div className="roi-wrapper">{renderROI()}</div>
-            <div className="roi-instructions">
-              {t('camera_link.roi_instructions')}
-            </div>
-
-            <div className="rotation-grid">
-              <div className="rotation-group">
-                <label className="label">{t('camera_link.rotate_degrees')}</label>
-                <Input
-                  type="number"
-                  value={rotate ?? ''}
-                  onChange={(e) =>
-                    setRotate(
-                      e.target.value === ''
-                        ? undefined
-                        : Number(e.target.value),
-                    )
-                  }
-                  placeholder="0"
-                  min={-180}
-                  max={180}
-                />
-              </div>
-              <div className="rotation-button-group">
+          <FormShell
+            onSubmit={handleSaveConfig}
+            error={
+              updateConfigMutation.isError
+                ? t('camera_link.save_config_error')
+                : null
+            }
+            actions={{
+              onCancel: requestReset,
+              cancelLabel: t('common.cancel'),
+              submitLabel: t('common.save'),
+              isSubmitting: updateConfigMutation.isPending,
+              submitDisabled: !isDirty,
+            }}
+          >
+            <div className="roi-section">
+              <div className="roi-header">
+                <label className="roi-header-label">
+                  {t('camera_link.roi_label')}
+                </label>
                 <Button
-                  className="rotation-button"
-                  variant="primary"
-                  onClick={handleSaveROI}
-                  disabled={updateConfigMutation.isPending}
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleRefreshSnapshot}
                 >
-                  {t('camera_link.save_roi_rotation')}
+                  {t('camera_link.refresh_snapshot')}
                 </Button>
               </div>
-            </div>
 
-            <div className="acquisition-section">
-              <label className="section-heading">
-                {t('camera_link.acquisition_types')}
-              </label>
-              <div className="acquisition-checkboxes">
-                <label className="acquisition-option">
-                  <input
-                    type="checkbox"
-                    checked={acquisitionTypes.includes('snapshot')}
-                    onChange={() => toggleAcquisitionType('snapshot')}
-                  />
-                  <span>{t('camera_link.acquisition_snapshot')}</span>
-                </label>
-                <label className="acquisition-option">
-                  <input
-                    type="checkbox"
-                    checked={acquisitionTypes.includes('recording')}
-                    onChange={() => toggleAcquisitionType('recording')}
-                  />
-                  <span>{t('camera_link.acquisition_recording')}</span>
-                </label>
+              <div className="roi-wrapper">{renderROI()}</div>
+              <div className="roi-instructions">
+                {t('camera_link.roi_instructions')}
               </div>
-              {acquisitionTypes.includes('snapshot') && (
-                <div className="snapshot-options-group">
-                  <label className="section-heading">
-                    {t('camera_link.snapshot_options')}
+
+              <div className="rotation-grid">
+                <div className="rotation-group">
+                  <label className="label">
+                    {t('camera_link.rotate_degrees')}
                   </label>
-                  <div className="fetch-delay-group">
-                    <label className="label">
-                      {t('camera_link.snapshot_interval_label')}
-                    </label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.1}
-                      value={snapshotIntervalSec}
-                      onChange={(e) =>
-                        setSnapshotIntervalSec(
+                  <Input
+                    type="number"
+                    value={configDraft.rotate ?? ''}
+                    onChange={(e) =>
+                      patchDraft({
+                        rotate:
                           e.target.value === ''
-                            ? 0
-                            : Math.max(0, Number(e.target.value)),
-                        )
-                      }
-                    />
-                    <p className="help-text">
-                      {t('camera_link.snapshot_interval_help')}
-                    </p>
-                  </div>
-                  <div className="fetch-delay-group">
-                    <label className="label">
-                      {t('camera_link.snapshot_first_frame_delay_label')}
-                    </label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.1}
-                      value={snapshotFirstFrameDelaySec}
-                      onChange={(e) =>
-                        setSnapshotFirstFrameDelaySec(
-                          e.target.value === ''
-                            ? 0
-                            : Math.max(0, Number(e.target.value)),
-                        )
-                      }
-                    />
-                    <p className="help-text">
-                      {t('camera_link.snapshot_first_frame_delay_help')}
-                    </p>
-                  </div>
+                            ? undefined
+                            : Number(e.target.value),
+                      })
+                    }
+                    placeholder="0"
+                    min={-180}
+                    max={180}
+                    disabled={updateConfigMutation.isPending}
+                  />
                 </div>
-              )}
-              <div className="fetch-delay-group">
-                <label className="label">
-                  {t('camera_link.fetch_delay_label')}
-                </label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={fetchDelay}
-                  onChange={(e) =>
-                    setFetchDelay(
-                      e.target.value === ''
-                        ? 0
-                        : Math.max(0, Number(e.target.value)),
-                    )
-                  }
-                />
-                <p className="help-text">
-                  {t('camera_link.fetch_delay_help')}
-                </p>
               </div>
-              <div className="acquisition-save-group">
-                <Button
-                  variant="primary"
-                  onClick={handleSaveAcquisition}
-                  disabled={updateConfigMutation.isPending}
-                >
-                  {t('camera_link.save_acquisition_settings')}
-                </Button>
-              </div>
-            </div>
 
-            {isThinginoCamera && linkedCameraDevice && (
-              <p className="edit-camera-hint">
-                {t('camera_link.edit_camera_recording_hint')}{' '}
-                <Link
-                  to={`/settings/devices/${linkedCameraDevice.id}`}
-                  className="edit-camera-link"
-                >
-                  {t('camera_link.edit_camera_link')}
-                </Link>
-              </p>
-            )}
-          </div>
+              <div className="acquisition-section">
+                <label className="section-heading">
+                  {t('camera_link.acquisition_types')}
+                </label>
+                <div className="acquisition-checkboxes">
+                  <label className="acquisition-option">
+                    <input
+                      type="checkbox"
+                      checked={configDraft.acquisitionTypes.includes(
+                        'snapshot',
+                      )}
+                      onChange={() => toggleAcquisitionType('snapshot')}
+                      disabled={updateConfigMutation.isPending}
+                    />
+                    <span>{t('camera_link.acquisition_snapshot')}</span>
+                  </label>
+                  <label className="acquisition-option">
+                    <input
+                      type="checkbox"
+                      checked={configDraft.acquisitionTypes.includes(
+                        'recording',
+                      )}
+                      onChange={() => toggleAcquisitionType('recording')}
+                      disabled={updateConfigMutation.isPending}
+                    />
+                    <span>{t('camera_link.acquisition_recording')}</span>
+                  </label>
+                </div>
+                {configDraft.acquisitionTypes.includes('snapshot') && (
+                  <div className="snapshot-options-group">
+                    <label className="section-heading">
+                      {t('camera_link.snapshot_options')}
+                    </label>
+                    <div className="fetch-delay-group">
+                      <label className="label">
+                        {t('camera_link.snapshot_interval_label')}
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        value={configDraft.snapshotIntervalSec}
+                        onChange={(e) =>
+                          patchDraft({
+                            snapshotIntervalSec:
+                              e.target.value === ''
+                                ? 0
+                                : Math.max(0, Number(e.target.value)),
+                          })
+                        }
+                        disabled={updateConfigMutation.isPending}
+                      />
+                      <p className="help-text">
+                        {t('camera_link.snapshot_interval_help')}
+                      </p>
+                    </div>
+                    <div className="fetch-delay-group">
+                      <label className="label">
+                        {t('camera_link.snapshot_first_frame_delay_label')}
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        value={configDraft.snapshotFirstFrameDelaySec}
+                        onChange={(e) =>
+                          patchDraft({
+                            snapshotFirstFrameDelaySec:
+                              e.target.value === ''
+                                ? 0
+                                : Math.max(0, Number(e.target.value)),
+                          })
+                        }
+                        disabled={updateConfigMutation.isPending}
+                      />
+                      <p className="help-text">
+                        {t('camera_link.snapshot_first_frame_delay_help')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <div className="fetch-delay-group">
+                  <label className="label">
+                    {t('camera_link.fetch_delay_label')}
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={configDraft.fetchDelay}
+                    onChange={(e) =>
+                      patchDraft({
+                        fetchDelay:
+                          e.target.value === ''
+                            ? 0
+                            : Math.max(0, Number(e.target.value)),
+                      })
+                    }
+                    disabled={updateConfigMutation.isPending}
+                  />
+                  <p className="help-text">
+                    {t('camera_link.fetch_delay_help')}
+                  </p>
+                </div>
+              </div>
+
+              {isThinginoCamera && linkedCameraDevice && (
+                <p className="edit-camera-hint">
+                  {t('camera_link.edit_camera_recording_hint')}{' '}
+                  <Link
+                    to={`/settings/devices/${linkedCameraDevice.id}`}
+                    className="edit-camera-link"
+                  >
+                    {t('camera_link.edit_camera_link')}
+                  </Link>
+                </p>
+              )}
+            </div>
+          </FormShell>
         )}
       </CardContent>
+      <DiscardUnsavedDialog {...discardConfirm} />
+      <ConfirmDialog
+        open={unlinkConfirmOpen}
+        title={t('devices.confirm_unlink_camera_title')}
+        description={t('devices.confirm_unlink_camera_description')}
+        confirmLabel={t('camera_link.unlink')}
+        variant="danger"
+        isConfirming={unlinkMutation.isPending}
+        onConfirm={handleUnlink}
+        onCancel={() => setUnlinkConfirmOpen(false)}
+      />
     </Card>
   );
 };

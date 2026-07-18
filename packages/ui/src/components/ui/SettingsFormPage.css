@@ -1,0 +1,16 @@
+.settings-form-page {
+  max-width: var(--max-width-sm);
+  margin: 0 auto;
+
+  .section-header {
+    margin-bottom: var(--space-2xl);
+  }
+
+  @media (max-width: 768px) {
+    padding: var(--space-sm);
+
+    .section-header {
+      margin-bottom: var(--space-xl);
+    }
+  }
+}

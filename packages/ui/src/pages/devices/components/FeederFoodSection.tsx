@@ -2,13 +2,10 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import type { GetDeviceResponseDTO } from 'shared';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
-import { FormField, Select } from '@/components/ui/form';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
+import { FormField, FormShell, Select } from '@/components/ui/form';
+import { useDraftForm } from '@/hooks/form';
 import { useFoods } from '@/hooks/queries/foodQueries';
 import { useUpdateDevice } from '@/hooks/queries/deviceQueries';
 import {
@@ -20,14 +17,20 @@ import './FeederFoodSection.css';
 
 interface FeederFoodSectionProps {
   device: GetDeviceResponseDTO;
+  onDirtyChange?: (dirty: boolean) => void;
 }
+
+type FoodAssignmentsDraft = Record<string, number | null>;
 
 function foodOptionLabel(brand: string | null, name: string): string {
   const b = brand?.trim();
   return b ? `${b} — ${name}` : name;
 }
 
-const FeederFoodSection: React.FC<FeederFoodSectionProps> = ({ device }) => {
+const FeederFoodSection: React.FC<FeederFoodSectionProps> = ({
+  device,
+  onDirtyChange,
+}) => {
   const { t } = useTranslation();
   const { data: foods = [], isLoading: isLoadingFoods } = useFoods();
   const updateDevice = useUpdateDevice(device.id);
@@ -42,13 +45,27 @@ const FeederFoodSection: React.FC<FeederFoodSectionProps> = ({ device }) => {
     [compartments],
   );
 
-  const [assignments, setAssignments] = React.useState<Map<string, number | null>>(
-    () => readFeederFoodAssignments(device.config),
+  const assignmentsBaselineKey = JSON.stringify(
+    Object.fromEntries(readFeederFoodAssignments(device.config)),
   );
+  const baselineAssignments = React.useMemo((): FoodAssignmentsDraft => {
+    return Object.fromEntries(readFeederFoodAssignments(device.config));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- baselineKey drives sync
+  }, [assignmentsBaselineKey]);
+  const {
+    draft: assignments,
+    setDraft: setAssignments,
+    isDirty,
+    requestReset,
+    discardConfirm,
+  } = useDraftForm(baselineAssignments, {
+    baselineKey: assignmentsBaselineKey,
+  });
 
   React.useEffect(() => {
-    setAssignments(readFeederFoodAssignments(device.config));
-  }, [device.config]);
+    onDirtyChange?.(isDirty);
+    return () => onDirtyChange?.(false);
+  }, [isDirty, onDirtyChange]);
 
   const foodOptions = React.useMemo(
     () => [
@@ -61,29 +78,31 @@ const FeederFoodSection: React.FC<FeederFoodSectionProps> = ({ device }) => {
     [foods, t],
   );
 
-  const persistAssignments = React.useCallback(
-    async (next: Map<string, number | null>) => {
-      const config = mergeFeederFoodCompartmentsIntoConfig(
-        device.config,
-        next,
-        compartmentOrder,
-      );
-      await updateDevice.mutateAsync({ config });
-    },
-    [compartmentOrder, device.config, updateDevice],
-  );
-
   const handleCompartmentChange = (compartmentId: string, value: string) => {
-    const next = new Map(assignments);
-    next.set(compartmentId, value === '' ? null : Number.parseInt(value, 10));
-    setAssignments(next);
-    void persistAssignments(next);
+    setAssignments((current) => ({
+      ...current,
+      [compartmentId]: value === '' ? null : Number.parseInt(value, 10),
+    }));
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!isDirty) return;
+
+    const config = mergeFeederFoodCompartmentsIntoConfig(
+      device.config,
+      new Map(Object.entries(assignments)),
+      compartmentOrder,
+    );
+    updateDevice.mutate({ config });
   };
 
   return (
     <Card className="feeder-food-section">
       <CardHeader>
-        <CardTitle>{t('devices.feeder.food_compartment_settings_title')}</CardTitle>
+        <CardTitle>
+          {t('devices.feeder.food_compartment_settings_title')}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <p className="feeder-food-section-help">
@@ -102,35 +121,47 @@ const FeederFoodSection: React.FC<FeederFoodSectionProps> = ({ device }) => {
         )}
 
         {!isLoadingFoods && foods.length > 0 && (
-          <div className="feeder-food-section-compartments">
-            {compartments.map((compartment) => {
-              const label =
-                compartment.labelKey === 'devices.feeder.food_compartment_numbered'
-                  ? t(compartment.labelKey, { number: compartment.id })
-                  : t(compartment.labelKey);
-              const current = assignments.get(compartment.id);
-              return (
-                <FormField key={compartment.id} label={label}>
-                  <Select
-                    value={current != null ? String(current) : ''}
-                    onChange={(e) =>
-                      handleCompartmentChange(compartment.id, e.target.value)
-                    }
-                    options={foodOptions}
-                    disabled={updateDevice.isPending}
-                  />
-                </FormField>
-              );
-            })}
-          </div>
-        )}
-
-        {updateDevice.isError && (
-          <p className="feeder-food-section-error" role="alert">
-            {t('devices.feeder.food_compartment_save_error')}
-          </p>
+          <FormShell
+            onSubmit={handleSubmit}
+            error={
+              updateDevice.isError
+                ? t('devices.feeder.food_compartment_save_error')
+                : null
+            }
+            actions={{
+              onCancel: requestReset,
+              cancelLabel: t('common.cancel'),
+              submitLabel: t('common.save'),
+              isSubmitting: updateDevice.isPending,
+              submitDisabled: !isDirty,
+            }}
+          >
+            <div className="feeder-food-section-compartments">
+              {compartments.map((compartment) => {
+                const label =
+                  compartment.labelKey ===
+                  'devices.feeder.food_compartment_numbered'
+                    ? t(compartment.labelKey, { number: compartment.id })
+                    : t(compartment.labelKey);
+                const current = assignments[compartment.id];
+                return (
+                  <FormField key={compartment.id} label={label}>
+                    <Select
+                      value={current != null ? String(current) : ''}
+                      onChange={(e) =>
+                        handleCompartmentChange(compartment.id, e.target.value)
+                      }
+                      options={foodOptions}
+                      disabled={updateDevice.isPending}
+                    />
+                  </FormField>
+                );
+              })}
+            </div>
+          </FormShell>
         )}
       </CardContent>
+      <DiscardUnsavedDialog {...discardConfirm} />
     </Card>
   );
 };

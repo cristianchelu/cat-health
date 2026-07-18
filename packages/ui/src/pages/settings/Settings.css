@@ -34,9 +34,21 @@
     gap: var(--space-xl);
     grid-template-columns: 1fr;
 
+    .settings-tracking-gap-editor {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: var(--space-xs);
+    }
+
     .settings-tracking-gap-input {
       width: 5.5rem;
       text-align: right;
+    }
+
+    .settings-tracking-gap-actions {
+      display: flex;
+      gap: var(--space-xs);
     }
 
     @media (min-width: 768px) {

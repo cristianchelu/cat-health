@@ -1,0 +1,19 @@
+.confirm-dialog {
+  .confirm-dialog__footer {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: flex-end;
+    margin-top: var(--space-lg);
+  }
+
+  @media (max-width: 768px) {
+    .confirm-dialog__footer {
+      flex-direction: column-reverse;
+      gap: var(--space-sm);
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+}

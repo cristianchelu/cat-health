@@ -21,6 +21,9 @@ import {
 import { usePets } from '@/hooks/queries/petQueries';
 import { Select } from '@/components/ui/form/Select';
 import { Button } from '@/components/ui/Button';
+import { FormActions, FormError } from '@/components/ui/form';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import WeightSignalChart from '@/components/events/WeightSignalChart';
 import LitterboxWeightBlock from '@/components/events/LitterboxWeightBlock';
 import { decodeLitterboxRawData } from '@/components/events/decodeLitterboxRawData';
@@ -44,6 +47,8 @@ interface AnnotationWorkspaceProps {
   /** From URL (`video=1`); panel visibility for media strip. */
   videoOpen: boolean;
   onVideoOpenChange: (open: boolean) => void;
+  /** Fires when draft dirty state changes (visit switch / route leave guards). */
+  onDirtyChange?: (dirty: boolean) => void;
   actionsRef?: React.MutableRefObject<AnnotationWorkspaceActions | null>;
   onConvertedToMaintenance?: () => void;
 }
@@ -87,19 +92,40 @@ function resolvePetIdFromSelect(nextPetId: string): number | null {
   return n;
 }
 
+function boutsEqual(
+  a: LitterboxBoutAnnotation[],
+  b: LitterboxBoutAnnotation[],
+): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const left = a[i];
+    const right = b[i];
+    if (
+      left.t_start_s !== right.t_start_s ||
+      left.t_end_s !== right.t_end_s ||
+      left.bout_type !== right.bout_type
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export interface AnnotationWorkspaceActions {
   toggleVideo: () => void;
   toggleStraining: () => void;
+  /** Immediately persists (not part of the draft flow — see AnnotationWorkspace module docs). */
   toggleVerified: () => Promise<void>;
-  toggleExcluded: () => Promise<void>;
+  toggleExcluded: () => void;
+  /** Immediately persists (not part of the draft flow — see AnnotationWorkspace module docs). */
   setVerified: (next: boolean) => Promise<void>;
   deleteSelectedBout: () => void;
   selectAdjacentBout: (direction: -1 | 1) => void;
-  clearAllBouts: () => Promise<void>;
-  resetToDetector: () => Promise<void>;
+  clearAllBouts: () => void;
+  resetToDetector: () => void;
   setSelectedBoutType: (boutType: LitterboxBoutAnnotation['bout_type']) => void;
   clearSelection: () => void;
-  convertToMaintenance: () => Promise<void>;
+  convertToMaintenance: () => void;
   reanalyze: () => void;
   setEventEliminationType: (t: LitterboxUseEliminationType) => void;
 }
@@ -108,6 +134,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   event,
   videoOpen,
   onVideoOpenChange,
+  onDirtyChange,
   actionsRef,
   onConvertedToMaintenance,
 }) => {
@@ -156,49 +183,37 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     return deriveDetectorBouts(analysisResult.periods, sampleRate);
   }, [analysisResult, sampleRate]);
 
+  const serverDraftBaseline = React.useMemo(
+    () => ({
+      petId: event.pet_id != null ? String(event.pet_id) : 'null',
+      eliminationType: data.elimination_type ?? 'unknown',
+      straining: data.straining ?? false,
+      excluded: data.annotation?.excluded ?? false,
+      bouts: hasPersistedBouts(event) ? getBouts(event) : detectorBouts,
+    }),
+    [event, data, detectorBouts],
+  );
+  const [draftBaseline, setDraftBaseline] = React.useState(serverDraftBaseline);
+  const latestServerBaselineRef = React.useRef(serverDraftBaseline);
   const [localBouts, setLocalBouts] = React.useState<LitterboxBoutAnnotation[]>(
-    () => {
-      if (hasPersistedBouts(event)) return getBouts(event);
-      return detectorBouts;
-    },
+    serverDraftBaseline.bouts,
   );
   const [selectedBoutIndex, setSelectedBoutIndex] = React.useState<
     number | null
   >(null);
-  const [petId, setPetId] = React.useState<string>(
-    event.pet_id != null ? String(event.pet_id) : 'null',
-  );
+  const [petId, setPetId] = React.useState<string>(serverDraftBaseline.petId);
   const [eliminationType, setEliminationType] =
     React.useState<LitterboxUseEliminationType>(
-      data.elimination_type ?? 'unknown',
+      serverDraftBaseline.eliminationType,
     );
   const [straining, setStraining] = React.useState<boolean>(
-    data.straining ?? false,
+    serverDraftBaseline.straining,
   );
   const [excluded, setExcluded] = React.useState<boolean>(
-    data.annotation?.excluded ?? false,
+    serverDraftBaseline.excluded,
   );
 
-  // Reset state when event changes
-  React.useEffect(() => {
-    if (hasPersistedBouts(event)) setLocalBouts(getBouts(event));
-    else setLocalBouts(detectorBouts);
-    setSelectedBoutIndex(null);
-    setPetId(event.pet_id != null ? String(event.pet_id) : 'null');
-    const d = event.data as {
-      elimination_type?: LitterboxUseEliminationType;
-      straining?: boolean;
-      annotation?: LitterboxAnnotation;
-    };
-    setEliminationType(d.elimination_type ?? 'unknown');
-    setStraining(d.straining ?? false);
-    setExcluded(d.annotation?.excluded ?? false);
-  }, [event.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const saveDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-  /** Latest server event snapshot; avoids re-creating `save` when `event.data` identity changes (refetch / mutation). */
+  /** Latest server event snapshot; avoids re-creating `flushSave` when `event.data` identity changes (refetch / mutation). */
   const eventIdRef = React.useRef(event.id);
   const eventDataRef = React.useRef(event.data);
 
@@ -206,6 +221,73 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     eventIdRef.current = event.id;
     eventDataRef.current = event.data;
   });
+
+  const isDirty = React.useMemo(
+    () =>
+      petId !== draftBaseline.petId ||
+      eliminationType !== draftBaseline.eliminationType ||
+      straining !== draftBaseline.straining ||
+      excluded !== draftBaseline.excluded ||
+      !boutsEqual(localBouts, draftBaseline.bouts),
+    [petId, eliminationType, straining, excluded, localBouts, draftBaseline],
+  );
+  const isDirtyRef = React.useRef(isDirty);
+  const baselineEventIdRef = React.useRef(event.id);
+
+  React.useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  React.useEffect(() => {
+    latestServerBaselineRef.current = serverDraftBaseline;
+    const eventChanged = baselineEventIdRef.current !== event.id;
+    if (!eventChanged && isDirtyRef.current) return;
+
+    baselineEventIdRef.current = event.id;
+    setDraftBaseline(serverDraftBaseline);
+    setLocalBouts(serverDraftBaseline.bouts);
+    setSelectedBoutIndex(null);
+    setPetId(serverDraftBaseline.petId);
+    setEliminationType(serverDraftBaseline.eliminationType);
+    setStraining(serverDraftBaseline.straining);
+    setExcluded(serverDraftBaseline.excluded);
+  }, [event.id, serverDraftBaseline]);
+
+  React.useEffect(() => {
+    onDirtyChange?.(isDirty);
+    return () => onDirtyChange?.(false);
+  }, [isDirty, onDirtyChange]);
+
+  const resetDraftToBaseline = React.useCallback(() => {
+    const baseline = latestServerBaselineRef.current;
+    setDraftBaseline(baseline);
+    setLocalBouts(baseline.bouts);
+    setSelectedBoutIndex(null);
+    setPetId(baseline.petId);
+    setEliminationType(baseline.eliminationType);
+    setStraining(baseline.straining);
+    setExcluded(baseline.excluded);
+  }, []);
+
+  const [discardOpen, setDiscardOpen] = React.useState(false);
+  const [saveError, setSaveError] = React.useState<string | null>(null);
+
+  const handleCancel = React.useCallback(() => {
+    if (!isDirty) {
+      resetDraftToBaseline();
+      return;
+    }
+    setDiscardOpen(true);
+  }, [isDirty, resetDraftToBaseline]);
+
+  const handleConfirmDiscard = React.useCallback(() => {
+    resetDraftToBaseline();
+    setDiscardOpen(false);
+  }, [resetDraftToBaseline]);
+
+  const handleCancelDiscard = React.useCallback(() => {
+    setDiscardOpen(false);
+  }, []);
 
   const flushSave = React.useCallback(
     async (
@@ -216,13 +298,17 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
       humanVerified: boolean,
       nextExcluded: boolean,
     ) => {
-      if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
-      saveDebounceRef.current = null;
       const eventData = eventDataRef.current;
       const eventId = eventIdRef.current;
       const resolvedPetId = resolvePetIdFromSelect(nextPetId);
       const prevAnn = (eventData as { annotation?: LitterboxAnnotation })
         .annotation;
+      const previousEliminationType =
+        (
+          eventData as {
+            elimination_type?: LitterboxUseEliminationType;
+          }
+        ).elimination_type ?? 'unknown';
       await patchEvent({
         eventId,
         data: {
@@ -231,6 +317,9 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
             ...eventData,
             elimination_type: nextElimType,
             straining: nextStraining,
+            ...(previousEliminationType !== nextElimType && {
+              segments: null,
+            }),
             annotation: {
               ...(prevAnn ?? {}),
               bouts: nextBouts,
@@ -244,98 +333,67 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     [patchEvent],
   );
 
-  const save = React.useCallback(
-    (
-      nextBouts: LitterboxBoutAnnotation[],
-      nextPetId: string,
-      nextElimType: LitterboxUseEliminationType,
-      nextStraining: boolean,
-      humanVerified: boolean,
-      nextExcluded: boolean,
-    ) => {
-      if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
-      saveDebounceRef.current = setTimeout(() => {
-        const eventData = eventDataRef.current;
-        const eventId = eventIdRef.current;
-        const resolvedPetId = resolvePetIdFromSelect(nextPetId);
-        const prevAnn = (eventData as { annotation?: LitterboxAnnotation })
-          .annotation;
-        void patchEvent({
-          eventId,
-          data: {
-            pet_id: resolvedPetId,
-            data: {
-              ...eventData,
-              elimination_type: nextElimType,
-              straining: nextStraining,
-              annotation: {
-                ...(prevAnn ?? {}),
-                bouts: nextBouts,
-                excluded: nextExcluded,
-              },
-            },
-            human_verified: humanVerified,
-          },
-        });
-      }, 500);
-    },
-    [patchEvent],
-  );
-
-  const handleBoutsChange = React.useCallback(
-    (bouts: LitterboxBoutAnnotation[]) => {
-      setLocalBouts(bouts);
-      save(
-        bouts,
+  const handleSave = React.useCallback(async () => {
+    setSaveError(null);
+    try {
+      await flushSave(
+        localBouts,
         petId,
         eliminationType,
         straining,
         event.human_verified,
         excluded,
       );
+      setDraftBaseline({
+        petId,
+        eliminationType,
+        straining,
+        excluded,
+        bouts: localBouts,
+      });
+      isDirtyRef.current = false;
+    } catch {
+      setSaveError(t('annotation.save_error'));
+    }
+  }, [
+    flushSave,
+    localBouts,
+    petId,
+    eliminationType,
+    straining,
+    event.human_verified,
+    excluded,
+    t,
+  ]);
+
+  const handleBoutsChange = React.useCallback(
+    (bouts: LitterboxBoutAnnotation[]) => {
+      setLocalBouts(bouts);
     },
-    [petId, eliminationType, straining, event.human_verified, excluded, save],
+    [],
   );
 
   const handlePetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setPetId(e.target.value);
-    save(
-      localBouts,
-      e.target.value,
-      eliminationType,
-      straining,
-      event.human_verified,
-      excluded,
-    );
   };
 
   const handleEliminationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value as LitterboxUseEliminationType;
-    setEliminationType(val);
-    save(localBouts, petId, val, straining, event.human_verified, excluded);
+    setEliminationType(e.target.value as LitterboxUseEliminationType);
   };
 
   const setEventEliminationType = React.useCallback(
     (val: LitterboxUseEliminationType) => {
       setEliminationType(val);
-      save(localBouts, petId, val, straining, event.human_verified, excluded);
     },
-    [localBouts, petId, save, straining, event.human_verified, excluded],
+    [],
   );
 
   const handleStrainingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setStraining(e.target.checked);
-    save(
-      localBouts,
-      petId,
-      eliminationType,
-      e.target.checked,
-      event.human_verified,
-      excluded,
-    );
   };
 
   const handleToggleVerified = async () => {
+    if (isDirty) return;
     const next = !event.human_verified;
     await flushSave(
       localBouts,
@@ -347,39 +405,62 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     );
   };
 
-  const handleToggleExcluded = async () => {
-    const next = !excluded;
-    setExcluded(next);
-    await flushSave(
-      localBouts,
-      petId,
-      eliminationType,
-      straining,
-      event.human_verified,
-      next,
-    );
+  const handleToggleExcluded = () => {
+    setExcluded((prev) => !prev);
   };
 
-  const handleConvertToMaintenance = React.useCallback(async () => {
-    const ok = window.confirm(t('annotation.confirm_convert_maintenance'));
-    if (!ok) return;
-    if (saveDebounceRef.current) {
-      clearTimeout(saveDebounceRef.current);
-      saveDebounceRef.current = null;
-    }
-    await patchEvent({
-      eventId: event.id,
-      data: {
-        pet_id: null,
+  /** Which destructive/commit confirm dialog is pending; only one can be open at a time. */
+  const [pendingConfirm, setPendingConfirm] = React.useState<
+    'maintenance' | 'clear-bouts' | 'reset-detector' | null
+  >(null);
+
+  const handleConvertToMaintenance = React.useCallback(() => {
+    setPendingConfirm('maintenance');
+  }, []);
+
+  const handleConfirmPending = React.useCallback(async () => {
+    if (pendingConfirm === 'maintenance') {
+      await patchEvent({
+        eventId: event.id,
         data: {
-          type: 'litterbox_maintenance',
-          maintenance_type: 'scoop',
+          pet_id: null,
+          data: {
+            type: 'litterbox_maintenance',
+            maintenance_type: 'scoop',
+          },
+          human_verified: true,
         },
-        human_verified: true,
-      },
-    });
-    onConvertedToMaintenance?.();
-  }, [event.id, onConvertedToMaintenance, patchEvent, t]);
+      });
+      setPendingConfirm(null);
+      onConvertedToMaintenance?.();
+      return;
+    }
+    if (pendingConfirm === 'clear-bouts') {
+      setSelectedBoutIndex(null);
+      setLocalBouts([]);
+      setPendingConfirm(null);
+      return;
+    }
+    if (pendingConfirm === 'reset-detector') {
+      if (analysisResult) {
+        const next = deriveDetectorBouts(analysisResult.periods, sampleRate);
+        setSelectedBoutIndex(next.length ? 0 : null);
+        setLocalBouts(next);
+      }
+      setPendingConfirm(null);
+    }
+  }, [
+    analysisResult,
+    event.id,
+    onConvertedToMaintenance,
+    patchEvent,
+    pendingConfirm,
+    sampleRate,
+  ]);
+
+  const handleCancelPending = React.useCallback(() => {
+    setPendingConfirm(null);
+  }, []);
 
   const handleBoutTypeChange = React.useCallback(
     (idx: number, boutType: LitterboxBoutAnnotation['bout_type']) => {
@@ -417,7 +498,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   const hasRawData = weights.length > 0;
 
   const handleReanalyze = React.useCallback(async () => {
-    if (!hasRawData || isSaving || isAnalyzing) return;
+    if (!hasRawData || isDirty || isSaving || isAnalyzing) return;
     const preserveElim = eliminationType;
     const preserveStrain = straining;
     try {
@@ -436,27 +517,18 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
         periods.length === 0 ? [] : deriveDetectorBouts(periods, sampleRate);
       setSelectedBoutIndex(next.length > 0 ? 0 : null);
       setLocalBouts(next);
-
-      await flushSave(
-        next,
-        petId,
-        preserveElim,
-        preserveStrain,
-        updated.human_verified,
-        excluded,
-      );
+      // Bouts derived from re-analysis stay a local draft — the analyze endpoint already
+      // persisted the new segments; the derived bouts still need an explicit Save.
     } catch {
       // Request failed (e.g. missing raw_data); list/detail queries still refresh on success path only.
     }
   }, [
     eliminationType,
-    excluded,
     event.id,
-    flushSave,
     hasRawData,
+    isDirty,
     isAnalyzing,
     isSaving,
-    petId,
     runAnalyzeAsync,
     sampleRate,
     straining,
@@ -590,19 +662,9 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
 
     actionsRef.current = {
       toggleVideo,
-      toggleStraining: () => {
-        const next = !straining;
-        setStraining(next);
-        save(
-          localBouts,
-          petId,
-          eliminationType,
-          next,
-          event.human_verified,
-          excluded,
-        );
-      },
+      toggleStraining: () => setStraining((prev) => !prev),
       toggleVerified: async () => {
+        if (isDirty) return;
         await flushSave(
           localBouts,
           petId,
@@ -612,19 +674,9 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
           excluded,
         );
       },
-      toggleExcluded: async () => {
-        const next = !excluded;
-        setExcluded(next);
-        await flushSave(
-          localBouts,
-          petId,
-          eliminationType,
-          straining,
-          event.human_verified,
-          next,
-        );
-      },
+      toggleExcluded: () => setExcluded((prev) => !prev),
       setVerified: async (next) => {
+        if (isDirty) return;
         await flushSave(
           localBouts,
           petId,
@@ -648,41 +700,19 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
         );
         setSelectedBoutIndex(next);
       },
-      clearAllBouts: async () => {
-        if (localBouts.length > 0) {
-          const ok = window.confirm(t('annotation.confirm_clear_bouts'));
-          if (!ok) return;
-        }
-        setSelectedBoutIndex(null);
-        setLocalBouts([]);
-        await flushSave(
-          [],
-          petId,
-          eliminationType,
-          straining,
-          event.human_verified,
-          excluded,
-        );
+      clearAllBouts: () => {
+        if (localBouts.length === 0) return;
+        setPendingConfirm('clear-bouts');
       },
-      resetToDetector: async () => {
+      resetToDetector: () => {
         if (!analysisResult) return;
-        if (localBouts.length > 0) {
-          const ok = window.confirm(
-            t('annotation.confirm_reset_detector_bouts'),
-          );
-          if (!ok) return;
+        if (localBouts.length === 0) {
+          const next = deriveDetectorBouts(analysisResult.periods, sampleRate);
+          setSelectedBoutIndex(next.length ? 0 : null);
+          setLocalBouts(next);
+          return;
         }
-        const next = deriveDetectorBouts(analysisResult.periods, sampleRate);
-        setSelectedBoutIndex(next.length ? 0 : null);
-        setLocalBouts(next);
-        await flushSave(
-          next,
-          petId,
-          eliminationType,
-          straining,
-          event.human_verified,
-          excluded,
-        );
+        setPendingConfirm('reset-detector');
       },
       setSelectedBoutType: (boutType) => {
         if (selectedBoutIndex == null) return;
@@ -705,6 +735,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     event.human_verified,
     excluded,
     flushSave,
+    isDirty,
     handleBoutTypeChange,
     handleConvertToMaintenance,
     handleReanalyze,
@@ -713,10 +744,8 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     localBouts,
     petId,
     sampleRate,
-    save,
     selectedBoutIndex,
     straining,
-    t,
   ]);
 
   return (
@@ -781,8 +810,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
         </div>
       )}
 
-      {/* TODO(perf): Chart bout drag still lags during/overlapping PATCH saves; usePatchEvent/memo not enough.
-          Suspect query invalidation/refetch, parent re-renders, analyze mutation, or drag render path—profile and isolate chart / narrow invalidation / batch drag updates. */}
+      {/* Bout chart edits stay local until Save — no PATCH during drag. */}
       <div className="annotation-workspace-chart">
         {hasRawData ? (
           <WeightSignalChart
@@ -875,7 +903,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
                 variant="secondary"
                 size="sm"
                 onClick={handleReanalyze}
-                disabled={isSaving || isAnalyzing || !hasRawData}
+                disabled={isDirty || isSaving || isAnalyzing || !hasRawData}
                 className="annotation-icon-action-btn"
                 aria-label={t('event_details.analyze')}
                 title={t('event_details.analyze')}
@@ -891,7 +919,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
                 variant={event.human_verified ? 'primary' : 'secondary'}
                 size="sm"
                 onClick={handleToggleVerified}
-                disabled={isSaving}
+                disabled={isDirty || isSaving}
                 className="annotation-icon-action-btn"
                 aria-label={
                   event.human_verified
@@ -957,6 +985,21 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
             </div>
           </div>
           <LitterboxWeightBlock parentEvent={eventWithChildren} />
+          <FormError message={saveError} />
+          <FormActions
+            className="annotation-form-actions"
+            onCancel={handleCancel}
+            cancelLabel={t('common.cancel')}
+            submitLabel={
+              isSaving ? t('settings.saving') : t('settings.save_changes')
+            }
+            isSubmitting={isSaving}
+            submitDisabled={!isDirty}
+            submitType="button"
+            onSubmitClick={() => {
+              void handleSave();
+            }}
+          />
         </div>
 
         <div className="annotation-bouts-section">
@@ -1133,6 +1176,45 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
           )}
         </div>
       </div>
+
+      <DiscardUnsavedDialog
+        open={discardOpen}
+        onConfirm={handleConfirmDiscard}
+        onCancel={handleCancelDiscard}
+      />
+      <ConfirmDialog
+        open={pendingConfirm === 'maintenance'}
+        title={t('annotation.mark_as_maintenance_aria')}
+        description={t('annotation.confirm_convert_maintenance')}
+        confirmLabel={t('common.confirm')}
+        variant="danger"
+        isConfirming={isSaving}
+        onConfirm={() => {
+          void handleConfirmPending();
+        }}
+        onCancel={handleCancelPending}
+      />
+      <ConfirmDialog
+        open={pendingConfirm === 'clear-bouts'}
+        title={t('annotation.clear_bouts')}
+        description={t('annotation.confirm_clear_bouts')}
+        confirmLabel={t('common.confirm')}
+        variant="danger"
+        onConfirm={() => {
+          void handleConfirmPending();
+        }}
+        onCancel={handleCancelPending}
+      />
+      <ConfirmDialog
+        open={pendingConfirm === 'reset-detector'}
+        title={t('annotation.reset_detector_bouts')}
+        description={t('annotation.confirm_reset_detector_bouts')}
+        confirmLabel={t('common.confirm')}
+        onConfirm={() => {
+          void handleConfirmPending();
+        }}
+        onCancel={handleCancelPending}
+      />
     </div>
   );
 };

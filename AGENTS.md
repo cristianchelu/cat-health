@@ -144,6 +144,38 @@ export default ComponentName;
 
 **UI copy — keep it quiet.** Default surfaces show label, value, and actions only. Do not add helper text, footnotes, or "why this matters" paragraphs unless the user explicitly asks or the interaction is genuinely non-obvious. Explanations belong in edit/confirm flows or docs — not stacked under every read-only field.
 
+#### Forms
+
+**Contract:** draft locally → primary **Save** persists → secondary **Cancel** discards. Never auto-save (on change / blur / debounce) on anything that looks like a form. Cancel must not be a fake “back” after already saving.
+
+**Kit** (`packages/ui/src/components/ui/form/`):
+
+- `FormShell` — `<form>` + optional `FormError` + `FormActions`
+- `FormActions` — Cancel/Back (`secondary`) left, Save/Create/Register (`primary`) right
+- `FormError` — mutation error banner
+- `FormInput` / `FormSelect` / `FormTextarea` / `FormDatePicker` / `FormSwitch` — RHF-wired fields
+- Dumb controls (`Input`, `Select`, …, `FormField`) for non-RHF / draft-mode sections
+- `LabeledSwitchField` — switch + enabled/disabled label
+
+**Hooks** (`packages/ui/src/hooks/form/`):
+
+- Entity / multi-field pages → `useAppForm` (RHF wrapper) + controlled `Form*` fields
+- Small sections / modal field clusters → `useDraftForm` + dumb controls in `FormField`
+- `useDraftForm` requires a content-aware `baselineKey` (not entity id alone) so server refreshes resync the draft; use `requestReset` for Cancel-that-discards without navigate
+- Full-page leave guard → `useUnsavedBlocker(isDirty)` + `DiscardUnsavedDialog`. **Cancel just navigates** (e.g. `navigate('/settings')`) — do not also call `requestDiscard` before navigate, or the user gets two confirms.
+- Modal dismiss when dirty → `requestDiscard` + swap footer to `FormInlineDiscard` (Keep editing / Discard). **Never** stack a second Dialog over the form modal.
+- True destructives (delete) → `ConfirmDialog` is fine (different intent than discard).
+- Chart-heavy annotation draft stays local in `AnnotationWorkspace` (custom dirty + `onDirtyChange` for visit/route guards) — do not force it through `useDraftForm` for bout drag perf.
+
+**Chrome:**
+
+- Settings edit pages → `SettingsFormPage` + `LoadingState`
+- Destructives → `ConfirmDialog` (never `window.confirm`)
+- Full-page unsaved leave → `DiscardUnsavedDialog`
+- In-modal unsaved discard → `FormInlineDiscard`
+
+Wizards keep Back + Continue/Register labels via `FormActions`; header Cancel still means abandon (guard if dirty).
+
 ### API Patterns
 
 - Use TypeBox for request/response validation

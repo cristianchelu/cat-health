@@ -2,14 +2,25 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import { Button } from '@/components/ui/Button';
-import { FormField, Input } from '@/components/ui/form';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog';
+import {
+  FormActions,
+  FormField,
+  FormInlineDiscard,
+  FormShell,
+  Input,
+} from '@/components/ui/form';
+import { LoadingState } from '@/components/ui/PageState';
+import { useDraftForm } from '@/hooks/form';
 import { useFoods } from '@/hooks/queries/foodQueries';
 import { addEvent } from '@/api/pets';
-import type { GetFoodDTO } from 'shared';
 import type { DateRange } from '@/lib/utils';
-import { Drumstick, Loader2 } from 'lucide-react';
+import { Drumstick } from 'lucide-react';
 
 import './LogFoodModal.css';
 
@@ -29,11 +40,16 @@ const LogFoodModal: React.FC<LogFoodModalProps> = ({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: foods = [], isLoading: isLoadingFoods } = useFoods();
-
-  const [selectedFood, setSelectedFood] = React.useState<GetFoodDTO | null>(
-    null,
+  const foodDraftBaseline = React.useMemo(
+    () => ({ selectedFoodId: null as number | null, amount: '' }),
+    [],
   );
-  const [amount, setAmount] = React.useState('');
+  const { draft, patchDraft, reset, requestDiscard, discardConfirm } =
+    useDraftForm(foodDraftBaseline, {
+      baselineKey: `${isOpen}-${petId}`,
+    });
+  const selectedFood =
+    foods.find((food) => food.id === draft.selectedFoodId) ?? null;
 
   const addEventMutation = useMutation({
     mutationFn: (input: Parameters<typeof addEvent>[0]) => addEvent(input),
@@ -44,21 +60,14 @@ const LogFoodModal: React.FC<LogFoodModalProps> = ({
       queryClient.invalidateQueries({
         queryKey: ['waterTrends', petId],
       });
+      reset();
       onClose();
-      setSelectedFood(null);
-      setAmount('');
     },
   });
 
-  React.useEffect(() => {
-    if (selectedFood?.serving_size_g != null && amount === '') {
-      setAmount(String(selectedFood.serving_size_g));
-    }
-  }, [selectedFood?.id, selectedFood?.serving_size_g, amount]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const amountNum = parseFloat(amount);
+    const amountNum = parseFloat(draft.amount);
     if (Number.isNaN(amountNum) || amountNum <= 0) return;
 
     const foodType =
@@ -88,9 +97,7 @@ const LogFoodModal: React.FC<LogFoodModalProps> = ({
   };
 
   const handleClose = () => {
-    setSelectedFood(null);
-    setAmount('');
-    onClose();
+    requestDiscard(onClose);
   };
 
   return (
@@ -103,18 +110,46 @@ const LogFoodModal: React.FC<LogFoodModalProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="log-food-form">
+        <FormShell
+          onSubmit={handleSubmit}
+          className="log-food-form"
+          error={
+            addEventMutation.isError
+              ? addEventMutation.error instanceof Error
+                ? addEventMutation.error.message
+                : 'Failed to log food'
+              : null
+          }
+          actionsSlot={
+            discardConfirm.open ? (
+              <FormInlineDiscard
+                keepLabel={t('common.keep_editing')}
+                discardLabel={t('common.discard')}
+                onKeepEditing={discardConfirm.onCancel}
+                onDiscard={discardConfirm.onConfirm}
+                disabled={addEventMutation.isPending}
+              />
+            ) : (
+              <FormActions
+                onCancel={handleClose}
+                cancelLabel={t('settings.cancel')}
+                submitLabel={t('overview.log_food')}
+                isSubmitting={addEventMutation.isPending}
+                submitDisabled={
+                  !selectedFood ||
+                  !draft.amount ||
+                  parseFloat(draft.amount) <= 0
+                }
+              />
+            )
+          }
+        >
           <FormField label={t('settings.foods')}>
             <div className="log-food-list">
-              {isLoadingFoods && (
-                <div className="log-food-loading">
-                  <Loader2 className="animate-spin" size={24} />
-                </div>
-              )}
+              {isLoadingFoods && <LoadingState message={t('common.loading')} />}
               {!isLoadingFoods && foods.length === 0 && (
                 <p className="log-food-empty">
-                  {t('settings.add_food_desc')}
-                  {' '}
+                  {t('settings.add_food_desc')}{' '}
                   <Link to="/settings">{t('settings.foods')}</Link>
                 </p>
               )}
@@ -126,9 +161,16 @@ const LogFoodModal: React.FC<LogFoodModalProps> = ({
                     className={`log-food-item ${
                       selectedFood?.id === food.id ? 'selected' : ''
                     }`}
-                    onClick={() =>
-                      setSelectedFood(selectedFood?.id === food.id ? null : food)
-                    }
+                    onClick={() => {
+                      const isDeselecting = selectedFood?.id === food.id;
+                      patchDraft({
+                        selectedFoodId: isDeselecting ? null : food.id,
+                        amount:
+                          !isDeselecting && food.serving_size_g != null
+                            ? String(food.serving_size_g)
+                            : '',
+                      });
+                    }}
                   >
                     <span className="log-food-item-name">{food.name}</span>
                     {food.brand && (
@@ -143,48 +185,23 @@ const LogFoodModal: React.FC<LogFoodModalProps> = ({
           </FormField>
 
           {selectedFood && (
-            <FormField label={t('settings.food_serving_size_label')}>
+            <FormField
+              label={t('settings.food_serving_size_label')}
+              htmlFor="log-food-amount"
+            >
               <Input
+                id="log-food-amount"
                 type="number"
                 min={0.1}
                 step={0.1}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                value={draft.amount}
+                onChange={(e) => patchDraft({ amount: e.target.value })}
                 placeholder={t('settings.food_serving_size_placeholder')}
                 required
               />
             </FormField>
           )}
-
-          {addEventMutation.isError && (
-            <div className="log-food-error">
-              {addEventMutation.error instanceof Error
-                ? addEventMutation.error.message
-                : 'Failed to log food'}
-            </div>
-          )}
-
-          <div className="log-food-actions">
-            <Button type="button" variant="secondary" onClick={handleClose}>
-              {t('settings.cancel')}
-            </Button>
-            <Button
-              type="submit"
-              disabled={
-                addEventMutation.isPending ||
-                !selectedFood ||
-                !amount ||
-                parseFloat(amount) <= 0
-              }
-            >
-              {addEventMutation.isPending ? (
-                <Loader2 className="animate-spin" size={16} />
-              ) : (
-                t('overview.log_food')
-              )}
-            </Button>
-          </div>
-        </form>
+        </FormShell>
       </DialogContent>
     </Dialog>
   );

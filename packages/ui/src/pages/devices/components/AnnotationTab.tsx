@@ -10,6 +10,8 @@ import type { LitterboxAnnotation } from '@/types/litterbox';
 import AnnotationWorkspace, {
   type AnnotationWorkspaceActions,
 } from './AnnotationWorkspace';
+import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
+import { useUnsavedBlocker } from '@/hooks/form';
 import './AnnotationTab.css';
 import { CheckCheck, ListChecks, CircleDot, Ban } from 'lucide-react';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
@@ -110,6 +112,38 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
     },
     [setSearchParams],
   );
+
+  const [workspaceDirty, setWorkspaceDirty] = React.useState(false);
+  const [pendingEventId, setPendingEventId] = React.useState<
+    number | null | undefined
+  >(undefined);
+
+  const selectEventIdGuarded = React.useCallback(
+    (id: number | null) => {
+      if (id === selectedEventId) return;
+      if (workspaceDirty) {
+        setPendingEventId(id);
+        return;
+      }
+      setSelectedEventId(id);
+    },
+    [selectedEventId, workspaceDirty, setSelectedEventId],
+  );
+
+  const discardVisitOpen = pendingEventId !== undefined;
+  const handleConfirmDiscardVisit = React.useCallback(() => {
+    const nextId = pendingEventId;
+    setPendingEventId(undefined);
+    setWorkspaceDirty(false);
+    if (nextId !== undefined) setSelectedEventId(nextId);
+  }, [pendingEventId, setSelectedEventId]);
+
+  const handleCancelDiscardVisit = React.useCallback(() => {
+    setPendingEventId(undefined);
+  }, []);
+
+  const { blockerOpen, onConfirmLeave, onCancelLeave } =
+    useUnsavedBlocker(workspaceDirty);
 
   /** Drop a malformed `event` query value (e.g. non-numeric). */
   React.useEffect(() => {
@@ -377,9 +411,9 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
         direction === 'next'
           ? filteredEvents[idx + 1]
           : filteredEvents[idx - 1];
-      if (next) setSelectedEventId(next.id);
+      if (next) selectEventIdGuarded(next.id);
     },
-    [filteredEvents, selectedEventId, setSelectedEventId],
+    [filteredEvents, selectedEventId, selectEventIdGuarded],
   );
 
   const handleAfterConvertToMaintenance = React.useCallback(() => {
@@ -405,11 +439,11 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
         e.preventDefault();
         const next =
           filteredEvents[Math.min(idx + 1, filteredEvents.length - 1)];
-        if (next) setSelectedEventId(next.id);
+        if (next) selectEventIdGuarded(next.id);
       } else if (e.key === 'ArrowUp' || e.key === 'k') {
         e.preventDefault();
         const prev = filteredEvents[Math.max(idx - 1, 0)];
-        if (prev) setSelectedEventId(prev.id);
+        if (prev) selectEventIdGuarded(prev.id);
       } else if (e.key === 'ArrowRight' || e.key === 'l') {
         e.preventDefault();
         handleNavigate('next');
@@ -418,7 +452,7 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
         handleNavigate('prev');
       }
     },
-    [filteredEvents, selectedEventId, handleNavigate, setSelectedEventId],
+    [filteredEvents, selectedEventId, handleNavigate, selectEventIdGuarded],
   );
 
   const totalPages = eventsPage ? Math.ceil(eventsPage.total / LIMIT) : 1;
@@ -702,7 +736,7 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
                       if (event.id !== selectedEventId) {
                         suppressNextSelectedRowScrollRef.current = true;
                       }
-                      setSelectedEventId(event.id);
+                      selectEventIdGuarded(event.id);
                     }}
                     role="option"
                     aria-selected={isSelected}
@@ -786,6 +820,7 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
             event={selectedEvent}
             videoOpen={videoOpen}
             onVideoOpenChange={setVideoOpen}
+            onDirtyChange={setWorkspaceDirty}
             actionsRef={workspaceActionsRef}
             onConvertedToMaintenance={handleAfterConvertToMaintenance}
           />
@@ -799,6 +834,17 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
           </div>
         )}
       </div>
+
+      <DiscardUnsavedDialog
+        open={discardVisitOpen}
+        onConfirm={handleConfirmDiscardVisit}
+        onCancel={handleCancelDiscardVisit}
+      />
+      <DiscardUnsavedDialog
+        open={blockerOpen}
+        onConfirm={onConfirmLeave}
+        onCancel={onCancelLeave}
+      />
     </div>
   );
 };

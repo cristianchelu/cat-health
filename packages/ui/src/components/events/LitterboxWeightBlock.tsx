@@ -1,13 +1,14 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, Pencil } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import type {
   GetEventChildDTO,
   GetEventDTO,
   GetEventWithChildrenDTO,
 } from 'shared';
 import { Button } from '@/components/ui/Button';
+import { FormActions } from '@/components/ui/form';
 import { addEvent } from '@/api/pets';
 import { reidentifyLitterboxVisits } from '@/api/devices';
 import {
@@ -163,14 +164,15 @@ const LitterboxWeightBlock = ({ parentEvent }: LitterboxWeightBlockProps) => {
           />
           <span>{t('event_details.reidentify_later_visits')}</span>
         </label>
-        <div className="litterbox-weight-block-actions">
-          <Button type="button" variant="secondary" size="sm" onClick={cancelEdit} disabled={isSaving}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="button" variant="primary" size="sm" onClick={() => void handleSave()} disabled={isSaving}>
-            {isSaving ? <Loader2 size={16} className="animate-spin" aria-hidden /> : t('common.save')}
-          </Button>
-        </div>
+        <FormActions
+          className="litterbox-weight-block-actions"
+          onCancel={cancelEdit}
+          cancelLabel={t('common.cancel')}
+          submitLabel={t('common.save')}
+          isSubmitting={isSaving}
+          submitType="button"
+          onSubmitClick={() => void handleSave()}
+        />
       </div>
     );
   }

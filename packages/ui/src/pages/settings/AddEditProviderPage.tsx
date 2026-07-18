@@ -1,5 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import type { ProviderPetLink } from 'shared';
@@ -9,10 +8,18 @@ import {
   useCreateProviderAccount,
   useUpdateProviderAccount,
 } from '@/hooks/queries/deviceQueries';
-import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Button } from '@/components/ui/Button';
-import { FormField, Input, Select, Textarea } from '@/components/ui/form';
-import { Switch } from '@/components/ui/Switch';
+import {
+  FormField,
+  FormShell,
+  FormSwitch,
+  Input,
+  Select,
+  Textarea,
+} from '@/components/ui/form';
+import { SettingsFormPage } from '@/components/ui/SettingsFormPage';
+import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
+import { useAppForm, useDraftForm, useUnsavedBlocker } from '@/hooks/form';
 import ProviderPetLinksEditor from './components/ProviderPetLinksEditor';
 import { Server } from 'lucide-react';
 import './AddEditProviderPage.css';
@@ -23,6 +30,8 @@ interface ProviderFormValues {
   enabled: boolean;
   config: string;
 }
+
+const EMPTY_PET_LINKS: ProviderPetLink[] = [];
 
 const DEFAULT_FORM_VALUES: ProviderFormValues = {
   provider: '',
@@ -96,8 +105,8 @@ const AddEditProviderPage: React.FC = () => {
     watch,
     control,
     setError,
-    formState: { errors },
-  } = useForm<ProviderFormValues>({
+    formState: { errors, isDirty },
+  } = useAppForm<ProviderFormValues>({
     defaultValues: DEFAULT_FORM_VALUES,
     values:
       account && isEditing
@@ -106,24 +115,39 @@ const AddEditProviderPage: React.FC = () => {
   });
 
   const [error, setErrorState] = useState<string | undefined>(undefined);
-  const [petLinks, setPetLinks] = useState<ProviderPetLink[]>([]);
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch() for create flow provider select
+  const petLinksBaseline = useMemo(() => {
+    if (!supportsPetLinking || !account?.config) return EMPTY_PET_LINKS;
+    const cfg = account.config as { pet_links?: ProviderPetLink[] };
+    return Array.isArray(cfg.pet_links) ? cfg.pet_links : EMPTY_PET_LINKS;
+  }, [account?.config, supportsPetLinking]);
+
+  const petLinksBaselineKey = useMemo(
+    () => JSON.stringify(petLinksBaseline),
+    [petLinksBaseline],
+  );
+
+  const {
+    draft: petLinks,
+    setDraft: setPetLinks,
+    isDirty: petLinksDirty,
+  } = useDraftForm(petLinksBaseline, {
+    baselineKey: petLinksBaselineKey,
+  });
+
+  const { blockerOpen, onConfirmLeave, onCancelLeave } = useUnsavedBlocker(
+    isDirty || (supportsPetLinking && petLinksDirty),
+  );
+
   const selectedProvider = watch('provider');
   const createProviderMeta = providers.find((p) => p.name === selectedProvider);
 
-  useEffect(() => {
-    if (supportsPetLinking && account?.config) {
-      const cfg = account.config as { pet_links?: ProviderPetLink[] };
-      setPetLinks(Array.isArray(cfg.pet_links) ? cfg.pet_links : []);
-    } else {
-      setPetLinks([]);
-    }
-  }, [account, supportsPetLinking]);
-
-  const handlePetLinksChange = useCallback((links: ProviderPetLink[]) => {
-    setPetLinks(links);
-  }, []);
+  const handlePetLinksChange = useCallback(
+    (links: ProviderPetLink[]) => {
+      setPetLinks(links);
+    },
+    [setPetLinks],
+  );
 
   const showPetLinking = isEditing && accountId > 0 && supportsPetLinking;
 
@@ -171,36 +195,60 @@ const AddEditProviderPage: React.FC = () => {
 
   if (isEditing && isLoading) {
     return (
-      <div className="add-edit-provider-page">
-        <div className="loading-state">
-          {t('settings.loading_provider_data')}
-        </div>
-      </div>
+      <SettingsFormPage
+        className="add-edit-provider-page"
+        title={t('settings.edit_provider_title')}
+        icon={<Server size="1em" />}
+        isLoading
+        loadingMessage={t('settings.loading_provider_data')}
+      />
     );
   }
 
   if (isEditing && (loadError || !account)) {
     return (
-      <div className="add-edit-provider-page">
+      <SettingsFormPage
+        className="add-edit-provider-page"
+        title={t('settings.edit_provider_title')}
+        icon={<Server size="1em" />}
+      >
         <div className="error-state">
           <p>{t('settings.error_loading_provider')}</p>
           <Button onClick={() => navigate('/settings')}>
             {t('settings.back')}
           </Button>
         </div>
-      </div>
+      </SettingsFormPage>
     );
   }
 
   return (
-    <div className="add-edit-provider-page">
-      <SectionHeader icon={<Server size="1em" />}>
-        {isEditing
+    <SettingsFormPage
+      className="add-edit-provider-page"
+      title={
+        isEditing
           ? t('settings.edit_provider_title')
-          : t('settings.add_provider_title')}
-      </SectionHeader>
-
-      <form onSubmit={handleSubmit(onFormSubmit)} className="settings-form">
+          : t('settings.add_provider_title')
+      }
+      icon={<Server size="1em" />}
+    >
+      <FormShell
+        onSubmit={handleSubmit(onFormSubmit)}
+        error={error}
+        actions={{
+          onCancel: () => navigate('/settings'),
+          cancelLabel: t('settings.cancel'),
+          submitLabel: isEditing
+            ? updateAccount.isPending
+              ? t('settings.saving')
+              : t('settings.save_changes')
+            : createAccount.isPending
+              ? t('settings.creating')
+              : t('settings.create_account'),
+          isSubmitting: createAccount.isPending || updateAccount.isPending,
+          submitDisabled: !(isDirty || (supportsPetLinking && petLinksDirty)),
+        }}
+      >
         <FormField label={t('settings.provider_label')}>
           <Select
             {...register('provider', { required: true })}
@@ -218,26 +266,11 @@ const AddEditProviderPage: React.FC = () => {
         </FormField>
 
         {isEditing && (
-          <FormField label={t('settings.enabled')}>
-            <div className="switch-row">
-              <Controller
-                name="enabled"
-                control={control}
-                render={({ field }) => (
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    ref={field.ref}
-                  />
-                )}
-              />
-              <span>
-                {watch('enabled')
-                  ? t('settings.enabled')
-                  : t('settings.disabled')}
-              </span>
-            </div>
-          </FormField>
+          <FormSwitch
+            name="enabled"
+            control={control}
+            label={t('settings.enabled')}
+          />
         )}
 
         <FormField
@@ -261,38 +294,19 @@ const AddEditProviderPage: React.FC = () => {
 
         {showPetLinking && (
           <ProviderPetLinksEditor
-            key={accountId}
+            key={`${accountId}:${petLinksBaselineKey}`}
             accountId={accountId}
-            initialLinks={petLinks}
+            initialLinks={petLinksBaseline}
             onChange={handlePetLinksChange}
           />
         )}
-
-        {error && <div className="error-message">{error}</div>}
-
-        <div className="form-actions">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => navigate('/settings')}
-          >
-            {t('settings.cancel')}
-          </Button>
-          <Button
-            type="submit"
-            disabled={createAccount.isPending || updateAccount.isPending}
-          >
-            {isEditing
-              ? updateAccount.isPending
-                ? t('settings.saving')
-                : t('settings.save_changes')
-              : createAccount.isPending
-                ? t('settings.creating')
-                : t('settings.create_account')}
-          </Button>
-        </div>
-      </form>
-    </div>
+      </FormShell>
+      <DiscardUnsavedDialog
+        open={blockerOpen}
+        onConfirm={onConfirmLeave}
+        onCancel={onCancelLeave}
+      />
+    </SettingsFormPage>
   );
 };
 

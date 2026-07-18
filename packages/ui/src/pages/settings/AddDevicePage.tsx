@@ -11,6 +11,7 @@ import {
   useDevices,
 } from '@/hooks/queries/deviceQueries';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import Stepper from '@/components/ui/Stepper';
 import { SelectAccountStep } from './add-device/steps/SelectAccountStep';
 import { DiscoverDevicesStep } from './add-device/steps/DiscoverDevicesStep';
@@ -32,6 +33,9 @@ const AddDevicePage: React.FC = () => {
 
   const [state, setState] = useState<WizardState>({ phase: 'account' });
   const [serverError, setServerError] = useState<string | null>(null);
+  const [accountDirty, setAccountDirty] = useState(false);
+  const [registerDirty, setRegisterDirty] = useState(false);
+  const [headerDiscardOpen, setHeaderDiscardOpen] = useState(false);
 
   const activeAccountId = state.phase === 'account' ? null : state.accountId;
   const selectedAccount = accounts.find((a) => a.id === activeAccountId);
@@ -42,10 +46,9 @@ const AddDevicePage: React.FC = () => {
     isLoading,
     isRefetching,
     refetch: refetchDiscovery,
-  } = useDiscoverDevices(
-    state.phase === 'account' ? null : state.accountId,
-    { enabled: state.phase === 'discover' },
-  );
+  } = useDiscoverDevices(state.phase === 'account' ? null : state.accountId, {
+    enabled: state.phase === 'discover',
+  });
 
   const STEPS = [
     { label: t('settings.step_select_account') },
@@ -58,6 +61,7 @@ const AddDevicePage: React.FC = () => {
     if (!account) return;
     const accountFlow = getFlow(account.provider);
     setServerError(null);
+    setAccountDirty(false);
     if (accountFlow.skipDiscovery) {
       setState({
         phase: 'register',
@@ -92,6 +96,7 @@ const AddDevicePage: React.FC = () => {
   const handleRegisterBack = () => {
     if (state.phase !== 'register') return;
     setServerError(null);
+    setRegisterDirty(false);
     const target = getRegistrationBackPhase(state.source);
     if (target === 'account') {
       setState({ phase: 'account' });
@@ -105,7 +110,16 @@ const AddDevicePage: React.FC = () => {
     setState({ phase: 'account' });
   };
 
-  const handleCancel = () => navigate('/settings');
+  const handleCancel = () => {
+    const isDirty =
+      (state.phase === 'account' && accountDirty) ||
+      (state.phase === 'register' && registerDirty);
+    if (isDirty) {
+      setHeaderDiscardOpen(true);
+      return;
+    }
+    navigate('/settings');
+  };
 
   const submitDevice = async (payload: PostDeviceRequestDTO) => {
     try {
@@ -138,6 +152,7 @@ const AddDevicePage: React.FC = () => {
           <SelectAccountStep
             accounts={accounts}
             onContinue={handleContinueFromAccount}
+            onDirtyChange={setAccountDirty}
           />
         </div>
       )}
@@ -173,9 +188,21 @@ const AddDevicePage: React.FC = () => {
             serverError={serverError}
             onSubmitDevice={submitDevice}
             onBack={handleRegisterBack}
+            onDirtyChange={setRegisterDirty}
           />
         </div>
       )}
+
+      <DiscardUnsavedDialog
+        open={headerDiscardOpen}
+        onConfirm={() => {
+          setHeaderDiscardOpen(false);
+          setAccountDirty(false);
+          setRegisterDirty(false);
+          navigate('/settings');
+        }}
+        onCancel={() => setHeaderDiscardOpen(false)}
+      />
     </div>
   );
 };

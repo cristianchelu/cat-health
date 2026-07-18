@@ -1,0 +1,16 @@
+.page-state {
+  padding: var(--space-2xl);
+  color: var(--color-text-light);
+  text-align: center;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+.empty-state {
+  color: var(--color-text-muted);
+}

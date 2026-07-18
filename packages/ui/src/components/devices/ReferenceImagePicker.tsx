@@ -2,7 +2,9 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
-import { Check, Loader2 } from 'lucide-react';
+import { FormActions } from '@/components/ui/form';
+import { LoadingState } from '@/components/ui/PageState';
+import { Check } from 'lucide-react';
 import { usePet } from '@/hooks/queries/petQueries';
 import { useVerifiedEventMedia } from '@/hooks/queries/eventQueries';
 import './ReferenceImagePicker.css';
@@ -86,10 +88,7 @@ const ReferenceImagePicker: React.FC<ReferenceImagePickerProps> = ({
 
         <div className="media-grid-container">
           {isLoading && (
-            <div className="loading-state">
-              <Loader2 className="animate-spin" />
-              <p>{t('pet_recognizer.loading_images')}</p>
-            </div>
+            <LoadingState message={t('pet_recognizer.loading_images')} />
           )}
 
           {!isLoading && candidateMedia && candidateMedia.length === 0 && (
@@ -140,17 +139,17 @@ const ReferenceImagePicker: React.FC<ReferenceImagePickerProps> = ({
           )}
         </div>
 
-        <div className="picker-actions">
-          <Button variant="secondary" onClick={handleCancel}>
-            {t('settings.cancel')}
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={selectedIds.size === 0}
-          >
-            {t('pet_recognizer.add_images', { count: selectedIds.size })}
-          </Button>
-        </div>
+        <FormActions
+          className="picker-actions"
+          onCancel={handleCancel}
+          cancelLabel={t('settings.cancel')}
+          submitLabel={t('pet_recognizer.add_images', {
+            count: selectedIds.size,
+          })}
+          submitType="button"
+          onSubmitClick={handleConfirm}
+          submitDisabled={selectedIds.size === 0}
+        />
       </DialogContent>
     </Dialog>
   );

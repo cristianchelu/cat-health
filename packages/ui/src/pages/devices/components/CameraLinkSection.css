@@ -19,7 +19,7 @@
 
   .camera-info-text {
     font-size: 0.875rem;
-    color: var(--color-text-secondary);
+    color: var(--color-text-light);
   }
 
   .external-camera-section {
@@ -37,7 +37,7 @@
 
   .section-description {
     font-size: 0.875rem;
-    color: var(--color-text-secondary);
+    color: var(--color-text-light);
     margin-bottom: 1rem;
   }
 
@@ -75,7 +75,7 @@
   .roi-instructions {
     font-size: 0.875rem;
     line-height: 1.25rem;
-    color: var(--color-text-secondary);
+    color: var(--color-text-light);
   }
 
   .rotation-grid {
@@ -87,15 +87,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-  }
-
-  .rotation-button-group {
-    display: flex;
-    align-items: flex-end;
-  }
-
-  .rotation-button {
-    width: 100%;
   }
 
   .acquisition-section {
@@ -139,19 +130,15 @@
     border-top: 1px solid var(--color-border);
   }
 
-  .acquisition-save-group {
-    margin-top: 0.5rem;
-  }
-
   .help-text {
     font-size: 0.875rem;
-    color: var(--color-text-secondary);
+    color: var(--color-text-light);
     margin: 0;
   }
 
   .edit-camera-hint {
     font-size: 0.875rem;
-    color: var(--color-text-secondary);
+    color: var(--color-text-light);
     margin: 0;
   }
 

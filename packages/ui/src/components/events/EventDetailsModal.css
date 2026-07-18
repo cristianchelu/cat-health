@@ -202,32 +202,16 @@
   gap: var(--space-sm);
 }
 
-.event-delete-confirm {
-  background-color: var(--color-surface-muted);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-error);
+.event-delete-checkbox {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
+  align-items: center;
+  gap: var(--space-xs);
   font-size: var(--text-sm);
   color: var(--color-text);
+  cursor: pointer;
 
-  .event-delete-checkbox {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    cursor: pointer;
-
-    input {
-      margin: 0;
-    }
-  }
-
-  .event-delete-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-xs);
+  input {
+    margin: 0;
   }
 }
 

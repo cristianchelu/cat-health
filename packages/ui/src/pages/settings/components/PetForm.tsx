@@ -1,27 +1,36 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useForm } from 'react-hook-form';
-import { FormField, Input, DatePicker } from '@/components/ui/form';
-import { Button } from '@/components/ui/Button';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Switch } from '@/components/ui/Switch';
 import { Cat } from 'lucide-react';
 import type { PostPetRequestDTO } from 'shared';
-import { useTogglePetPresence } from '@/hooks/queries/petQueries';
+import { Button } from '@/components/ui/Button';
+import { SettingsFormPage } from '@/components/ui/SettingsFormPage';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
+import {
+  FormDatePicker,
+  FormField,
+  FormInput,
+  FormShell,
+  LabeledSwitchField,
+} from '@/components/ui/form';
+import { useAppForm, useUnsavedBlocker } from '@/hooks/form';
 import AvatarUpload from '@/components/pet/AvatarUpload';
-
-import './PetForm.css';
 
 interface PetFormProps {
   initialData?: Partial<PostPetRequestDTO>;
   existingAvatarUrl?: string | null;
   petId?: number;
   isAway?: boolean;
-  onSubmit: (data: PostPetRequestDTO, avatarFile: File | null) => void;
+  onSubmit: (
+    data: PostPetRequestDTO,
+    avatarFile: File | null,
+    awayFromHome: boolean,
+  ) => void;
   onCancel: () => void;
-  onDelete?: () => void; // optional delete handler when editing
+  onDelete?: () => void;
   isSubmitting?: boolean;
   isDeleting?: boolean;
+  error?: string | null;
   title?: string;
 }
 
@@ -35,172 +44,166 @@ const PetForm: React.FC<PetFormProps> = ({
   onDelete,
   isSubmitting = false,
   isDeleting = false,
+  error,
   title,
 }) => {
   const { t } = useTranslation();
-  const togglePresenceMutation = useTogglePetPresence(petId ?? 0);
   const {
-    register,
+    control,
     handleSubmit,
-    formState: { errors, isValid },
-    setValue,
-    watch,
-  } = useForm<PostPetRequestDTO>({
+    formState: { isValid, isDirty },
+  } = useAppForm<PostPetRequestDTO>({
     defaultValues: {
       name: initialData?.name || '',
       breed: initialData?.breed || '',
       birth_date: initialData?.birth_date || '',
     },
-    mode: 'onChange',
   });
-
-  // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch() is safe here for derived UI
-  const watchedBirthDate = watch('birth_date');
 
   const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
   const [awayFromHome, setAwayFromHome] = React.useState(isAway);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+
+  const avatarDirty = avatarFile != null;
+  const awayDirty = petId != null && awayFromHome !== isAway;
+  const formDirty = isDirty || avatarDirty || awayDirty;
+
+  const { blockerOpen, onConfirmLeave, onCancelLeave } =
+    useUnsavedBlocker(formDirty);
 
   React.useEffect(() => {
     setAwayFromHome(isAway);
   }, [petId, isAway]);
 
-  const handleFormSubmit = async (data: PostPetRequestDTO) => {
-    if (petId != null && awayFromHome !== isAway) {
-      await togglePresenceMutation.mutateAsync();
-    }
-    onSubmit(data, avatarFile);
-  };
+  const handleFormSubmit = (data: PostPetRequestDTO) =>
+    onSubmit(data, avatarFile, awayFromHome);
 
-  const handleCancel = () => {
-    setAwayFromHome(isAway);
-    onCancel();
-  };
+  const busy = isSubmitting || isDeleting;
+
+  const isAdd = petId == null;
 
   return (
-    <div className="pet-form">
-      <SectionHeader icon={<Cat size={20} />}>
-        {title || t('settings.add_pet_title')}
-      </SectionHeader>
-
-      <form onSubmit={handleSubmit(handleFormSubmit)}>
+    <SettingsFormPage
+      className="pet-form"
+      title={title || t('settings.add_pet_title')}
+      icon={<Cat size={20} />}
+    >
+      <FormShell
+        onSubmit={handleSubmit(handleFormSubmit)}
+        error={error}
+        actions={{
+          onCancel,
+          cancelLabel: t('settings.cancel'),
+          submitLabel: busy
+            ? t('settings.saving')
+            : isAdd
+              ? t('settings.add_pet_title')
+              : t('settings.save_changes'),
+          isSubmitting: busy,
+          submitDisabled: !isValid || busy,
+          cancelDisabled: busy,
+          leading: onDelete ? (
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => setDeleteOpen(true)}
+              disabled={busy}
+            >
+              {isDeleting ? t('settings.deleting') : t('settings.delete')}
+            </Button>
+          ) : undefined,
+        }}
+      >
         <AvatarUpload
           value={avatarFile}
           existingUrl={existingAvatarUrl || null}
           onChange={setAvatarFile}
-          disabled={isSubmitting || isDeleting}
+          disabled={busy}
           className="avatar-section"
         />
-        <FormField
+        <FormInput
+          name="name"
+          control={control}
           label={t('settings.pet_name')}
-          error={errors.name?.message as string}
           required
-        >
-          <Input
-            {...register('name', {
-              required: t('settings.pet_name_required'),
-              minLength: {
-                value: 1,
-                message: t('settings.pet_name_min'),
-              },
-              maxLength: {
-                value: 50,
-                message: t('settings.pet_name_max'),
-              },
-            })}
-            variant={errors.name ? 'error' : 'default'}
-            placeholder={t('settings.pet_name_placeholder')}
-            disabled={isSubmitting}
-          />
-        </FormField>
-
-        <FormField
+          placeholder={t('settings.pet_name_placeholder')}
+          disabled={isSubmitting}
+          rules={{
+            required: t('settings.pet_name_required'),
+            minLength: {
+              value: 1,
+              message: t('settings.pet_name_min'),
+            },
+            maxLength: {
+              value: 50,
+              message: t('settings.pet_name_max'),
+            },
+          }}
+        />
+        <FormInput
+          name="breed"
+          control={control}
           label={t('settings.breed')}
-          error={errors.breed?.message as string}
           required
-        >
-          <Input
-            {...register('breed', {
-              required: t('settings.breed_required'),
-              minLength: {
-                value: 1,
-                message: t('settings.breed_min'),
-              },
-              maxLength: {
-                value: 50,
-                message: t('settings.breed_max'),
-              },
-            })}
-            variant={errors.breed ? 'error' : 'default'}
-            placeholder={t('settings.breed_placeholder')}
-            disabled={isSubmitting}
-          />
-        </FormField>
-
-        <FormField
+          placeholder={t('settings.breed_placeholder')}
+          disabled={isSubmitting}
+          rules={{
+            required: t('settings.breed_required'),
+            minLength: {
+              value: 1,
+              message: t('settings.breed_min'),
+            },
+            maxLength: {
+              value: 50,
+              message: t('settings.breed_max'),
+            },
+          }}
+        />
+        <FormDatePicker
+          name="birth_date"
+          control={control}
           label={t('settings.birth_date')}
-          error={errors.birth_date?.message as string}
           description={t('settings.birth_date_desc')}
-        >
-          <DatePicker
-            {...register('birth_date')}
-            variant={errors.birth_date ? 'error' : 'default'}
-            value={watchedBirthDate}
-            onChange={(e) => setValue('birth_date', e.target.value)}
-            disabled={isSubmitting}
-          />
-        </FormField>
-
+          disabled={isSubmitting}
+        />
         {petId != null && (
-          <FormField label={t('settings.away_from_home')}>
-            <Switch
+          <FormField
+            label={t('settings.away_from_home')}
+            htmlFor="pet-away-from-home"
+          >
+            <LabeledSwitchField
+              id="pet-away-from-home"
               checked={awayFromHome}
               onCheckedChange={setAwayFromHome}
-              disabled={
-                isSubmitting ||
-                isDeleting ||
-                togglePresenceMutation.isPending
-              }
+              disabled={busy}
             />
           </FormField>
         )}
+      </FormShell>
 
-        <div className="actions">
-          {onDelete && (
-            <Button
-              type="button"
-              variant="danger"
-              onClick={onDelete}
-              disabled={isDeleting || isSubmitting}
-            >
-              {isDeleting ? t('settings.deleting') : t('settings.delete')}
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isSubmitting || isDeleting}
-          >
-            {t('settings.cancel')}
-          </Button>
-          <Button
-            type="submit"
-            disabled={
-              !isValid ||
-              isSubmitting ||
-              isDeleting ||
-              togglePresenceMutation.isPending
-            }
-          >
-            {isSubmitting || togglePresenceMutation.isPending
-              ? t('settings.saving')
-              : title === t('settings.add_pet_title')
-                ? t('settings.add_pet_title')
-                : t('settings.save_changes')}
-          </Button>
-        </div>
-      </form>
-    </div>
+      <DiscardUnsavedDialog
+        open={blockerOpen}
+        onConfirm={onConfirmLeave}
+        onCancel={onCancelLeave}
+      />
+      {onDelete ? (
+        <ConfirmDialog
+          open={deleteOpen}
+          title={t('settings.delete')}
+          description={t('settings.confirm_delete_pet')}
+          confirmLabel={
+            isDeleting ? t('settings.deleting') : t('settings.delete')
+          }
+          variant="danger"
+          isConfirming={isDeleting}
+          onConfirm={() => {
+            setDeleteOpen(false);
+            onDelete();
+          }}
+          onCancel={() => setDeleteOpen(false)}
+        />
+      ) : null}
+    </SettingsFormPage>
   );
 };
 

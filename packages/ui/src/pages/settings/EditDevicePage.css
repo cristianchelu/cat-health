@@ -1,18 +1,4 @@
 .edit-device-page {
-  max-width: var(--max-width-sm);
-  margin: 0 auto;
-
-  .section-header {
-    margin-bottom: var(--space-2xl);
-  }
-
-  .settings-form {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-    margin-top: var(--space-md);
-  }
-
   .switch-row {
     display: flex;
     align-items: center;
@@ -24,39 +10,24 @@
     flex-direction: column;
     gap: var(--space-sm);
     padding: var(--space-md);
-    background-color: var(--color-bg-secondary);
+    background-color: var(--color-surface-muted);
     border-radius: var(--radius-md);
 
     .summary-item {
       display: flex;
       justify-content: space-between;
-      font-size: var(--font-size-sm);
+      font-size: var(--text-sm);
 
       .label {
-        color: var(--color-text-secondary);
+        color: var(--color-text-light);
       }
 
       .value {
-        font-weight: var(--font-weight-medium);
+        font-weight: var(--font-medium);
         color: var(--color-text-primary);
         font-family: monospace;
       }
     }
-  }
-
-  .form-actions {
-    display: flex;
-    gap: var(--space-md);
-    justify-content: flex-end;
-    padding-top: var(--space-lg);
-  }
-
-  .loading-state {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-2xl);
-    color: var(--color-text-secondary);
   }
 
   .error-state {
@@ -65,37 +36,12 @@
     align-items: center;
     gap: var(--space-md);
     padding: var(--space-2xl);
-    color: var(--color-text-secondary);
-  }
-
-  .error-message {
-    color: var(--color-error);
-    font-size: var(--font-size-sm);
-    padding: var(--space-sm);
-    background-color: var(--color-error-bg);
-    border-radius: var(--radius-sm);
+    color: var(--color-text-light);
   }
 
   .help-text {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
     margin-top: var(--space-xs);
-  }
-
-  @media (max-width: 768px) {
-    padding: var(--space-sm);
-
-    .section-header {
-      margin-bottom: var(--space-xl);
-    }
-
-    .form-actions {
-      flex-direction: column;
-      gap: var(--space-sm);
-
-      button {
-        width: 100%;
-      }
-    }
   }
 }

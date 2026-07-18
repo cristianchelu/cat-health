@@ -18,7 +18,14 @@ import {
   DialogTitle,
 } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/form/Select';
+import {
+  FormActions,
+  FormInlineDiscard,
+  FormShell,
+  Select,
+} from '@/components/ui/form';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useDraftForm } from '@/hooks/form';
 import type {
   GetEventDTO,
   LitterboxAnalysisStatePeriod,
@@ -160,7 +167,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     event?.id ?? 0,
     isOpen && event !== null,
   );
-  const { mutate: updateEvent, isPending: isUpdating } = useUpdateEvent();
+  const {
+    mutate: updateEvent,
+    isPending: isUpdating,
+    error: updateError,
+  } = useUpdateEvent();
   const { mutate: deleteEventMutation, isPending: isDeleting } =
     useDeleteEvent();
   const { mutate: runAnalyze, isPending: isAnalyzing } =
@@ -173,35 +184,31 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     enabled: Boolean(isOpen && eventId),
   });
 
-  const [selectedPetId, setSelectedPetId] = React.useState<string | null>(null);
-  const [selectedEliminationType, setSelectedEliminationType] =
-    React.useState<LitterboxUseEliminationType>('unknown');
-  const [selectedStraining, setSelectedStraining] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'media' | 'analysis'>(
     'media',
   );
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [reidentifyOnDelete, setReidentifyOnDelete] = React.useState(false);
 
-  React.useEffect(() => {
-    if (event) {
-      setSelectedPetId(event.pet_id ? String(event.pet_id) : 'null');
-      if (event.data?.type === 'litterbox_use' && event.data.elimination_type) {
-        setSelectedEliminationType(event.data.elimination_type);
-        setSelectedStraining(event.data.straining ?? false);
-      } else if (event.data?.type === 'litterbox_use') {
-        setSelectedEliminationType('unknown');
-        setSelectedStraining(event.data.straining ?? false);
-      }
-      // Reset to media tab when event changes
-      setActiveTab('media');
-      setShowDeleteConfirm(false);
-      setReidentifyOnDelete(false);
-    }
-  }, [event]);
-
   /** Prefer React Query payload so the modal stays in sync after mutations (e.g. reanalyze) while `event` from parent state may be stale. */
   const displayEvent = event ? (eventFromServer ?? event) : null;
+  const draftBaseline = React.useMemo(
+    () => ({
+      petId: displayEvent?.pet_id ?? null,
+      eliminationType:
+        displayEvent?.data?.type === 'litterbox_use'
+          ? (displayEvent.data.elimination_type ?? 'unknown')
+          : 'unknown',
+      straining:
+        displayEvent?.data?.type === 'litterbox_use'
+          ? (displayEvent.data.straining ?? false)
+          : false,
+    }),
+    [displayEvent?.data, displayEvent?.pet_id],
+  );
+  const draftBaselineKey = `${displayEvent?.id ?? 'new'}|${draftBaseline.petId}|${draftBaseline.eliminationType}|${draftBaseline.straining}`;
+  const { draft, patchDraft, isDirty, requestDiscard, discardConfirm } =
+    useDraftForm(draftBaseline, { baselineKey: draftBaselineKey });
 
   const decodedRawData = React.useMemo(() => {
     if (displayEvent?.data?.type !== 'litterbox_use') return null;
@@ -245,17 +252,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     (decodedWaterData?.weights?.length ?? 0) > 0;
 
   React.useEffect(() => {
-    if (!eventFromServer || !event || eventFromServer.id !== event.id) return;
-    setSelectedPetId(
-      eventFromServer.pet_id ? String(eventFromServer.pet_id) : 'null',
-    );
-    if (eventFromServer.data?.type === 'litterbox_use') {
-      setSelectedEliminationType(
-        eventFromServer.data.elimination_type ?? 'unknown',
-      );
-      setSelectedStraining(eventFromServer.data.straining ?? false);
-    }
-  }, [event, eventFromServer]);
+    setActiveTab('media');
+    setShowDeleteConfirm(false);
+    setReidentifyOnDelete(false);
+  }, [event?.id]);
 
   const hasMedia = Boolean(media?.length);
 
@@ -290,52 +290,44 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     return null;
   }
 
-  const handlePetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newValue = e.target.value;
-    setSelectedPetId(newValue);
-
-    const petId = newValue === 'null' ? null : parseInt(newValue, 10);
-
-    updateEvent({
-      eventId: event.id,
-      data: { pet_id: petId, human_verified: true },
+  const handlePetChange = (e: React.ChangeEvent<HTMLSelectElement>) =>
+    patchDraft({
+      petId:
+        e.target.value === 'null' ? null : Number.parseInt(e.target.value, 10),
     });
-  };
 
   const handleEliminationTypeChange = (
     e: React.ChangeEvent<HTMLSelectElement>,
   ) => {
-    const newValue = e.target.value as LitterboxUseEliminationType;
-    setSelectedEliminationType(newValue);
-
-    if (displayEvent.data?.type !== 'litterbox_use') return;
-
-    updateEvent({
-      eventId: displayEvent.id,
-      data: {
-        data: {
-          ...displayEvent.data,
-          elimination_type: newValue,
-          segments: null,
-        },
-        human_verified: true,
-      },
+    patchDraft({
+      eliminationType: e.target.value as LitterboxUseEliminationType,
     });
   };
 
-  const handleStrainingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const nextStraining = e.target.checked;
-    setSelectedStraining(nextStraining);
+  const handleStrainingChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    patchDraft({ straining: e.target.checked });
 
-    if (displayEvent.data?.type !== 'litterbox_use') return;
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isDirty) return;
+    const litterboxData =
+      displayEvent.data.type === 'litterbox_use'
+        ? {
+            ...displayEvent.data,
+            elimination_type: draft.eliminationType,
+            straining: draft.straining,
+            ...(draft.eliminationType !==
+              (displayEvent.data.elimination_type ?? 'unknown') && {
+              segments: null,
+            }),
+          }
+        : undefined;
 
     updateEvent({
       eventId: displayEvent.id,
       data: {
-        data: {
-          ...displayEvent.data,
-          straining: nextStraining,
-        },
+        pet_id: draft.petId,
+        ...(litterboxData && { data: litterboxData }),
         human_verified: true,
       },
     });
@@ -349,7 +341,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     : [{ value: 'null', label: t('common.unknown') }];
 
   const handleDeleteClick = () => {
-    setShowDeleteConfirm((prev) => !prev);
+    setShowDeleteConfirm(true);
     setReidentifyOnDelete(false);
   };
 
@@ -382,267 +374,280 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     });
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="event-details-modal-content"
-        showCloseButton={!hasAnalysisData}
-      >
-        {/* Tab buttons + inline close — only when analysis tab exists */}
-        {hasAnalysisData && (
-          <div className="event-tabs">
-            <button
-              type="button"
-              className={`tab-button ${activeTab === 'media' ? 'active' : ''}`}
-              onClick={() => setActiveTab('media')}
-            >
-              <Image size={16} />
-              {t('event_details.media')}
-            </button>
-            <button
-              type="button"
-              className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
-              onClick={() => setActiveTab('analysis')}
-            >
-              <Activity size={16} />
-              {t('event_details.analysis')}
-            </button>
-            <DialogClose
-              type="button"
-              className="event-tab-close"
-              aria-label={t('common.close')}
-              title={t('common.close')}
-            >
-              <X size={18} aria-hidden />
-            </DialogClose>
-          </div>
-        )}
+  const handleClose = () => requestDiscard(onClose);
 
-        <div className="event-details-media-section">
-          {activeTab === 'media' && (
-            <>
-              {isLoadingMedia && (
-                <div className="media-loading">
-                  <Loader2 className="animate-spin" />
-                </div>
-              )}
-              {!isLoadingMedia && !hasMedia && (
-                <div className="media-placeholder">
-                  <p>{t('event_details.no_media_available')}</p>
-                </div>
-              )}
-              {!isLoadingMedia && hasMedia && (
-                <div className="event-media-stack">
-                  {timelapseTimeline && (
-                    <TimelapsePlayer
-                      frames={timelapseTimeline.frames}
-                      durationSec={timelapseTimeline.durationSec}
-                      intervalSec={timelapseTimeline.intervalSec}
-                      alt={t('event_details.event_media_alt')}
-                    />
-                  )}
-                  {imageFrames.length === 1 && !hasTimelapse && (
-                    <div className="event-media-static-image">
-                      <img
-                        src={`api/media/${imageFrames[0].file_path}`}
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+        <DialogContent
+          className="event-details-modal-content"
+          showCloseButton={!hasAnalysisData}
+        >
+          {/* Tab buttons + inline close — only when analysis tab exists */}
+          {hasAnalysisData && (
+            <div className="event-tabs">
+              <button
+                type="button"
+                className={`tab-button ${activeTab === 'media' ? 'active' : ''}`}
+                onClick={() => setActiveTab('media')}
+              >
+                <Image size={16} />
+                {t('event_details.media')}
+              </button>
+              <button
+                type="button"
+                className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
+                onClick={() => setActiveTab('analysis')}
+              >
+                <Activity size={16} />
+                {t('event_details.analysis')}
+              </button>
+              <DialogClose
+                type="button"
+                className="event-tab-close"
+                aria-label={t('common.close')}
+                title={t('common.close')}
+              >
+                <X size={18} aria-hidden />
+              </DialogClose>
+            </div>
+          )}
+
+          <div className="event-details-media-section">
+            {activeTab === 'media' && (
+              <>
+                {isLoadingMedia && (
+                  <div className="media-loading">
+                    <Loader2 className="animate-spin" />
+                  </div>
+                )}
+                {!isLoadingMedia && !hasMedia && (
+                  <div className="media-placeholder">
+                    <p>{t('event_details.no_media_available')}</p>
+                  </div>
+                )}
+                {!isLoadingMedia && hasMedia && (
+                  <div className="event-media-stack">
+                    {timelapseTimeline && (
+                      <TimelapsePlayer
+                        frames={timelapseTimeline.frames}
+                        durationSec={timelapseTimeline.durationSec}
+                        intervalSec={timelapseTimeline.intervalSec}
                         alt={t('event_details.event_media_alt')}
                       />
-                    </div>
-                  )}
-                  {videoItems.map((m) => (
-                    <div key={m.id} className="event-media-video">
-                      <video controls src={`api/media/${m.file_path}`} />
-                    </div>
-                  ))}
+                    )}
+                    {imageFrames.length === 1 && !hasTimelapse && (
+                      <div className="event-media-static-image">
+                        <img
+                          src={`api/media/${imageFrames[0].file_path}`}
+                          alt={t('event_details.event_media_alt')}
+                        />
+                      </div>
+                    )}
+                    {videoItems.map((m) => (
+                      <div key={m.id} className="event-media-video">
+                        <video controls src={`api/media/${m.file_path}`} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            {activeTab === 'analysis' &&
+              hasLitterboxChartWeights &&
+              decodedRawData && (
+                <div className="event-details-litterbox-analysis">
+                  <WeightSignalChart
+                    weights={decodedRawData.weights}
+                    periods={segmentPeriods ?? EMPTY_LITTERBOX_SEGMENT_PERIODS}
+                  />
                 </div>
               )}
-            </>
-          )}
-          {activeTab === 'analysis' &&
-            hasLitterboxChartWeights &&
-            decodedRawData && (
-              <div className="event-details-litterbox-analysis">
-                <WeightSignalChart
-                  weights={decodedRawData.weights}
-                  periods={segmentPeriods ?? EMPTY_LITTERBOX_SEGMENT_PERIODS}
+            {activeTab === 'analysis' &&
+              hasWaterChartWeights &&
+              decodedWaterData && (
+                <WaterSignalChart
+                  weights={decodedWaterData.weights}
+                  periods={waterPeriods}
                 />
-              </div>
-            )}
-          {activeTab === 'analysis' &&
-            hasWaterChartWeights &&
-            decodedWaterData && (
-              <WaterSignalChart
-                weights={decodedWaterData.weights}
-                periods={waterPeriods}
-              />
-            )}
-        </div>
-
-        <div className="event-details-body">
-          <div className="event-header-row">
-            <div className="event-info">
-              <DialogTitle className="event-title">
-                {getEventTitle(displayEvent, t)}
-              </DialogTitle>
-              <span className="event-time">
-                {displayEvent.timestamp
-                  ? formatDateTime(new Date(displayEvent.timestamp))
-                  : ''}
-              </span>
-            </div>
-            <div className="event-actions">
-              {hasLitterboxChartWeights && (
-                <>
-                  {/* TODO: Hide for devices with visit annotation off — needs device context on the event (or similar) without an extra device fetch. */}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    icon
-                    className="action-btn"
-                    title={t('event_details.analyze')}
-                    aria-label={t('event_details.analyze')}
-                    onClick={() => runAnalyze(displayEvent.id)}
-                    disabled={isAnalyzing}
-                  >
-                    {isAnalyzing ? (
-                      <Loader2 size={20} aria-hidden className="animate-spin" />
-                    ) : (
-                      <Sparkles size={20} aria-hidden />
-                    )}
-                  </Button>
-                </>
               )}
-              <Button
-                variant="ghost"
-                icon
-                className="action-btn"
-                title={t('event_details.delete_event')}
-                onClick={handleDeleteClick}
-                disabled={isDeleting}
-              >
-                {isDeleting ? (
-                  <Loader2 size={20} className="animate-spin" />
-                ) : (
-                  <Trash2 size={20} />
+          </div>
+
+          <FormShell
+            className="event-details-body"
+            onSubmit={handleSave}
+            error={updateError instanceof Error ? updateError.message : null}
+            actionsSlot={
+              discardConfirm.open ? (
+                <FormInlineDiscard
+                  keepLabel={t('common.keep_editing')}
+                  discardLabel={t('common.discard')}
+                  onKeepEditing={discardConfirm.onCancel}
+                  onDiscard={discardConfirm.onConfirm}
+                  disabled={isUpdating}
+                />
+              ) : (
+                <FormActions
+                  onCancel={handleClose}
+                  cancelLabel={t('common.cancel')}
+                  submitLabel={t('common.save')}
+                  isSubmitting={isUpdating}
+                  submitDisabled={!isDirty}
+                />
+              )
+            }
+          >
+            <div className="event-header-row">
+              <div className="event-info">
+                <DialogTitle className="event-title">
+                  {getEventTitle(displayEvent, t)}
+                </DialogTitle>
+                <span className="event-time">
+                  {displayEvent.timestamp
+                    ? formatDateTime(new Date(displayEvent.timestamp))
+                    : ''}
+                </span>
+              </div>
+              <div className="event-actions">
+                {hasLitterboxChartWeights && (
+                  <>
+                    {/* TODO: Hide for devices with visit annotation off — needs device context on the event (or similar) without an extra device fetch. */}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      icon
+                      className="action-btn"
+                      title={t('event_details.analyze')}
+                      aria-label={t('event_details.analyze')}
+                      onClick={() => runAnalyze(displayEvent.id)}
+                      disabled={isAnalyzing}
+                    >
+                      {isAnalyzing ? (
+                        <Loader2
+                          size={20}
+                          aria-hidden
+                          className="animate-spin"
+                        />
+                      ) : (
+                        <Sparkles size={20} aria-hidden />
+                      )}
+                    </Button>
+                  </>
                 )}
-              </Button>
-              {hasMedia && downloadMediaPath && (
                 <Button
                   variant="ghost"
                   icon
                   className="action-btn"
-                  title={t('event_details.download_media')}
-                  onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = `api/media/${downloadMediaPath}`;
-                    link.download =
-                      downloadMediaPath.split('/').pop() || 'media';
-                    link.click();
-                  }}
-                >
-                  <Download size={20} />
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div className="event-section pet-identification-section">
-            <div className="section-label">
-              <Info size={14} className="info-icon" />
-              <span>{t('event_details.pet_identification')}</span>
-            </div>
-            <div className="pet-selector-wrapper">
-              <Select
-                options={petOptions}
-                value={selectedPetId ?? ''}
-                onChange={handlePetChange}
-                className="pet-select"
-                disabled={isUpdating}
-              />
-            </div>
-          </div>
-
-          {displayEvent.data?.type === 'litterbox_use' && (
-            <LitterboxWeightBlock parentEvent={displayEvent} />
-          )}
-
-          {showDeleteConfirm && (
-            <div className="event-delete-confirm">
-              <span>{t('event_details.confirm_delete_visit')}</span>
-              <label className="event-delete-checkbox">
-                <input
-                  type="checkbox"
-                  checked={reidentifyOnDelete}
-                  onChange={(e) => setReidentifyOnDelete(e.target.checked)}
-                  disabled={isDeleting || displayEvent.device_id == null}
-                />
-                <span>{t('event_details.reidentify_later_visits')}</span>
-              </label>
-              <div className="event-delete-actions">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleDeleteCancel}
-                  disabled={isDeleting}
-                >
-                  {t('common.cancel')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  onClick={() => void handleDeleteConfirm()}
+                  title={t('event_details.delete_event')}
+                  onClick={handleDeleteClick}
                   disabled={isDeleting}
                 >
                   {isDeleting ? (
-                    <Loader2 size={16} className="animate-spin" aria-hidden />
+                    <Loader2 size={20} className="animate-spin" />
                   ) : (
-                    t('event_details.delete_visit')
+                    <Trash2 size={20} />
                   )}
                 </Button>
+                {hasMedia && downloadMediaPath && (
+                  <Button
+                    variant="ghost"
+                    icon
+                    className="action-btn"
+                    title={t('event_details.download_media')}
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = `api/media/${downloadMediaPath}`;
+                      link.download =
+                        downloadMediaPath.split('/').pop() || 'media';
+                      link.click();
+                    }}
+                  >
+                    <Download size={20} />
+                  </Button>
+                )}
               </div>
             </div>
-          )}
 
-          {displayEvent.data?.type === 'litterbox_use' && (
-            <div className="event-section elimination-type-section">
+            <div className="event-section pet-identification-section">
               <div className="section-label">
                 <Info size={14} className="info-icon" />
-                <span>{t('event_details.event_type')}</span>
+                <span>{t('event_details.pet_identification')}</span>
               </div>
-              <div className="elimination-type-selector-wrapper">
+              <div className="pet-selector-wrapper">
                 <Select
-                  options={eliminationTypeOptions}
-                  value={selectedEliminationType}
-                  onChange={handleEliminationTypeChange}
-                  className="elimination-type-select"
+                  options={petOptions}
+                  value={draft.petId == null ? 'null' : String(draft.petId)}
+                  onChange={handlePetChange}
+                  className="pet-select"
                   disabled={isUpdating}
                 />
-                <label
-                  className="straining-control"
-                  htmlFor="event-details-straining"
-                >
-                  <span>{t('annotation.straining')}</span>
-                  <input
-                    id="event-details-straining"
-                    type="checkbox"
-                    checked={selectedStraining}
-                    onChange={handleStrainingChange}
-                    className="straining-checkbox"
-                    disabled={isUpdating}
-                  />
-                </label>
               </div>
             </div>
-          )}
 
-          <div className="event-section details-section">
-            <EventDetailsRenderer event={displayEvent} />
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+            {displayEvent.data?.type === 'litterbox_use' && (
+              <LitterboxWeightBlock parentEvent={displayEvent} />
+            )}
+
+            {displayEvent.data?.type === 'litterbox_use' && (
+              <div className="event-section elimination-type-section">
+                <div className="section-label">
+                  <Info size={14} className="info-icon" />
+                  <span>{t('event_details.event_type')}</span>
+                </div>
+                <div className="elimination-type-selector-wrapper">
+                  <Select
+                    options={eliminationTypeOptions}
+                    value={draft.eliminationType}
+                    onChange={handleEliminationTypeChange}
+                    className="elimination-type-select"
+                    disabled={isUpdating}
+                  />
+                  <label
+                    className="straining-control"
+                    htmlFor="event-details-straining"
+                  >
+                    <span>{t('annotation.straining')}</span>
+                    <input
+                      id="event-details-straining"
+                      type="checkbox"
+                      checked={draft.straining}
+                      onChange={handleStrainingChange}
+                      className="straining-checkbox"
+                      disabled={isUpdating}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+
+            <div className="event-section details-section">
+              <EventDetailsRenderer event={displayEvent} />
+            </div>
+          </FormShell>
+        </DialogContent>
+      </Dialog>
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title={t('event_details.delete_visit')}
+        description={t('event_details.confirm_delete_visit')}
+        confirmLabel={t('event_details.delete_visit')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        isConfirming={isDeleting}
+        onConfirm={() => void handleDeleteConfirm()}
+        onCancel={handleDeleteCancel}
+      >
+        <label className="event-delete-checkbox">
+          <input
+            type="checkbox"
+            checked={reidentifyOnDelete}
+            onChange={(e) => setReidentifyOnDelete(e.target.checked)}
+            disabled={isDeleting || displayEvent.device_id == null}
+          />
+          <span>{t('event_details.reidentify_later_visits')}</span>
+        </label>
+      </ConfirmDialog>
+    </>
   );
 };
 

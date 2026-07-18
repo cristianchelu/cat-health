@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import {
@@ -7,11 +6,19 @@ import {
   useUpdateDevice,
   useDevices,
 } from '@/hooks/queries/deviceQueries';
-import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Button } from '@/components/ui/Button';
-import { FormField, Input, Textarea, Select } from '@/components/ui/form';
-import { Switch } from '@/components/ui/Switch';
-import { Smartphone, Check } from 'lucide-react';
+import {
+  FormField,
+  FormShell,
+  FormSwitch,
+  Input,
+  Select,
+  Textarea,
+} from '@/components/ui/form';
+import { SettingsFormPage } from '@/components/ui/SettingsFormPage';
+import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
+import { useAppForm, useUnsavedBlocker } from '@/hooks/form';
+import { Smartphone } from 'lucide-react';
 import './EditDevicePage.css';
 
 interface DeviceFormValues {
@@ -87,8 +94,7 @@ function deviceToFormValues(device: {
     return {
       ...base,
       model: (cfg.model as string) || '',
-      sourceDeviceId:
-        sid != null && sid !== '' ? String(sid) : '',
+      sourceDeviceId: sid != null && sid !== '' ? String(sid) : '',
       promptTemplate: (cfg.prompt_template as string) || '',
       autoIdentify: cfg.auto_identify !== false,
     };
@@ -102,16 +108,27 @@ const EditDevicePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const deviceId = parseInt(id || '0', 10);
 
-  const { data: device, isLoading, error } = useDevice(deviceId, !!id, {
+  const {
+    data: device,
+    isLoading,
+    error,
+  } = useDevice(deviceId, !!id, {
     refetchInterval: false,
   });
   const { data: allDevices = [] } = useDevices();
   const updateDevice = useUpdateDevice(deviceId);
 
-  const { register, handleSubmit, control } = useForm<DeviceFormValues>({
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { isDirty },
+  } = useAppForm<DeviceFormValues>({
     defaultValues: DEFAULT_FORM_VALUES,
     values: device ? deviceToFormValues(device) : undefined,
   });
+  const { blockerOpen, onConfirmLeave, onCancelLeave } =
+    useUnsavedBlocker(isDirty);
 
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -166,20 +183,30 @@ const EditDevicePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="edit-device-page">
-        <div className="loading-state">{t('settings.loading_device_data')}</div>
-      </div>
+      <SettingsFormPage
+        className="edit-device-page"
+        title={t('settings.edit_device_title')}
+        icon={<Smartphone size="1em" />}
+        isLoading
+        loadingMessage={t('settings.loading_device_data')}
+      />
     );
   }
 
   if (error || !device) {
     return (
-      <div className="edit-device-page">
+      <SettingsFormPage
+        className="edit-device-page"
+        title={t('settings.edit_device_title')}
+        icon={<Smartphone size="1em" />}
+      >
         <div className="error-state">
           <p>{t('devices.error_loading_device')}</p>
-          <Button onClick={() => navigate('/settings')}>{t('settings.back')}</Button>
+          <Button onClick={() => navigate('/settings')}>
+            {t('settings.back')}
+          </Button>
         </div>
-      </div>
+      </SettingsFormPage>
     );
   }
 
@@ -188,54 +215,40 @@ const EditDevicePage: React.FC = () => {
     .map((d) => ({ value: d.id.toString(), label: `${d.name} (${d.type})` }));
 
   return (
-    <div className="edit-device-page">
-      <SectionHeader icon={<Smartphone size="1em" />}>
-        {t('settings.edit_device_title')}
-      </SectionHeader>
-
-      <form onSubmit={handleSubmit(onFormSubmit)} className="settings-form">
+    <SettingsFormPage
+      className="edit-device-page"
+      title={t('settings.edit_device_title')}
+      icon={<Smartphone size="1em" />}
+    >
+      <FormShell
+        onSubmit={handleSubmit(onFormSubmit)}
+        error={submitError}
+        actions={{
+          onCancel: () => navigate('/settings'),
+          cancelLabel: t('settings.cancel'),
+          submitLabel: updateDevice.isPending
+            ? t('settings.saving')
+            : t('settings.save_changes'),
+          isSubmitting: updateDevice.isPending,
+          submitDisabled: !isDirty,
+        }}
+      >
         <FormField label={t('settings.device_name_label')}>
           <Input {...register('name', { required: true })} />
         </FormField>
 
-        <FormField label={t('settings.enabled')}>
-          <div className="switch-row">
-            <Controller
-              name="enabled"
-              control={control}
-              render={({ field }) => (
-                <>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    ref={field.ref}
-                  />
-                  <span>{field.value ? t('settings.enabled') : t('settings.disabled')}</span>
-                </>
-              )}
-            />
-          </div>
-        </FormField>
+        <FormSwitch
+          name="enabled"
+          control={control}
+          label={t('settings.enabled')}
+        />
 
-        <FormField label={t('settings.visit_annotation_label')}>
-          <div className="switch-row">
-            <Controller
-              name="visitAnnotationEnabled"
-              control={control}
-              render={({ field }) => (
-                <>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    ref={field.ref}
-                  />
-                  <span>{field.value ? t('settings.enabled') : t('settings.disabled')}</span>
-                </>
-              )}
-            />
-          </div>
-          <p className="help-text">{t('settings.visit_annotation_help')}</p>
-        </FormField>
+        <FormSwitch
+          name="visitAnnotationEnabled"
+          control={control}
+          label={t('settings.visit_annotation_label')}
+          description={t('settings.visit_annotation_help')}
+        />
 
         <div className="device-summary">
           <div className="summary-item">
@@ -308,48 +321,20 @@ const EditDevicePage: React.FC = () => {
               />
             </FormField>
 
-            <FormField label={t('settings.auto_identify_label')}>
-              <div className="switch-row">
-                <Controller
-                  name="autoIdentify"
-                  control={control}
-                  render={({ field }) => (
-                    <>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        ref={field.ref}
-                      />
-                      <span>
-                        {field.value ? t('settings.enabled') : t('settings.disabled')}
-                      </span>
-                    </>
-                  )}
-                />
-              </div>
-            </FormField>
+            <FormSwitch
+              name="autoIdentify"
+              control={control}
+              label={t('settings.auto_identify_label')}
+            />
           </>
         )}
-
-        {submitError && <div className="error-message">{submitError}</div>}
-
-        <div className="form-actions">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => navigate('/settings')}
-          >
-            {t('settings.cancel')}
-          </Button>
-          <Button type="submit" disabled={updateDevice.isPending}>
-            <Check size="1em" />
-            {updateDevice.isPending
-              ? t('settings.saving')
-              : t('settings.save_changes')}
-          </Button>
-        </div>
-      </form>
-    </div>
+      </FormShell>
+      <DiscardUnsavedDialog
+        open={blockerOpen}
+        onConfirm={onConfirmLeave}
+        onCancel={onCancelLeave}
+      />
+    </SettingsFormPage>
   );
 };
 

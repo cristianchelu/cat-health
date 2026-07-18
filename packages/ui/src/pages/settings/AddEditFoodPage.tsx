@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
-import { useFood, useCreateFood, useUpdateFood } from '@/hooks/queries/foodQueries';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Button } from '@/components/ui/Button';
-import { FormField, Input, Select, Textarea } from '@/components/ui/form';
+import {
+  useFood,
+  useCreateFood,
+  useUpdateFood,
+} from '@/hooks/queries/foodQueries';
+import {
+  FormField,
+  FormShell,
+  Input,
+  Select,
+  Textarea,
+} from '@/components/ui/form';
+import { SettingsFormPage } from '@/components/ui/SettingsFormPage';
+import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
+import { useAppForm, useUnsavedBlocker } from '@/hooks/form';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Drumstick } from 'lucide-react';
 import type { FoodTypeDTO, NutrientNameDTO, NutrientUnitDTO } from 'shared';
@@ -38,7 +48,11 @@ const NUTRIENT_NAMES: NutrientNameDTO[] = [
 
 const NUTRIENT_UNITS: NutrientUnitDTO[] = ['percent', 'g', 'mg'];
 
-type NutrientEntry = { nutrient: NutrientNameDTO; unit: NutrientUnitDTO; value: number };
+type NutrientEntry = {
+  nutrient: NutrientNameDTO;
+  unit: NutrientUnitDTO;
+  value: number;
+};
 
 const DEFAULT_NUTRIENTS: NutrientEntry[] = NUTRIENT_NAMES.map((nutrient) => ({
   nutrient,
@@ -108,16 +122,25 @@ const AddEditFoodPage: React.FC = () => {
   const createFood = useCreateFood();
   const updateFoodMutation = useUpdateFood(foodId);
 
-  const { register, handleSubmit, watch, setValue } = useForm<FoodFormValues>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { isDirty },
+  } = useAppForm<FoodFormValues>({
     defaultValues: DEFAULT_FORM_VALUES,
     values: food ? foodToFormValues(food) : undefined,
   });
+  const { blockerOpen, onConfirmLeave, onCancelLeave } =
+    useUnsavedBlocker(isDirty);
 
   const [error, setError] = useState<string | null>(null);
 
   // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch() for derived form UI (nutrients list, barcode)
   const nutrients = watch('nutrients');
   const barcodeEan13 = watch('barcode_ean13');
+  const barcodeRegistration = register('barcode_ean13');
 
   const onFormSubmit = async (data: FoodFormValues) => {
     setError(null);
@@ -164,27 +187,41 @@ const AddEditFoodPage: React.FC = () => {
     }
   };
 
-  if (!isNew && isLoading) {
-    return (
-      <div className="add-edit-food-page">
-        <p>{t('common.loading_pets')}</p>
-      </div>
-    );
-  }
-
   const isPending = createFood.isPending || updateFoodMutation.isPending;
 
   return (
-    <div className="add-edit-food-page">
-      <SectionHeader icon={<Drumstick size="1em" />}>
-        {isNew ? t('settings.add_food_title') : t('settings.edit_food_title')}
-      </SectionHeader>
-
-      <form onSubmit={handleSubmit(onFormSubmit)} className="settings-form">
+    <SettingsFormPage
+      className="add-edit-food-page"
+      title={
+        isNew ? t('settings.add_food_title') : t('settings.edit_food_title')
+      }
+      icon={<Drumstick size="1em" />}
+      isLoading={!isNew && isLoading}
+      loadingMessage={t('common.loading_pets')}
+    >
+      <FormShell
+        onSubmit={handleSubmit(onFormSubmit)}
+        error={error}
+        actions={{
+          onCancel: () => navigate('/settings'),
+          cancelLabel: t('settings.cancel'),
+          submitLabel: isPending
+            ? t('settings.saving')
+            : isNew
+              ? t('settings.food_create')
+              : t('settings.save_changes'),
+          isSubmitting: isPending,
+          submitDisabled: !isDirty,
+        }}
+      >
         <Tabs defaultValue="basic" className="add-edit-food-tabs">
           <TabsList>
-            <TabsTrigger value="basic">{t('settings.food_tab_basic')}</TabsTrigger>
-            <TabsTrigger value="nutrients">{t('settings.food_tab_nutrients')}</TabsTrigger>
+            <TabsTrigger value="basic">
+              {t('settings.food_tab_basic')}
+            </TabsTrigger>
+            <TabsTrigger value="nutrients">
+              {t('settings.food_tab_nutrients')}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic" className="add-edit-food-tab-content">
@@ -216,15 +253,14 @@ const AddEditFoodPage: React.FC = () => {
 
             <FormField label={t('settings.food_barcode_label')}>
               <Input
-                ref={register('barcode_ean13').ref}
-                onBlur={register('barcode_ean13').onBlur}
-                name={register('barcode_ean13').name}
+                {...barcodeRegistration}
                 value={barcodeEan13}
                 onChange={(e) => {
-                  const next = e.target.value
-                    .replace(/\D/g, '')
-                    .slice(0, 13);
-                  setValue('barcode_ean13', next, { shouldValidate: true });
+                  const next = e.target.value.replace(/\D/g, '').slice(0, 13);
+                  setValue('barcode_ean13', next, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
                 }}
                 placeholder={t('settings.food_barcode_placeholder')}
                 inputMode="numeric"
@@ -304,27 +340,13 @@ const AddEditFoodPage: React.FC = () => {
             </div>
           </TabsContent>
         </Tabs>
-
-        {error && <div className="error-message">{error}</div>}
-
-        <div className="form-actions">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => navigate('/settings')}
-          >
-            {t('settings.cancel')}
-          </Button>
-          <Button type="submit" disabled={isPending}>
-            {isPending
-              ? t('settings.saving')
-              : isNew
-                ? t('settings.food_create')
-                : t('settings.save_changes')}
-          </Button>
-        </div>
-      </form>
-    </div>
+      </FormShell>
+      <DiscardUnsavedDialog
+        open={blockerOpen}
+        onConfirm={onConfirmLeave}
+        onCancel={onCancelLeave}
+      />
+    </SettingsFormPage>
   );
 };
 

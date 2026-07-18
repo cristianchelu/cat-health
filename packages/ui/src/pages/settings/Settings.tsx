@@ -24,6 +24,10 @@ import {
   useUpdateSettings,
 } from '@/hooks/queries/settingsQueries';
 import { Input } from '@/components/ui/form/Input';
+import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/form';
+import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
+import { useDraftForm, useUnsavedBlocker } from '@/hooks/form';
 
 import './Settings.css';
 
@@ -43,28 +47,35 @@ const Settings: React.FC = () => {
     navigate('/settings/pets/new');
   };
 
-  const [trackingGapInput, setTrackingGapInput] = React.useState('');
+  const trackingGapBaseline = String(
+    settings?.tracking_gap_threshold_minutes ?? '',
+  );
+  const {
+    draft: trackingGapInput,
+    setDraft: setTrackingGapInput,
+    isDirty: trackingGapDirty,
+    requestReset: requestTrackingGapReset,
+    discardConfirm: trackingGapDiscardConfirm,
+  } = useDraftForm(trackingGapBaseline, {
+    baselineKey: trackingGapBaseline,
+  });
+  const parsedTrackingGap = Number.parseInt(trackingGapInput, 10);
+  const trackingGapIsValid =
+    Number.isFinite(parsedTrackingGap) && parsedTrackingGap >= 0;
 
-  React.useEffect(() => {
-    if (settings?.tracking_gap_threshold_minutes !== undefined) {
-      setTrackingGapInput(String(settings.tracking_gap_threshold_minutes));
-    }
-  }, [settings?.tracking_gap_threshold_minutes]);
+  const { blockerOpen, onConfirmLeave, onCancelLeave } =
+    useUnsavedBlocker(trackingGapDirty);
 
-  const handleTrackingGapBlur = () => {
-    const value = Number.parseInt(trackingGapInput, 10);
-    if (Number.isNaN(value) || value < 0) {
-      setTrackingGapInput(
-        String(settings?.tracking_gap_threshold_minutes ?? ''),
-      );
-      return;
-    }
-
-    if (value === settings?.tracking_gap_threshold_minutes) {
-      return;
-    }
-
-    updateSettings.mutate({ tracking_gap_threshold_minutes: value });
+  const handleSaveTrackingGap = () => {
+    if (!trackingGapIsValid) return;
+    updateSettings.mutate(
+      { tracking_gap_threshold_minutes: parsedTrackingGap },
+      {
+        onSuccess: () => {
+          setTrackingGapInput(String(parsedTrackingGap));
+        },
+      },
+    );
   };
 
   return (
@@ -228,17 +239,46 @@ const Settings: React.FC = () => {
             <CardListItem
               icon={<Timer size="1em" />}
               trailing={
-                <Input
-                  className="settings-tracking-gap-input"
-                  type="number"
-                  inputSize="sm"
-                  min={0}
-                  step={15}
-                  value={trackingGapInput}
-                  onChange={(event) => setTrackingGapInput(event.target.value)}
-                  onBlur={handleTrackingGapBlur}
-                  aria-label={t('settings.tracking_gap_threshold_label')}
-                />
+                <div className="settings-tracking-gap-editor">
+                  <Input
+                    className="settings-tracking-gap-input"
+                    type="number"
+                    inputSize="sm"
+                    min={0}
+                    step={15}
+                    value={trackingGapInput}
+                    onChange={(event) => {
+                      setTrackingGapInput(event.target.value);
+                    }}
+                    disabled={updateSettings.isPending}
+                    aria-label={t('settings.tracking_gap_threshold_label')}
+                  />
+                  {trackingGapDirty ? (
+                    <div className="settings-tracking-gap-actions">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={updateSettings.isPending}
+                        onClick={requestTrackingGapReset}
+                      >
+                        {t('settings.cancel')}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={
+                          updateSettings.isPending || !trackingGapIsValid
+                        }
+                        onClick={handleSaveTrackingGap}
+                      >
+                        {updateSettings.isPending
+                          ? t('settings.saving')
+                          : t('common.save')}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
               }
             >
               <CardListContent
@@ -252,6 +292,15 @@ const Settings: React.FC = () => {
                 description={t('settings.notifications_desc')}
               />
             </CardListItem>
+            <FormError
+              message={
+                trackingGapDirty && !trackingGapIsValid
+                  ? t('settings.tracking_gap_invalid')
+                  : updateSettings.isError
+                  ? t('settings.tracking_gap_save_error')
+                  : null
+              }
+            />
           </CardList>
         </section>
         <section>
@@ -274,6 +323,12 @@ const Settings: React.FC = () => {
           </CardList>
         </section>
       </div>
+      <DiscardUnsavedDialog
+        open={blockerOpen}
+        onConfirm={onConfirmLeave}
+        onCancel={onCancelLeave}
+      />
+      <DiscardUnsavedDialog {...trackingGapDiscardConfirm} />
     </div>
   );
 };

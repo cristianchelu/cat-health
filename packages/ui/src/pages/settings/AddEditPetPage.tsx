@@ -7,6 +7,7 @@ import {
   useCreatePet,
   useUpdatePet,
   useDeletePet,
+  useTogglePetPresence,
   useUploadPetAvatar,
 } from '@/hooks/queries/petQueries';
 import type { PostPetRequestDTO } from 'shared';
@@ -24,34 +25,41 @@ const AddEditPetPage: React.FC = () => {
   const createPetMutation = useCreatePet();
   const updatePetMutation = useUpdatePet(petId);
   const deletePetMutation = useDeletePet(petId);
+  const togglePresenceMutation = useTogglePetPresence(petId);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const uploadAvatarMutation = useUploadPetAvatar(petId);
 
-  const handleSubmit = (data: PostPetRequestDTO, avatarFile: File | null) => {
-    if (isEditing) {
-      updatePetMutation.mutate(data, {
-        onSuccess: async () => {
-          if (avatarFile) {
-            await uploadAvatarMutation.mutateAsync(avatarFile);
-          }
-          navigate('/settings');
-        },
-      });
-    } else {
-      createPetMutation.mutate(data, {
-        onSuccess: async (newPet) => {
-          if (avatarFile) {
-            // Use a one-off upload for the new pet id without invoking a hook inside callback
-            const form = new FormData();
-            form.append('avatar', avatarFile);
-            await fetch(`api/pets/${newPet.id}/avatar`, {
-              method: 'POST',
-              body: form,
-            });
-          }
-          navigate('/settings');
-        },
-      });
+  const handleSubmit = async (
+    data: PostPetRequestDTO,
+    avatarFile: File | null,
+    awayFromHome: boolean,
+  ) => {
+    setSubmitError(null);
+    try {
+      if (isEditing) {
+        await updatePetMutation.mutateAsync(data);
+        if (avatarFile) {
+          await uploadAvatarMutation.mutateAsync(avatarFile);
+        }
+        if (pet && awayFromHome !== pet.is_away) {
+          await togglePresenceMutation.mutateAsync();
+        }
+      } else {
+        const newPet = await createPetMutation.mutateAsync(data);
+        if (avatarFile) {
+          const form = new FormData();
+          form.append('avatar', avatarFile);
+          const response = await fetch(`api/pets/${newPet.id}/avatar`, {
+            method: 'POST',
+            body: form,
+          });
+          if (!response.ok) throw new Error('Failed to upload avatar');
+        }
+      }
+      navigate('/settings');
+    } catch {
+      setSubmitError(t('settings.pet_save_error'));
     }
   };
 
@@ -85,10 +93,12 @@ const AddEditPetPage: React.FC = () => {
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         onDelete={isEditing ? handleDelete : undefined}
+        error={submitError}
         isSubmitting={
           createPetMutation.isPending ||
           updatePetMutation.isPending ||
-          uploadAvatarMutation.isPending
+          uploadAvatarMutation.isPending ||
+          togglePresenceMutation.isPending
         }
         isDeleting={deletePetMutation.isPending}
       />

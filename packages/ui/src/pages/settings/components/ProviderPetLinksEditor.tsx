@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ProviderPetLink } from 'shared';
 import { FormField, Select } from '@/components/ui/form';
@@ -36,7 +36,6 @@ const ProviderPetLinksEditor: React.FC<ProviderPetLinksEditorProps> = ({
   const [petIdOverrides, setPetIdOverrides] = useState<Record<string, number>>(
     {},
   );
-  const lastSyncedKey = useRef('');
 
   const baseLinks = useMemo(() => {
     if (!cloudPets?.length) return [];
@@ -51,18 +50,6 @@ const ProviderPetLinksEditor: React.FC<ProviderPetLinksEditorProps> = ({
       })),
     [baseLinks, petIdOverrides],
   );
-
-  const savedLinks = useMemo(
-    () => petLinksForSave(displayLinks),
-    [displayLinks],
-  );
-
-  useEffect(() => {
-    const syncKey = JSON.stringify(savedLinks);
-    if (!syncKey || syncKey === lastSyncedKey.current) return;
-    lastSyncedKey.current = syncKey;
-    onChange(savedLinks);
-  }, [savedLinks, onChange]);
 
   const localPetOptions = [
     { value: UNLINKED_VALUE, label: t('settings.pet_linking_unlinked') },

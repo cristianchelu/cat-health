@@ -153,19 +153,21 @@ const Overview: React.FC = () => {
           </div>
         </section>
       )}
-      <EventDetailsModal
-        isOpen={selectedEvent !== null}
-        event={selectedEvent}
-        onClose={handleCloseModal}
-      />
-      {selectedPet && (
+      {selectedEvent ? (
+        <EventDetailsModal
+          isOpen
+          event={selectedEvent}
+          onClose={handleCloseModal}
+        />
+      ) : null}
+      {selectedPet && showFoodModal ? (
         <LogFoodModal
-          isOpen={showFoodModal}
+          isOpen
           onClose={() => setShowFoodModal(false)}
           petId={selectedPet.id}
           dateRange={dateRange}
         />
-      )}
+      ) : null}
     </div>
   );
 };

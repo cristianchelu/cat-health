@@ -17,6 +17,8 @@ export type RegisterDeviceFormProps = {
   serverError: string | null;
   onSubmitDevice: (payload: PostDeviceRequestDTO) => Promise<void>;
   onBack: () => void;
+  /** Report register-step dirty state for header Cancel leave guard. */
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 export interface AddDeviceFlow {

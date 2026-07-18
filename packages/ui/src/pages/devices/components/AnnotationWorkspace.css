@@ -101,6 +101,11 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
+
+    .annotation-form-actions {
+      padding-top: var(--space-sm);
+      justify-content: flex-start;
+    }
   }
 
   .annotation-session-main-row {

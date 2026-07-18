@@ -1,32 +1,4 @@
 .add-edit-food-page {
-  max-width: var(--max-width-sm);
-  margin: 0 auto;
-
-  .section-header {
-    margin-bottom: var(--space-2xl);
-  }
-
-  .settings-form {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-  }
-
-  .form-actions {
-    display: flex;
-    gap: var(--space-md);
-    justify-content: flex-end;
-    padding-top: var(--space-lg);
-  }
-
-  .error-message {
-    color: var(--color-error);
-    font-size: var(--font-size-sm);
-    padding: var(--space-sm);
-    background-color: var(--color-error-light);
-    border-radius: var(--radius-sm);
-  }
-
   .add-edit-food-tabs {
     width: 100%;
   }
@@ -74,12 +46,6 @@
   }
 
   @media (max-width: 768px) {
-    padding: var(--space-sm);
-
-    .section-header {
-      margin-bottom: var(--space-xl);
-    }
-
     .nutrient-entry {
       flex-direction: column;
       align-items: stretch;
@@ -87,15 +53,6 @@
 
     .nutrient-entry .nutrient-value-input {
       max-width: none;
-    }
-
-    .form-actions {
-      flex-direction: column;
-      gap: var(--space-sm);
-
-      button {
-        width: 100%;
-      }
     }
   }
 }
