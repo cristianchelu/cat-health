@@ -18,7 +18,7 @@ export interface DailyMetricTrendDay {
   averageWeight: number;
 }
 
-function calorieBoundsFromWeight(avgWeightGrams: number): {
+export function calorieBoundsFromWeight(avgWeightGrams: number): {
   lowerBound: number;
   upperBound: number;
 } {

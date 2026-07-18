@@ -1,6 +1,5 @@
 import type { Kysely } from 'kysely';
 import {
-  createDefaultSettingsResponse,
   DATE_FORMAT_KEY,
   DEFAULT_DATE_FORMAT,
   DEFAULT_FIRST_WEEKDAY,

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { format } from 'date-fns';
+import { subDays } from 'date-fns';
 import type { FastifyInstance } from 'fastify';
 
 import {
@@ -10,9 +10,12 @@ import {
   type TestDbContext,
 } from '../helpers/testDb.ts';
 import {
+  insertFood,
+  insertFoodIntakeEvent,
   insertLitterboxEvent,
   insertPet,
   insertWaterIntakeEvent,
+  insertWeightMeasurementEvent,
 } from '../helpers/fixtures.ts';
 
 describe('events API trends', () => {
@@ -31,54 +34,161 @@ describe('events API trends', () => {
 
   it('aggregates water intake for the requested day window', async () => {
     const pet = await insertPet(ctx.db, { name: 'Hydration Cat' });
-    const today = new Date();
+    const anchor = new Date();
     await insertWaterIntakeEvent(ctx.db, {
       pet_id: pet.id,
       amount: 42,
-      timestamp: today,
+      timestamp: anchor,
     });
 
     const res = await app.inject({
       method: 'GET',
-      url: `/api/events/water-trends/${pet.id}?days=1&timezone=UTC`,
+      url: `/api/events/water-trends/${pet.id}?days=2&timezone=UTC`,
     });
 
     assert.equal(res.statusCode, 200);
     const days = res.json() as Array<{ date: string; amount: number }>;
-    const todayKey = format(today, 'yyyy-MM-dd');
-    const todayBucket = days.find((day) => day.date === todayKey);
+    const bucket = days.find((day) => day.amount === 42);
 
-    assert.ok(todayBucket);
-    assert.equal(todayBucket.amount, 42);
+    assert.ok(bucket);
+    assert.equal(bucket.amount, 42);
   });
 
-  it('returns litterbox visits inside the requested date range', async () => {
-    const pet = await insertPet(ctx.db, { name: 'Litter Cat' });
-    const visitAt = new Date('2026-03-10T15:30:00.000Z');
+  it('excludes out-of-range litterbox visits and includes detail fields', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Detail Cat' });
+    const inside = new Date('2026-04-12T12:00:00.000Z');
+    const outside = new Date('2026-04-11T12:00:00.000Z');
 
+    const visit = await insertLitterboxEvent(ctx.db, {
+      pet_id: pet.id,
+      timestamp: inside,
+      elimination_type: 'defecation',
+      elimination_weight: 35,
+      duration: 90,
+      human_verified: true,
+    });
     await insertLitterboxEvent(ctx.db, {
       pet_id: pet.id,
-      timestamp: visitAt,
+      timestamp: outside,
       elimination_type: 'urination',
-      elimination_weight: 28,
+      elimination_weight: 20,
     });
 
     const res = await app.inject({
       method: 'GET',
       url:
         `/api/events/litterbox-trends/${pet.id}` +
-        `?startTime=2026-03-10T00:00:00.000Z` +
-        `&endTime=2026-03-10T23:59:59.999Z` +
-        `&timezone=UTC`,
+        `?startTime=2026-04-12T00:00:00.000Z` +
+        `&endTime=2026-04-12T23:59:59.999Z` +
+        `&timezone=UTC&detail=true`,
     });
 
     assert.equal(res.statusCode, 200);
     const body = res.json() as {
-      days: Array<{ date: string; events: Array<{ id: number }> }>;
+      days: Array<{
+        date: string;
+        events: Array<{
+          id?: number;
+          elimination_weight?: number;
+          human_verified?: boolean;
+          type: string;
+        }>;
+        summary?: { defecationCount: number; urinationCount: number };
+      }>;
+      lastPee: string | null;
+      lastPoop: string | null;
     };
 
-    const day = body.days.find((entry) => entry.date === '2026-03-10');
+    const day = body.days.find((entry) => entry.date === '2026-04-12');
     assert.ok(day);
     assert.equal(day.events.length, 1);
+    assert.equal(day.events[0].id, visit.id);
+    assert.equal(day.events[0].elimination_weight, 35);
+    assert.equal(day.events[0].human_verified, true);
+    assert.equal(day.events[0].type, 'defecation');
+    assert.ok(day.summary);
+    assert.equal(day.summary.defecationCount, 1);
+    assert.equal(day.summary.urinationCount, 0);
+    assert.equal(body.lastPee, null);
+    assert.equal(body.lastPoop, inside.toISOString());
+  });
+
+  it('returns weight points inside the days window only', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Weight Cat' });
+    const anchor = new Date();
+    const recent = subDays(anchor, 2);
+    const old = subDays(anchor, 40);
+
+    await insertWeightMeasurementEvent(ctx.db, {
+      pet_id: pet.id,
+      timestamp: recent,
+      weight: 4100,
+    });
+    await insertWeightMeasurementEvent(ctx.db, {
+      pet_id: pet.id,
+      timestamp: old,
+      weight: 3900,
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/events/weight-trends/${pet.id}?days=7&timezone=UTC`,
+    });
+
+    assert.equal(res.statusCode, 200);
+    const body = res.json() as {
+      points: Array<{ weight: number; timestamp: string }>;
+    };
+
+    assert.equal(body.points.length, 1);
+    assert.equal(body.points[0].weight, 4100);
+  });
+
+  it('aggregates food trends as calories with weight-based bounds', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Calorie Cat' });
+    const anchor = new Date();
+    const food = await insertFood(ctx.db, {
+      name: 'Calorie pouch',
+      food_type: 'complete_wet',
+      moisture_percent: 80,
+      calories_per_100g: 100,
+    });
+
+    await insertFoodIntakeEvent(ctx.db, {
+      pet_id: pet.id,
+      timestamp: anchor,
+      food_type: 'wet',
+      amount: 50,
+      food_id: food.id,
+      nutrients: { calories: 50 },
+    });
+    await insertWeightMeasurementEvent(ctx.db, {
+      pet_id: pet.id,
+      timestamp: anchor,
+      weight: 4000,
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/events/food-trends/${pet.id}?days=2&timezone=UTC`,
+    });
+
+    assert.equal(res.statusCode, 200);
+    const days = res.json() as Array<{
+      date: string;
+      amount: number;
+      lowerBound: number;
+      upperBound: number;
+      averageWeight: number;
+    }>;
+    const bucket = days.find((day) => day.amount === 50);
+    assert.ok(bucket);
+    assert.equal(bucket.amount, 50);
+    assert.equal(bucket.averageWeight, 4000);
+
+    const fallbackLower = 220 * 0.8;
+    const fallbackUpper = 220 * 1.2;
+    assert.notEqual(bucket.lowerBound, fallbackLower);
+    assert.notEqual(bucket.upperBound, fallbackUpper);
   });
 });

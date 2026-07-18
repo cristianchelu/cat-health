@@ -4,6 +4,7 @@ import type { Database } from '../../src/database/index.ts';
 import type {
   Event,
   EventData,
+  FoodIntakeEventData,
   LitterboxUseEventData,
   PetPresenceEventData,
   WaterIntakeEventData,
@@ -47,8 +48,17 @@ type WaterIntakeEventSeed = {
   timestamp?: Date;
 } & Pick<WaterIntakeEventData, 'amount'>;
 
+type FoodIntakeEventSeed = {
+  pet_id: number;
+  device_id?: number | null;
+  timestamp?: Date;
+  human_verified?: boolean;
+} & Pick<FoodIntakeEventData, 'amount' | 'food_type' | 'food_id' | 'nutrients'>;
+
 type WeightMeasurementEventSeed = {
   pet_id: number;
+  device_id?: number | null;
+  parent_event_id?: number | null;
   timestamp?: Date;
   weight: number;
 };
@@ -207,6 +217,33 @@ export async function insertFood(
     .executeTakeFirstOrThrow();
 }
 
+export async function insertFoodIntakeEvent(
+  db: Kysely<Database>,
+  seed: FoodIntakeEventSeed,
+): Promise<Event> {
+  const data: FoodIntakeEventData = {
+    type: 'food_intake',
+    food_type: seed.food_type ?? 'wet',
+    amount: seed.amount,
+    ...(seed.food_id !== undefined ? { food_id: seed.food_id } : {}),
+    ...(seed.nutrients !== undefined ? { nutrients: seed.nutrients } : {}),
+  };
+
+  return db
+    .insertInto('event')
+    .values({
+      pet_id: seed.pet_id,
+      device_id: seed.device_id ?? null,
+      parent_event_id: null,
+      timestamp: seed.timestamp ?? new Date(),
+      data: data satisfies EventData,
+      raw_data: null,
+      human_verified: seed.human_verified ?? false,
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
+
 export async function insertWeightMeasurementEvent(
   db: Kysely<Database>,
   seed: WeightMeasurementEventSeed,
@@ -215,8 +252,8 @@ export async function insertWeightMeasurementEvent(
     .insertInto('event')
     .values({
       pet_id: seed.pet_id,
-      device_id: null,
-      parent_event_id: null,
+      device_id: seed.device_id ?? null,
+      parent_event_id: seed.parent_event_id ?? null,
       timestamp: seed.timestamp ?? new Date(),
       data: {
         type: 'weight_measurement',

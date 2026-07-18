@@ -4,16 +4,18 @@ Agent-facing guide for how we test Pet Assistant: what to cover, where tests liv
 
 ## North star
 
-Test **behavior at meaningful boundaries**. Prefer confidence over line coverage. Tests must be fast and run on potato hardware (Raspberry Pi class hosts) with no external cloud dependencies in CI.
+Test **behavior at meaningful boundaries**. Prefer confidence over line coverage — **no coverage targets, no tautological “code we wrote” tests**. Write a test only when it catches a regression a user (or API consumer) would feel, or locks a non-obvious contract. Prefer fewer sharp tests over many shallow ones.
+
+Tests must be fast and run on potato hardware (Raspberry Pi class hosts) with no external cloud dependencies in CI.
 
 ## Test pyramid
 
-| Layer               | What                                                                      | Where                                           |
-| ------------------- | ------------------------------------------------------------------------- | ----------------------------------------------- |
-| **Unit**            | Pure functions, deterministic edge cases                                  | Colocated `test/` or `*.test.ts` next to source |
-| **Contract**        | Cross-package serialization, algorithm parity (gaps TypeBox cannot catch) | `packages/api/test/contracts/`                  |
-| **API integration** | Full route stack via `inject()` + temp SQLite                             | `packages/api/test/integration/`                |
-| **Browser E2E**     | Deferred (Playwright smoke flows later)                                   | —                                               |
+| Layer               | What                                                                      | Where                                          |
+| ------------------- | ------------------------------------------------------------------------- | ---------------------------------------------- |
+| **Unit**            | Pure functions, shared form contracts, deterministic edge cases           | Colocated `test/` (`*.test.ts` / `*.test.tsx`) |
+| **Contract**        | Cross-package serialization, algorithm parity (gaps TypeBox cannot catch) | `packages/api/test/contracts/`                 |
+| **API integration** | Full route stack via `inject()` + temp SQLite                             | `packages/api/test/integration/`               |
+| **Browser E2E**     | Deferred (optional tiny Playwright smokes later — not for business rules) | —                                              |
 
 ## What TypeBox already covers
 
@@ -36,8 +38,27 @@ Shared schemas in `packages/shared/src/schemas/api/` are the JSON contract betwe
 
 ### `packages/ui`
 
-- **Unit:** `lib/utils.ts` (`createDayRange`), `untrackedIntervals.ts`, `decodeLitterboxRawData.ts`, `analyzeWaterSegments.ts`
-- **Not:** React component render trees or snapshots (defer until integration tests cannot reach the behavior)
+- **Unit (lib):** day ranges, regional/format helpers, untracked intervals, litterbox decode/bout helpers
+- **Unit (shared UX):** form hooks (`useDraftForm`, `useAppForm`, `useUnsavedBlocker`) and kit/chrome contracts (`FormActions` submitting, `FormShell` submit+error, `ConfirmDialog` confirming) via jsdom + Testing Library
+- **Not:** page/route React trees, snapshots, thin prop-plumbing wrappers, Playwright for business rules
+
+Business / persistence rules stay on **API unit + `inject()` integration** — do not retest them in UI pages or E2E.
+
+## UI React unit harness
+
+`packages/ui` runs `tsx --tsconfig ./tsconfig.app.json --import ./src/test/register.ts --test` on `**/test/*.test.ts` and `**/test/*.test.tsx`.
+
+- [`src/test/register.ts`](packages/ui/src/test/register.ts) — jsdom globals, jsdom `Event` constructors (override Node’s), CSS import stub
+- [`src/test/render.tsx`](packages/ui/src/test/render.tsx) — `renderWithProviders` (minimal i18n; optional `MemoryRouter`)
+- Stay on `node:test` + `assert` — no Vitest/Jest
+
+Focused UI run:
+
+```bash
+# from packages/ui
+npm run test:unit
+tsx --tsconfig ./tsconfig.app.json --import ./src/test/register.ts --test src/hooks/form/test/
+```
 
 ## API integration harness
 
@@ -97,11 +118,13 @@ after(async () => {
 - New/changed route? → integration test asserting observable behavior
 - Provider normalization? → adapter unit test with inline vendor JSON fixture
 - UI-only date/format math? → `ui/lib` unit test
+- Shared form draft/discard/leave guard? → UI hook/kit unit test (jsdom)
 - Duplicated algorithm API ↔ UI? → parity contract test; consider moving to `shared`
+- Page-level “click Save”? → skip (thin glue); extend API + kit tests instead
 
 ### Naming
 
-- Files: `*.test.ts`
+- Files: `*.test.ts` / `*.test.tsx`
 - `describe` = resource or behavior area
 - `it` / `test` = observable outcome
 
@@ -114,13 +137,16 @@ after(async () => {
 ## Anti-patterns
 
 - Line-by-line route handler unit tests
-- React render snapshots
+- React render snapshots / className inventory
+- Tautological “renders the title prop” tests
+- Coverage % gates or coverage-motivated suites
 - Schema golden JSON fixtures
 - Real cloud calls in CI
 - Testing implementation details (internal call order, private helpers)
 - Parallel `Insert*Options` / fixture interfaces that duplicate Kysely `New*` or shared event types
 - `as unknown as IntegrationManager` test doubles — inject account managers on the real manager instead
 - `toISOString().split('T')[0]` in test fixtures (use `date-fns` `format` for local calendar dates)
+- Playwright (or page RTL) to re-assert API business rules
 
 ## Commands
 
@@ -137,6 +163,9 @@ npm run test:integration  # API integration tests only
 node --experimental-strip-types --test src/services/devices/providers/esphome/test/analyzerSmoke.test.ts
 node --experimental-strip-types --test src/services/devices/providers/esphome/test/
 node --experimental-strip-types --test 'src/services/**/surepet/**'
+
+# from packages/ui
+tsx --tsconfig ./tsconfig.app.json --import ./src/test/register.ts --test src/hooks/form/test/
 ```
 
 **PR gate:** `npm run lint && npm run typecheck && npm run test`
@@ -146,5 +175,8 @@ node --experimental-strip-types --test 'src/services/**/surepet/**'
 | Test                                         | Type        | File                                                                             |
 | -------------------------------------------- | ----------- | -------------------------------------------------------------------------------- |
 | Known cat plateau → eliminating period       | Unit        | `packages/api/src/services/devices/providers/esphome/test/analyzerSmoke.test.ts` |
-| Pets CRUD via inject                         | Integration | `packages/api/test/integration/pets.test.ts`                                       |
+| Pets CRUD via inject                         | Integration | `packages/api/test/integration/pets.test.ts`                                     |
 | Litterbox encode → API serialize → UI decode | Contract    | `packages/api/test/contracts/` (Phase 2)                                         |
+| Draft dirty + discard confirm                | Unit (UI)   | `packages/ui/src/hooks/form/test/useDraftForm.test.tsx`                          |
+| Confirm while busy blocks Escape             | Unit (UI)   | `packages/ui/src/components/ui/test/ConfirmDialog.test.tsx`                      |
+| Food calorie bounds from weight              | Unit (API)  | `packages/api/src/services/analytics/test/dailyMetricTrends.test.ts`             |

@@ -25,6 +25,12 @@ import {
 } from 'shared';
 import { reidentifyLitterboxVisits } from '../services/litterbox/reidentifyLitterboxVisits.ts';
 
+const Http404ResponseSchema = Type.Object({
+  statusCode: Type.Literal(404),
+  error: Type.Literal('Not Found'),
+  message: Type.String(),
+});
+
 const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   const { db, integrationManager } = fastify;
 
@@ -671,10 +677,11 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PatchDeviceCameraRequestSchema,
         response: {
           '200': GetDeviceResponseSchema,
+          '404': Http404ResponseSchema,
         },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const { id } = request.params;
       const { config } = request.body;
 
@@ -683,7 +690,13 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .selectAll()
         .where('device_id', '=', id)
         .executeTakeFirst();
-      if (!existing) throw new Error('Camera link not found');
+      if (!existing) {
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Camera link not found',
+        });
+      }
 
       await db
         .updateTable('device_camera')
