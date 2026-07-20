@@ -9,10 +9,8 @@ import {
 } from 'shared';
 import type { Camera, ProviderDeps, Device } from '../../types.ts';
 import type { PendingMedia } from '../../../media/MediaManager.ts';
-import type {
-  NewEvent,
-  WaterIntakeEventData,
-} from '../../../../database/types/EventTable.ts';
+import type { NewEvent } from '../../../../database/types/EventTable.ts';
+import type { WaterIntakeEventData } from '../../../../domain/events.ts';
 import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
 import {
   BaseESPHomeController,

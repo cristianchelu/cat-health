@@ -7,7 +7,7 @@ import {
 } from 'shared';
 
 import { isBucketTracked } from '../analytics/analyticsCoverage.ts';
-import type { LitterboxUseEventData } from '../../database/types/EventTable.ts';
+import type { LitterboxUseEventData } from '../../domain/events.ts';
 
 export interface LitterboxVisitRow {
   id: number;

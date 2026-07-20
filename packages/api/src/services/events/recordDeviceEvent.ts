@@ -1,6 +1,7 @@
 import type { Kysely } from 'kysely';
 import type { Database } from '../../database/index.ts';
-import type { EventData, NewEvent } from '../../database/types/EventTable.ts';
+import type { NewEvent } from '../../database/types/EventTable.ts';
+import type { EventData } from '../../domain/events.ts';
 import type { EventBus } from '../devices/EventBus.ts';
 
 export interface RecordDeviceEventDeps {

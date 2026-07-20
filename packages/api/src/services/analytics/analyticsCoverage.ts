@@ -4,10 +4,7 @@ import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import type { DeviceType } from 'shared';
 import type { Database } from '../../database/index.ts';
-import type {
-  DeviceConnectivityEventData,
-  PetPresenceEventData,
-} from '../../database/types/EventTable.ts';
+import type { DeviceConnectivityEventData, PetPresenceEventData } from '../../domain/events.ts';
 
 export type MonitorDeviceClass = Extract<
   DeviceType,

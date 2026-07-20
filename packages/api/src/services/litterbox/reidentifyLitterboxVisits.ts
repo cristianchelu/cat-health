@@ -4,11 +4,8 @@ import type { Kysely } from 'kysely';
 import { decodeLitterboxRawData } from 'shared';
 
 import type { Database } from '../../database/index.ts';
-import type {
-  EventTable,
-  LitterboxUseEventData,
-  WeightMeasurementEventData,
-} from '../../database/types/EventTable.ts';
+import type { EventTable } from '../../database/types/EventTable.ts';
+import type { LitterboxUseEventData, WeightMeasurementEventData } from '../../domain/events.ts';
 import {
   getLatestPetWeightsGrams,
   mergeAnalyzerIntoLitterboxData,

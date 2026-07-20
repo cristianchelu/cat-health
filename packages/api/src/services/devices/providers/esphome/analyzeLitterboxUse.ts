@@ -1,7 +1,7 @@
 import { sql } from 'kysely';
 
 import type { Database } from '../../../../database/index.ts';
-import type { LitterboxUseEventData } from '../../../../database/types/EventTable.ts';
+import type { LitterboxUseEventData } from '../../../../domain/events.ts';
 import type { Kysely } from 'kysely';
 
 import { decodeLitterboxRawData } from 'shared';

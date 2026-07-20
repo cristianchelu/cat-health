@@ -1,10 +1,7 @@
 import type { FoodTypeDTO } from 'shared';
 import { parseFeederFoodCompartments, parseFoodNutrients } from 'shared';
 import type { Food } from '../../database/types/FoodTable.ts';
-import type {
-  FoodIntakeEventData,
-  FoodIntakeFoodType,
-} from '../../database/types/EventTable.ts';
+import type { FoodIntakeEventData, FoodIntakeFoodType } from '../../domain/events.ts';
 import type { Insertable } from 'kysely';
 import type { EventTable } from '../../database/types/EventTable.ts';
 

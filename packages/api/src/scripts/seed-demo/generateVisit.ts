@@ -1,7 +1,7 @@
 import { encodeLitterboxRawData } from 'shared';
 import type { LitterboxUseEliminationType } from 'shared';
 
-import type { LitterboxUseEventData } from '../../database/types/EventTable.ts';
+import type { LitterboxUseEventData } from '../../domain/events.ts';
 import { mergeAnalyzerIntoLitterboxData } from '../../services/devices/providers/esphome/analyzeLitterboxUse.ts';
 import { StateAnalyzer } from '../../services/devices/providers/esphome/StateAnalyzer.ts';
 

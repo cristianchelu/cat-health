@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseStoredEventData } from '../parseStoredEventData.ts';
+import { parseStoredEventData } from '../storedEventData.ts';
 
 describe('parseStoredEventData', () => {
   it('accepts weight_measurement', () => {

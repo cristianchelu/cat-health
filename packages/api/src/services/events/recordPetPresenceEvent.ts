@@ -1,9 +1,7 @@
 import type { Kysely } from 'kysely';
 import type { Database } from '../../database/index.ts';
-import type {
-  NewEvent,
-  PetPresenceEventData,
-} from '../../database/types/EventTable.ts';
+import type { NewEvent } from '../../database/types/EventTable.ts';
+import type { PetPresenceEventData } from '../../domain/events.ts';
 
 export interface RecordPetPresenceEventDeps {
   db: Kysely<Database>;

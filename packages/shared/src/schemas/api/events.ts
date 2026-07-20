@@ -16,29 +16,6 @@ export const LITTERBOX_SAMPLE_HZ = 10;
  */
 export type LitterboxAnalysisStatePeriod = LitterboxAnalysisStatePeriodDTO;
 
-/** Provider-specific metadata on events (discriminated by `provider`). */
-export const SurePetEventProviderDataSchema = Type.Object({
-  provider: Type.Literal("surepet"),
-  external_key: Type.String(),
-  tag_id: Type.Optional(Type.Number()),
-  /** SurePet cloud device id */
-  device_id: Type.Optional(Type.Number()),
-  /** SurePet cloud pet id */
-  pet_id: Type.Optional(Type.Number()),
-  duration_s: Type.Optional(Type.Number()),
-  timeline_entry_id: Type.Optional(Type.Number()),
-  /** SurePet hardware bowl index (0 | 1); not a compartment id. */
-  bowl_index: Type.Optional(Type.Number()),
-});
-export type SurePetEventProviderData = Static<
-  typeof SurePetEventProviderDataSchema
->;
-
-export const EventProviderDataSchema = Type.Union([
-  SurePetEventProviderDataSchema,
-]);
-export type EventProviderData = Static<typeof EventProviderDataSchema>;
-
 const GetEventFieldsSchema = Type.Object({
   id: Type.Number(),
   parent_event_id: Type.Union([Type.Number(), Type.Null()]),

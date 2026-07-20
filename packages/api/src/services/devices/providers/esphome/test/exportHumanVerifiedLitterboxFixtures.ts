@@ -29,7 +29,7 @@ import { sql, type Kysely } from 'kysely';
 import { decodeLitterboxRawData } from 'shared';
 
 import type { Database } from '../../../../../database/index.ts';
-import type { LitterboxUseEventData } from '../../../../../database/types/EventTable.ts';
+import type { LitterboxUseEventData } from '../../../../../domain/events.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

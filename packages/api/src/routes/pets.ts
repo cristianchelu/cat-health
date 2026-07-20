@@ -15,10 +15,8 @@ import {
   TogglePetPresenceResponseSchema,
   type GetEventDTO,
 } from 'shared';
-import {
-  parseStoredEventData,
-  storedEventDataToDto,
-} from '../database/types/parseStoredEventData.ts';
+import { parseStoredEventData } from '../database/types/storedEventData.ts';
+import { eventDataToDto } from './mappers/events.ts';
 import {
   Type,
   type FastifyPluginAsyncTypebox,
@@ -61,7 +59,7 @@ function serializeEventRow(event: {
     pet_id: event.pet_id,
     device_id: event.device_id,
     timestamp: event.timestamp.toISOString(),
-    data: storedEventDataToDto(data),
+    data: eventDataToDto(data),
     raw_data: event.raw_data ? Array.from(event.raw_data) : null,
     human_verified: event.human_verified,
   };

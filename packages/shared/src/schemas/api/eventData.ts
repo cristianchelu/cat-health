@@ -107,16 +107,39 @@ export type FoodIntakeFoodTypeDTO = Static<typeof FoodIntakeFoodTypeSchema>;
 
 export const FoodIntakeNutrientsSchema = Type.Record(
   Type.String(),
-  Type.Optional(Type.Number()),
+  Type.Number(),
 );
 export type FoodIntakeNutrientsDTO = Static<typeof FoodIntakeNutrientsSchema>;
+
+/** Provider-specific metadata on events (discriminated by `provider`). */
+export const SurePetEventProviderDataSchema = Type.Object({
+  provider: Type.Literal("surepet"),
+  external_key: Type.String(),
+  tag_id: Type.Optional(Type.Number()),
+  /** SurePet cloud device id */
+  device_id: Type.Optional(Type.Number()),
+  /** SurePet cloud pet id */
+  pet_id: Type.Optional(Type.Number()),
+  duration_s: Type.Optional(Type.Number()),
+  timeline_entry_id: Type.Optional(Type.Number()),
+  /** SurePet hardware bowl index (0 | 1); not a compartment id. */
+  bowl_index: Type.Optional(Type.Number()),
+});
+export type SurePetEventProviderData = Static<
+  typeof SurePetEventProviderDataSchema
+>;
+
+export const EventProviderDataSchema = Type.Union([
+  SurePetEventProviderDataSchema,
+]);
+export type EventProviderData = Static<typeof EventProviderDataSchema>;
 
 export const FoodIntakeEventDataSchema = Type.Object({
   type: Type.Literal("food_intake"),
   food_type: FoodIntakeFoodTypeSchema,
   amount: Type.Number(),
   food_id: Type.Optional(Type.Number()),
-  provider_data: Type.Optional(Type.Unknown()),
+  provider_data: Type.Optional(EventProviderDataSchema),
   nutrients: Type.Optional(FoodIntakeNutrientsSchema),
 });
 export type FoodIntakeEventDataDTO = Static<typeof FoodIntakeEventDataSchema>;

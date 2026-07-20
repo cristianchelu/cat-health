@@ -55,12 +55,9 @@ import { isBucketTracked } from '../services/analytics/analyticsCoverage.ts';
 import type { Selectable } from 'kysely';
 
 import type { GetEventDTO } from 'shared';
-import {
-  dtoEventDataToStored,
-  parseStoredEventData,
-  storedEventDataToDto,
-} from '../database/types/parseStoredEventData.ts';
-import type { EventData } from '../database/types/EventTable.ts';
+import { parseStoredEventData } from '../database/types/storedEventData.ts';
+import { eventDataFromDto, eventDataToDto } from './mappers/events.ts';
+import type { EventData } from '../domain/events.ts';
 
 function serializeEventRow(event: Selectable<EventTable>): GetEventDTO | null {
   const data = parseStoredEventData(event.data);
@@ -72,7 +69,7 @@ function serializeEventRow(event: Selectable<EventTable>): GetEventDTO | null {
     pet_id: event.pet_id,
     device_id: event.device_id,
     timestamp: event.timestamp.toISOString(),
-    data: storedEventDataToDto(data),
+    data: eventDataToDto(data),
     raw_data: event.raw_data ? Array.from(event.raw_data) : null,
     human_verified: event.human_verified,
   };
@@ -516,7 +513,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         human_verified: bodyHumanVerified,
       } = request.body;
 
-      let storedEventData: EventData = dtoEventDataToStored(data);
+      let storedEventData: EventData = eventDataFromDto(data);
       let nutrients: Record<string, number> | undefined;
 
       if (
@@ -744,7 +741,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           ...fkRepair,
           ...patchRest,
           ...(patchEventData !== undefined
-            ? { data: dtoEventDataToStored(patchEventData) }
+            ? { data: eventDataFromDto(patchEventData) }
             : {}),
         })
         .where('id', '=', eventId)

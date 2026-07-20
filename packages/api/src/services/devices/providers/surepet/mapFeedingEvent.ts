@@ -1,8 +1,6 @@
 import type { SurePetAccountConfig } from 'shared';
-import type {
-  FoodIntakeEventData,
-  NewEvent,
-} from '../../../../database/types/EventTable.ts';
+import type { NewEvent } from '../../../../database/types/EventTable.ts';
+import type { FoodIntakeEventData } from '../../../../domain/events.ts';
 import type { NormalizedFeedingDatapoint } from './types.ts';
 import {
   buildFeedingExternalKey,

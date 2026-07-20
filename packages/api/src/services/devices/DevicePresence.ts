@@ -1,7 +1,7 @@
 import type { Kysely } from 'kysely';
 import type { DeviceStatus } from 'shared';
 import type { Database } from '../../database/index.ts';
-import type { DeviceConnectivityEventData } from '../../database/types/EventTable.ts';
+import type { DeviceConnectivityEventData } from '../../domain/events.ts';
 import type {
   RecordDeviceEventInput,
   RecordDeviceEventDeps,

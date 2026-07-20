@@ -8,7 +8,7 @@ import {
   destroyTestDb,
   type TestDbContext,
 } from '../helpers/testDb.ts';
-import type { EventData } from '../../src/database/types/EventTable.ts';
+import type { EventData } from '../../src/domain/events.ts';
 import { insertLitterboxEvent, insertPet } from '../helpers/fixtures.ts';
 
 describe('events API list', () => {

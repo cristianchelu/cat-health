@@ -1,14 +1,8 @@
 import type { Kysely } from 'kysely';
 
 import type { Database } from '../../src/database/index.ts';
-import type {
-  Event,
-  EventData,
-  FoodIntakeEventData,
-  LitterboxUseEventData,
-  PetPresenceEventData,
-  WaterIntakeEventData,
-} from '../../src/database/types/EventTable.ts';
+import type { Event } from '../../src/database/types/EventTable.ts';
+import type { EventData, FoodIntakeEventData, LitterboxUseEventData, PetPresenceEventData, WaterIntakeEventData } from '../../src/domain/events.ts';
 import type { NewPet, Pet } from '../../src/database/types/PetTable.ts';
 import type {
   NewProviderAccount,
