@@ -52,11 +52,17 @@ function FormDatePicker<TFieldValues extends FieldValues>({
           >
             <DatePicker
               {...datePickerProps}
-              {...field}
+              name={field.name}
+              ref={field.ref}
+              onBlur={field.onBlur}
               id={a11y.inputId}
               aria-describedby={describedBy}
               aria-invalid={fieldState.invalid || undefined}
               value={field.value ?? ''}
+              onChange={(event) => {
+                const next = event.target.value;
+                field.onChange(next === '' ? null : next);
+              }}
               variant={fieldState.error ? 'error' : datePickerProps.variant}
             />
           </FormField>

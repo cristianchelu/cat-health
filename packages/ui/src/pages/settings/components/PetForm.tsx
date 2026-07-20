@@ -56,7 +56,7 @@ const PetForm: React.FC<PetFormProps> = ({
     defaultValues: {
       name: initialData?.name || '',
       breed: initialData?.breed || '',
-      birth_date: initialData?.birth_date || '',
+      birth_date: initialData?.birth_date ?? null,
     },
   });
 

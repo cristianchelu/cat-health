@@ -4,7 +4,7 @@ export interface PetTable {
   id: Generated<number>;
   name: string;
   breed: string;
-  birth_date: Date;
+  birth_date: Date | null;
 }
 
 export type Pet = Selectable<PetTable>;

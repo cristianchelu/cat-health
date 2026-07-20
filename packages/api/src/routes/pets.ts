@@ -28,11 +28,14 @@ import {
 import { recordPetPresenceEvent } from '../services/events/recordPetPresenceEvent.ts';
 import type { PetUpdate } from '../database/types/PetTable.ts';
 
-function formatBirthDate(value: Date | string): string {
+function formatBirthDate(value: Date | string | null): string | null {
+  if (value == null) return null;
   return typeof value === 'string' ? value : format(value, 'yyyy-MM-dd');
 }
 
-function parseBirthDate(value: string): Date {
+/** Present wire value only — caller owns PATCH presence (`!== undefined`). */
+function parseBirthDate(value: string | null): Date | null {
+  if (value == null) return null;
   return new Date(`${value}T00:00:00`);
 }
 
@@ -102,7 +105,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .values({
           name,
           breed,
-          birth_date: parseBirthDate(birth_date),
+          birth_date: parseBirthDate(birth_date ?? null),
         })
         .returningAll()
         .executeTakeFirstOrThrow();

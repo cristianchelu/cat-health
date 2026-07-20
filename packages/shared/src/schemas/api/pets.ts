@@ -7,7 +7,7 @@ export const GetPetResponseSchema = Type.Object({
   name: Type.String(),
   breed: Type.String(),
   avatar_url: Type.Optional(Type.String()),
-  birth_date: Type.String(),
+  birth_date: Type.Union([Type.String({ format: "date" }), Type.Null()]),
   is_away: Type.Boolean(),
 });
 export type GetPetResponseDTO = Static<typeof GetPetResponseSchema>;
@@ -28,19 +28,23 @@ export type TogglePetPresenceResponseDTO = Static<
 export const GetPetsResponseSchema = Type.Array(GetPetResponseSchema);
 export type GetPetsResponseDTO = Static<typeof GetPetsResponseSchema>;
 
-export const PostPetRequestSchema = Type.Omit(GetPetResponseSchema, [
-  "id",
-  "is_away",
-  "avatar_url",
-]);
+export const PostPetRequestSchema = Type.Object({
+  name: Type.String(),
+  breed: Type.String(),
+  birth_date: Type.Optional(
+    Type.Union([Type.String({ format: "date" }), Type.Null()]),
+  ),
+});
 export type PostPetRequestDTO = Static<typeof PostPetRequestSchema>;
 
-// Partial update schema – all fields optional to allow targeted PATCH updates
 export const PatchPetRequestSchema = Type.Partial(
-  Type.Omit(GetPetResponseSchema, ["id", "is_away", "avatar_url"]),
+  Type.Object({
+    name: Type.String(),
+    breed: Type.String(),
+    birth_date: Type.Union([Type.String({ format: "date" }), Type.Null()]),
+  }),
 );
 export type PatchPetRequestDTO = Static<typeof PatchPetRequestSchema>;
 
-// Delete response – simple success boolean
 export const DeletePetResponseSchema = Type.Object({ success: Type.Boolean() });
 export type DeletePetResponseDTO = Static<typeof DeletePetResponseSchema>;
