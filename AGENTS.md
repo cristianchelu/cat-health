@@ -190,6 +190,14 @@ Wizards keep Back + Continue/Register labels via `FormActions`; header Cancel st
 - Avoid typecasting unless absolutely necessary.
 - Avoid `any` unless absolutely necessary.
 
+#### Persistence vs API schemas
+
+- Kysely DB types (`packages/api/src/database/types/`) are declared **independently** of `packages/shared/src/schemas/api/` DTOs. Only genuinely representation-independent primitives may be shared across the boundary (e.g. `LitterboxUseEliminationType`, `EventProviderData`).
+- **Never** alias a JSON DB column type to an API DTO type (e.g. `export type EventData = EventDataDTO` in `EventTable.ts`).
+- Persisted-row validation uses a **DB-owned corruption canary** (`parseStoredEventData`), not the API response schema (`EventDataSchema` / `parseEventData`). The canary rejects out-of-band garbage; it is not a normalization or coercion layer.
+- `EventDataSchema` / `parseEventData` remain the Fastify wire contract for POST/PATCH bodies and API responses after serialization.
+- **Out of scope / future story:** full bidirectional Stored↔DTO mapping when persistence shapes intentionally diverge from the wire contract, and multi-row resiliency (skip corrupt rows in list endpoints with partial-success accounting). Do not mistake boundary restoration for those being solved.
+
 #### Route Structure
 
 ```typescript

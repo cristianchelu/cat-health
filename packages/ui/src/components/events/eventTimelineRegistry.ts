@@ -18,10 +18,26 @@ interface TimelineEventRegistration {
 }
 
 const timelineEventRegistry: TimelineEventRegistration[] = [
-  { id: 'litterbox-use', type: 'litterbox_use', component: LitterboxEvent },
-  { id: 'weight-measurement', type: 'weight_measurement', component: WeightEvent },
-  { id: 'water-intake', type: 'water_intake', component: WaterEvent },
-  { id: 'food-intake', type: 'food_intake', component: FoodEvent },
+  {
+    id: 'litterbox-use',
+    type: 'litterbox_use',
+    component: LitterboxEvent,
+  },
+  {
+    id: 'weight-measurement',
+    type: 'weight_measurement',
+    component: WeightEvent,
+  },
+  {
+    id: 'water-intake',
+    type: 'water_intake',
+    component: WaterEvent,
+  },
+  {
+    id: 'food-intake',
+    type: 'food_intake',
+    component: FoodEvent,
+  },
   {
     id: 'device-connectivity',
     type: 'device_connectivity',
@@ -50,7 +66,9 @@ export function resolveTimelineEventComponent(
 ): TimelineEventComponent {
   const type = event.data?.type;
   if (typeof type === 'string') {
-    const registration = timelineEventRegistry.find((entry) => entry.type === type);
+    const registration = timelineEventRegistry.find(
+      (entry) => entry.type === type,
+    );
     if (registration) {
       return registration.component;
     }

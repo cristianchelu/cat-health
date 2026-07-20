@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import type { DeviceStatus } from 'shared';
+import { requireWithSchema } from 'shared';
 import type { Camera, ProviderDeps, Device } from '../../types.ts';
 import type { PendingMedia } from '../../../media/MediaManager.ts';
 import { type Static, Type } from '@fastify/type-provider-typebox';
@@ -22,11 +23,11 @@ export class CameraDeviceController implements Camera {
     this.deps = deps;
     this.deviceId = device.id;
 
-    const rawConfig = device.config as unknown as CameraConfig;
-    this.config = {
-      snapshotUrl: rawConfig.snapshotUrl,
-      snapshotAuth: rawConfig.snapshotAuth,
-    };
+    this.config = requireWithSchema(
+      CameraConfigSchema,
+      device.config,
+      'camera configuration',
+    );
 
     // If snapshotUrl contains credentials, extract them and clean the URL
     try {

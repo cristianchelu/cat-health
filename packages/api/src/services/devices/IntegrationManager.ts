@@ -13,6 +13,7 @@ import type {
   ProviderDeps,
   ProviderListing,
 } from './types.ts';
+import { isCamera } from './types.ts';
 import { DevicePresence } from './DevicePresence.ts';
 import { recordDeviceEvent } from '../events/recordDeviceEvent.ts';
 
@@ -178,8 +179,8 @@ export class IntegrationManager
     if (link) {
       // Use external linked camera
       const controller = await this.instantiateController(link.camera_id);
-      if (controller && 'captureSnapshot' in controller) {
-        const camera = controller as unknown as Camera;
+      if (controller && isCamera(controller)) {
+        const camera = controller;
         const config = link.config || {};
 
         // Return a proxy that injects the config
@@ -203,12 +204,8 @@ export class IntegrationManager
 
     // Fall back to integrated camera if no external link
     const requestingController = await this.instantiateController(deviceId);
-    if (
-      requestingController &&
-      'captureSnapshot' in requestingController &&
-      'getSnapshotBuffer' in requestingController
-    ) {
-      const integratedCamera = requestingController as unknown as Camera;
+    if (requestingController && isCamera(requestingController)) {
+      const integratedCamera = requestingController;
       // Check if integrated camera is available and enabled
       const state = requestingController.getState?.();
       if (state && 'hasCamera' in state && state.hasCamera) {

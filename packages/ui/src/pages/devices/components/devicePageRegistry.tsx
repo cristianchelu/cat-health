@@ -1,10 +1,14 @@
 /* eslint-disable react-refresh/only-export-components -- Registry intentionally colocates private view adapters with resolution logic. */
 import * as React from 'react';
-import type { EntityDTO, GetDeviceResponseDTO } from 'shared';
+import {
+  parseWithSchema,
+  SurePetDeviceStateSchema,
+  type EntityDTO,
+  type GetDeviceResponseDTO,
+} from 'shared';
 import { getStringValue, isRecord } from '@/lib/utils';
 import { ESPHomeView } from './ESPHomeView';
 import { SureFeederView } from './SureFeederView';
-import { parseSurePetFeederState } from './surepet/parseSurePetFeederState';
 
 export interface DevicePageContext {
   device: GetDeviceResponseDTO;
@@ -63,7 +67,7 @@ const ESPHomeDevicePage: DevicePageComponent = ({ entities, sensors }) => {
 };
 
 const SureFeederDevicePage: DevicePageComponent = ({ device }) => {
-  const state = parseSurePetFeederState(device.state);
+  const state = parseWithSchema(SurePetDeviceStateSchema, device.state);
   return <SureFeederView state={state} />;
 };
 

@@ -25,6 +25,9 @@ import {
   LitterboxTrendParamsSchema,
   LitterboxTrendQuerySchema,
   LitterboxTrendsResponseSchema,
+  parseFoodIntakeEventData,
+  parseLitterboxUseEventData,
+  parseWeightMeasurementEventData,
 } from 'shared';
 
 import {
@@ -37,9 +40,7 @@ import {
   calculateNutrientsFromFood,
   enrichFoodIntakeEventData,
 } from '../services/food/enrichFoodIntake.ts';
-import type { FoodIntakeEventData } from '../database/types/EventTable.ts';
 import { computeLitterboxAnalysisData } from '../services/devices/providers/esphome/analyzeLitterboxUse.ts';
-import type { LitterboxUseEventData } from '../database/types/EventTable.ts';
 import type { EventTable } from '../database/types/EventTable.ts';
 import { buildLitterboxTrendResult } from '../services/litterbox/litterboxAnalytics.ts';
 import {
@@ -53,11 +54,36 @@ import {
 import { isBucketTracked } from '../services/analytics/analyticsCoverage.ts';
 import type { Selectable } from 'kysely';
 
-function serializeEventRow(event: Selectable<EventTable>) {
+import type { GetEventDTO } from 'shared';
+import {
+  dtoEventDataToStored,
+  parseStoredEventData,
+  storedEventDataToDto,
+} from '../database/types/parseStoredEventData.ts';
+import type { EventData } from '../database/types/EventTable.ts';
+
+function serializeEventRow(event: Selectable<EventTable>): GetEventDTO | null {
+  const data = parseStoredEventData(event.data);
+  if (!data) return null;
+
   return {
-    ...event,
+    id: event.id,
+    parent_event_id: event.parent_event_id,
+    pet_id: event.pet_id,
+    device_id: event.device_id,
+    timestamp: event.timestamp.toISOString(),
+    data: storedEventDataToDto(data),
     raw_data: event.raw_data ? Array.from(event.raw_data) : null,
+    human_verified: event.human_verified,
   };
+}
+
+function requireSerializedEventRow(event: Selectable<EventTable>): GetEventDTO {
+  const serialized = serializeEventRow(event);
+  if (!serialized) {
+    throw new Error(`Invalid event data for event ${event.id}`);
+  }
+  return serialized;
 }
 
 const Http404ResponseSchema = Type.Object({
@@ -69,6 +95,12 @@ const Http404ResponseSchema = Type.Object({
 const Http400BadRequestSchema = Type.Object({
   statusCode: Type.Literal(400),
   error: Type.Literal('Bad Request'),
+  message: Type.String(),
+});
+
+const Http422ResponseSchema = Type.Object({
+  statusCode: Type.Literal(422),
+  error: Type.Literal('Unprocessable Entity'),
   message: Type.String(),
 });
 
@@ -155,13 +187,25 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       ]);
 
       return buildLitterboxTrendResult({
-        visits: litterboxEvents.map((event) => ({
-          id: event.id,
-          timestamp: event.timestamp,
-          device_id: event.device_id,
-          human_verified: event.human_verified,
-          data: event.data as LitterboxUseEventData,
-        })),
+        visits: litterboxEvents.flatMap((event) => {
+          const data = parseLitterboxUseEventData(event.data);
+          if (!data) {
+            fastify.log.warn(
+              { eventId: event.id },
+              'Skipping invalid litterbox event in trends',
+            );
+            return [];
+          }
+          return [
+            {
+              id: event.id,
+              timestamp: event.timestamp,
+              device_id: event.device_id,
+              human_verified: event.human_verified,
+              data,
+            },
+          ];
+        }),
         startTime: startDate,
         endTime: endDate,
         timezone,
@@ -221,15 +265,18 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const todayKey = formatInTimeZone(rangeEnd, timezone, 'yyyy-MM-dd');
 
-      const points = weightEvents.map((event) => {
-        const data = event.data as { type: string; weight: number };
+      const points = weightEvents.flatMap((event) => {
+        const data = parseWeightMeasurementEventData(event.data);
+        if (!data) return [];
         const date = formatInTimeZone(event.timestamp, timezone, 'yyyy-MM-dd');
-        return {
-          date,
-          weight: data.weight,
-          timestamp: event.timestamp.toISOString(),
-          tracked: isBucketTracked(date, untrackedDayBuckets),
-        };
+        return [
+          {
+            date,
+            weight: data.weight,
+            timestamp: event.timestamp.toISOString(),
+            tracked: isBucketTracked(date, untrackedDayBuckets),
+          },
+        ];
       });
 
       return {
@@ -298,10 +345,11 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         querystring: GetEventsQuerySchema,
         response: {
           '200': GetEventsResponseSchema,
+          '422': Http422ResponseSchema,
         },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const {
         pet_id,
         device_id,
@@ -363,12 +411,21 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const total = countResult?.count || 0;
       const hasMore = offset + events.length < total;
+      const serializedEvents: GetEventDTO[] = [];
+      for (const event of events) {
+        const serialized = serializeEventRow(event);
+        if (!serialized) {
+          return reply.code(422).send({
+            statusCode: 422,
+            error: 'Unprocessable Entity',
+            message: `Event ${event.id} contains invalid data`,
+          });
+        }
+        serializedEvents.push(serialized);
+      }
 
       return {
-        data: events.map((event) => ({
-          ...event,
-          raw_data: event.raw_data ? Array.from(event.raw_data) : null,
-        })),
+        data: serializedEvents,
         total,
         limit,
         offset,
@@ -385,6 +442,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         response: {
           '200': GetEventWithChildrenSchema,
           '404': Http404ResponseSchema,
+          '422': Http422ResponseSchema,
         },
       },
     },
@@ -414,9 +472,26 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         });
       }
 
+      const serializedEvent = serializeEventRow(event);
+      if (!serializedEvent) {
+        return reply.code(422).send({
+          statusCode: 422,
+          error: 'Unprocessable Entity',
+          message: 'Event data is invalid',
+        });
+      }
+      const serializedChildren = children.flatMap((child) => {
+        const serialized = serializeEventRow(child);
+        if (serialized) return [serialized];
+        fastify.log.warn(
+          { eventId: child.id, parentEventId: event.id },
+          'Skipping invalid child event',
+        );
+        return [];
+      });
       return {
-        ...serializeEventRow(event),
-        children: children.map(serializeEventRow),
+        ...serializedEvent,
+        children: serializedChildren,
       };
     },
   );
@@ -441,37 +516,32 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         human_verified: bodyHumanVerified,
       } = request.body;
 
-      let eventData = data;
+      let storedEventData: EventData = dtoEventDataToStored(data);
       let nutrients: Record<string, number> | undefined;
 
       if (
-        eventData?.type === 'food_intake' &&
-        typeof eventData.food_id === 'number'
+        storedEventData.type === 'food_intake' &&
+        typeof storedEventData.food_id === 'number'
       ) {
         const food = await db
           .selectFrom('food')
           .selectAll()
-          .where('id', '=', eventData.food_id)
+          .where('id', '=', storedEventData.food_id)
           .executeTakeFirst();
-        if (food && typeof eventData.amount === 'number') {
-          nutrients = calculateNutrientsFromFood(eventData.amount, food);
-          eventData = enrichFoodIntakeEventData(
-            eventData as FoodIntakeEventData,
-            food,
-          );
+        if (food && typeof storedEventData.amount === 'number') {
+          nutrients = calculateNutrientsFromFood(storedEventData.amount, food);
+          storedEventData = enrichFoodIntakeEventData(storedEventData, food);
         }
       }
 
       const eventTimestamp =
-        bodyTimestamp != null
-          ? new Date(bodyTimestamp as string | number | Date)
-          : new Date();
+        bodyTimestamp != null ? new Date(bodyTimestamp) : new Date();
       const humanVerified =
         bodyHumanVerified ??
-        (eventData?.type === 'food_intake'
+        (storedEventData.type === 'food_intake'
           ? true
-          : eventData?.type === 'pet_presence'
-            ? eventData.context === 'manual'
+          : storedEventData.type === 'pet_presence'
+            ? storedEventData.context === 'manual'
             : false);
 
       const result = await db
@@ -481,7 +551,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           pet_id,
           device_id,
           timestamp: eventTimestamp,
-          data: eventData,
+          data: storedEventData,
           raw_data: null,
           human_verified: humanVerified,
         })
@@ -491,7 +561,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       if (
         nutrients?.moisture_ml != null &&
         result.data &&
-        (result.data as { type: string }).type === 'food_intake'
+        parseFoodIntakeEventData(result.data) !== null
       ) {
         await db
           .insertInto('event')
@@ -506,10 +576,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           .execute();
       }
 
-      return {
-        ...result,
-        raw_data: result.raw_data ? Array.from(result.raw_data) : null,
-      };
+      return requireSerializedEventRow(result);
     },
   );
 
@@ -543,16 +610,14 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         });
       }
 
-      const d = eventRow.data as { type?: string };
-      if (d?.type !== 'litterbox_use') {
+      const existing = parseLitterboxUseEventData(eventRow.data);
+      if (!existing) {
         return reply.code(400).send({
           statusCode: 400,
           error: 'Bad Request',
           message: 'Only litterbox_use events can be analyzed',
         });
       }
-
-      const existing = eventRow.data as LitterboxUseEventData;
       const result = await computeLitterboxAnalysisData(db, {
         timestamp: eventRow.timestamp,
         raw_data: eventRow.raw_data,
@@ -578,10 +643,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      return {
-        ...updated,
-        raw_data: updated.raw_data ? Array.from(updated.raw_data) : null,
-      };
+      return requireSerializedEventRow(updated);
     },
   );
 
@@ -674,17 +736,22 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         }
       }
 
+      const { data: patchEventData, ...patchRest } = patchBody;
+
       const result = await db
         .updateTable('event')
-        .set({ ...fkRepair, ...patchBody })
+        .set({
+          ...fkRepair,
+          ...patchRest,
+          ...(patchEventData !== undefined
+            ? { data: dtoEventDataToStored(patchEventData) }
+            : {}),
+        })
         .where('id', '=', eventId)
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      return {
-        ...result,
-        raw_data: result.raw_data ? Array.from(result.raw_data) : null,
-      };
+      return requireSerializedEventRow(result);
     },
   );
 

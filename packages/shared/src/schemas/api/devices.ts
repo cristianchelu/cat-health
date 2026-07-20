@@ -81,13 +81,13 @@ export type GetProviderAccountsResponseDTO = Static<typeof GetProviderAccountsRe
 export const PostProviderAccountRequestSchema = Type.Object({
   provider: Type.String(),
   name: Type.String(),
-  config: Type.Unknown(),
+  config: Type.Record(Type.String(), Type.Unknown()),
 });
 export type PostProviderAccountRequestDTO = Static<typeof PostProviderAccountRequestSchema>;
 
 export const PatchProviderAccountRequestSchema = Type.Object({
   name: Type.Optional(Type.String()),
-  config: Type.Optional(Type.Unknown()),
+  config: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
   enabled: Type.Optional(Type.Boolean()),
 });
 export type PatchProviderAccountRequestDTO = Static<typeof PatchProviderAccountRequestSchema>;
@@ -103,7 +103,7 @@ export const DiscoveredDeviceSchema = Type.Object({
   externalId: Type.String(),
   name: Type.String(),
   type: DeviceTypeSchema,
-  config: Type.Unknown(),
+  config: Type.Record(Type.String(), Type.Unknown()),
 });
 export type DiscoveredDeviceDTO = Static<typeof DiscoveredDeviceSchema>;
 
@@ -193,14 +193,14 @@ export const PostDeviceRequestSchema = Type.Object({
   external_id: Type.String(),
   name: Type.String(),
   type: DeviceTypeSchema,
-  config: Type.Optional(Type.Unknown()),
+  config: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
 });
 export type PostDeviceRequestDTO = Static<typeof PostDeviceRequestSchema>;
 
 export const PatchDeviceRequestSchema = Type.Object({
   name: Type.Optional(Type.String()),
   enabled: Type.Optional(Type.Boolean()),
-  config: Type.Optional(Type.Unknown()),
+  config: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
 });
 export type PatchDeviceRequestDTO = Static<typeof PatchDeviceRequestSchema>;
 

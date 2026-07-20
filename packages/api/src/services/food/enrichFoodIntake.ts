@@ -1,5 +1,5 @@
 import type { FoodTypeDTO } from 'shared';
-import { parseFeederFoodCompartments } from 'shared';
+import { parseFeederFoodCompartments, parseFoodNutrients } from 'shared';
 import type { Food } from '../../database/types/FoodTable.ts';
 import type {
   FoodIntakeEventData,
@@ -10,15 +10,19 @@ import type { EventTable } from '../../database/types/EventTable.ts';
 
 type FoodNutrientItem = { nutrient: string; unit: string; value: number };
 
+function readFoodNutrients(food: Food): FoodNutrientItem[] | null {
+  if (typeof food.nutrients === 'string') {
+    return parseFoodNutrients(JSON.parse(food.nutrients));
+  }
+  return parseFoodNutrients(food.nutrients);
+}
+
 export function calculateNutrientsFromFood(
   amount: number,
   food: Food,
 ): Record<string, number> {
   const nutrients: Record<string, number> = {};
-  const nutrientsArray: FoodNutrientItem[] | null =
-    typeof food.nutrients === 'string'
-      ? (JSON.parse(food.nutrients) as FoodNutrientItem[])
-      : food.nutrients;
+  const nutrientsArray = readFoodNutrients(food);
 
   if (food.moisture_percent != null) {
     nutrients.moisture_ml = amount * (food.moisture_percent / 100);

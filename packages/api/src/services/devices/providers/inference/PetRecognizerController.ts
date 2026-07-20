@@ -3,7 +3,17 @@ import path from 'path';
 import sharp from 'sharp';
 import { getMediaPath } from '../../../../mediaPaths.ts';
 import type { DeviceStatus } from 'shared';
-import type { DeviceController, ProviderDeps, Device, ProviderAccount } from '../../types.ts';
+import {
+  InferenceAccountConfigSchema,
+  PetRecognizerConfigSchema,
+  requireWithSchema,
+} from 'shared';
+import type {
+  DeviceController,
+  ProviderDeps,
+  Device,
+  ProviderAccount,
+} from '../../types.ts';
 import type { DeviceMediaReadyEvent } from '../../EventBus.ts';
 import type { PetRecognizerConfig, InferenceAccountConfig } from 'shared';
 
@@ -31,18 +41,26 @@ export class PetRecognizerController implements DeviceController {
     this.deps = deps;
     this.deviceId = device.id;
 
-    // Parse device config
-    this.config = device.config as unknown as PetRecognizerConfig;
-    
-    // Parse account config
-    this.accountConfig = account.config as unknown as InferenceAccountConfig;
+    this.config = requireWithSchema(
+      PetRecognizerConfigSchema,
+      device.config,
+      'pet recognizer configuration',
+    );
+    this.accountConfig = requireWithSchema(
+      InferenceAccountConfigSchema,
+      account.config,
+      'inference account configuration',
+    );
   }
 
   async connect(): Promise<void> {
     // Subscribe only after snapshot media has been linked to the event.
     this.eventHandler = (event: DeviceMediaReadyEvent) => {
       // Filter for events from our source device
-      if (event.deviceId === this.config.source_device_id && this.config.auto_identify) {
+      if (
+        event.deviceId === this.config.source_device_id &&
+        this.config.auto_identify
+      ) {
         // Run identification asynchronously (don't block event handler)
         this.identifyPet(event.eventId).catch((error) => {
           console.error(
@@ -61,7 +79,10 @@ export class PetRecognizerController implements DeviceController {
 
   async disconnect(): Promise<void> {
     if (this.eventHandler) {
-      this.deps.eventBus.removeListener('device.event.media_ready', this.eventHandler);
+      this.deps.eventBus.removeListener(
+        'device.event.media_ready',
+        this.eventHandler,
+      );
       this.eventHandler = null;
     }
     this.status = 'offline';
@@ -72,7 +93,13 @@ export class PetRecognizerController implements DeviceController {
     return this.status;
   }
 
-  async identifyPetFromMedia(mediaId: number): Promise<{ pet_id: number | null; pet_name: string; raw_response: string }> {
+  async identifyPetFromMedia(
+    mediaId: number,
+  ): Promise<{
+    pet_id: number | null;
+    pet_name: string;
+    raw_response: string;
+  }> {
     console.log(`Running pet identification for media ${mediaId}`);
 
     try {
@@ -85,7 +112,11 @@ export class PetRecognizerController implements DeviceController {
 
       if (!targetMedia) {
         console.warn(`Media ${mediaId} not found`);
-        return { pet_id: null, pet_name: 'unknown', raw_response: 'Media not found' };
+        return {
+          pet_id: null,
+          pet_name: 'unknown',
+          raw_response: 'Media not found',
+        };
       }
 
       const targetImagePath = path.join(getMediaPath(), targetMedia.file_path);
@@ -93,10 +124,7 @@ export class PetRecognizerController implements DeviceController {
       const targetImageDataUrl = await resizeImageToBase64(targetImageBuffer);
 
       // 2. Load reference images for all pets
-      const pets = await this.deps.db
-        .selectFrom('pet')
-        .selectAll()
-        .execute();
+      const pets = await this.deps.db.selectFrom('pet').selectAll().execute();
 
       // Collect all media IDs across all pets in one pass
       const allMediaIds: number[] = [];
@@ -124,7 +152,11 @@ export class PetRecognizerController implements DeviceController {
         }
       }
 
-      const referenceImages: Array<{ pet_id: number; pet_name: string; images: string[] }> = [];
+      const referenceImages: Array<{
+        pet_id: number;
+        pet_name: string;
+        images: string[];
+      }> = [];
 
       for (const pet of pets) {
         const ids = petMediaMap.get(pet.id);
@@ -155,7 +187,11 @@ export class PetRecognizerController implements DeviceController {
 
       if (referenceImages.length === 0) {
         console.warn('No reference images configured for any pet');
-        return { pet_id: null, pet_name: 'unknown', raw_response: 'No reference images' };
+        return {
+          pet_id: null,
+          pet_name: 'unknown',
+          raw_response: 'No reference images',
+        };
       }
 
       // 3. Build the prompt with reference images
@@ -165,22 +201,32 @@ export class PetRecognizerController implements DeviceController {
         })
         .join('\n');
 
-      const prompt = this.config.prompt_template.replace('{{reference_images}}', referenceImagesText);
+      const prompt = this.config.prompt_template.replace(
+        '{{reference_images}}',
+        referenceImagesText,
+      );
 
       // 4. Build OpenAI-compatible chat completion request
       const messages: Array<{
         role: 'system' | 'user';
-        content: string | Array<{ type: string; image_url?: { url: string }; text?: string }>;
+        content:
+          | string
+          | Array<{ type: string; image_url?: { url: string }; text?: string }>;
       }> = [];
 
       // System message
       messages.push({
         role: 'system',
-        content: 'You are a pet identification assistant. Respond with ONLY the pet name from the options provided, or "unknown" if you cannot identify the pet with confidence.',
+        content:
+          'You are a pet identification assistant. Respond with ONLY the pet name from the options provided, or "unknown" if you cannot identify the pet with confidence.',
       });
 
       // User message with images
-      const userContent: Array<{ type: string; image_url?: { url: string }; text?: string }> = [];
+      const userContent: Array<{
+        type: string;
+        image_url?: { url: string };
+        text?: string;
+      }> = [];
 
       // Add prompt text
       userContent.push({
@@ -218,27 +264,33 @@ export class PetRecognizerController implements DeviceController {
       });
 
       // 5. Call OpenRouter API
-      const response = await fetch(`${this.accountConfig.base_url}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.accountConfig.api_key}`,
+      const response = await fetch(
+        `${this.accountConfig.base_url}/chat/completions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.accountConfig.api_key}`,
+          },
+          body: JSON.stringify({
+            model: this.config.model,
+            messages,
+            max_tokens: 50,
+            temperature: 0.1,
+          }),
         },
-        body: JSON.stringify({
-          model: this.config.model,
-          messages,
-          max_tokens: 50,
-          temperature: 0.1,
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`OpenRouter API error: ${response.status} ${errorText}`);
+        throw new Error(
+          `OpenRouter API error: ${response.status} ${errorText}`,
+        );
       }
 
       const result = await response.json();
-      const rawResponse = result.choices[0]?.message?.content?.trim() || 'unknown';
+      const rawResponse =
+        result.choices[0]?.message?.content?.trim() || 'unknown';
 
       console.log(`AI response: ${rawResponse}`);
 
@@ -255,7 +307,9 @@ export class PetRecognizerController implements DeviceController {
         }
       }
 
-      console.log(`AI identified pet as: ${identifiedPetName} (ID: ${identifiedPetId})`);
+      console.log(
+        `AI identified pet as: ${identifiedPetName} (ID: ${identifiedPetId})`,
+      );
 
       this.deps.presence.recordActivity(this.deviceId);
 
@@ -270,7 +324,13 @@ export class PetRecognizerController implements DeviceController {
     }
   }
 
-  async identifyPet(eventId: number): Promise<{ pet_id: number | null; pet_name: string; raw_response: string }> {
+  async identifyPet(
+    eventId: number,
+  ): Promise<{
+    pet_id: number | null;
+    pet_name: string;
+    raw_response: string;
+  }> {
     console.log(`Running pet identification for event ${eventId}`);
 
     try {
@@ -304,9 +364,13 @@ export class PetRecognizerController implements DeviceController {
           .where('id', '=', eventId)
           .execute();
 
-        console.log(`Updated event ${eventId} with pet_id ${result.pet_id} (${result.pet_name})`);
+        console.log(
+          `Updated event ${eventId} with pet_id ${result.pet_id} (${result.pet_name})`,
+        );
       } else {
-        console.log(`Could not identify pet in event ${eventId}, AI said: ${result.raw_response}`);
+        console.log(
+          `Could not identify pet in event ${eventId}, AI said: ${result.raw_response}`,
+        );
       }
 
       return result;

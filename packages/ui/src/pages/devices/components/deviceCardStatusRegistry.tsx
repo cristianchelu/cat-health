@@ -1,6 +1,12 @@
 import * as React from 'react';
-import type { GetDeviceResponseDTO } from 'shared';
+import { useTranslation } from 'react-i18next';
+import {
+  parseWithSchema,
+  WaterFountainStateSchema,
+  type GetDeviceResponseDTO,
+} from 'shared';
 import SureFeederCardStatus from './surepet/SureFeederCardStatus';
+import WaterFountainStatus from './WaterFountainStatus';
 
 export type DeviceCardStatusComponent = React.ComponentType<{
   device: GetDeviceResponseDTO;
@@ -13,12 +19,23 @@ interface DeviceCardStatusRegistration {
   component: DeviceCardStatusComponent;
 }
 
-type DeviceCardStatusMatch = 'provider-type' | 'provider';
+type DeviceCardStatusMatch = 'provider-type' | 'provider' | 'type';
 
 const cardStatusResolutionOrder: DeviceCardStatusMatch[] = [
   'provider-type',
   'provider',
+  'type',
 ];
+
+const WaterFountainCardStatus: DeviceCardStatusComponent = ({ device }) => {
+  const { t } = useTranslation();
+  const state = parseWithSchema(WaterFountainStateSchema, device.state);
+  return state ? (
+    <WaterFountainStatus state={state} />
+  ) : (
+    <div className="no-status-data">{t('devices.no_status_data')}</div>
+  );
+};
 
 const deviceCardStatusRegistry: DeviceCardStatusRegistration[] = [
   {
@@ -26,6 +43,11 @@ const deviceCardStatusRegistry: DeviceCardStatusRegistration[] = [
     provider: 'surepet',
     type: 'feeder',
     component: SureFeederCardStatus,
+  },
+  {
+    id: 'water-fountain',
+    type: 'water_fountain',
+    component: WaterFountainCardStatus,
   },
 ];
 
@@ -51,6 +73,8 @@ const registrationMatchesResolutionStep = (
       return Boolean(registration.provider && registration.type);
     case 'provider':
       return Boolean(registration.provider && !registration.type);
+    case 'type':
+      return Boolean(!registration.provider && registration.type);
   }
 };
 

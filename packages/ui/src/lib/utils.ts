@@ -1,21 +1,18 @@
 import { clsx } from 'clsx';
 import { addDays, format } from 'date-fns';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
+import {
+  getStringValue as getSharedStringValue,
+  getNumberValue as getSharedNumberValue,
+  isRecord as sharedIsRecord,
+} from 'shared';
 
 export const cn = clsx;
 
-export const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-};
+export const isRecord = sharedIsRecord;
 
-export const getStringValue = (
-  record: Record<string, unknown>,
-  key: string,
-): string | undefined => {
-  const value = record[key];
-
-  return typeof value === 'string' ? value : undefined;
-};
+export const getStringValue = getSharedStringValue;
+export const getNumberValue = getSharedNumberValue;
 
 export type TimeRangeType = 'day' | 'week' | 'month' | 'custom';
 

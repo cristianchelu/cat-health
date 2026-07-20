@@ -1,4 +1,4 @@
-import type { SurePetAccountConfig, SurePetFeederConfig } from 'shared';
+import type { SurePetAccountConfig } from 'shared';
 import type {
   FoodIntakeEventData,
   NewEvent,
@@ -89,23 +89,4 @@ export function computeFillPercentages(
     totalTarget > 0 ? (totalWeight / totalTarget) * 100 : null;
 
   return { total, per_bowl };
-}
-
-export function parseSurePetFeederConfig(config: unknown): SurePetFeederConfig {
-  if (typeof config !== 'object' || config === null) {
-    throw new Error('Feeder config must be an object');
-  }
-  const cfg = config as Record<string, unknown>;
-  if (typeof cfg.product_id !== 'number') {
-    throw new Error('Feeder config requires product_id');
-  }
-  if (typeof cfg.household_id !== 'number') {
-    throw new Error('Feeder config requires household_id');
-  }
-  return {
-    product_id: cfg.product_id,
-    household_id: cfg.household_id,
-    serial_number:
-      typeof cfg.serial_number === 'string' ? cfg.serial_number : undefined,
-  };
 }

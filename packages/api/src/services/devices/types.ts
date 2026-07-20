@@ -72,6 +72,20 @@ export interface DeviceController {
   getState?(): Record<string, unknown>;
 }
 
+export function isCamera(controller: DeviceController): controller is Camera {
+  if (
+    !('captureSnapshot' in controller) ||
+    !('getSnapshotBuffer' in controller)
+  ) {
+    return false;
+  }
+  const candidate = controller as Camera;
+  return (
+    typeof candidate.captureSnapshot === 'function' &&
+    typeof candidate.getSnapshotBuffer === 'function'
+  );
+}
+
 export interface DiscoveredDevice {
   externalId: string;
   name: string;
@@ -123,5 +137,7 @@ export interface DeviceIntegrationContext {
   getAccountManager(accountId: number): AccountManager | undefined;
   instantiateDeviceController(device: Device): DeviceController | undefined;
   invalidateDeviceController(deviceId: number): Promise<void>;
-  instantiateController(deviceId: number): Promise<DeviceController | undefined>;
+  instantiateController(
+    deviceId: number,
+  ): Promise<DeviceController | undefined>;
 }

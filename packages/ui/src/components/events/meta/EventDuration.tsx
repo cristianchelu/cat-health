@@ -8,17 +8,33 @@ interface EventDurationProps {
   duration: number;
 }
 
-// TODO: TypeScript hasn't yet added types for DurationFormat
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const DurationFormat = (Intl as any).DurationFormat;
+interface DurationFormatInstance {
+  format(duration: { seconds?: number; minutes?: number }): string;
+}
 
-const formatterCache = new Map<string, InstanceType<typeof DurationFormat>>();
+interface DurationFormatConstructor {
+  new (locale: string, options?: { style?: string }): DurationFormatInstance;
+}
 
-const getFormatter = (locale: string) => {
-  if (!formatterCache.has(locale)) {
-    formatterCache.set(locale, new DurationFormat(locale, { style: 'narrow' }));
-  }
-  return formatterCache.get(locale)!;
+function getDurationFormatCtor(): DurationFormatConstructor | undefined {
+  const globalIntl = globalThis.Intl as typeof globalThis.Intl & {
+    DurationFormat?: DurationFormatConstructor;
+  };
+  return globalIntl.DurationFormat;
+}
+
+const formatterCache = new Map<string, DurationFormatInstance>();
+
+const getFormatter = (locale: string): DurationFormatInstance | undefined => {
+  const DurationFormat = getDurationFormatCtor();
+  if (!DurationFormat) return undefined;
+
+  const cached = formatterCache.get(locale);
+  if (cached) return cached;
+
+  const formatter = new DurationFormat(locale, { style: 'narrow' });
+  formatterCache.set(locale, formatter);
+  return formatter;
 };
 
 const EventDuration: React.FC<EventDurationProps> = ({ duration }) => {
@@ -31,7 +47,9 @@ const EventDuration: React.FC<EventDurationProps> = ({ duration }) => {
   return (
     <Timeline.MetaItem>
       <Timer />
-      {minutes > 0 ? formatter.format({ minutes, seconds }) : `${seconds}s`}
+      {minutes > 0 && formatter
+        ? formatter.format({ minutes, seconds })
+        : `${seconds}s`}
     </Timeline.MetaItem>
   );
 };

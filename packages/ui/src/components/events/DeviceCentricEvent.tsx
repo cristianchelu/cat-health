@@ -1,22 +1,13 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  AlertTriangle,
-  Brush,
-  Wifi,
-  WifiOff,
-} from 'lucide-react';
-import type { DeviceConnectivityEventDataDTO, GetEventDTO } from 'shared';
-import { getStringValue, isRecord } from '@/lib/utils';
+import { AlertTriangle, Brush, Wifi, WifiOff } from 'lucide-react';
+import type {
+  DeviceConnectivityEventDataDTO,
+  LitterboxMaintenanceEventTypeDTO,
+} from 'shared';
 import type { EventComponentProps } from './types';
 import TimelineEventShell from './TimelineEventShell';
 import './DeviceCentricEvent.css';
-
-type LitterboxMaintenanceEventType =
-  | 'scoop'
-  | 'deep_clean'
-  | 'litter_change'
-  | 'litter_addition';
 
 type ConnectivityState = DeviceConnectivityEventDataDTO['state'];
 
@@ -35,64 +26,22 @@ const CONNECTIVITY_VARIANT: Record<
   error: 'danger',
 };
 
-const MAINTENANCE_LABEL_KEY: Record<LitterboxMaintenanceEventType, string> = {
+const MAINTENANCE_LABEL_KEY: Record<
+  LitterboxMaintenanceEventTypeDTO,
+  string
+> = {
   scoop: 'events.litterbox_maintenance_scoop',
   deep_clean: 'events.litterbox_maintenance_deep_clean',
   litter_change: 'events.litterbox_maintenance_litter_change',
   litter_addition: 'events.litterbox_maintenance_litter_addition',
 };
 
-function parseConnectivityData(
-  event: GetEventDTO,
-): DeviceConnectivityEventDataDTO | null {
-  const data = event.data;
-  if (!isRecord(data) || data.type !== 'device_connectivity') {
-    return null;
-  }
-
-  const state = data.state;
-  if (state !== 'online' && state !== 'offline' && state !== 'error') {
-    return null;
-  }
-
-  const previousRaw = data.previous_state;
-  const previous_state =
-    previousRaw === 'online' ||
-    previousRaw === 'offline' ||
-    previousRaw === 'error' ||
-    previousRaw === 'unknown'
-      ? previousRaw
-      : undefined;
-
-  return {
-    type: 'device_connectivity',
-    state,
-    previous_state,
-  };
-}
-
-function parseMaintenanceType(event: GetEventDTO): LitterboxMaintenanceEventType | null {
-  const data = event.data;
-  if (!isRecord(data) || data.type !== 'litterbox_maintenance') {
-    return null;
-  }
-
-  const maintenanceType = getStringValue(data, 'maintenance_type');
-  if (
-    maintenanceType === 'scoop' ||
-    maintenanceType === 'deep_clean' ||
-    maintenanceType === 'litter_change' ||
-    maintenanceType === 'litter_addition'
-  ) {
-    return maintenanceType;
-  }
-
-  return null;
-}
-
 const DeviceConnectivityEventRow: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
-  const connectivity = parseConnectivityData(props.event);
+  const connectivity =
+    props.event.data.type === 'device_connectivity'
+      ? props.event.data
+      : null;
   if (!connectivity) {
     return null;
   }
@@ -119,12 +68,12 @@ const DeviceConnectivityEventRow: React.FC<EventComponentProps> = (props) => {
 
 const LitterboxMaintenanceEventRow: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
-  const maintenanceType = parseMaintenanceType(props.event);
-  const litterAmount =
-    isRecord(props.event.data) &&
-    typeof props.event.data.litter_amount === 'number'
-      ? props.event.data.litter_amount
-      : undefined;
+  const maintenance =
+    props.event.data.type === 'litterbox_maintenance'
+      ? props.event.data
+      : null;
+  const maintenanceType = maintenance?.maintenance_type ?? null;
+  const litterAmount = maintenance?.litter_amount;
 
   const detailKey = maintenanceType
     ? MAINTENANCE_LABEL_KEY[maintenanceType]

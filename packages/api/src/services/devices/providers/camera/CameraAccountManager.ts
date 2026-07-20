@@ -1,4 +1,4 @@
-import Compile from 'typebox/compile';
+import { requireWithSchema } from 'shared';
 import type {
   AccountManager,
   DeviceController,
@@ -55,13 +55,11 @@ export class CameraAccountManager implements AccountManager {
       throw new Error(`Unsupported device type: ${device.type}`);
     }
 
-    const validator = Compile(CameraConfigSchema);
-    if (!validator.Check(device.config)) {
-      const errors = [...validator.Errors(device.config)];
-      throw new Error(
-        `Invalid camera configuration: ${JSON.stringify(errors)}`,
-      );
-    }
+    const config = requireWithSchema(
+      CameraConfigSchema,
+      device.config,
+      'camera configuration',
+    );
 
     // Validate that the URL is reachable
     try {
@@ -72,7 +70,7 @@ export class CameraAccountManager implements AccountManager {
           external_id: 'temp',
           name: 'temp',
           type: 'camera',
-          config: device.config,
+          config,
           enabled: 1,
           created_at: 0,
           updated_at: 0,

@@ -2,8 +2,12 @@ import { subDays } from 'date-fns';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
+import {
+  parseFoodIntakeEventData,
+  parseWaterIntakeEventData,
+  parseWeightMeasurementEventData,
+} from 'shared';
 import type { Database } from '../../database/index.ts';
-import type { FoodIntakeEventData } from '../../database/types/EventTable.ts';
 import { isBucketTracked } from './analyticsCoverage.ts';
 import { computeUntrackedBuckets } from './trendCoverage.ts';
 
@@ -81,8 +85,15 @@ async function buildDailyMetricTrends(
     };
   },
 ): Promise<DailyMetricTrendDay[]> {
-  const { petId, days, timezone, deviceClass, eventType, getAmount, getBounds } =
-    options;
+  const {
+    petId,
+    days,
+    timezone,
+    deviceClass,
+    eventType,
+    getAmount,
+    getBounds,
+  } = options;
   const { rangeStart, rangeEnd, dayKeys } = createDayRange(days, timezone);
 
   const [metricEvents, weightEvents, lastWeightEvent, untrackedBuckets] =
@@ -122,11 +133,12 @@ async function buildDailyMetricTrends(
     ]);
 
   let currentWeight = lastWeightEvent
-    ? (lastWeightEvent.data as { weight: number }).weight
+    ? (parseWeightMeasurementEventData(lastWeightEvent.data)?.weight ?? 0)
     : 0;
 
   if (currentWeight === 0 && weightEvents.length > 0) {
-    currentWeight = (weightEvents[0].data as { weight: number }).weight;
+    currentWeight =
+      parseWeightMeasurementEventData(weightEvents[0].data)?.weight ?? 0;
   }
 
   const dailyAmounts = new Map<string, number>();
@@ -156,7 +168,8 @@ async function buildDailyMetricTrends(
       const we = weightEvents[weightEventIndex];
       if (we.timestamp <= dayEnd) {
         if (we.timestamp >= dayStart) {
-          dayWeights.push((we.data as { weight: number }).weight);
+          const weight = parseWeightMeasurementEventData(we.data)?.weight;
+          if (weight !== undefined) dayWeights.push(weight);
         }
         weightEventIndex++;
       } else {
@@ -197,7 +210,7 @@ export function buildWaterTrends(
     timezone,
     deviceClass: 'water_fountain',
     eventType: 'water_intake',
-    getAmount: (data) => (data as { amount?: number }).amount ?? 0,
+    getAmount: (data) => parseWaterIntakeEventData(data)?.amount ?? 0,
     getBounds: waterBoundsFromWeight,
   });
 }
@@ -215,7 +228,7 @@ export function buildFoodTrends(
     deviceClass: 'feeder',
     eventType: 'food_intake',
     getAmount: (data) => {
-      const nutrients = (data as FoodIntakeEventData).nutrients;
+      const nutrients = parseFoodIntakeEventData(data)?.nutrients;
       return Math.round(nutrients?.calories ?? 0);
     },
     getBounds: calorieBoundsFromWeight,

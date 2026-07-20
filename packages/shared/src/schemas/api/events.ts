@@ -1,27 +1,20 @@
 import { Type, type Static } from "@fastify/type-provider-typebox";
 import { getPaginatedResponseSchema } from "./common.ts";
+import {
+  EventDataSchema,
+  LitterboxUseEliminationTypeSchema,
+  type LitterboxAnalysisStatePeriodDTO,
+} from "./eventData.ts";
 
-export const EventTypeSchema = Type.Union([
-  Type.Literal("weight_measurement"),
-  Type.Literal("water_intake"),
-  Type.Literal("litterbox_use"),
-  Type.Literal("food_intake"),
-  Type.Literal("litterbox_maintenance"),
-  Type.Literal("device_connectivity"),
-  Type.Literal("pet_presence"),
-]);
-export type EventType = Static<typeof EventTypeSchema>;
+/** Sample rate (Hz); must match `StateAnalyzer` on the device path. */
+export const LITTERBOX_SAMPLE_HZ = 10;
 
-export const LitterboxUseEliminationTypeSchema = Type.Union([
-  Type.Literal("urination"),
-  Type.Literal("defecation"),
-  Type.Literal("both"),
-  Type.Literal("no_elimination"),
-  Type.Literal("unknown"),
-]);
-
-export type LitterboxUseEliminationType =
-  Static<typeof LitterboxUseEliminationTypeSchema>;
+/**
+ * One row from server `StateAnalyzer` periods, persisted on the event as `data.segments`.
+ * Sample indices `start` / `end` align with the weight array; use `LITTERBOX_SAMPLE_HZ` (or derived Hz from duration/length) for seconds in the UI.
+ * Per-interval stats (variance, mean) are not persisted — UIs that need them recompute from `raw_data` weights.
+ */
+export type LitterboxAnalysisStatePeriod = LitterboxAnalysisStatePeriodDTO;
 
 /** Provider-specific metadata on events (discriminated by `provider`). */
 export const SurePetEventProviderDataSchema = Type.Object({
@@ -46,36 +39,13 @@ export const EventProviderDataSchema = Type.Union([
 ]);
 export type EventProviderData = Static<typeof EventProviderDataSchema>;
 
-/** Sample rate (Hz); must match `StateAnalyzer` on the device path. */
-export const LITTERBOX_SAMPLE_HZ = 10;
-
-/**
- * One row from server `StateAnalyzer` periods, persisted on the event as `data.segments`.
- * Sample indices `start` / `end` align with the weight array; use `LITTERBOX_SAMPLE_HZ` (or derived Hz from duration/length) for seconds in the UI.
- * Per-interval stats (variance, mean) are not persisted — UIs that need them recompute from `raw_data` weights.
- */
-export interface LitterboxAnalysisStatePeriod {
-  state: string;
-  start: number;
-  end: number;
-  /** Urination vs defecation for `eliminating` rows; set server-side (underlying variance is not stored). */
-  elimination_type?: "urination" | "defecation";
-}
-
-/** Timeline badge row: seconds from sample indices; `elimination_type` comes from persisted segments. */
-export interface LitterboxEliminationBadgeSegment {
-  elimination_type: "urination" | "defecation";
-  start_s: number;
-  end_s: number;
-}
-
 const GetEventFieldsSchema = Type.Object({
   id: Type.Number(),
   parent_event_id: Type.Union([Type.Number(), Type.Null()]),
   pet_id: Type.Union([Type.Number(), Type.Null()]),
   device_id: Type.Union([Type.Null(), Type.Number()]),
-  timestamp: Type.Any(), // TODO: Type.Date(),
-  data: Type.Any(), // TODO: Type
+  timestamp: Type.String({ format: "date-time" }),
+  data: EventDataSchema,
   raw_data: Type.Union([Type.Null(), Type.Array(Type.Number())]),
   human_verified: Type.Boolean(),
 });
@@ -101,7 +71,7 @@ export type GetEventsDTO = Static<typeof GetEventsSchema>;
 export const PostEventRequestSchema = Type.Intersect([
   Type.Omit(GetEventSchema, ["id", "timestamp", "raw_data"]),
   Type.Object({
-    timestamp: Type.Optional(Type.Any()),
+    timestamp: Type.Optional(Type.String({ format: "date-time" })),
   }),
 ]);
 export type PostEventRequestDTO = Static<typeof PostEventRequestSchema>;
@@ -111,7 +81,7 @@ export type PatchEventParamsDTO = Static<typeof PatchEventParamsSchema>;
 
 export const PatchEventRequestSchema = Type.Object({
   pet_id: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
-  data: Type.Optional(Type.Any()),
+  data: Type.Optional(EventDataSchema),
   human_verified: Type.Optional(Type.Boolean()),
 });
 export type PatchEventRequestDTO = Static<typeof PatchEventRequestSchema>;
@@ -168,68 +138,18 @@ export const WeightTrendsResponseSchema = Type.Object({
   points: Type.Array(WeightTrendPointSchema),
   untrackedIntervals: Type.Array(UntrackedIntervalSchema),
   untrackedDayIntervals: Type.Array(UntrackedIntervalSchema),
-  rangeStart: Type.String({ format: 'date-time' }),
-  rangeEnd: Type.String({ format: 'date-time' }),
+  rangeStart: Type.String({ format: "date-time" }),
+  rangeEnd: Type.String({ format: "date-time" }),
   todayTracked: Type.Boolean(),
 });
 export type WeightTrendsResponseDTO = Static<typeof WeightTrendsResponseSchema>;
 
-export const WaterIntakeEventDataSchema = Type.Object({
-  type: Type.Literal('water_intake'),
-  amount: Type.Number(),
-  duration: Type.Optional(Type.Number()),
-  source: Type.Optional(Type.Union([Type.Literal('drinking'), Type.Literal('food')])),
-  raw_amount: Type.Optional(Type.Number()),
-  excluded_amount: Type.Optional(Type.Number()),
-  filtered: Type.Optional(Type.Boolean()),
-});
-export type WaterIntakeEventDataDTO = Static<typeof WaterIntakeEventDataSchema>;
-
-export const DeviceConnectivityStateSchema = Type.Union([
-  Type.Literal("online"),
-  Type.Literal("offline"),
-  Type.Literal("error"),
-]);
-
-export const DeviceConnectivityPreviousStateSchema = Type.Union([
-  DeviceConnectivityStateSchema,
-  Type.Literal("unknown"),
-]);
-
-export const DeviceConnectivityEventDataSchema = Type.Object({
-  type: Type.Literal("device_connectivity"),
-  state: DeviceConnectivityStateSchema,
-  previous_state: Type.Optional(DeviceConnectivityPreviousStateSchema),
-});
-export type DeviceConnectivityEventDataDTO = Static<
-  typeof DeviceConnectivityEventDataSchema
->;
-
-export const PetPresenceStateSchema = Type.Union([
-  Type.Literal("away"),
-  Type.Literal("home"),
-  Type.Literal("outside"),
-]);
-
-export const PetPresenceContextSchema = Type.Union([
-  Type.Literal("vet"),
-  Type.Literal("travel"),
-  Type.Literal("friend"),
-  Type.Literal("manual"),
-]);
-
-export const PetPresencePreviousStateSchema = Type.Union([
-  PetPresenceStateSchema,
-  Type.Literal("unknown"),
-]);
-
-export const PetPresenceEventDataSchema = Type.Object({
-  type: Type.Literal("pet_presence"),
-  state: PetPresenceStateSchema,
-  context: Type.Optional(PetPresenceContextSchema),
-  previous_state: Type.Optional(PetPresencePreviousStateSchema),
-});
-export type PetPresenceEventDataDTO = Static<typeof PetPresenceEventDataSchema>;
+/** Timeline badge row: seconds from sample indices; `elimination_type` comes from persisted segments. */
+export interface LitterboxEliminationBadgeSegment {
+  elimination_type: "urination" | "defecation";
+  start_s: number;
+  end_s: number;
+}
 
 // Water trends
 export const WaterTrendParamsSchema = Type.Object({ petId: Type.Number() });
@@ -309,7 +229,9 @@ const LitterboxDailySummarySchema = Type.Object({
   medianDuration: Type.Union([Type.Number(), Type.Null()]),
   maxDuration: Type.Union([Type.Number(), Type.Null()]),
 });
-export type LitterboxDailySummaryDTO = Static<typeof LitterboxDailySummarySchema>;
+export type LitterboxDailySummaryDTO = Static<
+  typeof LitterboxDailySummarySchema
+>;
 
 const LitterboxChartPointSchema = Type.Object({
   timestamp: Type.String(),
@@ -323,7 +245,9 @@ const LitterboxDailyCountPointSchema = Type.Object({
   date: Type.String(),
   value: Type.Number(),
 });
-export type LitterboxDailyCountPointDTO = Static<typeof LitterboxDailyCountPointSchema>;
+export type LitterboxDailyCountPointDTO = Static<
+  typeof LitterboxDailyCountPointSchema
+>;
 
 const LitterboxTrendAnalyticsSchema = Type.Object({
   dailyUrinationCount: Type.Array(LitterboxDailyCountPointSchema),
@@ -334,7 +258,9 @@ const LitterboxTrendAnalyticsSchema = Type.Object({
   defecationWeightPoints: Type.Array(LitterboxChartPointSchema),
   combinedEliminationWeightPoints: Type.Array(LitterboxChartPointSchema),
 });
-export type LitterboxTrendAnalyticsDTO = Static<typeof LitterboxTrendAnalyticsSchema>;
+export type LitterboxTrendAnalyticsDTO = Static<
+  typeof LitterboxTrendAnalyticsSchema
+>;
 
 export const LitterboxTrendsResponseSchema = Type.Object({
   days: Type.Array(
@@ -349,4 +275,6 @@ export const LitterboxTrendsResponseSchema = Type.Object({
   lastPoop: Type.Union([Type.String(), Type.Null()]),
   analytics: Type.Optional(LitterboxTrendAnalyticsSchema),
 });
-export type LitterboxTrendsResponseDTO = Static<typeof LitterboxTrendsResponseSchema>;
+export type LitterboxTrendsResponseDTO = Static<
+  typeof LitterboxTrendsResponseSchema
+>;

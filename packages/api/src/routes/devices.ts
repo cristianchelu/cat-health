@@ -23,7 +23,31 @@ import {
   ReidentifyLitterboxVisitsQuerySchema,
   ReidentifyLitterboxVisitsResponseSchema,
 } from 'shared';
+import { isRecord } from 'shared';
+import type { Device } from '../database/types/DeviceTable.ts';
+import type { ProviderAccount } from '../database/types/ProviderAccountTable.ts';
+import type { GetDeviceResponseDTO, ProviderAccountDTO } from 'shared';
 import { reidentifyLitterboxVisits } from '../services/litterbox/reidentifyLitterboxVisits.ts';
+
+type DeviceWithProvider = Device & { provider: string };
+
+function asConfigRecord(config: unknown): Record<string, unknown> | null {
+  if (config == null) return null;
+  return isRecord(config) ? config : null;
+}
+
+function parseJsonValue(
+  config: Device['config'] | ProviderAccount['config'],
+): unknown {
+  if (typeof config === 'string') {
+    try {
+      return JSON.parse(config) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  return config;
+}
 
 const Http404ResponseSchema = Type.Object({
   statusCode: Type.Literal(404),
@@ -36,20 +60,24 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
   // --- Helpers ---
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mapDevice = async (device: any) => {
-    const mapped = {
-      ...device,
+  const mapDevice = async (
+    device: DeviceWithProvider,
+  ): Promise<GetDeviceResponseDTO> => {
+    const mapped: GetDeviceResponseDTO = {
+      id: device.id,
+      provider_account_id: device.provider_account_id,
+      provider: device.provider,
+      external_id: device.external_id,
+      name: device.name,
+      type: device.type,
+      config: parseJsonValue(device.config) ?? null,
       enabled: Boolean(device.enabled),
       created_at: new Date(device.created_at).toISOString(),
       updated_at: new Date(device.updated_at).toISOString(),
       last_seen: device.last_seen
         ? new Date(device.last_seen).toISOString()
         : null,
-      config:
-        typeof device.config === 'string'
-          ? JSON.parse(device.config)
-          : device.config,
+      status: device.status,
     };
 
     const snapshot = await integrationManager
@@ -64,13 +92,17 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     try {
       const controller = integrationManager.instantiateDeviceController({
         ...device,
-        config: mapped.config,
+        config: asConfigRecord(mapped.config),
       });
       if (controller?.getState) {
         mapped.state = controller.getState();
       }
-    } catch {
-      // Ignore errors when fetching controller state
+    } catch (error) {
+      mapped.status = 'error';
+      fastify.log.error(
+        { err: error, deviceId: device.id },
+        'Failed to load device controller state',
+      );
     }
 
     return mapped;
@@ -80,25 +112,41 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
    * Resolve reference_images IDs to { id, file_path } for pet_recognizer
    * devices. Mutates `mapped.reference_media` in place.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function enrichReferenceMedia(devices: any[]) {
+  async function enrichReferenceMedia(devices: GetDeviceResponseDTO[]) {
     const allIds: number[] = [];
     const petRecognizers: Array<{
-      mapped: Record<string, unknown>;
+      mapped: GetDeviceResponseDTO;
       refImages: Record<string, number[]>;
     }> = [];
 
     for (const mapped of devices) {
       if (mapped.type !== 'pet_recognizer') continue;
-      const refImages = (mapped.config as Record<string, unknown>)
-        ?.reference_images as Record<string, number[]> | undefined;
-      if (!refImages) continue;
+      const config = mapped.config;
+      const refImages = isRecord(config) ? config.reference_images : undefined;
+      if (!isRecord(refImages)) continue;
 
-      const ids = Object.values(refImages).flat();
+      const ids = Object.values(refImages).flatMap((value) =>
+        Array.isArray(value)
+          ? value.filter(
+              (id): id is number =>
+                typeof id === 'number' && Number.isFinite(id),
+            )
+          : [],
+      );
       if (ids.length === 0) continue;
 
       allIds.push(...ids);
-      petRecognizers.push({ mapped, refImages });
+      const normalizedRefImages: Record<string, number[]> = {};
+      for (const [petId, value] of Object.entries(refImages)) {
+        if (!Array.isArray(value)) continue;
+        const mediaIds = value.filter(
+          (id): id is number => typeof id === 'number' && Number.isFinite(id),
+        );
+        if (mediaIds.length > 0) {
+          normalizedRefImages[petId] = mediaIds;
+        }
+      }
+      petRecognizers.push({ mapped, refImages: normalizedRefImages });
     }
 
     if (allIds.length === 0) return;
@@ -131,17 +179,15 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mapAccount = (account: any) => ({
-    ...account,
+  const mapAccount = (account: ProviderAccount): ProviderAccountDTO => ({
+    id: account.id,
+    provider: account.provider,
+    name: account.name,
     enabled: Boolean(account.enabled),
     internal: Boolean(account.internal),
     created_at: new Date(account.created_at).toISOString(),
     updated_at: new Date(account.updated_at).toISOString(),
-    config:
-      typeof account.config === 'string'
-        ? JSON.parse(account.config)
-        : account.config,
+    config: parseJsonValue(account.config),
   });
 
   // --- Providers ---
@@ -198,7 +244,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .values({
           provider,
           name,
-          config: config as Record<string, unknown>,
+          config,
           enabled: 1,
           created_at: Date.now(),
           updated_at: Date.now(),
@@ -380,7 +426,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           type,
           provider_account_id,
           external_id,
-          config: config ? (config as Record<string, unknown>) : null,
+          config: config ?? null,
           enabled: 1,
           created_at: Date.now(),
           updated_at: Date.now(),
@@ -399,7 +445,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       if (manager?.onDeviceRegistered) {
         await manager.onDeviceRegistered({
           ...result,
-          config: mapped.config,
+          config: asConfigRecord(mapped.config),
         });
       }
 
@@ -658,7 +704,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           .values({
             device_id: id,
             camera_id,
-            config: config ? (config as Record<string, unknown>) : null,
+            config: config ?? null,
           })
           .execute();
       });
@@ -700,7 +746,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       await db
         .updateTable('device_camera')
-        .set({ config: config ? (config as Record<string, unknown>) : null })
+        .set({ config: config ?? null })
         .where('device_id', '=', id)
         .execute();
 

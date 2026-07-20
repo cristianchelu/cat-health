@@ -10,11 +10,7 @@ import EventPet from './meta/EventPet';
 import EventAnnotated from './meta/EventAnnotated';
 import EventVerified from './meta/EventVerified';
 import PoopIcon from '../icons/PoopIcon';
-import {
-  LITTERBOX_SAMPLE_HZ,
-  type LitterboxAnalysisStatePeriod,
-  type LitterboxUseEliminationType,
-} from 'shared';
+import { LITTERBOX_SAMPLE_HZ, type LitterboxUseEliminationType } from 'shared';
 import { eliminationBadgeRowsFromSegments } from '@/lib/litterboxEliminationBadges';
 import { hasPersistedLitterboxAnnotation } from '@/types/litterbox';
 import EventEliminationSegments from './meta/EventEliminationSegments';
@@ -44,25 +40,24 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
 }) => {
   const { t } = useTranslation();
   const { formatTime } = useFormatters();
-  const { data } = event;
-  const persistedSegments = (
-    data as { segments?: LitterboxAnalysisStatePeriod[] | null }
-  ).segments;
+  const litterboxData = event.data.type === 'litterbox_use' ? event.data : null;
+  const persistedSegments = litterboxData?.segments;
   const badgeSegments = React.useMemo(
     () =>
       eliminationBadgeRowsFromSegments(persistedSegments, LITTERBOX_SAMPLE_HZ),
     [persistedSegments],
   );
 
-  const eliminationType = data.elimination_type as LitterboxUseEliminationType;
+  const eliminationType = litterboxData?.elimination_type ?? 'unknown';
 
   const showEliminationSegments = badgeSegments.length > 0;
 
   const variant = React.useMemo(() => {
-    if (data.straining) return 'danger';
+    if (!litterboxData) return 'default';
+    if (litterboxData.straining) return 'danger';
     if (eliminationType === 'no_elimination') return 'default';
     return 'warning';
-  }, [eliminationType, data.straining]);
+  }, [eliminationType, litterboxData]);
 
   const title = React.useMemo(() => {
     switch (eliminationType) {
@@ -79,6 +74,8 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
     }
   }, [eliminationType, t]);
 
+  if (!litterboxData) return null;
+
   const Icon = ICON_MAP[eliminationType] || Toilet;
   const style = {
     '--timeline-icon-color': COLOR_MAP[eliminationType],
@@ -94,9 +91,10 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
           <Timeline.Timestamp>
             {formatTime(new Date(event.timestamp))}
           </Timeline.Timestamp>
-          {(data.elimination_weight !== undefined || data.straining) && (
+          {(litterboxData.elimination_weight !== undefined ||
+            litterboxData.straining) && (
             <span className="timeline-value-group">
-              {data.elimination_weight !== undefined && (
+              {litterboxData.elimination_weight !== undefined && (
                 <Timeline.Value
                   variant={variant}
                   style={
@@ -105,10 +103,10 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
                       : undefined
                   }
                 >
-                  {data.elimination_weight}g
+                  {litterboxData.elimination_weight}g
                 </Timeline.Value>
               )}
-              {data.straining && (
+              {litterboxData.straining && (
                 <Timeline.Badge variant="warning">
                   {t('overview.straining')}
                 </Timeline.Badge>
@@ -117,7 +115,7 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
           )}
           <Timeline.TitleGroup>
             {event.human_verified &&
-              (hasPersistedLitterboxAnnotation(data) ? (
+              (hasPersistedLitterboxAnnotation(litterboxData) ? (
                 <EventAnnotated />
               ) : (
                 <EventVerified />
@@ -126,7 +124,9 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
           </Timeline.TitleGroup>
         </Timeline.Header>
         <Timeline.Meta>
-          {data.duration && <EventDuration duration={data.duration} />}
+          {litterboxData.duration > 0 && (
+            <EventDuration duration={litterboxData.duration} />
+          )}
           {showEliminationSegments && (
             <EventEliminationSegments segments={badgeSegments} />
           )}

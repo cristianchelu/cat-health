@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import {
+  isRecord,
+  parseFoodIntakeEventData,
+  parseWithSchema,
   ProductId,
+  SurePetAccountConfigSchema,
+  SurePetFeederConfigSchema,
   type ProviderRemotePet,
   type SurePetAccountConfig,
 } from 'shared';
@@ -18,7 +23,6 @@ import {
   enrichFoodIntakeEventData,
   resolveFoodIdForCompartment,
 } from '../../../food/enrichFoodIntake.ts';
-import type { FoodIntakeEventData } from '../../../../database/types/EventTable.ts';
 import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
 import { SurePetClient, SurePetClientError } from './SurePetClient.ts';
 import { FeederController } from './FeederController.ts';
@@ -32,43 +36,22 @@ import {
   resolveLocalPetIdFromProviderData,
 } from './extractFeedingEvents.ts';
 import { resolveSurePetFoodCompartmentId } from './foodCompartments.ts';
-import {
-  mapFeedingDatapointToEvent,
-  parseSurePetFeederConfig,
-} from './mapFeedingEvent.ts';
+import { mapFeedingDatapointToEvent } from './mapFeedingEvent.ts';
 import type { NormalizedFeedingDatapoint } from './types.ts';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function parseAccountConfig(config: unknown): SurePetAccountConfig {
-  if (!isRecord(config)) {
-    throw new Error('SurePet account config must be an object');
+  const parsed = parseWithSchema(SurePetAccountConfigSchema, config);
+  if (!parsed) {
+    throw new Error('SurePet account config must include email and password');
   }
 
-  const email = config.email;
-  const password = config.password;
-  const deviceId = config.device_id;
-
-  if (typeof email !== 'string' || !email) {
-    throw new Error('SurePet account config requires email');
-  }
-  if (typeof password !== 'string' || !password) {
-    throw new Error('SurePet account config requires password');
-  }
-
-  const parsed = {
-    ...(config as unknown as SurePetAccountConfig),
-    email,
-    password,
+  return {
+    ...parsed,
     device_id:
-      typeof deviceId === 'string' && deviceId.length > 0
-        ? deviceId
+      typeof parsed.device_id === 'string' && parsed.device_id.length > 0
+        ? parsed.device_id
         : randomUUID(),
   };
-
-  return parsed;
 }
 
 export class SurePetAccountManager implements AccountManager {
@@ -261,7 +244,10 @@ export class SurePetAccountManager implements AccountManager {
       throw new Error('SurePet provider only supports feeder devices');
     }
 
-    const config = parseSurePetFeederConfig(device.config);
+    const config = parseWithSchema(SurePetFeederConfigSchema, device.config);
+    if (!config) {
+      throw new Error('Invalid SurePet feeder configuration');
+    }
     if (config.product_id !== ProductId.FEEDER_CONNECT) {
       throw new Error(
         `Unsupported SurePet product_id ${config.product_id}; expected ${ProductId.FEEDER_CONNECT}`,
@@ -583,9 +569,13 @@ export class SurePetAccountManager implements AccountManager {
       }
     }
 
+    const providerData = parseFoodIntakeEventData(event.data)?.provider_data;
     const externalKey =
-      event.data.provider_data?.provider === 'surepet'
-        ? event.data.provider_data.external_key
+      providerData &&
+      isRecord(providerData) &&
+      providerData.provider === 'surepet' &&
+      typeof providerData.external_key === 'string'
+        ? providerData.external_key
         : undefined;
     if (!externalKey) return;
 
@@ -675,10 +665,13 @@ export class SurePetAccountManager implements AccountManager {
     for (const row of events) {
       const data =
         typeof row.data === 'string'
-          ? (JSON.parse(row.data) as FoodIntakeEventData)
-          : (row.data as FoodIntakeEventData);
+          ? parseFoodIntakeEventData(JSON.parse(row.data))
+          : parseFoodIntakeEventData(row.data);
+      if (!data) continue;
       const providerData = data.provider_data;
-      if (providerData?.provider !== 'surepet') continue;
+      if (!isRecord(providerData) || providerData.provider !== 'surepet') {
+        continue;
+      }
 
       const resolvedPetId = resolveLocalPetIdFromProviderData(
         this.config,
@@ -704,10 +697,11 @@ export class SurePetAccountManager implements AccountManager {
       }
     }
 
+    const config = { ...this.config };
     await this.deps.db
       .updateTable('provider_account')
       .set({
-        config: this.config as Record<string, unknown>,
+        config,
         updated_at: Date.now(),
       })
       .where('id', '=', this.accountId)
@@ -715,7 +709,7 @@ export class SurePetAccountManager implements AccountManager {
 
     this.account = {
       ...this.account,
-      config: this.config as unknown as Record<string, unknown>,
+      config,
     };
   }
 }

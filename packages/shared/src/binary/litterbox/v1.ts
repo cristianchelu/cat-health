@@ -2,12 +2,12 @@ import {
   LITTERBOX_NULL_U16,
   LITTERBOX_NULL_U8,
   LITTERBOX_RAW_DATA_VERSION_1,
-} from './constants.ts';
+} from "./constants.ts";
 import type {
   DecodedLitterboxContext,
   DecodedLitterboxRawData,
   EncodeLitterboxRawDataV1Input,
-} from './types.ts';
+} from "./types.ts";
 
 const HEADER_MIN = 1 + 8 + 10 + 4;
 
@@ -59,12 +59,16 @@ export function decodeLitterboxRawDataV1(
   }
 
   const context: DecodedLitterboxContext = {
-    wasteWeight: wasteWeightRaw === LITTERBOX_NULL_U16 ? undefined : wasteWeightRaw,
+    wasteWeight:
+      wasteWeightRaw === LITTERBOX_NULL_U16 ? undefined : wasteWeightRaw,
     litterRemaining:
-      litterRemainingRaw === LITTERBOX_NULL_U16 ? undefined : litterRemainingRaw,
+      litterRemainingRaw === LITTERBOX_NULL_U16
+        ? undefined
+        : litterRemainingRaw,
     deepCleanTimer:
       deepCleanTimerRaw === LITTERBOX_NULL_U8 ? undefined : deepCleanTimerRaw,
-    totalVisits: totalVisitsRaw === LITTERBOX_NULL_U8 ? undefined : totalVisitsRaw,
+    totalVisits:
+      totalVisitsRaw === LITTERBOX_NULL_U8 ? undefined : totalVisitsRaw,
     daysSinceLitterReplaced:
       daysSinceLitterReplacedRaw === LITTERBOX_NULL_U8
         ? undefined

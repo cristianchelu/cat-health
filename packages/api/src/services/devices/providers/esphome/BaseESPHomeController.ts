@@ -4,19 +4,17 @@ import {
   EspHomeClient,
   LogLevel,
 } from 'esphome-client';
-import type { DeviceStatus, EntityDTO } from 'shared';
-import type {
-  DeviceController,
-  ProviderDeps,
-  Device,
-} from '../../types.ts';
+import { type Static, Type } from '@fastify/type-provider-typebox';
+import { requireWithSchema, type DeviceStatus, type EntityDTO } from 'shared';
+import type { DeviceController, ProviderDeps, Device } from '../../types.ts';
 
-export interface ESPHomeConfig {
-  host: string;
-  port?: number;
-  encryptionKey?: string;
-  clientId?: string;
-}
+export const ESPHomeConfigSchema = Type.Object({
+  host: Type.String({ minLength: 1 }),
+  port: Type.Optional(Type.Number()),
+  encryptionKey: Type.Optional(Type.String()),
+  clientId: Type.Optional(Type.String()),
+});
+export type ESPHomeConfig = Static<typeof ESPHomeConfigSchema>;
 
 export interface ReconnectConfig {
   baseDelay: number;
@@ -82,7 +80,11 @@ export abstract class BaseESPHomeController implements DeviceController {
     this.deviceId = device.id;
 
     // Parse config
-    const rawConfig = device.config as unknown as ESPHomeConfig;
+    const rawConfig = requireWithSchema(
+      ESPHomeConfigSchema,
+      device.config,
+      'ESPHome configuration',
+    );
     this.config = {
       host: rawConfig.host,
       port: rawConfig.port ?? 6053,
@@ -401,16 +403,16 @@ export abstract class BaseESPHomeController implements DeviceController {
         ? entity.deviceClass
         : undefined;
     const icon =
-      'icon' in entity && typeof entity.icon === 'string' ? entity.icon : undefined;
+      'icon' in entity && typeof entity.icon === 'string'
+        ? entity.icon
+        : undefined;
 
     const accuracyDecimals =
       entity.type === 'sensor' &&
       'accuracyDecimals' in entity &&
       typeof (entity as { accuracyDecimals?: unknown }).accuracyDecimals ===
         'number' &&
-      Number.isFinite(
-        (entity as { accuracyDecimals: number }).accuracyDecimals,
-      )
+      Number.isFinite((entity as { accuracyDecimals: number }).accuracyDecimals)
         ? Math.min(
             15,
             Math.max(

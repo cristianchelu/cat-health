@@ -1,7 +1,10 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import type { GetDeviceResponseDTO } from 'shared';
-import { parseSurePetFeederState } from './parseSurePetFeederState';
+import {
+  parseWithSchema,
+  SurePetDeviceStateSchema,
+  type GetDeviceResponseDTO,
+} from 'shared';
 import SureFeederStatus from '../SureFeederStatus';
 
 interface SureFeederCardStatusProps {
@@ -12,12 +15,10 @@ const SureFeederCardStatus: React.FC<SureFeederCardStatusProps> = ({
   device,
 }) => {
   const { t } = useTranslation();
-  const state = parseSurePetFeederState(device.state);
+  const state = parseWithSchema(SurePetDeviceStateSchema, device.state);
 
   if (!state) {
-    return (
-      <div className="no-status-data">{t('devices.no_status_data')}</div>
-    );
+    return <div className="no-status-data">{t('devices.no_status_data')}</div>;
   }
 
   return <SureFeederStatus state={state} />;

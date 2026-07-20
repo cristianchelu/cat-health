@@ -13,6 +13,7 @@ export default tseslint.config([
   globalIgnores(['dist', 'dev-dist']),
   {
     files: ['**/*.{ts,tsx}'],
+    ignores: ['src/test/register.ts'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: 2020,
@@ -20,6 +21,26 @@ export default tseslint.config([
       parserOptions: {
         tsconfigRootDir: __dirname,
       },
+    },
+    rules: {
+      '@typescript-eslint/consistent-type-assertions': [
+        'error',
+        { assertionStyle: 'as', objectLiteralTypeAssertions: 'allow' },
+      ],
+    },
+  },
+  {
+    files: ['src/test/register.ts'],
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+      parserOptions: {
+        tsconfigRootDir: __dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/consistent-type-assertions': 'off',
     },
   },
   {

@@ -17,7 +17,8 @@ const WeightEvent: React.FC<EventComponentProps> = ({
 }) => {
   const { t } = useTranslation();
   const { formatTime } = useFormatters();
-  const { data } = event;
+  if (event.data.type !== 'weight_measurement') return null;
+  const weightData = event.data;
 
   return (
     <Timeline.Item onClick={onClick}>
@@ -29,7 +30,9 @@ const WeightEvent: React.FC<EventComponentProps> = ({
           <Timeline.Timestamp>
             {formatTime(new Date(event.timestamp))}
           </Timeline.Timestamp>
-          <Timeline.Value variant="primary">{data.weight}g</Timeline.Value>
+          <Timeline.Value variant="primary">
+            {weightData.weight}g
+          </Timeline.Value>
           <Timeline.TitleGroup>
             {event.human_verified && <EventVerified />}
             <Timeline.Title>{t('overview.weight_recorded')}</Timeline.Title>

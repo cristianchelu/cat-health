@@ -1,4 +1,4 @@
-import Compile from 'typebox/compile';
+import { requireWithSchema } from 'shared';
 import type {
   AccountManager,
   DeviceController,
@@ -55,13 +55,11 @@ export class ThinginoAccountManager implements AccountManager {
       throw new Error(`Unsupported device type: ${device.type}`);
     }
 
-    const validator = Compile(ThinginoConfigSchema);
-    if (!validator.Check(device.config)) {
-      const errors = [...validator.Errors(device.config)];
-      throw new Error(
-        `Invalid Thingino configuration: ${JSON.stringify(errors)}`,
-      );
-    }
+    requireWithSchema(
+      ThinginoConfigSchema,
+      device.config,
+      'Thingino configuration',
+    );
   }
 
   instantiateDeviceController(device: Device): DeviceController {

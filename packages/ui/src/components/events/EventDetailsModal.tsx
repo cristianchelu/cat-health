@@ -31,6 +31,9 @@ import type {
   LitterboxAnalysisStatePeriod,
   LitterboxUseEliminationType,
 } from 'shared';
+import {
+  parseLitterboxUseEliminationType,
+} from 'shared';
 import WeightSignalChart from './WeightSignalChart';
 import WaterSignalChart from './WaterSignalChart';
 import TimelapsePlayer from './TimelapsePlayer';
@@ -66,12 +69,8 @@ interface EventDetailsModalProps {
 
 const WaterIntakeDetails: React.FC<{ event: GetEventDTO }> = ({ event }) => {
   const { t } = useTranslation();
-  const data = event.data as {
-    duration?: number;
-    amount?: number;
-    raw_amount?: number;
-    excluded_amount?: number;
-  };
+  if (event.data.type !== 'water_intake') return null;
+  const data = event.data;
   const hasFiltering = data.excluded_amount != null && data.excluded_amount > 0;
   return (
     <div className="event-specific-details">
@@ -229,9 +228,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   const litterboxData =
     displayEvent?.data?.type === 'litterbox_use'
-      ? (displayEvent.data as {
-          segments?: LitterboxAnalysisStatePeriod[] | null;
-        })
+      ? displayEvent.data
       : null;
 
   const segmentPeriods: LitterboxAnalysisStatePeriod[] | null | undefined =
@@ -278,7 +275,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   const timelapseTimeline = React.useMemo(() => {
     const eventDurationSec =
-      typeof displayEvent?.data?.duration === 'number'
+      displayEvent?.data.type === 'water_intake' ||
+      displayEvent?.data.type === 'litterbox_use'
         ? displayEvent.data.duration
         : undefined;
     return buildTimelapseTimeline(imageFrames, eventDurationSec);
@@ -299,8 +297,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const handleEliminationTypeChange = (
     e: React.ChangeEvent<HTMLSelectElement>,
   ) => {
+    const parsed = parseLitterboxUseEliminationType(e.target.value);
+    if (!parsed) return;
     patchDraft({
-      eliminationType: e.target.value as LitterboxUseEliminationType,
+      eliminationType: parsed,
     });
   };
 
@@ -353,12 +353,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const handleDeleteConfirm = async () => {
     if (!displayEvent) return;
     const deviceId = displayEvent.device_id;
-    const after =
-      typeof displayEvent.timestamp === 'string'
-        ? displayEvent.timestamp
-        : new Date(
-            displayEvent.timestamp as string | number | Date,
-          ).toISOString();
+    const after = displayEvent.timestamp;
 
     deleteEventMutation(displayEvent.id, {
       onSuccess: async () => {

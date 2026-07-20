@@ -1,4 +1,5 @@
-import { type Static, Type } from "@fastify/type-provider-typebox";
+import { Type, type Static } from "@fastify/type-provider-typebox";
+import { parseWithSchema } from "../runtimeSchema.ts";
 
 export const FoodTypeSchema = Type.Union([
   Type.Literal("drink"),
@@ -46,6 +47,12 @@ const FoodNutrientItemSchema = Type.Object({
 export const FoodNutrientsSchema = Type.Array(FoodNutrientItemSchema);
 export type FoodNutrientsDTO = Static<typeof FoodNutrientsSchema>;
 
+/** Parse nutrients from a DB JSON column or request body. */
+export function parseFoodNutrients(raw: unknown): FoodNutrientsDTO | null {
+  if (raw === null || raw === undefined) return null;
+  return parseWithSchema(FoodNutrientsSchema, raw) ?? null;
+}
+
 export const GetFoodParamsSchema = Type.Object({ id: Type.Number() });
 export type GetFoodParamsDTO = Static<typeof GetFoodParamsSchema>;
 
@@ -72,7 +79,12 @@ export const PostFoodRequestSchema = Type.Object({
   name: Type.String(),
   brand: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   food_type: FoodTypeSchema,
-  barcode_ean13: Type.Optional(Type.Union([Type.Null(), Type.String({ minLength: 13, maxLength: 13, pattern: "^[0-9]{13}$" })])),
+  barcode_ean13: Type.Optional(
+    Type.Union([
+      Type.Null(),
+      Type.String({ minLength: 13, maxLength: 13, pattern: "^[0-9]{13}$" }),
+    ]),
+  ),
   moisture_percent: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
   calories_per_100g: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
   nutrients: Type.Optional(Type.Union([FoodNutrientsSchema, Type.Null()])),

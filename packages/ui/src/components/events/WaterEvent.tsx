@@ -9,19 +9,19 @@ import TimelineEventShell from './TimelineEventShell';
 const WaterEvent: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
   const { event, children } = props;
-  const { data } = event;
+  if (event.data.type !== 'water_intake') return null;
+  const waterData = event.data;
 
-  const excludedAmount: number | undefined =
-    typeof data.excluded_amount === 'number' ? data.excluded_amount : undefined;
+  const excludedAmount = waterData.excluded_amount;
   const hasFiltered =
-    data.filtered === true && excludedAmount != null && excludedAmount > 0;
+    waterData.filtered === true && excludedAmount != null && excludedAmount > 0;
 
   return (
     <TimelineEventShell
       {...props}
       icon={<GlassWater aria-hidden />}
       iconVariant="primary"
-      value={`${data.amount}ml`}
+      value={`${waterData.amount}ml`}
       valueVariant="primary"
       title={t('overview.water_intake')}
       itemStyle={
@@ -30,8 +30,8 @@ const WaterEvent: React.FC<EventComponentProps> = (props) => {
         } as React.CSSProperties
       }
     >
-      {typeof data.duration === 'number' && (
-        <EventDuration duration={data.duration} />
+      {typeof waterData.duration === 'number' && (
+        <EventDuration duration={waterData.duration} />
       )}
       {hasFiltered && (
         <Timeline.MetaItem

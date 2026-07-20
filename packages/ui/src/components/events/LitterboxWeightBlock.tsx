@@ -2,10 +2,10 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
-import type {
-  GetEventChildDTO,
-  GetEventDTO,
-  GetEventWithChildrenDTO,
+import {
+  type GetEventChildDTO,
+  type GetEventDTO,
+  type GetEventWithChildrenDTO,
 } from 'shared';
 import { Button } from '@/components/ui/Button';
 import { FormActions } from '@/components/ui/form';
@@ -21,11 +21,13 @@ import './LitterboxWeightBlock.css';
 const MIN_WEIGHT_G = 500;
 const MAX_WEIGHT_G = 20_000;
 
-type ParentEvent = GetEventWithChildrenDTO | (GetEventDTO & { children?: GetEventChildDTO[] });
+type ParentEvent =
+  | GetEventWithChildrenDTO
+  | (GetEventDTO & { children?: GetEventChildDTO[] });
 
 function findWeightChild(parent: ParentEvent): GetEventChildDTO | undefined {
   return parent.children?.find(
-    (c) => (c.data as { type?: string })?.type === 'weight_measurement',
+    (child) => child.data.type === 'weight_measurement',
   );
 }
 
@@ -53,8 +55,8 @@ const LitterboxWeightBlock = ({ parentEvent }: LitterboxWeightBlockProps) => {
 
   const weightChild = findWeightChild(parentEvent);
   const weightGrams =
-    weightChild && (weightChild.data as { weight?: number }).weight != null
-      ? (weightChild.data as { weight: number }).weight
+    weightChild?.data.type === 'weight_measurement'
+      ? weightChild.data.weight
       : null;
 
   const [isEditing, setIsEditing] = React.useState(false);
@@ -65,23 +67,31 @@ const LitterboxWeightBlock = ({ parentEvent }: LitterboxWeightBlockProps) => {
   const isSaving = isUpdating || isDeleting;
 
   const refreshAfterChange = React.useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ['event', parentEvent.id] });
+    await queryClient.invalidateQueries({
+      queryKey: ['event', parentEvent.id],
+    });
     invalidateQueriesAfterEventPatch(queryClient);
     if (parentEvent.pet_id != null) {
-      await queryClient.invalidateQueries({ queryKey: ['weightTrends', parentEvent.pet_id] });
+      await queryClient.invalidateQueries({
+        queryKey: ['weightTrends', parentEvent.pet_id],
+      });
     }
   }, [parentEvent.id, parentEvent.pet_id, queryClient]);
 
   const runReidentifyIfNeeded = React.useCallback(async () => {
     if (!reidentifyAfterSave || parentEvent.device_id == null) return;
-    const after =
-      typeof parentEvent.timestamp === 'string'
-        ? parentEvent.timestamp
-        : new Date(parentEvent.timestamp as string | number | Date).toISOString();
-    await reidentifyLitterboxVisits(parentEvent.device_id, after);
+    await reidentifyLitterboxVisits(
+      parentEvent.device_id,
+      parentEvent.timestamp,
+    );
     invalidateQueriesAfterEventPatch(queryClient);
     await queryClient.invalidateQueries({ queryKey: ['litterboxTrends'] });
-  }, [parentEvent.device_id, parentEvent.timestamp, queryClient, reidentifyAfterSave]);
+  }, [
+    parentEvent.device_id,
+    parentEvent.timestamp,
+    queryClient,
+    reidentifyAfterSave,
+  ]);
 
   const startEdit = () => {
     setDraftKg(weightGrams != null ? (weightGrams / 1000).toFixed(2) : '');
@@ -138,7 +148,9 @@ const LitterboxWeightBlock = ({ parentEvent }: LitterboxWeightBlockProps) => {
     return (
       <div className="litterbox-weight-block editing">
         <div className="litterbox-weight-block-edit-row">
-          <span className="litterbox-weight-block-label">{t('event_details.weight')}</span>
+          <span className="litterbox-weight-block-label">
+            {t('event_details.weight')}
+          </span>
           <div className="litterbox-weight-block-input-wrap">
             <input
               type="number"
@@ -179,7 +191,9 @@ const LitterboxWeightBlock = ({ parentEvent }: LitterboxWeightBlockProps) => {
 
   return (
     <div className="litterbox-weight-block">
-      <span className="litterbox-weight-block-label">{t('event_details.weight')}</span>
+      <span className="litterbox-weight-block-label">
+        {t('event_details.weight')}
+      </span>
       <span className="litterbox-weight-block-value">
         {weightGrams != null ? gramsToKgDisplay(weightGrams) : '—'}
       </span>

@@ -4,6 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import sharp from 'sharp';
 import type { MultipartFile } from '@fastify/multipart';
+import { format } from 'date-fns';
 import {
   GetPetParamsSchema,
   GetPetResponseSchema,
@@ -12,8 +13,12 @@ import {
   PatchPetRequestSchema,
   TogglePetPresenceParamsSchema,
   TogglePetPresenceResponseSchema,
-  type PatchPetRequestDTO,
+  type GetEventDTO,
 } from 'shared';
+import {
+  parseStoredEventData,
+  storedEventDataToDto,
+} from '../database/types/parseStoredEventData.ts';
 import {
   Type,
   type FastifyPluginAsyncTypebox,
@@ -25,6 +30,15 @@ import {
   fetchLatestPresenceForPet,
 } from '../services/events/petPresence.ts';
 import { recordPetPresenceEvent } from '../services/events/recordPetPresenceEvent.ts';
+import type { PetUpdate } from '../database/types/PetTable.ts';
+
+function formatBirthDate(value: Date | string): string {
+  return typeof value === 'string' ? value : format(value, 'yyyy-MM-dd');
+}
+
+function parseBirthDate(value: string): Date {
+  return new Date(`${value}T00:00:00`);
+}
 
 function serializeEventRow(event: {
   id: number;
@@ -35,10 +49,21 @@ function serializeEventRow(event: {
   data: unknown;
   raw_data: Buffer | null;
   human_verified: boolean;
-}) {
+}): GetEventDTO {
+  const data = parseStoredEventData(event.data);
+  if (!data) {
+    throw new Error(`Invalid event data for event ${event.id}`);
+  }
+
   return {
-    ...event,
+    id: event.id,
+    parent_event_id: event.parent_event_id,
+    pet_id: event.pet_id,
+    device_id: event.device_id,
+    timestamp: event.timestamp.toISOString(),
+    data: storedEventDataToDto(data),
     raw_data: event.raw_data ? Array.from(event.raw_data) : null,
+    human_verified: event.human_verified,
   };
 }
 
@@ -80,8 +105,8 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         id: r.id,
         name: r.name,
         breed: r.breed,
-        // birth_date is stored as text in SQLite, shared schema currently uses Any
-        birth_date: r.birth_date,
+
+        birth_date: formatBirthDate(r.birth_date),
         avatar_url: r.avatar_file_path
           ? `api/media/${r.avatar_file_path}`
           : undefined,
@@ -105,10 +130,19 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const result = await db
         .insertInto('pet')
-        .values({ name, breed, birth_date })
+        .values({
+          name,
+          breed,
+          birth_date: parseBirthDate(birth_date),
+        })
         .returningAll()
         .executeTakeFirstOrThrow();
-      return { ...result, avatar_url: undefined, is_away: false };
+      return {
+        ...result,
+        avatar_url: undefined,
+        is_away: false,
+        birth_date: formatBirthDate(result.birth_date),
+      };
     },
   );
   fastify.get(
@@ -122,7 +156,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       },
     },
     async (request) => {
-      const { id } = request.params as { id: number };
+      const { id } = request.params;
       const row = await db
         .selectFrom('pet')
         .leftJoin('media_link', (join) =>
@@ -147,7 +181,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         id: row.id,
         name: row.name,
         breed: row.breed,
-        birth_date: row.birth_date,
+        birth_date: formatBirthDate(row.birth_date),
         avatar_url: row.avatar_file_path
           ? `api/media/${row.avatar_file_path}`
           : undefined,
@@ -168,19 +202,14 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       },
     },
     async (request) => {
-      const { id } = request.params as { id: number };
-      const data = request.body as PatchPetRequestDTO;
+      const { id } = request.params;
+      const data = request.body;
 
-      // Build an update object only with provided (non-undefined) fields
-      const update: Record<string, unknown> = {};
-      const keys: Array<keyof PatchPetRequestDTO> = [
-        'name',
-        'breed',
-        'birth_date',
-      ];
-      for (const key of keys) {
-        const value = data[key];
-        if (value !== undefined) update[key] = value;
+      const update: PetUpdate = {};
+      if (data.name !== undefined) update.name = data.name;
+      if (data.breed !== undefined) update.breed = data.breed;
+      if (data.birth_date !== undefined) {
+        update.birth_date = parseBirthDate(data.birth_date);
       }
 
       if (Object.keys(update).length === 0) {
@@ -204,6 +233,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           ...existing,
           avatar_url: avatar ? `api/media/${avatar.file_path}` : undefined,
           is_away: deriveIsAway(latestPresence),
+          birth_date: formatBirthDate(existing.birth_date),
         };
       }
 
@@ -231,6 +261,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         ...result,
         avatar_url,
         is_away: deriveIsAway(latestPresence),
+        birth_date: formatBirthDate(result.birth_date),
       };
     },
   );
@@ -294,7 +325,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       },
     },
     async (request) => {
-      const { id } = request.params as { id: number };
+      const { id } = request.params;
       const existing = await db
         .selectFrom('pet')
         .select('id')

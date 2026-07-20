@@ -7,7 +7,7 @@ import { createWriteStream } from 'node:fs';
 import { format } from 'date-fns';
 import { NodeSSH } from 'node-ssh';
 import { type Static, Type } from '@fastify/type-provider-typebox';
-import type { EventType } from 'shared';
+import { requireWithSchema, type EventType } from 'shared';
 import type { Camera, RecordingResult, RecordingSource } from '../../types.ts';
 import {
   CameraConfigSchema,
@@ -63,7 +63,11 @@ export class ThinginoDeviceController
     super(device, deps);
     this.ssh = new NodeSSH();
 
-    const rawConfig = device.config as unknown as ThinginoConfig;
+    const rawConfig = requireWithSchema(
+      ThinginoConfigSchema,
+      device.config,
+      'Thingino configuration',
+    );
     if (rawConfig.recording) {
       const r = rawConfig.recording;
       const host =
@@ -253,10 +257,7 @@ export class ThinginoDeviceController
       const fileStartEpoch = this.filenameToEpoch(filePath);
       if (fileStartEpoch === 0) continue;
       const fileEndEpoch = fileStartEpoch + cfg.clipDurationSeconds;
-      if (
-        fileStartEpoch < endEpoch &&
-        fileEndEpoch > extendedStartEpoch
-      ) {
+      if (fileStartEpoch < endEpoch && fileEndEpoch > extendedStartEpoch) {
         relevantFiles.push(filePath);
       }
     }
@@ -304,9 +305,7 @@ export class ThinginoDeviceController
           `[ -d "${dir}" ] && ls -1 "${dir}"/*.mp4 2>/dev/null || true`,
         );
         if (result.stdout.trim()) {
-          allFiles.push(
-            ...result.stdout.trim().split('\n').filter(Boolean),
-          );
+          allFiles.push(...result.stdout.trim().split('\n').filter(Boolean));
         }
       } catch {
         /* ignore missing dirs */
@@ -316,10 +315,7 @@ export class ThinginoDeviceController
     return allFiles;
   }
 
-  private async downloadFiles(
-    files: string[],
-    tempDir: string,
-  ): Promise<void> {
+  private async downloadFiles(files: string[], tempDir: string): Promise<void> {
     for (const file of files) {
       const filename = path.basename(file);
       const localPath = path.join(tempDir, filename);
@@ -338,9 +334,7 @@ export class ThinginoDeviceController
     return new Promise((resolve, reject) => {
       const localWriteStream = createWriteStream(localPath);
       localWriteStream.on('error', (err) => {
-        reject(
-          new Error(`Failed to write to ${localPath}: ${err.message}`),
-        );
+        reject(new Error(`Failed to write to ${localPath}: ${err.message}`));
       });
       localWriteStream.on('finish', () => {
         localWriteStream.close((err) => (err ? reject(err) : resolve()));
@@ -357,11 +351,7 @@ export class ThinginoDeviceController
         })
         .catch((err: Error) => {
           localWriteStream.end();
-          reject(
-            new Error(
-              `Remote cat ${remotePath} failed: ${err.message}`,
-            ),
-          );
+          reject(new Error(`Remote cat ${remotePath} failed: ${err.message}`));
         });
     });
   }

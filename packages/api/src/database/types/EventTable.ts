@@ -15,9 +15,9 @@ export interface WaterIntakeEventData {
   amount: number;
   duration?: number;
   source?: 'drinking' | 'food';
-  raw_amount?: number;      // total weight drop before rate filtering (ml)
+  raw_amount?: number; // total weight drop before rate filtering (ml)
   excluded_amount?: number; // amount removed by rate filter (spill/play, ml)
-  filtered?: boolean;       // true when any segments were excluded
+  filtered?: boolean; // true when any segments were excluded
 }
 
 export interface LitterboxBoutAnnotation {

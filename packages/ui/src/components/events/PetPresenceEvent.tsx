@@ -1,8 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Home, LogOut } from 'lucide-react';
-import type { GetEventDTO, PetPresenceEventDataDTO } from 'shared';
-import { isRecord } from '@/lib/utils';
+import type { PetPresenceEventDataDTO } from 'shared';
 import type { EventComponentProps } from './types';
 import TimelineEventShell from './TimelineEventShell';
 import './PetPresenceEvent.css';
@@ -24,46 +23,10 @@ const PRESENCE_VARIANT: Record<
   outside: 'warning',
 };
 
-function parsePresenceData(event: GetEventDTO): PetPresenceEventDataDTO | null {
-  const data = event.data;
-  if (!isRecord(data) || data.type !== 'pet_presence') {
-    return null;
-  }
-
-  const state = data.state;
-  if (state !== 'away' && state !== 'home' && state !== 'outside') {
-    return null;
-  }
-
-  const context = data.context;
-  const parsedContext =
-    context === 'vet' ||
-    context === 'travel' ||
-    context === 'friend' ||
-    context === 'manual'
-      ? context
-      : undefined;
-
-  const previousRaw = data.previous_state;
-  const previous_state =
-    previousRaw === 'away' ||
-    previousRaw === 'home' ||
-    previousRaw === 'outside' ||
-    previousRaw === 'unknown'
-      ? previousRaw
-      : undefined;
-
-  return {
-    type: 'pet_presence',
-    state,
-    context: parsedContext,
-    previous_state,
-  };
-}
-
 const PetPresenceEvent: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
-  const presence = parsePresenceData(props.event);
+  const presence =
+    props.event.data.type === 'pet_presence' ? props.event.data : null;
   if (!presence) {
     return null;
   }

@@ -1,10 +1,10 @@
 import * as React from 'react';
 import { Clock, AlertTriangle } from 'lucide-react';
 import Timeline from '@/components/ui/Timeline';
+import { getStringValue, isRecord } from '@/lib/utils';
 import type { EventComponentProps } from './types';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import EventDevice from './meta/EventDevice';
-import EventDuration from './meta/EventDuration';
 import EventPet from './meta/EventPet';
 import EventVerified from './meta/EventVerified';
 
@@ -17,11 +17,11 @@ const GenericEvent: React.FC<EventComponentProps> = ({
 }) => {
   const { formatTime } = useFormatters();
   const { data } = event;
-  const hasType = data && data.type;
+  const type = isRecord(data) ? getStringValue(data, 'type') : undefined;
 
   return (
     <Timeline.Item onClick={onClick}>
-      <Timeline.Icon>{hasType ? <Clock /> : <AlertTriangle />}</Timeline.Icon>
+      <Timeline.Icon>{type ? <Clock /> : <AlertTriangle />}</Timeline.Icon>
       <Timeline.Content>
         <Timeline.Header>
           <Timeline.Timestamp>
@@ -29,13 +29,10 @@ const GenericEvent: React.FC<EventComponentProps> = ({
           </Timeline.Timestamp>
           <Timeline.TitleGroup>
             {event.human_verified && <EventVerified />}
-            <Timeline.Title>
-              {hasType ? data.type : 'Unknown Event'}
-            </Timeline.Title>
+            <Timeline.Title>{type ?? 'Unknown Event'}</Timeline.Title>
           </Timeline.TitleGroup>
         </Timeline.Header>
         <Timeline.Meta>
-          {data?.duration && <EventDuration duration={data.duration} />}
           {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
           {showDevice && event.device_id && (
             <EventDevice deviceId={event.device_id} />

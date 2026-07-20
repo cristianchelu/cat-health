@@ -32,11 +32,12 @@ import type {
   GetEventDTO,
   LitterboxAnalysisStatePeriod,
   LitterboxUseEliminationType,
+  LitterboxUseEventDataDTO,
 } from 'shared';
-import type {
-  LitterboxBoutAnnotation,
-  LitterboxAnnotation,
-} from '@/types/litterbox';
+import {
+  parseLitterboxUseEliminationType,
+} from 'shared';
+import type { LitterboxBoutAnnotation } from '@/types/litterbox';
 import './AnnotationWorkspace.css';
 
 /** Stable fallback so `periods` stays referentially equal when there are no analyzer segments. */
@@ -70,17 +71,19 @@ const ELIMINATION_TYPES: {
   { value: 'unknown', label: 'common.unknown' },
 ];
 
+function getLitterboxData(event: GetEventDTO): LitterboxUseEventDataDTO | null {
+  return event.data.type === 'litterbox_use' ? event.data : null;
+}
+
 function getBouts(event: GetEventDTO): LitterboxBoutAnnotation[] {
-  const data = event.data as { annotation?: LitterboxAnnotation };
-  return data.annotation?.bouts ?? [];
+  return getLitterboxData(event)?.annotation?.bouts ?? [];
 }
 
 function hasPersistedBouts(event: GetEventDTO): boolean {
-  const d = event.data as { annotation?: unknown };
-  if (!d.annotation || typeof d.annotation !== 'object') return false;
-  return Object.prototype.hasOwnProperty.call(
-    d.annotation as Record<string, unknown>,
-    'bouts',
+  const annotation = getLitterboxData(event)?.annotation;
+  return (
+    annotation != null &&
+    Object.prototype.hasOwnProperty.call(annotation, 'bouts')
   );
 }
 
@@ -130,8 +133,25 @@ export interface AnnotationWorkspaceActions {
   setEventEliminationType: (t: LitterboxUseEliminationType) => void;
 }
 
-const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
+const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = (props) => {
+  const litterboxData = getLitterboxData(props.event);
+  if (!litterboxData) {
+    return (
+      <div className="annotation-workspace">
+        <FormError message="Invalid litterbox event data" />
+      </div>
+    );
+  }
+  return <AnnotationWorkspaceBody {...props} litterboxData={litterboxData} />;
+};
+
+interface AnnotationWorkspaceBodyProps extends AnnotationWorkspaceProps {
+  litterboxData: LitterboxUseEventDataDTO;
+}
+
+const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
   event,
+  litterboxData,
   videoOpen,
   onVideoOpenChange,
   onDirtyChange,
@@ -151,22 +171,14 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   });
   const eventWithChildren = eventDetail ?? { ...event, children: [] };
 
-  const data = event.data as {
-    elimination_type?: LitterboxUseEliminationType;
-    straining?: boolean;
-    annotation?: LitterboxAnnotation;
-    duration?: number;
-  };
+  const data = litterboxData;
+  const segmentsFromServer = litterboxData.segments;
 
   const decodedRaw = React.useMemo(
     () => decodeLitterboxRawData(event.raw_data),
     [event.raw_data],
   );
   const weights = React.useMemo(() => decodedRaw?.weights ?? [], [decodedRaw]);
-
-  const segmentsFromServer = (
-    event.data as { segments?: LitterboxAnalysisStatePeriod[] | null }
-  ).segments;
 
   const analysisResult = React.useMemo(() => {
     if (segmentsFromServer == null) return null;
@@ -215,11 +227,14 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
 
   /** Latest server event snapshot; avoids re-creating `flushSave` when `event.data` identity changes (refetch / mutation). */
   const eventIdRef = React.useRef(event.id);
-  const eventDataRef = React.useRef(event.data);
+  const eventDataRef = React.useRef<LitterboxUseEventDataDTO>(litterboxData);
 
   React.useEffect(() => {
     eventIdRef.current = event.id;
-    eventDataRef.current = event.data;
+    const parsed = getLitterboxData(event);
+    if (parsed) {
+      eventDataRef.current = parsed;
+    }
   });
 
   const isDirty = React.useMemo(
@@ -301,14 +316,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
       const eventData = eventDataRef.current;
       const eventId = eventIdRef.current;
       const resolvedPetId = resolvePetIdFromSelect(nextPetId);
-      const prevAnn = (eventData as { annotation?: LitterboxAnnotation })
-        .annotation;
-      const previousEliminationType =
-        (
-          eventData as {
-            elimination_type?: LitterboxUseEliminationType;
-          }
-        ).elimination_type ?? 'unknown';
+      const previousEliminationType = eventData.elimination_type;
       await patchEvent({
         eventId,
         data: {
@@ -321,7 +329,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
               segments: null,
             }),
             annotation: {
-              ...(prevAnn ?? {}),
+              ...(eventData.annotation ?? {}),
               bouts: nextBouts,
               excluded: nextExcluded,
             },
@@ -378,7 +386,10 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
   };
 
   const handleEliminationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setEliminationType(e.target.value as LitterboxUseEliminationType);
+    setEliminationType((current) => {
+      const parsed = parseLitterboxUseEliminationType(e.target.value);
+      return parsed ?? current;
+    });
   };
 
   const setEventEliminationType = React.useCallback(
@@ -503,16 +514,14 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
     const preserveStrain = straining;
     try {
       const updated = await runAnalyzeAsync(event.id);
-      const ud = updated.data as {
-        segments?: LitterboxAnalysisStatePeriod[] | null;
-      };
+      if (updated.data.type !== 'litterbox_use') return;
       eventDataRef.current = {
         ...updated.data,
         elimination_type: preserveElim,
         straining: preserveStrain,
       };
 
-      const periods = ud.segments ?? [];
+      const periods = updated.data.segments ?? [];
       const next =
         periods.length === 0 ? [] : deriveDetectorBouts(periods, sampleRate);
       setSelectedBoutIndex(next.length > 0 ? 0 : null);

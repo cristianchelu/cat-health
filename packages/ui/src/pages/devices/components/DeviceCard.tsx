@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import type { GetDeviceResponseDTO, WaterFountainState } from 'shared';
+import type { GetDeviceResponseDTO } from 'shared';
 import { getDeviceIcon } from '@/components/icons/deviceIcons';
 import {
   Card,
@@ -11,7 +11,6 @@ import {
   CardContent,
 } from '@/components/ui/Card';
 import { Tooltip } from '@/components/ui/Tooltip';
-import WaterFountainStatus from './WaterFountainStatus';
 import { resolveDeviceCardStatus } from './deviceCardStatusRegistry';
 import { cn } from '@/lib/utils';
 import './DeviceCard.css';
@@ -51,9 +50,6 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
     }
   };
 
-  const waterFountainState = device.state as unknown as
-    | WaterFountainState
-    | undefined;
   const cardStatus = resolveDeviceCardStatus(device);
 
   return (
@@ -80,16 +76,6 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
 
       <CardContent>
         {cardStatus ? React.createElement(cardStatus, { device }) : null}
-        {!cardStatus &&
-          device.type === 'water_fountain' &&
-          waterFountainState && (
-            <WaterFountainStatus state={waterFountainState} />
-          )}
-        {!cardStatus &&
-          device.type === 'water_fountain' &&
-          !waterFountainState && (
-            <div className="no-status-data">{t('devices.no_status_data')}</div>
-          )}
       </CardContent>
     </Card>
   );

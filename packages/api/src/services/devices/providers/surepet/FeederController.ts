@@ -1,8 +1,10 @@
-import type {
-  DeviceStatus,
-  SurePetFeederConfig,
-  SureFeederState,
+import {
+  requireWithSchema,
+  SurePetFeederConfigSchema,
+  type DeviceStatus,
+  type SureFeederState,
 } from 'shared';
+import type { SurePetFeederConfig } from 'shared';
 import type { DeviceController, Device, ProviderDeps } from '../../types.ts';
 import type { SurePetDeviceDetailPayload } from './types.ts';
 import { computeFillPercentages } from './mapFeedingEvent.ts';
@@ -22,7 +24,11 @@ export class FeederController implements DeviceController {
     this.device = device;
     this.deps = deps;
     this.deviceId = device.id;
-    this.config = device.config as unknown as SurePetFeederConfig;
+    this.config = requireWithSchema(
+      SurePetFeederConfigSchema,
+      device.config,
+      'SurePet feeder configuration',
+    );
   }
 
   async connect(): Promise<void> {
@@ -92,6 +98,10 @@ export class FeederController implements DeviceController {
   /** Refresh in-memory device row after PATCH without tearing down presence. */
   updateDevice(device: Device): void {
     this.device = device;
-    this.config = device.config as unknown as SurePetFeederConfig;
+    this.config = requireWithSchema(
+      SurePetFeederConfigSchema,
+      device.config,
+      'SurePet feeder configuration',
+    );
   }
 }

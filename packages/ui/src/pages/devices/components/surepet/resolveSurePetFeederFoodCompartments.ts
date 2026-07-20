@@ -1,13 +1,16 @@
-import type { GetDeviceResponseDTO } from 'shared';
+import {
+  parseWithSchema,
+  SurePetDeviceStateSchema,
+  type GetDeviceResponseDTO,
+} from 'shared';
 import type { FeederFoodCompartmentDescriptor } from '../feederFoodCompartmentsRegistry';
-import { parseSurePetFeederState } from './parseSurePetFeederState';
 
 const TWO_SMALL_BOWL_TYPE = 4;
 
 export function resolveSurePetFeederFoodCompartments(
   device: GetDeviceResponseDTO,
 ): FeederFoodCompartmentDescriptor[] {
-  const state = parseSurePetFeederState(device.state);
+  const state = parseWithSchema(SurePetDeviceStateSchema, device.state);
 
   if (state?.bowl_type === TWO_SMALL_BOWL_TYPE) {
     return [
@@ -16,5 +19,7 @@ export function resolveSurePetFeederFoodCompartments(
     ];
   }
 
-  return [{ id: 'default', labelKey: 'devices.feeder.food_compartment_default' }];
+  return [
+    { id: 'default', labelKey: 'devices.feeder.food_compartment_default' },
+  ];
 }
