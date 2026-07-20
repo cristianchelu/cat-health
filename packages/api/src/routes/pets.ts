@@ -13,10 +13,8 @@ import {
   PatchPetRequestSchema,
   TogglePetPresenceParamsSchema,
   TogglePetPresenceResponseSchema,
-  type GetEventDTO,
 } from 'shared';
-import { parseStoredEventData } from '../database/types/storedEventData.ts';
-import { eventDataToDto } from './mappers/events.ts';
+import { requireSerializedEventRow } from './mappers/events.ts';
 import {
   Type,
   type FastifyPluginAsyncTypebox,
@@ -36,33 +34,6 @@ function formatBirthDate(value: Date | string): string {
 
 function parseBirthDate(value: string): Date {
   return new Date(`${value}T00:00:00`);
-}
-
-function serializeEventRow(event: {
-  id: number;
-  parent_event_id: number | null;
-  pet_id: number | null;
-  device_id: number | null;
-  timestamp: Date;
-  data: unknown;
-  raw_data: Buffer | null;
-  human_verified: boolean;
-}): GetEventDTO {
-  const data = parseStoredEventData(event.data);
-  if (!data) {
-    throw new Error(`Invalid event data for event ${event.id}`);
-  }
-
-  return {
-    id: event.id,
-    parent_event_id: event.parent_event_id,
-    pet_id: event.pet_id,
-    device_id: event.device_id,
-    timestamp: event.timestamp.toISOString(),
-    data: eventDataToDto(data),
-    raw_data: event.raw_data ? Array.from(event.raw_data) : null,
-    human_verified: event.human_verified,
-  };
 }
 
 export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
@@ -307,7 +278,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       return {
         is_away: deriveIsAway(data),
-        event: serializeEventRow(event),
+        event: requireSerializedEventRow(event),
       };
     },
   );

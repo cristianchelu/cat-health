@@ -53,7 +53,7 @@ describe('events API list', () => {
     assert.equal(body.data[1].data.elimination_weight, 23);
   });
 
-  it('returns 422 when a persisted row has corrupt event data', async () => {
+  it('skips corrupt rows in the list and 500s on direct fetch', async () => {
     const pet = await insertPet(ctx.db, { name: 'Corrupt' });
     const valid = await insertLitterboxEvent(ctx.db, {
       pet_id: pet.id,
@@ -76,12 +76,15 @@ describe('events API list', () => {
       })
       .execute();
 
+    // One corrupt row must not brick the timeline: it is skipped, valid rows survive.
     const list = await app.inject({
       method: 'GET',
       url: `/api/events?pet_id=${pet.id}`,
     });
-    assert.equal(list.statusCode, 422);
-    assert.match(list.json().message, /invalid data/i);
+    assert.equal(list.statusCode, 200);
+    const body = list.json();
+    assert.equal(body.data.length, 1);
+    assert.equal(body.data[0].id, valid.id);
 
     const detail = await app.inject({
       method: 'GET',
@@ -89,11 +92,11 @@ describe('events API list', () => {
     });
     assert.equal(detail.statusCode, 200);
 
+    // Directly fetching the corrupt row is a server-side data error, not a client error.
     const corruptDetail = await app.inject({
       method: 'GET',
       url: `/api/events/${valid.id + 1}`,
     });
-    assert.equal(corruptDetail.statusCode, 422);
-    assert.match(corruptDetail.json().message, /invalid/i);
+    assert.equal(corruptDetail.statusCode, 500);
   });
 });

@@ -25,9 +25,6 @@ import {
   LitterboxTrendParamsSchema,
   LitterboxTrendQuerySchema,
   LitterboxTrendsResponseSchema,
-  parseFoodIntakeEventData,
-  parseLitterboxUseEventData,
-  parseWeightMeasurementEventData,
 } from 'shared';
 
 import {
@@ -41,7 +38,6 @@ import {
   enrichFoodIntakeEventData,
 } from '../services/food/enrichFoodIntake.ts';
 import { computeLitterboxAnalysisData } from '../services/devices/providers/esphome/analyzeLitterboxUse.ts';
-import type { EventTable } from '../database/types/EventTable.ts';
 import { buildLitterboxTrendResult } from '../services/litterbox/litterboxAnalytics.ts';
 import {
   buildFoodTrends,
@@ -52,36 +48,15 @@ import {
   computeUntrackedBuckets,
 } from '../services/analytics/trendCoverage.ts';
 import { isBucketTracked } from '../services/analytics/analyticsCoverage.ts';
-import type { Selectable } from 'kysely';
 
 import type { GetEventDTO } from 'shared';
 import { parseStoredEventData } from '../database/types/storedEventData.ts';
-import { eventDataFromDto, eventDataToDto } from './mappers/events.ts';
+import {
+  eventDataFromDto,
+  requireSerializedEventRow,
+  serializeEventRow,
+} from './mappers/events.ts';
 import type { EventData } from '../domain/events.ts';
-
-function serializeEventRow(event: Selectable<EventTable>): GetEventDTO | null {
-  const data = parseStoredEventData(event.data);
-  if (!data) return null;
-
-  return {
-    id: event.id,
-    parent_event_id: event.parent_event_id,
-    pet_id: event.pet_id,
-    device_id: event.device_id,
-    timestamp: event.timestamp.toISOString(),
-    data: eventDataToDto(data),
-    raw_data: event.raw_data ? Array.from(event.raw_data) : null,
-    human_verified: event.human_verified,
-  };
-}
-
-function requireSerializedEventRow(event: Selectable<EventTable>): GetEventDTO {
-  const serialized = serializeEventRow(event);
-  if (!serialized) {
-    throw new Error(`Invalid event data for event ${event.id}`);
-  }
-  return serialized;
-}
 
 const Http404ResponseSchema = Type.Object({
   statusCode: Type.Literal(404),
@@ -92,12 +67,6 @@ const Http404ResponseSchema = Type.Object({
 const Http400BadRequestSchema = Type.Object({
   statusCode: Type.Literal(400),
   error: Type.Literal('Bad Request'),
-  message: Type.String(),
-});
-
-const Http422ResponseSchema = Type.Object({
-  statusCode: Type.Literal(422),
-  error: Type.Literal('Unprocessable Entity'),
   message: Type.String(),
 });
 
@@ -185,8 +154,8 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       return buildLitterboxTrendResult({
         visits: litterboxEvents.flatMap((event) => {
-          const data = parseLitterboxUseEventData(event.data);
-          if (!data) {
+          const data = parseStoredEventData(event.data);
+          if (data?.type !== 'litterbox_use') {
             fastify.log.warn(
               { eventId: event.id },
               'Skipping invalid litterbox event in trends',
@@ -263,8 +232,8 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const todayKey = formatInTimeZone(rangeEnd, timezone, 'yyyy-MM-dd');
 
       const points = weightEvents.flatMap((event) => {
-        const data = parseWeightMeasurementEventData(event.data);
-        if (!data) return [];
+        const data = parseStoredEventData(event.data);
+        if (data?.type !== 'weight_measurement') return [];
         const date = formatInTimeZone(event.timestamp, timezone, 'yyyy-MM-dd');
         return [
           {
@@ -342,11 +311,10 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         querystring: GetEventsQuerySchema,
         response: {
           '200': GetEventsResponseSchema,
-          '422': Http422ResponseSchema,
         },
       },
     },
-    async (request, reply) => {
+    async (request) => {
       const {
         pet_id,
         device_id,
@@ -412,11 +380,11 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       for (const event of events) {
         const serialized = serializeEventRow(event);
         if (!serialized) {
-          return reply.code(422).send({
-            statusCode: 422,
-            error: 'Unprocessable Entity',
-            message: `Event ${event.id} contains invalid data`,
-          });
+          fastify.log.warn(
+            { eventId: event.id },
+            'Skipping event with invalid stored data',
+          );
+          continue;
         }
         serializedEvents.push(serialized);
       }
@@ -439,7 +407,6 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         response: {
           '200': GetEventWithChildrenSchema,
           '404': Http404ResponseSchema,
-          '422': Http422ResponseSchema,
         },
       },
     },
@@ -469,14 +436,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         });
       }
 
-      const serializedEvent = serializeEventRow(event);
-      if (!serializedEvent) {
-        return reply.code(422).send({
-          statusCode: 422,
-          error: 'Unprocessable Entity',
-          message: 'Event data is invalid',
-        });
-      }
+      const serializedEvent = requireSerializedEventRow(event);
       const serializedChildren = children.flatMap((child) => {
         const serialized = serializeEventRow(child);
         if (serialized) return [serialized];
@@ -555,11 +515,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      if (
-        nutrients?.moisture_ml != null &&
-        result.data &&
-        parseFoodIntakeEventData(result.data) !== null
-      ) {
+      if (nutrients?.moisture_ml != null && result.data.type === 'food_intake') {
         await db
           .insertInto('event')
           .values(
@@ -607,8 +563,8 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         });
       }
 
-      const existing = parseLitterboxUseEventData(eventRow.data);
-      if (!existing) {
+      const existingData = parseStoredEventData(eventRow.data);
+      if (existingData?.type !== 'litterbox_use') {
         return reply.code(400).send({
           statusCode: 400,
           error: 'Bad Request',
@@ -618,7 +574,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const result = await computeLitterboxAnalysisData(db, {
         timestamp: eventRow.timestamp,
         raw_data: eventRow.raw_data,
-        existing,
+        existing: existingData,
       });
 
       if (!result.ok) {

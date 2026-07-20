@@ -2,12 +2,8 @@ import { subDays } from 'date-fns';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
-import {
-  parseFoodIntakeEventData,
-  parseWaterIntakeEventData,
-  parseWeightMeasurementEventData,
-} from 'shared';
 import type { Database } from '../../database/index.ts';
+import { parseStoredEventData } from '../../database/types/storedEventData.ts';
 import { isBucketTracked } from './analyticsCoverage.ts';
 import { computeUntrackedBuckets } from './trendCoverage.ts';
 
@@ -132,13 +128,18 @@ async function buildDailyMetricTrends(
       }),
     ]);
 
-  let currentWeight = lastWeightEvent
-    ? (parseWeightMeasurementEventData(lastWeightEvent.data)?.weight ?? 0)
-    : 0;
-
+  let currentWeight = 0;
+  const lastWeightData = lastWeightEvent
+    ? parseStoredEventData(lastWeightEvent.data)
+    : null;
+  if (lastWeightData?.type === 'weight_measurement') {
+    currentWeight = lastWeightData.weight;
+  }
   if (currentWeight === 0 && weightEvents.length > 0) {
-    currentWeight =
-      parseWeightMeasurementEventData(weightEvents[0].data)?.weight ?? 0;
+    const firstWeightData = parseStoredEventData(weightEvents[0].data);
+    if (firstWeightData?.type === 'weight_measurement') {
+      currentWeight = firstWeightData.weight;
+    }
   }
 
   const dailyAmounts = new Map<string, number>();
@@ -168,8 +169,10 @@ async function buildDailyMetricTrends(
       const we = weightEvents[weightEventIndex];
       if (we.timestamp <= dayEnd) {
         if (we.timestamp >= dayStart) {
-          const weight = parseWeightMeasurementEventData(we.data)?.weight;
-          if (weight !== undefined) dayWeights.push(weight);
+          const weightData = parseStoredEventData(we.data);
+          if (weightData?.type === 'weight_measurement') {
+            dayWeights.push(weightData.weight);
+          }
         }
         weightEventIndex++;
       } else {
@@ -210,7 +213,10 @@ export function buildWaterTrends(
     timezone,
     deviceClass: 'water_fountain',
     eventType: 'water_intake',
-    getAmount: (data) => parseWaterIntakeEventData(data)?.amount ?? 0,
+    getAmount: (data) => {
+      const parsed = parseStoredEventData(data);
+      return parsed?.type === 'water_intake' ? parsed.amount : 0;
+    },
     getBounds: waterBoundsFromWeight,
   });
 }
@@ -228,8 +234,10 @@ export function buildFoodTrends(
     deviceClass: 'feeder',
     eventType: 'food_intake',
     getAmount: (data) => {
-      const nutrients = parseFoodIntakeEventData(data)?.nutrients;
-      return Math.round(nutrients?.calories ?? 0);
+      const parsed = parseStoredEventData(data);
+      return parsed?.type === 'food_intake'
+        ? Math.round(parsed.nutrients?.calories ?? 0)
+        : 0;
     },
     getBounds: calorieBoundsFromWeight,
   });

@@ -1,8 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import {
-  isRecord,
-  parseFoodIntakeEventData,
   parseWithSchema,
   ProductId,
   SurePetAccountConfigSchema,
@@ -10,6 +8,7 @@ import {
   type ProviderRemotePet,
   type SurePetAccountConfig,
 } from 'shared';
+import { parseStoredEventData } from '../../../../database/types/storedEventData.ts';
 import type {
   AccountManager,
   DeviceController,
@@ -569,12 +568,9 @@ export class SurePetAccountManager implements AccountManager {
       }
     }
 
-    const providerData = parseFoodIntakeEventData(event.data)?.provider_data;
+    const providerData = event.data.provider_data;
     const externalKey =
-      providerData &&
-      isRecord(providerData) &&
-      providerData.provider === 'surepet' &&
-      typeof providerData.external_key === 'string'
+      providerData?.provider === 'surepet'
         ? providerData.external_key
         : undefined;
     if (!externalKey) return;
@@ -663,15 +659,12 @@ export class SurePetAccountManager implements AccountManager {
       .execute();
 
     for (const row of events) {
-      const data =
-        typeof row.data === 'string'
-          ? parseFoodIntakeEventData(JSON.parse(row.data))
-          : parseFoodIntakeEventData(row.data);
-      if (!data) continue;
+      const data = parseStoredEventData(
+        typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
+      );
+      if (data?.type !== 'food_intake') continue;
       const providerData = data.provider_data;
-      if (!isRecord(providerData) || providerData.provider !== 'surepet') {
-        continue;
-      }
+      if (providerData?.provider !== 'surepet') continue;
 
       const resolvedPetId = resolveLocalPetIdFromProviderData(
         this.config,
