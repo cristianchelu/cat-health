@@ -7,14 +7,25 @@ import {
   isRecord,
 } from "../../src/typeGuards.ts";
 import {
-  parseEventData,
-  parseFoodIntakeEventData,
+  EventDataSchema,
+  FoodIntakeEventDataSchema,
+  LitterboxUseEventDataSchema,
+  WaterIntakeEventDataSchema,
+  WeightMeasurementEventDataSchema,
   parseLitterboxUseEliminationType,
-  parseLitterboxUseEventData,
-  parseWaterIntakeEventData,
-  parseWeightMeasurementEventData,
 } from "../../src/schemas/api/eventData.ts";
 import { parseWithSchema } from "../../src/schemas/runtimeSchema.ts";
+
+// Wire-contract pins: what the API accepts/serializes for event `data`.
+const parseEventData = (v: unknown) => parseWithSchema(EventDataSchema, v) ?? null;
+const parseWeightMeasurementEventData = (v: unknown) =>
+  parseWithSchema(WeightMeasurementEventDataSchema, v) ?? null;
+const parseWaterIntakeEventData = (v: unknown) =>
+  parseWithSchema(WaterIntakeEventDataSchema, v) ?? null;
+const parseLitterboxUseEventData = (v: unknown) =>
+  parseWithSchema(LitterboxUseEventDataSchema, v) ?? null;
+const parseFoodIntakeEventData = (v: unknown) =>
+  parseWithSchema(FoodIntakeEventDataSchema, v) ?? null;
 import {
   SurePetAccountConfigSchema,
   SurePetDeviceStateSchema,

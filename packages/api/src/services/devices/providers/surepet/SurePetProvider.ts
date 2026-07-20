@@ -1,3 +1,4 @@
+import { isRecord } from 'shared';
 import type { ProviderCapabilities } from 'shared';
 import type {
   DeviceProvider,
@@ -7,9 +8,6 @@ import type {
 } from '../../types.ts';
 import { SurePetAccountManager } from './SurePetAccountManager.ts';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export class SurePetProvider implements DeviceProvider {
   readonly name = 'surepet';

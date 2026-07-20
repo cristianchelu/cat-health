@@ -1,8 +1,6 @@
+import { isRecord } from 'shared';
 import type { ProviderPetLink } from 'shared';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function getTagIdFromMetadata(metadata: unknown): number | undefined {
   if (!isRecord(metadata)) return undefined;

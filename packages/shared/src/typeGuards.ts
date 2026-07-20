@@ -29,9 +29,3 @@ export function getBooleanValue(
   const value = record[key];
   return typeof value === "boolean" ? value : undefined;
 }
-
-export function getFiniteNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value)
-    ? value
-    : undefined;
-}

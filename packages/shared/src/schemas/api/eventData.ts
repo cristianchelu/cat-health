@@ -231,30 +231,3 @@ export const EventDataSchema = Type.Union([
 ]);
 export type EventDataDTO = Static<typeof EventDataSchema>;
 
-export function parseWeightMeasurementEventData(
-  data: unknown,
-): WeightMeasurementEventDataDTO | null {
-  return parseWithSchema(WeightMeasurementEventDataSchema, data) ?? null;
-}
-
-export function parseWaterIntakeEventData(
-  data: unknown,
-): WaterIntakeEventDataDTO | null {
-  return parseWithSchema(WaterIntakeEventDataSchema, data) ?? null;
-}
-
-export function parseLitterboxUseEventData(
-  data: unknown,
-): LitterboxUseEventDataDTO | null {
-  return parseWithSchema(LitterboxUseEventDataSchema, data) ?? null;
-}
-
-export function parseFoodIntakeEventData(
-  data: unknown,
-): FoodIntakeEventDataDTO | null {
-  return parseWithSchema(FoodIntakeEventDataSchema, data) ?? null;
-}
-
-export function parseEventData(data: unknown): EventDataDTO | null {
-  return parseWithSchema(EventDataSchema, data) ?? null;
-}

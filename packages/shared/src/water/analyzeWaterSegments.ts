@@ -9,7 +9,7 @@ const MIN_DRINKING_DURATION_SAMPLES = 10;
 
 function emaSmooth(weights: number[]): number[] {
   const alpha = 2 / (EMA_SPAN + 1);
-  const out: number[] = new Array(weights.length);
+  const out = new Array<number>(weights.length);
   out[0] = weights[0];
   for (let i = 1; i < weights.length; i++) {
     out[i] = alpha * weights[i] + (1 - alpha) * out[i - 1];

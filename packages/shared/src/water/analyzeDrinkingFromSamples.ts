@@ -22,7 +22,7 @@ export function analyzeDrinkingFromSamples(
 
   const n = samples.length;
   const alpha = 2 / (EMA_SPAN + 1);
-  const smoothed: number[] = new Array(n);
+  const smoothed = new Array<number>(n);
   smoothed[0] = samples[0].weight;
   for (let i = 1; i < n; i++) {
     smoothed[i] = alpha * samples[i].weight + (1 - alpha) * smoothed[i - 1];
@@ -37,7 +37,7 @@ export function analyzeDrinkingFromSamples(
   });
 
   type IntervalClass = "drinking" | "other";
-  const intervalClass: IntervalClass[] = new Array(n - 1);
+  const intervalClass = new Array<IntervalClass>(n - 1);
   for (let i = 0; i < n - 1; i++) {
     const intervalRate = (rates[i] + rates[i + 1]) / 2;
     intervalClass[i] =

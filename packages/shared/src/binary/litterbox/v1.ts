@@ -52,7 +52,7 @@ export function decodeLitterboxRawDataV1(
   const availableCount = Math.floor((raw.length - offset) / 2);
   const weightsCount = Math.min(count, availableCount);
 
-  const weights: number[] = new Array(weightsCount);
+  const weights = new Array<number>(weightsCount);
   for (let i = 0; i < weightsCount; i++) {
     weights[i] = view.getInt16(offset);
     offset += 2;

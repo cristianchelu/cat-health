@@ -171,7 +171,6 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
   });
   const eventWithChildren = eventDetail ?? { ...event, children: [] };
 
-  const data = litterboxData;
   const segmentsFromServer = litterboxData.segments;
 
   const decodedRaw = React.useMemo(
@@ -186,9 +185,11 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
   }, [segmentsFromServer]);
 
   const sampleRate = React.useMemo(() => {
-    if (!weights.length || !data.duration) return 10;
-    return Math.round(((weights.length - 1) / data.duration) * 1000) / 1000;
-  }, [weights.length, data.duration]);
+    if (!weights.length || !litterboxData.duration) return 10;
+    return (
+      Math.round(((weights.length - 1) / litterboxData.duration) * 1000) / 1000
+    );
+  }, [weights.length, litterboxData.duration]);
 
   const detectorBouts = React.useMemo(() => {
     if (!analysisResult) return [];
@@ -198,12 +199,12 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
   const serverDraftBaseline = React.useMemo(
     () => ({
       petId: event.pet_id != null ? String(event.pet_id) : 'null',
-      eliminationType: data.elimination_type ?? 'unknown',
-      straining: data.straining ?? false,
-      excluded: data.annotation?.excluded ?? false,
+      eliminationType: litterboxData.elimination_type ?? 'unknown',
+      straining: litterboxData.straining ?? false,
+      excluded: litterboxData.annotation?.excluded ?? false,
       bouts: hasPersistedBouts(event) ? getBouts(event) : detectorBouts,
     }),
-    [event, data, detectorBouts],
+    [event, litterboxData, detectorBouts],
   );
   const [draftBaseline, setDraftBaseline] = React.useState(serverDraftBaseline);
   const latestServerBaselineRef = React.useRef(serverDraftBaseline);
@@ -231,10 +232,7 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
 
   React.useEffect(() => {
     eventIdRef.current = event.id;
-    const parsed = getLitterboxData(event);
-    if (parsed) {
-      eventDataRef.current = parsed;
-    }
+    eventDataRef.current = litterboxData;
   });
 
   const isDirty = React.useMemo(

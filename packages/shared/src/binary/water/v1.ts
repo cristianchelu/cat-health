@@ -37,7 +37,7 @@ export function decodeWaterRawDataV1(
   const available = Math.floor((raw.length - offset) / 4);
   const weightsCount = Math.min(count, available);
 
-  const weights: number[] = new Array(weightsCount);
+  const weights = new Array<number>(weightsCount);
   for (let i = 0; i < weightsCount; i++) {
     weights[i] = view.getInt32(offset) / 100;
     offset += 4;

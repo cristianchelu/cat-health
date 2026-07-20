@@ -1,3 +1,4 @@
+import { isRecord } from 'shared';
 import { createHash } from 'node:crypto';
 import type { ProviderPetLink, SurePetAccountConfig } from 'shared';
 import {
@@ -14,9 +15,6 @@ import type {
   SurePetTimelineWeightRecord,
 } from './types.ts';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function getNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;

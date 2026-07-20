@@ -26,13 +26,12 @@ import {
 } from '@/components/ui/form';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDraftForm } from '@/hooks/form';
-import type {
-  GetEventDTO,
-  LitterboxAnalysisStatePeriod,
-  LitterboxUseEliminationType,
-} from 'shared';
 import {
   parseLitterboxUseEliminationType,
+  type EventDataDTO,
+  type GetEventDTO,
+  type LitterboxAnalysisStatePeriod,
+  type LitterboxUseEliminationType,
 } from 'shared';
 import WeightSignalChart from './WeightSignalChart';
 import WaterSignalChart from './WaterSignalChart';
@@ -60,6 +59,17 @@ import {
 } from 'lucide-react';
 
 const EMPTY_LITTERBOX_SEGMENT_PERIODS: LitterboxAnalysisStatePeriod[] = [];
+
+/** Event variants that carry a duration (seconds). */
+function getEventDurationSeconds(data: EventDataDTO): number | undefined {
+  switch (data.type) {
+    case 'water_intake':
+    case 'litterbox_use':
+      return data.duration;
+    default:
+      return undefined;
+  }
+}
 
 interface EventDetailsModalProps {
   event: GetEventDTO | null;
@@ -274,11 +284,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   }, [media]);
 
   const timelapseTimeline = React.useMemo(() => {
-    const eventDurationSec =
-      displayEvent?.data.type === 'water_intake' ||
-      displayEvent?.data.type === 'litterbox_use'
-        ? displayEvent.data.duration
-        : undefined;
+    const eventDurationSec = displayEvent
+      ? getEventDurationSeconds(displayEvent.data)
+      : undefined;
     return buildTimelapseTimeline(imageFrames, eventDurationSec);
   }, [displayEvent, imageFrames]);
 
