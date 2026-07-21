@@ -1,10 +1,15 @@
 import * as React from 'react';
-import { useBlocker } from 'react-router';
+import { useBlocker, type BlockerFunction } from 'react-router';
 
 interface UseUnsavedBlockerResult {
   blockerOpen: boolean;
   onConfirmLeave: () => void;
   onCancelLeave: () => void;
+  /**
+   * Call before an intentional leave after a successful save so the blocker
+   * does not fire while React still has a stale dirty render.
+   */
+  allowLeave: () => void;
 }
 
 /**
@@ -12,9 +17,27 @@ interface UseUnsavedBlockerResult {
  * returned open/confirm/cancel handlers.
  */
 function useUnsavedBlocker(isDirty: boolean): UseUnsavedBlockerResult {
-  const blocker = useBlocker(isDirty);
+  const allowLeaveRef = React.useRef(false);
+
+  const shouldBlock = React.useCallback<BlockerFunction>(
+    ({ currentLocation, nextLocation }) => {
+      if (allowLeaveRef.current) {
+        return false;
+      }
+      return (
+        isDirty && currentLocation.pathname !== nextLocation.pathname
+      );
+    },
+    [isDirty],
+  );
+
+  const blocker = useBlocker(shouldBlock);
 
   const blockerOpen = blocker.state === 'blocked';
+
+  const allowLeave = React.useCallback(() => {
+    allowLeaveRef.current = true;
+  }, []);
 
   const onConfirmLeave = React.useCallback(() => {
     if (blocker.state === 'blocked') {
@@ -32,6 +55,7 @@ function useUnsavedBlocker(isDirty: boolean): UseUnsavedBlockerResult {
     blockerOpen,
     onConfirmLeave,
     onCancelLeave,
+    allowLeave,
   };
 }
 

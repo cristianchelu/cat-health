@@ -25,7 +25,7 @@ interface PetFormProps {
     data: PostPetRequestDTO,
     avatarFile: File | null,
     awayFromHome: boolean,
-  ) => void;
+  ) => Promise<boolean>;
   onCancel: () => void;
   onDelete?: () => void;
   isSubmitting?: boolean;
@@ -68,15 +68,19 @@ const PetForm: React.FC<PetFormProps> = ({
   const awayDirty = petId != null && awayFromHome !== isAway;
   const formDirty = isDirty || avatarDirty || awayDirty;
 
-  const { blockerOpen, onConfirmLeave, onCancelLeave } =
+  const { blockerOpen, onConfirmLeave, onCancelLeave, allowLeave } =
     useUnsavedBlocker(formDirty);
 
   React.useEffect(() => {
     setAwayFromHome(isAway);
   }, [petId, isAway]);
 
-  const handleFormSubmit = (data: PostPetRequestDTO) =>
-    onSubmit(data, avatarFile, awayFromHome);
+  const handleFormSubmit = async (data: PostPetRequestDTO) => {
+    const saved = await onSubmit(data, avatarFile, awayFromHome);
+    if (!saved) return;
+    allowLeave();
+    onCancel();
+  };
 
   const busy = isSubmitting || isDeleting;
 

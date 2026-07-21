@@ -1,6 +1,5 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
 import { useDevices, useProviderAccounts } from '@/hooks/queries/deviceQueries';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -39,13 +38,8 @@ const Settings: React.FC = () => {
   const { data: foods = [] } = useFoods();
   const { data: settings } = useSettings();
   const updateSettings = useUpdateSettings();
-  const navigate = useNavigate();
 
   const visibleAccounts = accounts.filter((a) => !a.internal);
-
-  const handleAddPet = () => {
-    navigate('/settings/pets/new');
-  };
 
   const trackingGapBaseline = String(
     settings?.tracking_gap_threshold_minutes ?? '',
@@ -96,7 +90,7 @@ const Settings: React.FC = () => {
                     fallbackIcon={<Cat size="1em" />}
                   />
                 }
-                onClick={() => navigate(`/settings/pets/${pet.id}`)}
+                to={`/settings/pets/${pet.id}`}
               >
                 <CardListContent title={pet.name} description={pet.breed} />
               </CardListItem>
@@ -107,7 +101,7 @@ const Settings: React.FC = () => {
                   <Plus size="0.5em" />
                 </div>
               }
-              onClick={handleAddPet}
+              to="/settings/pets/new"
             >
               <CardListContent
                 title={t('settings.add_pet')}
@@ -125,7 +119,7 @@ const Settings: React.FC = () => {
               <CardListItem
                 key={account.id}
                 icon={<Server size="1em" />}
-                onClick={() => navigate(`/settings/providers/${account.id}`)}
+                to={`/settings/providers/${account.id}`}
               >
                 <CardListContent
                   title={account.name}
@@ -139,7 +133,7 @@ const Settings: React.FC = () => {
                   <Plus size="0.5em" />
                 </div>
               }
-              onClick={() => navigate('/settings/providers/new')}
+              to="/settings/providers/new"
             >
               <CardListContent
                 title={t('settings.add_provider')}
@@ -162,7 +156,7 @@ const Settings: React.FC = () => {
                 <CardListItem
                   key={device.id}
                   icon={icon}
-                  onClick={() => navigate(`/settings/devices/${device.id}`)}
+                  to={`/settings/devices/${device.id}`}
                 >
                   <CardListContent
                     title={device.name}
@@ -177,7 +171,7 @@ const Settings: React.FC = () => {
                   <Plus size="0.5em" />
                 </div>
               }
-              onClick={() => navigate('/settings/devices/new')}
+              to="/settings/devices/new"
             >
               <CardListContent
                 title={t('settings.add_device')}
@@ -195,7 +189,7 @@ const Settings: React.FC = () => {
               <CardListItem
                 key={food.id}
                 icon={<Drumstick size="1em" />}
-                onClick={() => navigate(`/settings/foods/${food.id}`)}
+                to={`/settings/foods/${food.id}`}
               >
                 <CardListContent
                   title={food.name}
@@ -213,7 +207,7 @@ const Settings: React.FC = () => {
                   <Plus size="0.5em" />
                 </div>
               }
-              onClick={() => navigate('/settings/foods/new')}
+              to="/settings/foods/new"
             >
               <CardListContent
                 title={t('settings.add_food')}
@@ -229,7 +223,7 @@ const Settings: React.FC = () => {
           <CardList>
             <CardListItem
               icon={<Globe size="1em" />}
-              onClick={() => navigate('/settings/language-region')}
+              to="/settings/language-region"
             >
               <CardListContent
                 title={t('settings.language_region')}

@@ -12,13 +12,22 @@ afterEach(() => {
 
 function LeaveGuardProbe({ isDirty }: { isDirty: boolean }) {
   const navigate = useNavigate();
-  const { blockerOpen, onConfirmLeave, onCancelLeave } =
+  const { blockerOpen, onConfirmLeave, onCancelLeave, allowLeave } =
     useUnsavedBlocker(isDirty);
 
   return (
     <div>
       <button type="button" onClick={() => navigate('/other')}>
         Leave
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          allowLeave();
+          navigate('/other');
+        }}
+      >
+        Save and leave
       </button>
       <p data-testid="blocker">{blockerOpen ? 'open' : 'closed'}</p>
       {blockerOpen ? (
@@ -88,5 +97,15 @@ describe('useUnsavedBlocker', () => {
     await user.click(screen.getByRole('button', { name: 'Stay' }));
     assert.equal(screen.getByTestId('blocker').textContent, 'closed');
     assert.equal(screen.queryByTestId('other'), null);
+  });
+
+  it('allowLeave bypasses the blocker while still dirty', async () => {
+    const user = userEvent.setup();
+    renderWithDirty(true);
+
+    await user.click(screen.getByRole('button', { name: 'Save and leave' }));
+
+    assert.ok(await screen.findByTestId('other'));
+    assert.equal(screen.queryByTestId('blocker'), null);
   });
 });

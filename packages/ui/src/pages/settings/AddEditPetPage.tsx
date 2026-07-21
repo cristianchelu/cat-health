@@ -34,7 +34,7 @@ const AddEditPetPage: React.FC = () => {
     data: PostPetRequestDTO,
     avatarFile: File | null,
     awayFromHome: boolean,
-  ) => {
+  ): Promise<boolean> => {
     setSubmitError(null);
     try {
       if (isEditing) {
@@ -57,9 +57,10 @@ const AddEditPetPage: React.FC = () => {
           if (!response.ok) throw new Error('Failed to upload avatar');
         }
       }
-      navigate('/settings');
+      return true;
     } catch {
       setSubmitError(t('settings.pet_save_error'));
+      return false;
     }
   };
 

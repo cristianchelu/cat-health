@@ -132,7 +132,7 @@ const AddEditFoodPage: React.FC = () => {
     defaultValues: DEFAULT_FORM_VALUES,
     values: food ? foodToFormValues(food) : undefined,
   });
-  const { blockerOpen, onConfirmLeave, onCancelLeave } =
+  const { blockerOpen, onConfirmLeave, onCancelLeave, allowLeave } =
     useUnsavedBlocker(isDirty);
 
   const [error, setError] = useState<string | null>(null);
@@ -171,11 +171,11 @@ const AddEditFoodPage: React.FC = () => {
 
       if (isNew) {
         await createFood.mutateAsync(payload);
-        navigate('/settings');
       } else {
         await updateFoodMutation.mutateAsync(payload);
-        navigate('/settings');
       }
+      allowLeave();
+      navigate('/settings');
     } catch (err) {
       console.error(err);
       setError(
@@ -196,7 +196,7 @@ const AddEditFoodPage: React.FC = () => {
       }
       icon={<Drumstick size="1em" />}
       isLoading={!isNew && isLoading}
-      loadingMessage={t('common.loading_pets')}
+      loadingMessage={t('common.loading')}
     >
       <FormShell
         onSubmit={handleSubmit(onFormSubmit)}

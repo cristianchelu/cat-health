@@ -68,9 +68,8 @@ const LanguageRegionPage: React.FC = () => {
     },
   );
 
-  const { blockerOpen, onConfirmLeave, onCancelLeave } = useUnsavedBlocker(
-    isDirty && Boolean(settings),
-  );
+  const { blockerOpen, onConfirmLeave, onCancelLeave, allowLeave } =
+    useUnsavedBlocker(isDirty && Boolean(settings));
 
   const timezoneOptions = React.useMemo(() => {
     const options = getTimezoneSelectOptions();
@@ -96,7 +95,10 @@ const LanguageRegionPage: React.FC = () => {
         number_format: draft.number_format,
       },
       {
-        onSuccess: () => navigate('/settings'),
+        onSuccess: () => {
+          allowLeave();
+          navigate('/settings');
+        },
       },
     );
   };

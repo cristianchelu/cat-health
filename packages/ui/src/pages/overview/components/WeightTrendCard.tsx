@@ -122,7 +122,7 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const { timezone } = useRegionalPreferences();
-  const { formatDate } = useFormatters();
+  const { formatDate, formatNumber } = useFormatters();
   const {
     data: weightData,
     isLoading: isQueryLoading,
@@ -191,7 +191,11 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
       weightData.rangeEnd,
     );
 
-    const formatWeight = (weight: number) => `${(weight / 1000).toFixed(2)} kg`;
+    const formatWeight = (weight: number) =>
+      `${formatNumber(weight / 1000, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })} kg`;
 
     const oldestWeight = points[0]?.weight ?? 0;
     const latestWeight = latestPoint?.weight ?? 0;

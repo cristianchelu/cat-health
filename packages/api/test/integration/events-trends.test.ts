@@ -54,6 +54,53 @@ describe('events API trends', () => {
     assert.equal(bucket.amount, 42);
   });
 
+  it('returns an empty water series when the pet has never had water events', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Dry Cat' });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/events/water-trends/${pet.id}?days=7&timezone=UTC`,
+    });
+
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json(), []);
+  });
+
+  it('returns an empty food series when the pet has never had food events', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Fasting Cat' });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/events/food-trends/${pet.id}?days=7&timezone=UTC`,
+    });
+
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json(), []);
+  });
+
+  it('still returns a zero-filled water series when the pet has prior intake history', async () => {
+    const pet = await insertPet(ctx.db, { name: 'History Cat' });
+    await insertWaterIntakeEvent(ctx.db, {
+      pet_id: pet.id,
+      amount: 30,
+      timestamp: subDays(new Date(), 40),
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/events/water-trends/${pet.id}?days=2&timezone=UTC`,
+    });
+
+    assert.equal(res.statusCode, 200);
+    const days = res.json() as Array<{
+      date: string;
+      amount: number;
+      tracked: boolean;
+    }>;
+    assert.equal(days.length, 2);
+    assert.ok(days.every((day) => day.amount === 0));
+  });
+
   it('excludes out-of-range litterbox visits and includes detail fields', async () => {
     const pet = await insertPet(ctx.db, { name: 'Detail Cat' });
     const inside = new Date('2026-04-12T12:00:00.000Z');

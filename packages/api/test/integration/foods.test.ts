@@ -61,4 +61,45 @@ describe('foods API', () => {
     const empty = await app.inject({ method: 'GET', url: '/api/foods' });
     assert.equal(empty.json().length, 0);
   });
+
+  it('persists explicit null optional numerics (not coerced to 0)', async () => {
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/foods',
+      payload: {
+        name: 'Unset Nutrition Food',
+        food_type: 'complete_wet',
+        moisture_percent: null,
+        calories_per_100g: null,
+        serving_size_g: null,
+      },
+    });
+
+    assert.equal(create.statusCode, 200);
+    const created = create.json();
+    assert.equal(created.moisture_percent, null);
+    assert.equal(created.calories_per_100g, null);
+    assert.equal(created.serving_size_g, null);
+
+    const patch = await app.inject({
+      method: 'PATCH',
+      url: `/api/foods/${created.id}`,
+      payload: {
+        moisture_percent: 0,
+        serving_size_g: null,
+      },
+    });
+    assert.equal(patch.statusCode, 200);
+    const patched = patch.json();
+    assert.equal(patched.moisture_percent, 0);
+    assert.equal(patched.serving_size_g, null);
+
+    const get = await app.inject({
+      method: 'GET',
+      url: `/api/foods/${created.id}`,
+    });
+    assert.equal(get.statusCode, 200);
+    assert.equal(get.json().moisture_percent, 0);
+    assert.equal(get.json().serving_size_g, null);
+  });
 });

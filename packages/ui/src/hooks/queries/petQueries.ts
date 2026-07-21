@@ -62,7 +62,9 @@ export function usePetEvents(
       return getPetEvents(petId, startTime, endTime, 5000);
     },
     enabled,
-    placeholderData: keepPreviousData,
+    // Keep prior day while the range changes, but never flash another pet's events.
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[1] === petId ? previousData : undefined,
   });
 }
 

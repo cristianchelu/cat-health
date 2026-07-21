@@ -33,6 +33,12 @@ export const DateNavigation: React.FC<DateNavigationProps> = ({
   const formatNavDate = (value: string) =>
     formatDate(parseCalendarDate(value, timezone), 'short');
 
+  const isRange = Boolean(endDate && endDate !== date);
+  const prevLabel = t(
+    isRange ? 'overview.previous_period' : 'overview.previous_day',
+  );
+  const nextLabel = t(isRange ? 'overview.next_period' : 'overview.next_day');
+
   return (
     <div className={cn('date-navigation', className)}>
       {!isToday && (
@@ -47,11 +53,18 @@ export const DateNavigation: React.FC<DateNavigationProps> = ({
           <RotateCcw size={16} />
         </Button>
       )}
-      <Button variant="ghost" size="sm" icon onClick={onPrev}>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon
+        onClick={onPrev}
+        title={prevLabel}
+        aria-label={prevLabel}
+      >
         <ChevronLeft size={20} />
       </Button>
       <span className="date-navigation-display">
-        {endDate && endDate !== date
+        {isRange && endDate
           ? `${formatNavDate(date)} - ${formatNavDate(endDate)}`
           : formatNavDate(date)}
       </span>
@@ -61,6 +74,8 @@ export const DateNavigation: React.FC<DateNavigationProps> = ({
         icon
         onClick={onNext}
         disabled={isToday}
+        title={nextLabel}
+        aria-label={nextLabel}
       >
         <ChevronRight size={20} />
       </Button>

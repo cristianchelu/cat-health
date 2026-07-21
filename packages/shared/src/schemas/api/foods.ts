@@ -56,16 +56,32 @@ export function parseFoodNutrients(raw: unknown): FoodNutrientsDTO | null {
 export const GetFoodParamsSchema = Type.Object({ id: Type.Number() });
 export type GetFoodParamsDTO = Static<typeof GetFoodParamsSchema>;
 
+/**
+ * Nullable number that survives Fastify’s default AJV `coerceTypes`.
+ *
+ * TypeBox’s idiomatic `Union([Number, Null])` emits `anyOf`, and AJV then
+ * coerces JSON `null` → `0`. OpenAPI `{ nullable: true }` avoids that but is
+ * non-standard JSON Schema and still needs Unsafe for Static.
+ *
+ * JSON Schema multi-type `{ type: ['number', 'null'] }` keeps null, still
+ * coerces `"5"` → `5`, and distinguishes genuine `0`. Unsafe is required only
+ * because TypeBox has no first-class multi-type emitter (same pattern TypeBox
+ * docs use for this case).
+ */
+const NullableNumberSchema = Type.Unsafe<number | null>({
+  type: ["number", "null"],
+});
+
 export const GetFoodSchema = Type.Object({
   id: Type.Number(),
   name: Type.String(),
   brand: Type.Union([Type.String(), Type.Null()]),
   food_type: FoodTypeSchema,
   barcode_ean13: Type.Union([Type.String(), Type.Null()]),
-  moisture_percent: Type.Union([Type.Number(), Type.Null()]),
-  calories_per_100g: Type.Union([Type.Number(), Type.Null()]),
+  moisture_percent: NullableNumberSchema,
+  calories_per_100g: NullableNumberSchema,
   nutrients: Type.Union([FoodNutrientsSchema, Type.Null()]),
-  serving_size_g: Type.Union([Type.Number(), Type.Null()]),
+  serving_size_g: NullableNumberSchema,
   notes: Type.Union([Type.String(), Type.Null()]),
   created_at: Type.Number(),
   updated_at: Type.Number(),
@@ -85,10 +101,10 @@ export const PostFoodRequestSchema = Type.Object({
       Type.String({ minLength: 13, maxLength: 13, pattern: "^[0-9]{13}$" }),
     ]),
   ),
-  moisture_percent: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
-  calories_per_100g: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
+  moisture_percent: Type.Optional(NullableNumberSchema),
+  calories_per_100g: Type.Optional(NullableNumberSchema),
   nutrients: Type.Optional(Type.Union([FoodNutrientsSchema, Type.Null()])),
-  serving_size_g: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
+  serving_size_g: Type.Optional(NullableNumberSchema),
   notes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
 });
 export type PostFoodRequestDTO = Static<typeof PostFoodRequestSchema>;

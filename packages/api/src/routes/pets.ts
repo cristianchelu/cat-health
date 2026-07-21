@@ -39,6 +39,23 @@ function parseBirthDate(value: string | null): Date | null {
   return new Date(`${value}T00:00:00`);
 }
 
+/**
+ * Advertise avatar_url only when the media row points at a file that exists.
+ * Orphaned DB rows (file deleted / media folder out of sync) must not produce
+ * a URL that 404s via `/api/media/`.
+ */
+async function avatarUrlForFilePath(
+  filePath: string | null | undefined,
+): Promise<string | undefined> {
+  if (!filePath) return undefined;
+  try {
+    await fs.access(path.join(getMediaPath(), filePath));
+  } catch {
+    return undefined;
+  }
+  return `api/media/${filePath}`;
+}
+
 export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   const { db } = fastify;
 
@@ -73,17 +90,17 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         db,
         rows.map((row) => row.id),
       );
-      return rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        breed: r.breed,
+      return Promise.all(
+        rows.map(async (r) => ({
+          id: r.id,
+          name: r.name,
+          breed: r.breed,
 
-        birth_date: formatBirthDate(r.birth_date),
-        avatar_url: r.avatar_file_path
-          ? `api/media/${r.avatar_file_path}`
-          : undefined,
-        is_away: deriveIsAway(presenceByPet.get(r.id)),
-      }));
+          birth_date: formatBirthDate(r.birth_date),
+          avatar_url: await avatarUrlForFilePath(r.avatar_file_path),
+          is_away: deriveIsAway(presenceByPet.get(r.id)),
+        })),
+      );
     },
   );
 
@@ -148,15 +165,16 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('pet.id', '=', id)
         .executeTakeFirst();
       if (!row) throw new Error('Pet not found');
-      const latestPresence = await fetchLatestPresenceForPet(db, id);
+      const [latestPresence, avatar_url] = await Promise.all([
+        fetchLatestPresenceForPet(db, id),
+        avatarUrlForFilePath(row.avatar_file_path),
+      ]);
       return {
         id: row.id,
         name: row.name,
         breed: row.breed,
         birth_date: formatBirthDate(row.birth_date),
-        avatar_url: row.avatar_file_path
-          ? `api/media/${row.avatar_file_path}`
-          : undefined,
+        avatar_url,
         is_away: deriveIsAway(latestPresence),
       };
     },
@@ -192,18 +210,20 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           .where('id', '=', id)
           .executeTakeFirst();
         if (!existing) throw new Error('Pet not found');
-        const avatar = await db
-          .selectFrom('media_link')
-          .innerJoin('media', 'media.id', 'media_link.media_id')
-          .select(['media.file_path'])
-          .where('media_link.entity_type', '=', 'pet')
-          .where('media_link.entity_id', '=', String(id))
-          .where('media_link.relation', '=', 'avatar')
-          .executeTakeFirst();
-        const latestPresence = await fetchLatestPresenceForPet(db, id);
+        const [avatar, latestPresence] = await Promise.all([
+          db
+            .selectFrom('media_link')
+            .innerJoin('media', 'media.id', 'media_link.media_id')
+            .select(['media.file_path'])
+            .where('media_link.entity_type', '=', 'pet')
+            .where('media_link.entity_id', '=', String(id))
+            .where('media_link.relation', '=', 'avatar')
+            .executeTakeFirst(),
+          fetchLatestPresenceForPet(db, id),
+        ]);
         return {
           ...existing,
-          avatar_url: avatar ? `api/media/${avatar.file_path}` : undefined,
+          avatar_url: await avatarUrlForFilePath(avatar?.file_path),
           is_away: deriveIsAway(latestPresence),
           birth_date: formatBirthDate(existing.birth_date),
         };
@@ -228,10 +248,9 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           .executeTakeFirst(),
         fetchLatestPresenceForPet(db, id),
       ]);
-      const avatar_url = avatar ? `api/media/${avatar.file_path}` : undefined;
       return {
         ...result,
-        avatar_url,
+        avatar_url: await avatarUrlForFilePath(avatar?.file_path),
         is_away: deriveIsAway(latestPresence),
         birth_date: formatBirthDate(result.birth_date),
       };
@@ -495,8 +514,10 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       .where('media_link.relation', '=', 'avatar')
       .executeTakeFirst();
     if (!avatar) return reply.status(404).send({ error: 'Avatar not found' });
+    const url = await avatarUrlForFilePath(avatar.file_path);
+    if (!url) return reply.status(404).send({ error: 'Avatar not found' });
     return reply.send({
-      url: `api/media/${avatar.file_path}`,
+      url,
       metadata: avatar.metadata,
     });
   });

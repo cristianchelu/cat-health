@@ -92,41 +92,60 @@ async function buildDailyMetricTrends(
   } = options;
   const { rangeStart, rangeEnd, dayKeys } = createDayRange(days, timezone);
 
-  const [metricEvents, weightEvents, lastWeightEvent, untrackedBuckets] =
-    await Promise.all([
-      db
-        .selectFrom('event')
-        .selectAll()
-        .where('pet_id', '=', petId)
-        .where(sql`json_extract(data, '$.type')`, '=', eventType)
-        .where('timestamp', '>=', rangeStart)
-        .orderBy('timestamp', 'asc')
-        .execute(),
-      db
-        .selectFrom('event')
-        .selectAll()
-        .where('pet_id', '=', petId)
-        .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
-        .where('timestamp', '>=', rangeStart)
-        .orderBy('timestamp', 'asc')
-        .execute(),
-      db
-        .selectFrom('event')
-        .selectAll()
-        .where('pet_id', '=', petId)
-        .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
-        .where('timestamp', '<', rangeStart)
-        .orderBy('timestamp', 'desc')
-        .limit(1)
-        .executeTakeFirst(),
-      computeUntrackedBuckets(db, {
-        petId,
-        deviceClass,
-        range: { start: rangeStart, end: rangeEnd },
-        resolution: 'day',
-        timezone,
-      }),
-    ]);
+  const [
+    metricEvents,
+    weightEvents,
+    lastWeightEvent,
+    untrackedBuckets,
+    anyMetricEvent,
+  ] = await Promise.all([
+    db
+      .selectFrom('event')
+      .selectAll()
+      .where('pet_id', '=', petId)
+      .where(sql`json_extract(data, '$.type')`, '=', eventType)
+      .where('timestamp', '>=', rangeStart)
+      .orderBy('timestamp', 'asc')
+      .execute(),
+    db
+      .selectFrom('event')
+      .selectAll()
+      .where('pet_id', '=', petId)
+      .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+      .where('timestamp', '>=', rangeStart)
+      .orderBy('timestamp', 'asc')
+      .execute(),
+    db
+      .selectFrom('event')
+      .selectAll()
+      .where('pet_id', '=', petId)
+      .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+      .where('timestamp', '<', rangeStart)
+      .orderBy('timestamp', 'desc')
+      .limit(1)
+      .executeTakeFirst(),
+    computeUntrackedBuckets(db, {
+      petId,
+      deviceClass,
+      range: { start: rangeStart, end: rangeEnd },
+      resolution: 'day',
+      timezone,
+    }),
+    db
+      .selectFrom('event')
+      .select('id')
+      .where('pet_id', '=', petId)
+      .where(sql`json_extract(data, '$.type')`, '=', eventType)
+      .limit(1)
+      .executeTakeFirst(),
+  ]);
+
+  // Coverage (`tracked`) is household-device-based. Without any intake events for
+  // this pet, a full series of tracked amount:0 reads as measured zeros — return
+  // [] so Overview can show the empty state (unknown / never tracked).
+  if (anyMetricEvent == null) {
+    return [];
+  }
 
   let currentWeight = 0;
   const lastWeightData = lastWeightEvent

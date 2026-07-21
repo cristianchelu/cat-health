@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Link } from 'react-router';
 import { cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
 
@@ -23,6 +24,9 @@ export const CardList: React.FC<CardListProps> = ({ children, className }) => {
 interface CardListItemProps {
   icon: React.ReactNode;
   children: React.ReactNode;
+  /** Navigate via React Router `Link` when set. Prefer over `onClick` for routes. */
+  to?: string;
+  /** Action handler; renders a `<button>` when `to` is not set. */
   onClick?: () => void;
   trailing?: React.ReactNode;
   className?: string;
@@ -31,22 +35,45 @@ interface CardListItemProps {
 export const CardListItem: React.FC<CardListItemProps> = ({
   icon,
   children,
+  to,
   onClick,
   trailing,
   className,
 }) => {
-  return (
-    <div
-      className={cn('list-item', { 'list-item--static': !onClick }, className)}
-      onClick={onClick}
-    >
+  const interactive = Boolean(to || onClick);
+  const itemClassName = cn(
+    'list-item',
+    { 'list-item--static': !interactive },
+    className,
+  );
+
+  const content = (
+    <>
       <div className="item-left">
         <div className={'item-icon'}>{icon}</div>
         <div className="item-content">{children}</div>
       </div>
-      {trailing ?? (onClick ? <ChevronRight size={20} className="item-arrow" /> : null)}
-    </div>
+      {trailing ?? (interactive ? <ChevronRight size={20} className="item-arrow" /> : null)}
+    </>
   );
+
+  if (to) {
+    return (
+      <Link to={to} className={itemClassName} onClick={onClick}>
+        {content}
+      </Link>
+    );
+  }
+
+  if (onClick) {
+    return (
+      <button type="button" className={itemClassName} onClick={onClick}>
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={itemClassName}>{content}</div>;
 };
 
 interface CardListContentProps {
