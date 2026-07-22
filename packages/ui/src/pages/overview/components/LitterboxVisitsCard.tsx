@@ -1,25 +1,21 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { Toilet, Droplets } from 'lucide-react';
-import PoopIcon from '@/components/icons/PoopIcon';
-import { usePetLitterboxTrends } from '@/hooks/queries/petQueries';
-import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
-import { LitterboxTrendGrid } from '@/components/litterbox';
 import {
   differenceInMinutes,
   differenceInHours,
   differenceInDays,
 } from 'date-fns';
-import './LitterboxVisitsCard.css';
+import { usePetLitterboxTrends } from '@/hooks/queries/petQueries';
+import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
+import LitterboxVisitsCardView, {
+  type LitterboxVisitsCardState,
+} from './LitterboxVisitsCardView';
 
 interface LitterboxVisitsCardProps {
   petId: number;
   isPending?: boolean;
 }
-
-const MAX_DOTS_PER_DAY = 4;
 
 function formatShortDuration(date: Date): string {
   const now = new Date();
@@ -41,122 +37,38 @@ const LitterboxVisitsCard: React.FC<LitterboxVisitsCardProps> = ({
   const navigate = useNavigate();
   const { startTime, endTime } = useDateWindowNavigation({ days: 7 });
 
-  const { data, isLoading: isQueryLoading, error } = usePetLitterboxTrends(
-    petId,
-    {
-      startTime,
-      endTime,
-    },
-    petId > 0,
-  );
+  const {
+    data,
+    isLoading: isQueryLoading,
+    error,
+  } = usePetLitterboxTrends(petId, { startTime, endTime }, petId > 0);
   const isLoading = isQueryLoading || isPending;
 
-  const timeSinceLastPee = data?.lastPee
-    ? formatShortDuration(new Date(data.lastPee))
-    : null;
-
-  const timeSinceLastPoop = data?.lastPoop
-    ? formatShortDuration(new Date(data.lastPoop))
-    : null;
-
-  if (error && !isLoading) {
-    return (
-      <Card
-        className="litterbox-visits-card litterbox-visits-card--interactive"
-        role="button"
-        tabIndex={0}
-        onClick={() => navigate('/overview/litterbox')}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            navigate('/overview/litterbox');
-          }
-        }}
-      >
-        <CardHeader>
-          <Toilet style={{ marginRight: 'auto' }} />
-          <div className="litterbox-stats">
-            <span className="litterbox-stat">
-              <Droplets size={18} color="#FFA500" />
-              --
-            </span>
-            <span className="litterbox-stat">
-              <PoopIcon size={18} color="#8B4513" />
-              --
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent empty className="overview-litterbox-chart-slot">
-          <p>{t('overview.error_loading')}</p>
-        </CardContent>
-      </Card>
-    );
+  let state: LitterboxVisitsCardState;
+  if (isLoading) {
+    state = { status: 'loading' };
+  } else if (error) {
+    state = { status: 'error' };
+  } else {
+    state = {
+      status: 'data',
+      timeSincePee: data?.lastPee
+        ? formatShortDuration(new Date(data.lastPee))
+        : null,
+      timeSincePoop: data?.lastPoop
+        ? formatShortDuration(new Date(data.lastPoop))
+        : null,
+      days: data?.days ?? [],
+    };
   }
 
-  const statsHeader = isLoading ? (
-    <div className="litterbox-stats">
-      <span className="litterbox-stat">
-        <Droplets size={18} color="#FFA500" />
-        --
-      </span>
-      <span className="litterbox-stat">
-        <PoopIcon size={18} color="#8B4513" />
-        --
-      </span>
-    </div>
-  ) : (
-    <div className="litterbox-stats">
-      <span className="litterbox-stat">
-        <Droplets size={18} color="#FFA500" />
-        {timeSinceLastPee ?? '--'}
-      </span>
-      <span className="litterbox-stat">
-        <PoopIcon size={18} color="#8B4513" />
-        {timeSinceLastPoop ?? '--'}
-      </span>
-    </div>
-  );
-
-  const chartBody = isLoading ? (
-    <div className="litterbox-dot-chart litterbox-dot-chart--pending" aria-hidden />
-  ) : (
-    <LitterboxTrendGrid
-      className="litterbox-dot-chart"
-      days={data?.days ?? []}
-      maxDots={MAX_DOTS_PER_DAY}
-    />
-  );
-
-  const handleNavigate = () => {
-    if (!isLoading) navigate('/overview/litterbox');
-  };
-
-  const handleKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (event) => {
-    if (isLoading) return;
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      navigate('/overview/litterbox');
-    }
-  };
-
   return (
-    <Card
-      className="litterbox-visits-card litterbox-visits-card--interactive"
-      isLoading={isLoading}
-      role="button"
-      tabIndex={isLoading ? -1 : 0}
-      aria-label={t('litterbox_details.open_details')}
-      onClick={handleNavigate}
-      onKeyDown={handleKeyDown}
-    >
-      <CardHeader>
-        <Toilet style={{ marginRight: 'auto' }} />
-        {statsHeader}
-      </CardHeader>
-      <CardContent className="overview-litterbox-chart-slot">
-        {chartBody}
-      </CardContent>
-    </Card>
+    <LitterboxVisitsCardView
+      state={state}
+      errorLabel={t('overview.error_loading')}
+      ariaLabel={t('litterbox_details.open_details')}
+      onOpen={() => navigate('/overview/litterbox')}
+    />
   );
 };
 
