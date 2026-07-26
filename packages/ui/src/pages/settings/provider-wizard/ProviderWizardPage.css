@@ -45,6 +45,11 @@
       color: var(--color-text-light);
     }
 
+    /* The picker card and a following note have no flex gap between them. */
+    .provider-picker + .provider-note {
+      margin-top: var(--space-md);
+    }
+
     .connect-provider-actions {
       display: flex;
       justify-content: flex-end;

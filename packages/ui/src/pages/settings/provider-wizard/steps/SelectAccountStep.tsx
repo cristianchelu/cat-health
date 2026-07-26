@@ -45,7 +45,10 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
     const count = deviceCounts.get(account.id) ?? 0;
     return {
       value: String(account.id),
-      title: account.name,
+      // Internal accounts are provider singletons whose stored name is a
+      // seeded implementation detail ("ESPHome Provider") — redundant under a
+      // provider heading. Their brand label is the honest title.
+      title: account.internal ? brand.label : account.name,
       provider: account.provider,
       meta: [identity, t('settings.device_count', { count })]
         .filter(Boolean)
