@@ -281,7 +281,16 @@
     "surepet_unofficial_note": "Acces cloud neoficial. Sure Petcare nu oferă un API public. Datele tale sunt stocate pe serverul tău și nu sunt trimise nicăieri altundeva.",
     "step_pick_provider": "Provider",
     "step_connect": "Conectare",
-    "step_link_pets": "Asociere pisici"
+    "step_link_pets": "Asociere pisici",
+    "unsupported": "Neacceptat",
+    "import_device": "Importă {{name}}",
+    "selected_count": "{{selected}} din {{total}} selectate",
+    "import_and_continue": "Importă și continuă",
+    "importing": "Se importă…",
+    "import_partial_error": "S-au importat {{imported}} din {{total}}. Unele dispozitive nu au putut fi adăugate.",
+    "import_failed": "Dispozitivele selectate nu au putut fi importate.",
+    "pet_links_editable_later": "Poți modifica aceste asocieri oricând din setările providerului.",
+    "finish": "Finalizează"
   },
   "common": {
     "loading": "Se încarcă...",

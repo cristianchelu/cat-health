@@ -17,18 +17,33 @@ export interface WizardPlan {
   steps: WizardPlanStep[];
 }
 
+/** Add-device always has the same three steps; a source may skip the middle one. */
+const ADD_DEVICE_STEPS: WizardPlanStep[] = [
+  { id: 'pick', labelKey: 'settings.step_select_account' },
+  { id: 'discover', labelKey: 'settings.step_discover_devices' },
+  { id: 'register', labelKey: 'settings.step_register_device' },
+];
+
 /**
  * Build the step list for a flow.
  *
- * Returns `null` while the choice that determines the shape hasn't been made
- * — on the `pick` step nothing is known yet, so the caller renders no stepper
- * at all rather than promising a step count it may not honour. Not every
- * provider has discovery or pet linking, so the length genuinely varies:
+ * The two entries differ in kind, not just in content:
  *
- *   connect + discovery + linking   pick > connect > discover > link-pets
- *   connect + skip_discovery        pick > connect
- *   add-device + discovery          pick > discover > register
- *   add-device + skip_discovery     pick > register
+ * `add-device` has a **fixed shape** — select, discover, register. A
+ * skip-discovery source doesn't shorten the flow, it jumps over the middle
+ * step, which the Stepper then renders as completed. The plan is known from
+ * the start, so the stepper is visible immediately and keeps its 1-2-3
+ * orientation on the screen where it matters most.
+ *
+ * `connect` has a **variable shape**: whether there are devices to import or
+ * pets to link is a property of the chosen provider, so the length genuinely
+ * differs and cannot be known before the pick. It returns `null` until then,
+ * and the caller renders no stepper rather than promising a count it may not
+ * honour:
+ *
+ *   discovery + linking   pick > connect > discover > link-pets
+ *   discovery only        pick > connect > discover
+ *   skip_discovery        pick > connect
  *
  * Branching is on capabilities, never on provider name, per AGENTS.md.
  */
@@ -36,29 +51,22 @@ export function buildWizardPlan(
   entry: WizardEntry,
   capabilities: ProviderCapabilities | undefined,
 ): WizardPlan | null {
+  if (entry === 'add-device') {
+    return { entry, steps: ADD_DEVICE_STEPS };
+  }
+
   if (!capabilities) return null;
 
   const steps: WizardPlanStep[] = [
-    {
-      id: 'pick',
-      labelKey:
-        entry === 'connect'
-          ? 'settings.step_pick_provider'
-          : 'settings.step_select_account',
-    },
+    { id: 'pick', labelKey: 'settings.step_pick_provider' },
+    { id: 'connect', labelKey: 'settings.step_connect' },
   ];
-
-  if (entry === 'connect') {
-    steps.push({ id: 'connect', labelKey: 'settings.step_connect' });
-  }
 
   if (!capabilities.skip_discovery) {
     steps.push({ id: 'discover', labelKey: 'settings.step_discover_devices' });
   }
 
-  if (entry === 'add-device') {
-    steps.push({ id: 'register', labelKey: 'settings.step_register_device' });
-  } else if (capabilities.supports_pet_linking) {
+  if (capabilities.supports_pet_linking) {
     steps.push({ id: 'link-pets', labelKey: 'settings.step_link_pets' });
   }
 

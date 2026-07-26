@@ -1,21 +1,31 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import type { DiscoveredDeviceDTO, PostDeviceRequestDTO } from 'shared';
+import type {
+  DiscoveredDeviceDTO,
+  PostDeviceRequestDTO,
+  ProviderPetLink,
+} from 'shared';
 import {
   useProviders,
   useProviderAccounts,
+  useProviderAccount,
   useDiscoverDevices,
   useAddDevice,
+  useCreateProviderAccount,
+  useUpdateProviderAccount,
   useDevices,
 } from '@/hooks/queries/deviceQueries';
-import { Smartphone } from 'lucide-react';
+import { Server, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import Stepper from '@/components/ui/Stepper';
+import { PickProviderStep } from './steps/PickProviderStep';
+import { ConnectProviderStep } from './steps/ConnectProviderStep';
 import { SelectAccountStep } from './steps/SelectAccountStep';
 import { DiscoverDevicesStep } from './steps/DiscoverDevicesStep';
+import { LinkPetsStep } from './steps/LinkPetsStep';
 import { getFlow } from './flows/registry';
 import type { WizardEntry, WizardState } from './wizardTypes';
 import {
@@ -24,6 +34,8 @@ import {
   getVisualStep,
   sourceKey,
 } from './wizardPlan';
+import { importDevices } from './importSelection';
+import '../providerForm.css';
 import './ProviderWizardPage.css';
 
 interface ProviderWizardPageProps {
@@ -31,12 +43,14 @@ interface ProviderWizardPageProps {
 }
 
 /**
- * Shared shell for the provider flows.
+ * Shared shell for both provider flows.
  *
- * The stepper is deliberately absent on the first step: how many steps the
- * flow has depends on the chosen provider's capabilities, so the count is not
- * knowable until something has been picked. From then on it is sized to that
- * provider, with the pick shown as a completed first step.
+ * `add-device` has a fixed three-step shape; a skip-discovery source jumps the
+ * middle step, which the Stepper renders as completed.
+ *
+ * `connect` is sized to the chosen provider — a provider with nothing to
+ * discover and no pets to link is a two-step flow — so no stepper is shown
+ * until the pick is made. See wizardPlan.ts.
  */
 const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
   const { t } = useTranslation();
@@ -45,20 +59,35 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
   const { data: accounts = [] } = useProviderAccounts();
   const { data: existingDevices = [] } = useDevices();
   const addDevice = useAddDevice();
+  const createAccount = useCreateProviderAccount();
 
   const [state, setState] = React.useState<WizardState>({ step: 'pick' });
+  const [pickedProvider, setPickedProvider] = React.useState<string | null>(
+    null,
+  );
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [stepDirty, setStepDirty] = React.useState(false);
   const [discardOpen, setDiscardOpen] = React.useState(false);
+  const [isImporting, setIsImporting] = React.useState(false);
 
   const activeAccountId = 'accountId' in state ? state.accountId : null;
   const selectedAccount = accounts.find((a) => a.id === activeAccountId);
+  const updateAccount = useUpdateProviderAccount(activeAccountId ?? 0);
+  // The freshly created account is not in the list query until it refetches.
+  const { data: activeAccount } = useProviderAccount(
+    activeAccountId ?? 0,
+    entry === 'connect' && activeAccountId != null,
+  );
+  const account = activeAccount ?? selectedAccount;
+
   const activeProvider =
-    state.step === 'connect' ? state.provider : selectedAccount?.provider;
+    entry === 'connect'
+      ? (pickedProvider ?? account?.provider)
+      : account?.provider;
   const capabilities = providers.find(
     (p) => p.name === activeProvider,
   )?.capabilities;
-  const flow = selectedAccount ? getFlow(selectedAccount.provider) : null;
+  const flow = account ? getFlow(account.provider) : null;
 
   const plan = buildWizardPlan(entry, capabilities);
 
@@ -74,6 +103,14 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
   const exit = React.useCallback(() => {
     void navigate(entry === 'connect' ? '/settings/providers' : '/settings');
   }, [entry, navigate]);
+
+  /** Where a connect flow lands once its remaining steps are exhausted. */
+  const finishConnect = React.useCallback(
+    (accountId: number) => {
+      void navigate(`/settings/providers/${accountId}`);
+    },
+    [navigate],
+  );
 
   const goBack = () => {
     const target = getBackTarget(plan, state);
@@ -94,15 +131,48 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
     exit();
   };
 
+  /** Advance past a step that has no work left for the current provider. */
+  const afterDiscovery = (accountId: number) => {
+    if (capabilities?.supports_pet_linking) {
+      setState({ step: 'link-pets', accountId });
+    } else {
+      finishConnect(accountId);
+    }
+  };
+
+  const handleConnectSubmit = async (values: {
+    name: string;
+    config: Record<string, unknown>;
+  }) => {
+    if (!pickedProvider) return;
+    setServerError(null);
+    try {
+      setStepDirty(false);
+      const created = await createAccount.mutateAsync({
+        provider: pickedProvider,
+        name: values.name,
+        config: values.config,
+      });
+      if (capabilities?.skip_discovery) {
+        finishConnect(created.id);
+        return;
+      }
+      setState({ step: 'discover', accountId: created.id });
+    } catch (err) {
+      console.error(err);
+      setServerError(t('settings.create_provider_error'));
+    }
+  };
+
   const handleContinueFromAccount = (accountId: number) => {
-    const account = accounts.find((a) => a.id === accountId);
-    if (!account) return;
+    const picked = accounts.find((a) => a.id === accountId);
+    if (!picked) return;
     setServerError(null);
     setStepDirty(false);
     // Branch on the same capability the step plan uses, so the stepper can
     // never promise a discovery step that navigation then skips.
     const skipsDiscovery =
-      providers.find((p) => p.name === account.provider)?.capabilities
+      providers.find((p) => p.name === picked.provider)?.capabilities
         .skip_discovery ?? false;
     setState(
       skipsDiscovery
@@ -131,6 +201,48 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
     });
   };
 
+  const handleImport = async (devices: DiscoveredDeviceDTO[]) => {
+    if (state.step !== 'discover' || !account || !flow?.buildDeviceFromDiscovery)
+      return;
+    const build = flow.buildDeviceFromDiscovery;
+    setServerError(null);
+    setIsImporting(true);
+    try {
+      const outcomes = await importDevices(devices, (device) =>
+        addDevice.mutateAsync(build(account, device)),
+      );
+      const imported = outcomes.filter((o) => o.ok).length;
+      if (imported < devices.length) {
+        setServerError(
+          imported === 0
+            ? t('settings.import_failed')
+            : t('settings.import_partial_error', {
+                imported,
+                total: devices.length,
+              }),
+        );
+        return;
+      }
+      afterDiscovery(state.accountId);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleFinishLinking = async (links: ProviderPetLink[]) => {
+    if (state.step !== 'link-pets' || !account) return;
+    setServerError(null);
+    try {
+      await updateAccount.mutateAsync({
+        config: { ...(account.config as Record<string, unknown>), pet_links: links },
+      });
+      finishConnect(state.accountId);
+    } catch (err) {
+      console.error(err);
+      setServerError(t('settings.update_provider_error'));
+    }
+  };
+
   const submitDevice = async (payload: PostDeviceRequestDTO) => {
     try {
       setServerError(null);
@@ -142,31 +254,70 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
     }
   };
 
+  const selectionMode = flow?.buildDeviceFromDiscovery ? 'multi' : 'single';
+
   return (
     <div className="provider-wizard-page">
       <SectionHeader
-        icon={<Smartphone size="1em" />}
+        icon={
+          entry === 'connect' ? <Server size="1em" /> : <Smartphone size="1em" />
+        }
         actions={
           <Button type="button" variant="secondary" onClick={handleCancel}>
             {t('settings.cancel')}
           </Button>
         }
       >
-        {t('settings.add_device_title')}
+        {entry === 'connect'
+          ? t('settings.add_provider')
+          : t('settings.add_device_title')}
       </SectionHeader>
 
-      {plan && plan.steps.length > 1 && (
+      {plan && (
         <Stepper
           steps={plan.steps.map((step) => ({ label: t(step.labelKey) }))}
           currentStep={getVisualStep(plan, state)}
         />
       )}
 
-      {state.step === 'pick' && (
+      {state.step === 'pick' && entry === 'connect' && (
+        <div className="step-container">
+          <PickProviderStep
+            value={pickedProvider}
+            onChange={setPickedProvider}
+            onContinue={() =>
+              pickedProvider &&
+              setState({ step: 'connect', provider: pickedProvider })
+            }
+            onCancel={exit}
+          />
+        </div>
+      )}
+
+      {state.step === 'pick' && entry === 'add-device' && (
         <div className="step-container">
           <SelectAccountStep
             accounts={accounts}
             onContinue={handleContinueFromAccount}
+            onDirtyChange={setStepDirty}
+          />
+        </div>
+      )}
+
+      {state.step === 'connect' && (
+        <div className="step-container">
+          <ConnectProviderStep
+            key={state.provider}
+            provider={state.provider}
+            isSubmitting={createAccount.isPending}
+            serverError={serverError ?? undefined}
+            submitLabel={
+              createAccount.isPending
+                ? t('settings.creating')
+                : t('settings.connect')
+            }
+            onSubmit={handleConnectSubmit}
+            onBack={goBack}
             onDirtyChange={setStepDirty}
           />
         </div>
@@ -181,7 +332,11 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
             existingDevices={existingDevices}
             supportedTypes={flow.supportedTypes}
             allowsDirectRegistration={flow.allowsDirectRegistration ?? false}
+            selectionMode={entry === 'connect' ? selectionMode : 'single'}
+            isImporting={isImporting}
+            importError={serverError}
             onSelect={handleSelectDiscovered}
+            onImport={handleImport}
             onDirectRegister={handleDirectRegister}
             onRescan={() => void refetchDiscovery()}
             onBack={goBack}
@@ -189,11 +344,11 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
         </div>
       )}
 
-      {state.step === 'register' && flow && selectedAccount && (
+      {state.step === 'register' && flow && account && (
         <div className="step-container">
           <flow.RegisterDeviceForm
             key={sourceKey(state.source)}
-            account={selectedAccount}
+            account={account}
             prefill={
               state.source.kind === 'discovery' ? state.source.device : null
             }
@@ -204,6 +359,19 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
             onSubmitDevice={submitDevice}
             onBack={goBack}
             onDirtyChange={setStepDirty}
+          />
+        </div>
+      )}
+
+      {state.step === 'link-pets' && (
+        <div className="step-container">
+          <LinkPetsStep
+            accountId={state.accountId}
+            initialLinks={[]}
+            isSaving={updateAccount.isPending}
+            serverError={serverError}
+            onFinish={handleFinishLinking}
+            onBack={goBack}
           />
         </div>
       )}

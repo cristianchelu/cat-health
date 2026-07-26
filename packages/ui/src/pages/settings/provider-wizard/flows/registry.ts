@@ -40,6 +40,20 @@ const esphomeFlow: AddDeviceFlow = {
 const surepetFlow: AddDeviceFlow = {
   supportedTypes: ['feeder'],
   RegisterDeviceForm: SurePetRegisterDeviceForm,
+  /*
+   * SurePetRegisterDeviceForm collects only a name, defaulted to the
+   * discovered one, so importing directly loses nothing but the chance to
+   * rename — which /settings/devices/:id already handles. That makes discovery
+   * multi-select for this provider while esphome, whose form genuinely asks
+   * for a device type and per-type settings, stays single-select.
+   */
+  buildDeviceFromDiscovery: (account, device) => ({
+    provider_account_id: account.id,
+    external_id: device.externalId,
+    name: device.name,
+    type: device.type,
+    config: device.config,
+  }),
 };
 
 const PROVIDER_FLOWS: Record<string, AddDeviceFlow> = {

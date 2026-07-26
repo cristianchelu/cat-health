@@ -31,11 +31,23 @@ const stepIds = (capabilities: ProviderCapabilities, entry = 'connect') =>
   );
 
 describe('buildWizardPlan', () => {
-  it('returns null until the shaping choice is made', () => {
-    // The caller renders no stepper at all in this state — the step count is
-    // not knowable before a provider or account is picked.
+  it('returns null for connect until a provider is picked', () => {
+    // The connect flow's length depends on the provider, so the caller renders
+    // no stepper rather than promising a count it may not honour.
     assert.equal(buildWizardPlan('connect', undefined), null);
-    assert.equal(buildWizardPlan('add-device', undefined), null);
+  });
+
+  it('always plans the same three steps for add-device', () => {
+    // The devices flow has a fixed shape whatever the source: a skip-discovery
+    // account jumps over step 2 rather than shortening the flow, so the
+    // stepper is available from the start and keeps its 1-2-3 orientation.
+    const expected = ['pick', 'discover', 'register'];
+    assert.deepEqual(stepIds(DISCOVERY_AND_LINKING, 'add-device'), expected);
+    assert.deepEqual(stepIds(SKIP_DISCOVERY, 'add-device'), expected);
+    assert.deepEqual(
+      buildWizardPlan('add-device', undefined)?.steps.map((s) => s.id),
+      expected,
+    );
   });
 
   it('plans the full connect flow for a discoverable, linkable provider', () => {
@@ -53,19 +65,6 @@ describe('buildWizardPlan', () => {
 
   it('omits pet linking when the provider does not support it', () => {
     assert.deepEqual(stepIds(DISCOVERY_ONLY), ['pick', 'connect', 'discover']);
-  });
-
-  it('plans the add-device flow', () => {
-    assert.deepEqual(stepIds(DISCOVERY_AND_LINKING, 'add-device'), [
-      'pick',
-      'discover',
-      'register',
-    ]);
-    // A skip_discovery source has nothing to scan.
-    assert.deepEqual(stepIds(SKIP_DISCOVERY, 'add-device'), [
-      'pick',
-      'register',
-    ]);
   });
 
   it('never puts pet linking in the add-device flow', () => {
@@ -90,6 +89,20 @@ describe('getVisualStep', () => {
   it('falls back to the first step for a step outside the plan', () => {
     const plan = buildWizardPlan('connect', SKIP_DISCOVERY)!;
     assert.equal(getVisualStep(plan, { step: 'discover', accountId: 1 }), 1);
+  });
+
+  it('lands a skipped-discovery registration on step 3, marking step 2 done', () => {
+    // Stepper renders everything before currentStep as completed, which is how
+    // "1 -> skip 2 -> 3" shows a checked Discover step.
+    const plan = buildWizardPlan('add-device', SKIP_DISCOVERY)!;
+    assert.equal(
+      getVisualStep(plan, {
+        step: 'register',
+        accountId: 1,
+        source: { kind: 'skip-discovery' },
+      }),
+      3,
+    );
   });
 });
 
