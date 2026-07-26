@@ -269,7 +269,16 @@
     "device_count_one": "{{count}} dispozitiv",
     "device_count_other": "{{count}} dispozitive",
     "system_integrations": "Integrări de sistem",
-    "system_integrations_desc": "Provideri interni folosiți de dispozitivele adăugate local."
+    "system_integrations_desc": "Provideri interni folosiți de dispozitivele adăugate local.",
+    "pick_provider_title": "Ce provider?",
+    "pick_provider_subtitle": "Alege serviciul pe care vrei să îl conectezi. Urmează datele de autentificare.",
+    "connect_provider_title": "Conectează {{provider}}",
+    "connect_provider_subtitle": "Autentifică-te cu contul folosit în aplicația providerului.",
+    "connect": "Conectează",
+    "continue": "Continuă",
+    "account_name_hint": "O etichetă pentru acest cont în setări.",
+    "no_configurable_settings": "Această integrare nu are setări configurabile.",
+    "surepet_unofficial_note": "Acces cloud neoficial. Sure Petcare nu oferă un API public. Datele tale sunt stocate pe serverul tău și nu sunt trimise nicăieri altundeva."
   },
   "common": {
     "loading": "Se încarcă...",

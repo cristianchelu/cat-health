@@ -1,0 +1,27 @@
+.provider-account-page {
+  max-width: var(--max-width-sm);
+  margin: 0 auto;
+
+  .provider-account-error {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    color: var(--color-text-light);
+  }
+
+  .provider-pet-links-editor,
+  .provider-account-devices {
+    margin-top: var(--space-2xl);
+  }
+
+  .provider-account-devices h2 {
+    margin: 0 0 var(--space-sm);
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}

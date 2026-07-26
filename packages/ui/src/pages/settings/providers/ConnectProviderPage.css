@@ -1,0 +1,26 @@
+.connect-provider-page {
+  max-width: var(--max-width-sm);
+  margin: 0 auto;
+
+  .connect-provider-step > h1 {
+    margin: 0 0 var(--space-2xs);
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+  }
+
+  .connect-provider-subtitle {
+    margin: 0 0 var(--space-lg);
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
+  }
+
+  .connect-provider-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: var(--border-thin);
+  }
+}

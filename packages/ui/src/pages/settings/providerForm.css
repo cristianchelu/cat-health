@@ -1,0 +1,68 @@
+/*
+ * Chrome shared by the provider connect step and the provider edit page:
+ * a card, a brand header, and the callout used for provider notes.
+ */
+.provider-formcard {
+  background: var(--color-surface);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-xl);
+
+  @media (max-width: 767px) {
+    padding: var(--space-md);
+  }
+}
+
+.provider-brandhead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding-bottom: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  border-bottom: var(--border-thin);
+
+  .provider-brandhead-text {
+    min-width: 0;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+  }
+
+  p {
+    margin: 3px 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.provider-note {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  margin: 0;
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  line-height: var(--line-height-normal);
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  &.warn {
+    background: var(--color-warning-light);
+    color: var(--color-warning);
+  }
+
+  &.info {
+    background: var(--color-primary-lightest);
+    color: var(--color-primary-dark);
+  }
+}
