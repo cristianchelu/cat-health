@@ -1,0 +1,103 @@
+/*
+ * Desktop: an inline "← Settings" link above the page heading.
+ * Mobile:  a title bar with a round icon button.
+ *
+ * Both variants are always in the DOM and toggled with `display: none` so the
+ * accessibility tree only ever contains one back control, while `actions`
+ * stays mounted across the breakpoint.
+ */
+.page-back {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+
+  .page-back-iconbtn,
+  .page-back-title {
+    display: none;
+  }
+
+  .page-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text-light);
+    text-decoration: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color var(--transition-fast);
+
+    &:hover {
+      color: var(--color-text);
+    }
+  }
+
+  .page-back-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-left: auto;
+    min-width: 0;
+  }
+
+  @media (max-width: 767px) {
+    padding-block: var(--space-md) var(--space-xs);
+    margin-bottom: var(--space-xs);
+
+    .page-back-link {
+      display: none;
+    }
+
+    .page-back-iconbtn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      /* 38px — between --space tokens, so a literal like the design uses. */
+      width: 2.375rem;
+      height: 2.375rem;
+      flex-shrink: 0;
+      border: 0;
+      border-radius: var(--radius-full);
+      background: var(--color-surface);
+      box-shadow: var(--shadow-sm);
+      color: var(--color-text-light);
+      cursor: pointer;
+      transition: background-color var(--transition-fast);
+
+      &:hover {
+        background: var(--color-surface-muted);
+        color: var(--color-text);
+      }
+    }
+
+    .page-back-title {
+      display: block;
+      flex: 1;
+      min-width: 0;
+      font-size: var(--text-lg);
+      font-weight: var(--font-bold);
+      color: var(--color-text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /*
+     * Sticky needs the gutter bleed too: without it, content scrolls through
+     * the inline padding on either side of the bar's background.
+     */
+    &.page-back--sticky {
+      position: sticky;
+      top: 0;
+      z-index: var(--z-index-sticky);
+      background: var(--color-background);
+      margin-inline: calc(-1 * var(--page-shell-padding-inline));
+      padding-inline: var(--page-shell-padding-inline);
+    }
+  }
+}

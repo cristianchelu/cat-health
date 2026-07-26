@@ -6,11 +6,16 @@
     margin-bottom: var(--space-2xl);
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     padding: var(--space-sm);
 
     .section-header {
       margin-bottom: var(--space-xl);
+    }
+
+    /* The back bar's title already names the page — don't say it twice. */
+    &:has(.page-back-title:not(:empty)) > .section-header {
+      display: none;
     }
   }
 }

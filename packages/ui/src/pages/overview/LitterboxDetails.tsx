@@ -1,7 +1,5 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router';
 import type { LitterboxTrendsResponseDTO } from 'shared';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetLitterboxTrends } from '@/hooks/queries/petQueries';
@@ -10,7 +8,7 @@ import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import { daysToUntrackedIntervals } from '@/lib/untrackedIntervals';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Button } from '@/components/ui/Button';
+import { PageBackLink } from '@/components/ui/PageBackLink';
 import { Card, CardContent } from '@/components/ui/Card';
 import {
   LitterboxMetricChart,
@@ -87,7 +85,6 @@ function hoursBetweenEventsToSeries(
 const LitterboxDetails: React.FC = () => {
   const { t } = useTranslation();
   const { dateFnsLocale, timezone } = useFormatters();
-  const navigate = useNavigate();
   const { selectedPet } = usePetContext();
   const {
     dateRange,
@@ -151,20 +148,12 @@ const LitterboxDetails: React.FC = () => {
 
   return (
     <div className="page-litterbox-details">
-      <header className="litterbox-details-header">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          icon
-          onClick={() => navigate(-1)}
-          aria-label={t('litterbox_details.back')}
-          title={t('litterbox_details.back')}
-        >
-          <ArrowLeft size={18} />
-        </Button>
-        {rangeActions}
-      </header>
+      <PageBackLink
+        useHistory
+        label={t('litterbox_details.back')}
+        mobileTitle={t('litterbox_details.title')}
+        actions={rangeActions}
+      />
 
       <section className="litterbox-details-chart-grid">
         <section className="litterbox-details-chart-section litterbox-details-chart-section--wide">

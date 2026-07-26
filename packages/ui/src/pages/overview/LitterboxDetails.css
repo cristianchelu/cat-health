@@ -30,14 +30,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .litterbox-details-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-lg);
-    min-width: 0;
-  }
-
   .litterbox-details-chart-section {
     display: flex;
     flex-direction: column;
