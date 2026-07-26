@@ -344,7 +344,12 @@
     "import_failed": "Could not import the selected devices.",
     "pet_links_editable_later": "You can change these links any time from the provider's settings.",
     "finish": "Finish",
-    "skip_for_now": "Skip for now"
+    "skip_for_now": "Skip for now",
+    "select_account_title": "Where is the device?",
+    "select_account_subtitle": "We'll scan the account you pick for anything new.",
+    "your_connected_providers": "Your connected providers",
+    "add_without_cloud_account": "Add without a cloud account",
+    "provider_missing_hint": "Don't see a provider? Connect one first under"
   },
   "common": {
     "loading": "Loading...",

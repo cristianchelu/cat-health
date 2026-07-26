@@ -336,7 +336,6 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
           <SelectAccountStep
             accounts={accounts}
             onContinue={handleContinueFromAccount}
-            onDirtyChange={setStepDirty}
           />
         </div>
       )}
