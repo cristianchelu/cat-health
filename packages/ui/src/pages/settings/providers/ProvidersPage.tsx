@@ -13,7 +13,7 @@ import {
   CardListContent,
   CardListItem,
 } from '../components/CardList';
-import { getProviderBrand } from '../add-device/flows/providerBrandRegistry.ts';
+import { getProviderBrand } from '../provider-wizard/flows/providerBrandRegistry.ts';
 import { ProviderBrandTile } from './components/ProviderBrandTile';
 import { countDevicesByAccount } from './providerListUtils.ts';
 import './ProvidersPage.css';

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { getProviderBrand } from '../../add-device/flows/providerBrandRegistry.ts';
+import { getProviderBrand } from '../../provider-wizard/flows/providerBrandRegistry.ts';
 import './ProviderBrandTile.css';
 
 interface ProviderBrandTileProps {

@@ -21,12 +21,12 @@ import {
   CardListItem,
 } from '../components/CardList';
 import ProviderPetLinksEditor from '../components/ProviderPetLinksEditor';
-import { getProviderBrand } from '../add-device/flows/providerBrandRegistry.ts';
+import { getProviderBrand } from '../provider-wizard/flows/providerBrandRegistry.ts';
 import {
   getAccountConfigModule,
   hasAccountConfigModule,
-} from '../add-device/flows/accountConfigRegistry.ts';
-import type { ProviderAccountFormValues } from '../add-device/flows/accountConfigTypes.ts';
+} from '../provider-wizard/flows/accountConfigRegistry.ts';
+import type { ProviderAccountFormValues } from '../provider-wizard/flows/accountConfigTypes.ts';
 import { ProviderBrandTile } from './components/ProviderBrandTile';
 import '../providerForm.css';
 import './ProviderAccountPage.css';

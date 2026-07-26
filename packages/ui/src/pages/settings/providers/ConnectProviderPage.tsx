@@ -5,8 +5,8 @@ import { useCreateProviderAccount } from '@/hooks/queries/deviceQueries';
 import { PageBackLink } from '@/components/ui/PageBackLink';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useUnsavedBlocker } from '@/hooks/form';
-import { PickProviderStep } from '../add-device/steps/PickProviderStep';
-import { ConnectProviderStep } from '../add-device/steps/ConnectProviderStep';
+import { PickProviderStep } from '../provider-wizard/steps/PickProviderStep';
+import { ConnectProviderStep } from '../provider-wizard/steps/ConnectProviderStep';
 import '../providerForm.css';
 import './ConnectProviderPage.css';
 

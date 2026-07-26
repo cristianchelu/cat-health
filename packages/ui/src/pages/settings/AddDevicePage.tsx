@@ -13,15 +13,15 @@ import {
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import Stepper from '@/components/ui/Stepper';
-import { SelectAccountStep } from './add-device/steps/SelectAccountStep';
-import { DiscoverDevicesStep } from './add-device/steps/DiscoverDevicesStep';
-import { getFlow } from './add-device/flows/registry';
-import type { WizardState } from './add-device/wizardTypes';
+import { SelectAccountStep } from './provider-wizard/steps/SelectAccountStep';
+import { DiscoverDevicesStep } from './provider-wizard/steps/DiscoverDevicesStep';
+import { getFlow } from './provider-wizard/flows/registry';
+import type { WizardState } from './provider-wizard/wizardTypes';
 import {
   getRegistrationBackPhase,
   getVisualStep,
   sourceKey,
-} from './add-device/wizardUtils';
+} from './provider-wizard/wizardUtils';
 import './AddDevicePage.css';
 
 const AddDevicePage: React.FC = () => {
