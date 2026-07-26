@@ -16,12 +16,14 @@ import { Kysely, sql } from 'kysely';
  * dropped rather than moved: it is declared in the schema but read nowhere
  * (token validity is inferred by `tokenSeemsValid()` in SurePetClient).
  *
- * DEPLOY ORDER — stop the API before migrating, and start it again on the new
- * code. A pre-split server holds its account config in memory and writes the
- * whole blob back on every token refresh or sync-cursor advance, so if one is
- * still running it will resurrect the runtime keys inside `config` moments
- * after this migration removes them. Re-running the final `json_remove` below
- * cleans that up, but only once the old process is actually gone.
+ * A normal deploy is safe: main.ts migrates at startup, before any account
+ * manager exists, so the old process is already gone by then.
+ *
+ * Do NOT run `npm run migrate` out-of-band against a live pre-split server.
+ * Such a server holds its account config in memory and writes the whole blob
+ * back on every token refresh or sync-cursor advance, so it will resurrect the
+ * runtime keys inside `config` seconds after this migration strips them. If
+ * that happens, re-run the final `json_remove` once the old process is down.
  */
 
 /**

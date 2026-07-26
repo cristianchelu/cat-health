@@ -43,13 +43,13 @@ export async function up(db: Kysely<Record<string, never>>): Promise<void> {
       .values([
         {
           provider: 'camera',
-          name: 'Camera Provider',
+          name: 'Camera',
           config: JSON.stringify({}),
           internal: 1,
         },
         {
           provider: 'esphome',
-          name: 'ESPHome Provider',
+          name: 'ESPHome',
           config: JSON.stringify({}),
           internal: 1,
         },

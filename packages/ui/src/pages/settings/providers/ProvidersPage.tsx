@@ -39,7 +39,7 @@ const ProviderRow: React.FC<ProviderRowProps> = ({ account, deviceCount }) => {
       }
     >
       <CardListContent
-        title={account.internal ? brand.label : account.name}
+        title={account.name}
         description={
           <span className="provider-row-meta">
             {identity && <span>{identity}</span>}
