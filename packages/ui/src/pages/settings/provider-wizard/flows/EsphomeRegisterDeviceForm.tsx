@@ -19,9 +19,8 @@ export const EsphomeRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = (
   props,
 ) => {
   const { t } = useTranslation();
-  const [directType, setDirectType] = useState<EsphomeDeviceType>(
-    ESPHOME_DEFAULT_TYPE,
-  );
+  const [directType, setDirectType] =
+    useState<EsphomeDeviceType>(ESPHOME_DEFAULT_TYPE);
 
   const prefillType =
     props.prefill && isEsphomeType(props.prefill.type)

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Info } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import { FormInput, FormShell } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form';
 import { ProviderBrandTile } from '../../providers/components/ProviderBrandTile';
@@ -17,7 +18,6 @@ interface ConnectProviderStepProps {
     name: string;
     config: Record<string, unknown>;
   }) => Promise<void> | void;
-  onBack: () => void;
   onDirtyChange?: (dirty: boolean) => void;
 }
 
@@ -34,7 +34,6 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
   serverError,
   submitLabel,
   onSubmit,
-  onBack,
   onDirtyChange,
 }) => {
   const { t } = useTranslation();
@@ -65,7 +64,9 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
         <header className="provider-brandhead">
           <ProviderBrandTile provider={provider} size="lg" />
           <div className="provider-brandhead-text">
-            <h1>{t('settings.connect_provider_title', { provider: brand.label })}</h1>
+            <h1>
+              {t('settings.connect_provider_title', { provider: brand.label })}
+            </h1>
             <p>{t('settings.connect_provider_subtitle')}</p>
           </div>
         </header>
@@ -78,12 +79,13 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
             }),
           )}
           error={serverError}
-          actions={{
-            onCancel: onBack,
-            cancelLabel: t('settings.back'),
-            submitLabel,
-            isSubmitting,
-          }}
+          actionsSlot={
+            <div className="form-actions">
+              <Button type="submit" disabled={isSubmitting}>
+                {submitLabel}
+              </Button>
+            </div>
+          }
         >
           <Fields control={control} mode="connect" />
 

@@ -27,22 +27,16 @@ const existing = (
 
 describe('describeCandidates', () => {
   it('marks devices already imported into this account', () => {
-    const [row] = describeCandidates(
-      [candidate('a')],
-      [existing('a', 1)],
-      1,
-      ['feeder'],
-    );
+    const [row] = describeCandidates([candidate('a')], [existing('a', 1)], 1, [
+      'feeder',
+    ]);
     assert.equal(row.disabledReason, 'already-added');
   });
 
   it('does not confuse the same external id on another account', () => {
-    const [row] = describeCandidates(
-      [candidate('a')],
-      [existing('a', 99)],
-      1,
-      ['feeder'],
-    );
+    const [row] = describeCandidates([candidate('a')], [existing('a', 99)], 1, [
+      'feeder',
+    ]);
     assert.equal(row.disabledReason, undefined);
   });
 
@@ -67,12 +61,9 @@ describe('describeCandidates', () => {
   });
 
   it('leaves importable devices undisabled', () => {
-    const rows = describeCandidates(
-      [candidate('a'), candidate('b')],
-      [],
-      1,
-      ['feeder'],
-    );
+    const rows = describeCandidates([candidate('a'), candidate('b')], [], 1, [
+      'feeder',
+    ]);
     assert.deepEqual(
       rows.map((r) => r.disabledReason),
       [undefined, undefined],

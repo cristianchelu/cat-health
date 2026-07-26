@@ -290,7 +290,8 @@
     "import_partial_error": "S-au importat {{imported}} din {{total}}. Unele dispozitive nu au putut fi adăugate.",
     "import_failed": "Dispozitivele selectate nu au putut fi importate.",
     "pet_links_editable_later": "Poți modifica aceste asocieri oricând din setările providerului.",
-    "finish": "Finalizează"
+    "finish": "Finalizează",
+    "skip_for_now": "Omite deocamdată"
   },
   "common": {
     "loading": "Se încarcă...",

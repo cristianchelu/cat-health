@@ -17,7 +17,7 @@ import {
   useDevices,
 } from '@/hooks/queries/deviceQueries';
 import { Server, Smartphone } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { PageBackLink } from '@/components/ui/PageBackLink';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import Stepper from '@/components/ui/Stepper';
@@ -123,13 +123,31 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
     setState(target);
   };
 
+  /**
+   * The single back/exit control. On the first step it leaves the wizard; on
+   * later steps it walks back through the plan. Guarded when the current step
+   * holds unsaved input.
+   */
   const handleCancel = () => {
     if (stepDirty) {
       setDiscardOpen(true);
       return;
     }
-    exit();
+    goBack();
   };
+
+  const title =
+    entry === 'connect'
+      ? t('settings.add_provider')
+      : t('settings.add_device_title');
+
+  /** Where back goes, so the label never lies about the destination. */
+  const backLabel =
+    plan && getVisualStep(plan, state) > 1
+      ? t('settings.back')
+      : entry === 'connect'
+        ? t('settings.providers')
+        : t('navigation.settings');
 
   /** Advance past a step that has no work left for the current provider. */
   const afterDiscovery = (accountId: number) => {
@@ -202,7 +220,11 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
   };
 
   const handleImport = async (devices: DiscoveredDeviceDTO[]) => {
-    if (state.step !== 'discover' || !account || !flow?.buildDeviceFromDiscovery)
+    if (
+      state.step !== 'discover' ||
+      !account ||
+      !flow?.buildDeviceFromDiscovery
+    )
       return;
     const build = flow.buildDeviceFromDiscovery;
     setServerError(null);
@@ -234,7 +256,10 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
     setServerError(null);
     try {
       await updateAccount.mutateAsync({
-        config: { ...(account.config as Record<string, unknown>), pet_links: links },
+        config: {
+          ...(account.config as Record<string, unknown>),
+          pet_links: links,
+        },
       });
       finishConnect(state.accountId);
     } catch (err) {
@@ -258,22 +283,35 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
 
   return (
     <div className="provider-wizard-page">
+      {/*
+       * The only back/exit affordance in the wizard. A header Cancel plus a
+       * footer Cancel plus this would be three ways to leave the same screen.
+       */}
+      <PageBackLink
+        label={backLabel}
+        mobileTitle={title}
+        onNavigate={handleCancel}
+      />
+
       <SectionHeader
         icon={
-          entry === 'connect' ? <Server size="1em" /> : <Smartphone size="1em" />
-        }
-        actions={
-          <Button type="button" variant="secondary" onClick={handleCancel}>
-            {t('settings.cancel')}
-          </Button>
+          entry === 'connect' ? (
+            <Server size="1em" />
+          ) : (
+            <Smartphone size="1em" />
+          )
         }
       >
-        {entry === 'connect'
-          ? t('settings.add_provider')
-          : t('settings.add_device_title')}
+        {title}
       </SectionHeader>
 
-      {plan && (
+      {/*
+       * Hidden on the first step in both flows: it would have nothing to say
+       * there, and in the connect flow it would pop into existence once the
+       * provider is known. From step 2 the first step reads as completed,
+       * which communicates the same thing without the flicker.
+       */}
+      {plan && getVisualStep(plan, state) > 1 && (
         <Stepper
           steps={plan.steps.map((step) => ({ label: t(step.labelKey) }))}
           currentStep={getVisualStep(plan, state)}
@@ -289,7 +327,6 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
               pickedProvider &&
               setState({ step: 'connect', provider: pickedProvider })
             }
-            onCancel={exit}
           />
         </div>
       )}
@@ -317,7 +354,6 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
                 : t('settings.connect')
             }
             onSubmit={handleConnectSubmit}
-            onBack={goBack}
             onDirtyChange={setStepDirty}
           />
         </div>
@@ -340,6 +376,11 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
             onDirectRegister={handleDirectRegister}
             onRescan={() => void refetchDiscovery()}
             onBack={goBack}
+            onSkip={
+              entry === 'connect'
+                ? () => afterDiscovery(state.accountId)
+                : undefined
+            }
           />
         </div>
       )}
@@ -372,6 +413,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
             serverError={serverError}
             onFinish={handleFinishLinking}
             onBack={goBack}
+            onSkip={() => finishConnect(state.accountId)}
           />
         </div>
       )}

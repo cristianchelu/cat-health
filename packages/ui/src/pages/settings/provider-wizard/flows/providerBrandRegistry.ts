@@ -1,11 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { Bot, Cpu, Server, Video } from 'lucide-react';
-import {
-  surepetAccountIdentity,
-} from './surepet/surepetAccountConfig.ts';
-import {
-  inferenceAccountIdentity,
-} from './inference/inferenceAccountConfig.ts';
+import { surepetAccountIdentity } from './surepet/surepetAccountConfig.ts';
+import { inferenceAccountIdentity } from './inference/inferenceAccountConfig.ts';
 
 /**
  * Visual identity for a provider, plus the one piece of provider-specific
@@ -92,7 +88,10 @@ const FALLBACK_BRAND: Omit<ProviderBrand, 'label' | 'monogram'> = {
 export function getProviderBrand(provider: string): ProviderBrand {
   const known = PROVIDER_BRANDS[provider];
   if (known) {
-    return { ...known, monogram: known.monogram ?? deriveMonogram(known.label) };
+    return {
+      ...known,
+      monogram: known.monogram ?? deriveMonogram(known.label),
+    };
   }
   const label = provider || 'Unknown';
   return { ...FALLBACK_BRAND, label, monogram: deriveMonogram(label) };

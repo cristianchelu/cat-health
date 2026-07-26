@@ -12,6 +12,8 @@ interface LinkPetsStepProps {
   serverError?: string | null;
   onFinish: (links: ProviderPetLink[]) => void;
   onBack: () => void;
+  /** Linking is optional — it can be done later from the provider's settings. */
+  onSkip?: () => void;
 }
 
 /**
@@ -25,6 +27,7 @@ export const LinkPetsStep: React.FC<LinkPetsStepProps> = ({
   serverError,
   onFinish,
   onBack,
+  onSkip,
 }) => {
   const { t } = useTranslation();
   const [links, setLinks] = React.useState<ProviderPetLink[]>(initialLinks);
@@ -52,7 +55,16 @@ export const LinkPetsStep: React.FC<LinkPetsStepProps> = ({
         <Button type="button" variant="secondary" onClick={onBack}>
           {t('settings.back')}
         </Button>
-        <Button type="button" onClick={() => onFinish(links)} disabled={isSaving}>
+        {onSkip && (
+          <Button type="button" variant="ghost" onClick={onSkip}>
+            {t('settings.skip_for_now')}
+          </Button>
+        )}
+        <Button
+          type="button"
+          onClick={() => onFinish(links)}
+          disabled={isSaving}
+        >
           {isSaving ? t('settings.saving') : t('settings.finish')}
         </Button>
       </div>

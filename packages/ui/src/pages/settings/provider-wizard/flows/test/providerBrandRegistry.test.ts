@@ -33,7 +33,10 @@ describe('getProviderBrand', () => {
   });
 
   it('exposes an account identity only for providers that have one', () => {
-    assert.equal(typeof getProviderBrand('surepet').accountIdentity, 'function');
+    assert.equal(
+      typeof getProviderBrand('surepet').accountIdentity,
+      'function',
+    );
     assert.equal(getProviderBrand('esphome').accountIdentity, undefined);
     assert.equal(getProviderBrand('unknown').accountIdentity, undefined);
   });

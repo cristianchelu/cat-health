@@ -10,7 +10,6 @@ interface PickProviderStepProps {
   value: string | null;
   onChange: (provider: string) => void;
   onContinue: () => void;
-  onCancel: () => void;
 }
 
 /**
@@ -24,7 +23,6 @@ export const PickProviderStep: React.FC<PickProviderStepProps> = ({
   value,
   onChange,
   onContinue,
-  onCancel,
 }) => {
   const { t } = useTranslation();
   const { data: providers = [] } = useProviders();
@@ -53,10 +51,8 @@ export const PickProviderStep: React.FC<PickProviderStepProps> = ({
         onChange={onChange}
       />
 
+      {/* Back/exit lives in the wizard header; a Cancel here would duplicate it. */}
       <div className="connect-provider-actions">
-        <Button type="button" variant="secondary" onClick={onCancel}>
-          {t('settings.cancel')}
-        </Button>
         <Button type="button" onClick={onContinue} disabled={!value}>
           {t('settings.continue')}
         </Button>

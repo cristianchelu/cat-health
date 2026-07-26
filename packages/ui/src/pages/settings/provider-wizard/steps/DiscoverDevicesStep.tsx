@@ -9,7 +9,10 @@ import type {
   DiscoveredDeviceDTO,
   GetDeviceResponseDTO,
 } from 'shared';
-import { describeCandidates, type DiscoveryCandidate } from '../importSelection';
+import {
+  describeCandidates,
+  type DiscoveryCandidate,
+} from '../importSelection';
 import './DiscoverDevicesStep.css';
 
 interface DiscoverDevicesStepProps {
@@ -31,6 +34,8 @@ interface DiscoverDevicesStepProps {
   onDirectRegister: () => void;
   onRescan: () => void;
   onBack: () => void;
+  /** Offered when importing now is optional (the connect flow). */
+  onSkip?: () => void;
 }
 
 const CandidateRow: React.FC<{
@@ -91,6 +96,7 @@ export const DiscoverDevicesStep: React.FC<DiscoverDevicesStepProps> = ({
   onDirectRegister,
   onRescan,
   onBack,
+  onSkip,
 }) => {
   const { t } = useTranslation();
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
@@ -168,6 +174,11 @@ export const DiscoverDevicesStep: React.FC<DiscoverDevicesStepProps> = ({
         <Button type="button" variant="secondary" onClick={onBack}>
           {t('settings.back')}
         </Button>
+        {onSkip && (
+          <Button type="button" variant="ghost" onClick={onSkip}>
+            {t('settings.skip_for_now')}
+          </Button>
+        )}
         {allowsDirectRegistration && (
           <Button type="button" variant="secondary" onClick={onDirectRegister}>
             {t('settings.add_manually')}

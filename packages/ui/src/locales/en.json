@@ -343,7 +343,8 @@
     "import_partial_error": "Imported {{imported}} of {{total}}. Some devices could not be added.",
     "import_failed": "Could not import the selected devices.",
     "pet_links_editable_later": "You can change these links any time from the provider's settings.",
-    "finish": "Finish"
+    "finish": "Finish",
+    "skip_for_now": "Skip for now"
   },
   "common": {
     "loading": "Loading...",

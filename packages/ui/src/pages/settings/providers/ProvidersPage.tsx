@@ -69,7 +69,7 @@ const ProvidersPage: React.FC = () => {
     <div className="providers-page">
       <PageBackLink
         to="/settings"
-        label={t('settings.title')}
+        label={t('navigation.settings')}
         mobileTitle={t('settings.providers')}
       />
 

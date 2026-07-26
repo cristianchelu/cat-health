@@ -11,8 +11,13 @@ interface PageBackLinkProps {
    * nowhere sensible to go.
    */
   to?: string;
-  /** Go back through history instead. Implied when `to` is omitted. */
+  /** Go back through history instead. Implied when `to` and `onNavigate` are omitted. */
   useHistory?: boolean;
+  /**
+   * Handle going back yourself — for a wizard step, or anywhere leaving needs
+   * to run a guard first. Takes precedence over `to` and `useHistory`.
+   */
+  onNavigate?: () => void;
   /** Desktop link text, and the accessible name of the mobile icon button. */
   label: string;
   /** Mobile title-bar text. Falls back to `label`. */
@@ -35,6 +40,7 @@ interface PageBackLinkProps {
 const PageBackLink: React.FC<PageBackLinkProps> = ({
   to,
   useHistory,
+  onNavigate,
   label,
   mobileTitle,
   actions,
@@ -43,17 +49,25 @@ const PageBackLink: React.FC<PageBackLinkProps> = ({
 }) => {
   const navigate = useNavigate();
   const goBack = React.useCallback(() => {
+    if (onNavigate) {
+      onNavigate();
+      return;
+    }
     void navigate(-1);
-  }, [navigate]);
+  }, [navigate, onNavigate]);
 
-  const viaHistory = useHistory || to === undefined;
+  const asLink = to !== undefined && !onNavigate && !useHistory;
 
   const control = (
     controlClassName: string,
     children: React.ReactNode,
     ariaLabel?: string,
   ) =>
-    viaHistory ? (
+    asLink ? (
+      <Link to={to} className={controlClassName} aria-label={ariaLabel}>
+        {children}
+      </Link>
+    ) : (
       <button
         type="button"
         className={controlClassName}
@@ -62,10 +76,6 @@ const PageBackLink: React.FC<PageBackLinkProps> = ({
       >
         {children}
       </button>
-    ) : (
-      <Link to={to} className={controlClassName} aria-label={ariaLabel}>
-        {children}
-      </Link>
     );
 
   return (

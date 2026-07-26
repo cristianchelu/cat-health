@@ -55,11 +55,12 @@
 
     .providers-page-fab {
       /*
-       * Sticky, not fixed: MobileNav is `position: sticky` in the same flex
-       * column, so a fixed FAB would sit on top of the bottom nav.
+       * Sticky, not fixed. The app shell is a flex column with MobileNav as a
+       * sibling, so the nav can never overlap content and the FAB needs no
+       * nav-sized offset — `bottom: 0` sits it directly above the nav.
        */
       position: sticky;
-      bottom: var(--space-lg);
+      bottom: 0;
       float: right;
       display: flex;
       align-items: center;
