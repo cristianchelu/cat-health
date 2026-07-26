@@ -28,6 +28,7 @@ const parseFoodIntakeEventData = (v: unknown) =>
   parseWithSchema(FoodIntakeEventDataSchema, v) ?? null;
 import {
   SurePetAccountConfigSchema,
+  SurePetRuntimeStateSchema,
   SurePetDeviceStateSchema,
 } from "../../src/schemas/api/surepet.ts";
 
@@ -130,7 +131,7 @@ describe("parseEventData", () => {
 });
 
 describe("device config parsers", () => {
-  it("preserves SurePet links and synchronization state", () => {
+  it("preserves SurePet credentials and pet links", () => {
     const parsed = parseWithSchema(SurePetAccountConfigSchema, {
       email: "cat@example.com",
       password: "secret",
@@ -141,12 +142,9 @@ describe("device config parsers", () => {
           metadata: { tag_id: 123 },
         },
       ],
-      sync: {
-        last_timeline_since_id: 55,
-        feeding_timeline_backfill_done: true,
-      },
     });
 
+    assert.equal(parsed?.email, "cat@example.com");
     assert.deepEqual(parsed?.pet_links, [
       {
         external_pet_id: "remote-1",
@@ -154,6 +152,21 @@ describe("device config parsers", () => {
         metadata: { tag_id: 123 },
       },
     ]);
+  });
+
+  it("preserves SurePet runtime state separately from config", () => {
+    const parsed = parseWithSchema(SurePetRuntimeStateSchema, {
+      device_id: "install-uuid",
+      token: "jwt",
+      household_id: 42,
+      sync: {
+        last_timeline_since_id: 55,
+        feeding_timeline_backfill_done: true,
+      },
+    });
+
+    assert.equal(parsed?.device_id, "install-uuid");
+    assert.equal(parsed?.household_id, 42);
     assert.deepEqual(parsed?.sync, {
       last_timeline_since_id: 55,
       feeding_timeline_backfill_done: true,

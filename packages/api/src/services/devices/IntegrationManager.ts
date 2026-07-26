@@ -63,6 +63,29 @@ export class IntegrationManager
     }));
   }
 
+  validateAccountConfig(providerName: string, config: unknown): boolean {
+    const provider = this.providers.get(providerName);
+    if (!provider) return false;
+    return provider.validateAccountConfig(config);
+  }
+
+  reconcileRuntimeState(
+    providerName: string,
+    args: {
+      previousConfig: unknown;
+      nextConfig: unknown;
+      runtimeState: unknown;
+    },
+  ): Record<string, unknown> {
+    const provider = this.providers.get(providerName);
+    const current =
+      args.runtimeState && typeof args.runtimeState === 'object'
+        ? (args.runtimeState as Record<string, unknown>)
+        : {};
+    if (!provider?.reconcileRuntimeState) return current;
+    return provider.reconcileRuntimeState(args);
+  }
+
   async initialize() {
     await this.mediaManager.initialize();
     await this.presence.hydrateAll();

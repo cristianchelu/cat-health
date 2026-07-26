@@ -5,8 +5,10 @@ import {
   ProductId,
   SurePetAccountConfigSchema,
   SurePetFeederConfigSchema,
+  SurePetRuntimeStateSchema,
   type ProviderRemotePet,
   type SurePetAccountConfig,
+  type SurePetRuntimeState,
 } from 'shared';
 import { parseStoredEventData } from '../../../../database/types/storedEventData.ts';
 import type {
@@ -44,6 +46,17 @@ function parseAccountConfig(config: unknown): SurePetAccountConfig {
     throw new Error('SurePet account config must include email and password');
   }
 
+  return parsed;
+}
+
+/**
+ * Runtime state is provider-owned and always optional — an account connected
+ * for the first time has none. A missing or malformed blob is not an error;
+ * it just means everything gets re-derived on the next login.
+ */
+function parseRuntimeState(runtimeState: unknown): SurePetRuntimeState {
+  const parsed = parseWithSchema(SurePetRuntimeStateSchema, runtimeState) ?? {};
+
   return {
     ...parsed,
     device_id:
@@ -58,6 +71,7 @@ export class SurePetAccountManager implements AccountManager {
   private account: ProviderAccount;
   private deps: ProviderDeps;
   private config: SurePetAccountConfig;
+  private runtime: SurePetRuntimeState;
   private client: SurePetClient | null = null;
   private controllers = new Map<number, FeederController>();
   private timelinePollTimer: ReturnType<typeof setInterval> | null = null;
@@ -69,6 +83,7 @@ export class SurePetAccountManager implements AccountManager {
     this.deps = deps;
     this.accountId = account.id;
     this.config = parseAccountConfig(account.config);
+    this.runtime = parseRuntimeState(account.runtime_state);
   }
 
   async initialize(): Promise<void> {
@@ -160,14 +175,14 @@ export class SurePetAccountManager implements AccountManager {
 
   async discoverDevices(): Promise<DiscoveredDevice[]> {
     const client = await this.ensureClient();
-    const householdId = this.config.household_id;
+    const householdId = this.runtime.household_id;
     const devices = await client.getDevices(householdId ?? undefined);
 
     return devices
       .filter((device) => device.product_id === ProductId.FEEDER_CONNECT)
       .map((device) => {
         const household =
-          device.household_id ?? householdId ?? this.config.household_id;
+          device.household_id ?? householdId ?? this.runtime.household_id;
         const label =
           device.name?.trim() ||
           (device.serial_number
@@ -191,7 +206,7 @@ export class SurePetAccountManager implements AccountManager {
 
   async listRemotePets(): Promise<ProviderRemotePet[]> {
     const client = await this.ensureClient();
-    const pets = await client.getPets(this.config.household_id ?? undefined);
+    const pets = await client.getPets(this.runtime.household_id ?? undefined);
     return pets.map((pet) => {
       const tagId = pet.tag_id ?? pet.tag?.id ?? null;
       return {
@@ -255,27 +270,27 @@ export class SurePetAccountManager implements AccountManager {
   }
 
   private async ensureClient(): Promise<SurePetClient> {
-    if (!this.config.device_id) {
-      this.config.device_id = randomUUID();
-      await this.persistAccountConfig();
+    if (!this.runtime.device_id) {
+      this.runtime.device_id = randomUUID();
+      await this.persistRuntimeState();
     }
 
     if (!this.client) {
       this.client = new SurePetClient({
         email: this.config.email,
         password: this.config.password,
-        deviceId: this.config.device_id,
-        token: this.config.token,
+        deviceId: this.runtime.device_id,
+        token: this.runtime.token,
       });
     }
 
     const token = await this.client.login();
-    if (token !== this.config.token) {
-      this.config.token = token;
-      await this.persistAccountConfig();
+    if (token !== this.runtime.token) {
+      this.runtime.token = token;
+      await this.persistRuntimeState();
     }
 
-    if (this.config.household_id == null) {
+    if (this.runtime.household_id == null) {
       const bootstrap = await this.client.meStart();
       const householdId =
         bootstrap.households?.[0]?.id ??
@@ -288,8 +303,8 @@ export class SurePetAccountManager implements AccountManager {
         );
       }
 
-      this.config.household_id = householdId;
-      await this.persistAccountConfig();
+      this.runtime.household_id = householdId;
+      await this.persistRuntimeState();
     }
 
     return this.client;
@@ -332,10 +347,10 @@ export class SurePetAccountManager implements AccountManager {
 
     try {
       const client = await this.ensureClient();
-      const householdId = this.config.household_id;
+      const householdId = this.runtime.household_id;
       if (householdId == null) return;
 
-      const sinceId = this.config.sync?.last_timeline_since_id;
+      const sinceId = this.runtime.sync?.last_timeline_since_id;
       const isFirstSync = sinceId == null;
       const datapoints: NormalizedFeedingDatapoint[] = [];
       let maxTimelineEntryId: number | null = null;
@@ -376,20 +391,20 @@ export class SurePetAccountManager implements AccountManager {
 
       if (isFirstSync) {
         const nextSinceId = maxTimelineEntryId ?? 0;
-        this.config.sync = {
-          ...this.config.sync,
+        this.runtime.sync = {
+          ...this.runtime.sync,
           last_timeline_since_id: nextSinceId,
         };
-        await this.persistAccountConfig();
+        await this.persistRuntimeState();
       } else if (maxTimelineEntryId != null) {
-        const currentSinceId = this.config.sync?.last_timeline_since_id ?? 0;
+        const currentSinceId = this.runtime.sync?.last_timeline_since_id ?? 0;
         const nextSinceId = Math.max(currentSinceId, maxTimelineEntryId);
-        if (nextSinceId !== this.config.sync?.last_timeline_since_id) {
-          this.config.sync = {
-            ...this.config.sync,
+        if (nextSinceId !== this.runtime.sync?.last_timeline_since_id) {
+          this.runtime.sync = {
+            ...this.runtime.sync,
             last_timeline_since_id: nextSinceId,
           };
-          await this.persistAccountConfig();
+          await this.persistRuntimeState();
         }
       }
     } finally {
@@ -398,21 +413,21 @@ export class SurePetAccountManager implements AccountManager {
   }
 
   private async backfillFeedingTimelineIfNeeded(): Promise<void> {
-    if (this.config.sync?.feeding_timeline_backfill_done) return;
+    if (this.runtime.sync?.feeding_timeline_backfill_done) return;
 
     await this.backfillFeedingTimeline();
-    this.config.sync = {
-      ...this.config.sync,
+    this.runtime.sync = {
+      ...this.runtime.sync,
       feeding_timeline_backfill_done: true,
     };
-    await this.persistAccountConfig();
+    await this.persistRuntimeState();
   }
 
   private async backfillFeedingForCloudDevice(
     cloudDeviceId: number,
   ): Promise<void> {
     const client = await this.ensureClient();
-    const householdId = this.config.household_id;
+    const householdId = this.runtime.household_id;
     if (householdId == null) return;
 
     const timeline = await client.getFullTimeline(householdId);
@@ -430,7 +445,7 @@ export class SurePetAccountManager implements AccountManager {
     skippedUnmapped: number;
   }> {
     const client = await this.ensureClient();
-    const householdId = this.config.household_id;
+    const householdId = this.runtime.household_id;
     if (householdId == null) {
       return {
         timelineEntryCount: 0,
@@ -676,33 +691,25 @@ export class SurePetAccountManager implements AccountManager {
     }
   }
 
-  private async persistAccountConfig(): Promise<void> {
-    const row = await this.deps.db
-      .selectFrom('provider_account')
-      .select('config')
-      .where('id', '=', this.accountId)
-      .executeTakeFirst();
-
-    if (row) {
-      const dbConfig = parseAccountConfig(row.config);
-      if (dbConfig.pet_links !== undefined) {
-        this.config.pet_links = dbConfig.pet_links;
-      }
-    }
-
-    const config = { ...this.config };
+  /**
+   * Writes only `runtime_state`. `config` is user-owned and must never be
+   * touched here — that separation is what lets a background token refresh and
+   * a concurrent user edit coexist without either clobbering the other.
+   *
+   * `updated_at` is deliberately not bumped: a token refresh is not a user-
+   * visible modification of the account.
+   */
+  private async persistRuntimeState(): Promise<void> {
+    const runtime_state = { ...this.runtime };
     await this.deps.db
       .updateTable('provider_account')
-      .set({
-        config,
-        updated_at: Date.now(),
-      })
+      .set({ runtime_state })
       .where('id', '=', this.accountId)
       .execute();
 
     this.account = {
       ...this.account,
-      config,
+      runtime_state,
     };
   }
 }

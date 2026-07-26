@@ -19,7 +19,7 @@ type PetSeed = Partial<Pick<NewPet, 'name' | 'breed' | 'birth_date'>>;
 type ProviderAccountSeed = Partial<
   Pick<
     NewProviderAccount,
-    'provider' | 'name' | 'config' | 'enabled' | 'internal'
+    'provider' | 'name' | 'config' | 'runtime_state' | 'enabled' | 'internal'
   >
 >;
 
@@ -107,6 +107,7 @@ export async function insertProviderAccount(
       provider: seed.provider ?? 'esphome',
       name: seed.name ?? 'Test account',
       config: seed.config ?? {},
+      runtime_state: seed.runtime_state ?? {},
       enabled: seed.enabled ?? 1,
       internal: seed.internal ?? 0,
       created_at: now,

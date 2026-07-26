@@ -55,6 +55,12 @@ const Http404ResponseSchema = Type.Object({
   message: Type.String(),
 });
 
+const Http400ResponseSchema = Type.Object({
+  statusCode: Type.Literal(400),
+  error: Type.Literal('Bad Request'),
+  message: Type.String(),
+});
+
 const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   const { db, integrationManager } = fastify;
 
@@ -233,11 +239,20 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PostProviderAccountRequestSchema,
         response: {
           '200': ProviderAccountSchema,
+          '400': Http400ResponseSchema,
         },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const { provider, name, config } = request.body;
+
+      if (!integrationManager.validateAccountConfig(provider, config)) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: `Invalid configuration for provider "${provider}"`,
+        });
+      }
 
       const result = await db
         .insertInto('provider_account')
@@ -245,6 +260,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           provider,
           name,
           config,
+          runtime_state: {},
           enabled: 1,
           created_at: Date.now(),
           updated_at: Date.now(),
@@ -291,20 +307,56 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PatchProviderAccountRequestSchema,
         response: {
           '200': ProviderAccountSchema,
+          '400': Http400ResponseSchema,
         },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const { id } = request.params;
       const updates = request.body;
+
+      const existing = await db
+        .selectFrom('provider_account')
+        .selectAll()
+        .where('id', '=', id)
+        .executeTakeFirst();
+      if (!existing) {
+        throw new Error('Account not found');
+      }
+
       const updateData: Record<string, unknown> = {
-        updated_at: Math.floor(Date.now() / 1000),
+        updated_at: Date.now(),
       };
       if (updates.name !== undefined) updateData.name = updates.name;
-      if (updates.config !== undefined)
-        updateData.config = JSON.stringify(updates.config);
       if (updates.enabled !== undefined)
         updateData.enabled = updates.enabled ? 1 : 0;
+
+      if (updates.config !== undefined) {
+        if (
+          !integrationManager.validateAccountConfig(
+            existing.provider,
+            updates.config,
+          )
+        ) {
+          return reply.code(400).send({
+            statusCode: 400,
+            error: 'Bad Request',
+            message: `Invalid configuration for provider "${existing.provider}"`,
+          });
+        }
+        updateData.config = updates.config;
+        // Config is user-owned and replaced wholesale; runtime state derived
+        // from it may no longer apply, so let the provider decide what survives.
+        updateData.runtime_state = integrationManager.reconcileRuntimeState(
+          existing.provider,
+          {
+            previousConfig: parseJsonValue(existing.config),
+            nextConfig: updates.config,
+            runtimeState: parseJsonValue(existing.runtime_state),
+          },
+        );
+      }
+
       const result = await db
         .updateTable('provider_account')
         .set(updateData)

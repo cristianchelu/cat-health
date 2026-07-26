@@ -22,17 +22,30 @@ export const SurePetSyncConfigSchema = Type.Object({
 });
 export type SurePetSyncConfig = Static<typeof SurePetSyncConfigSchema>;
 
+/**
+ * User-supplied account settings. Stored in `provider_account.config`, editable
+ * from the UI, and validated at the API boundary. Must never hold credentials
+ * the provider obtained at runtime — those live in {@link SurePetRuntimeStateSchema}.
+ */
 export const SurePetAccountConfigSchema = Type.Object({
   email: Type.String(),
   password: Type.String(),
-  device_id: Type.Optional(Type.String()),
-  token: Type.Optional(Type.String()),
-  token_expires_at: Type.Optional(Type.String()),
-  household_id: Type.Optional(Type.Number()),
   pet_links: Type.Optional(Type.Array(ProviderPetLinkSchema)),
-  sync: Type.Optional(SurePetSyncConfigSchema),
 });
 export type SurePetAccountConfig = Static<typeof SurePetAccountConfigSchema>;
+
+/**
+ * Provider-managed runtime state. Stored in `provider_account.runtime_state`,
+ * written only by SurePetAccountManager, and never sent to the client.
+ */
+export const SurePetRuntimeStateSchema = Type.Object({
+  /** Stable client-install identity (a randomUUID), not a device. */
+  device_id: Type.Optional(Type.String()),
+  token: Type.Optional(Type.String()),
+  household_id: Type.Optional(Type.Number()),
+  sync: Type.Optional(SurePetSyncConfigSchema),
+});
+export type SurePetRuntimeState = Static<typeof SurePetRuntimeStateSchema>;
 
 export const SurePetFeederConfigSchema = Type.Object({
   product_id: Type.Number(),

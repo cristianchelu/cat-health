@@ -121,6 +121,21 @@ export interface DeviceProvider {
     deps: ProviderDeps,
   ): AccountManager;
   validateAccountConfig(config: unknown): boolean;
+  /**
+   * Decide which provider-managed runtime state survives a config edit.
+   *
+   * Runtime state is derived from config, so a config change can invalidate it
+   * — e.g. changing SurePet credentials makes a cached bearer token useless.
+   * Only the provider knows which of its config keys matter, so the generic
+   * account route delegates here rather than inspecting vendor field names.
+   *
+   * Return the runtime state to persist. Omit the method to keep it unchanged.
+   */
+  reconcileRuntimeState?(args: {
+    previousConfig: unknown;
+    nextConfig: unknown;
+    runtimeState: unknown;
+  }): Record<string, unknown>;
 }
 
 export type ProviderListing = {
@@ -133,6 +148,17 @@ export type ProviderListing = {
 export interface DeviceIntegrationContext {
   getPresence(): DevicePresence;
   getProviders(): ProviderListing[];
+  /** False when the provider is unregistered or rejects the config. */
+  validateAccountConfig(providerName: string, config: unknown): boolean;
+  /** Runtime state to keep after a config edit. See DeviceProvider.reconcileRuntimeState. */
+  reconcileRuntimeState(
+    providerName: string,
+    args: {
+      previousConfig: unknown;
+      nextConfig: unknown;
+      runtimeState: unknown;
+    },
+  ): Record<string, unknown>;
   initializeAccount(accountId: number): Promise<void>;
   getAccountManager(accountId: number): AccountManager | undefined;
   instantiateDeviceController(device: Device): DeviceController | undefined;
