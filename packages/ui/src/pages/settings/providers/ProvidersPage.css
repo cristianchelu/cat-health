@@ -1,0 +1,80 @@
+.providers-page {
+  max-width: var(--max-width-md);
+  margin: 0 auto;
+
+  .providers-page-intro {
+    margin: 0 0 var(--space-lg);
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
+  }
+
+  /* Dot-separated identity + device count under the account name. */
+  .provider-row-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+
+    .provider-row-sep {
+      width: 3px;
+      height: 3px;
+      border-radius: var(--radius-full);
+      background: var(--color-text-subtle);
+      flex-shrink: 0;
+    }
+  }
+
+  .providers-page-system {
+    margin-top: var(--space-2xl);
+
+    h2 {
+      margin: 0 0 var(--space-2xs);
+      font-size: var(--text-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    p {
+      margin: 0 0 var(--space-sm);
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+  }
+
+  .providers-page-fab {
+    display: none;
+  }
+
+  @media (max-width: 767px) {
+    /* The header button is replaced by a thumb-reachable floating action. */
+    .section-header .button {
+      display: none;
+    }
+
+    .providers-page-fab {
+      /*
+       * Sticky, not fixed: MobileNav is `position: sticky` in the same flex
+       * column, so a fixed FAB would sit on top of the bottom nav.
+       */
+      position: sticky;
+      bottom: var(--space-lg);
+      float: right;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 3.5rem;
+      height: 3.5rem;
+      margin-top: var(--space-lg);
+      border-radius: var(--radius-full);
+      background: var(--color-primary);
+      color: var(--color-text-inverted);
+      box-shadow: var(--shadow-lg);
+
+      &:hover {
+        background: var(--color-primary-dark);
+      }
+    }
+  }
+}

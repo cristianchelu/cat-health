@@ -115,29 +115,13 @@ const Settings: React.FC = () => {
             {t('settings.providers')}
           </SectionHeader>
           <CardList>
-            {visibleAccounts.map((account) => (
-              <CardListItem
-                key={account.id}
-                icon={<Server size="1em" />}
-                to={`/settings/providers/${account.id}`}
-              >
-                <CardListContent
-                  title={account.name}
-                  description={`${account.provider} - ${account.enabled ? t('settings.enabled') : t('settings.disabled')}`}
-                />
-              </CardListItem>
-            ))}
-            <CardListItem
-              icon={
-                <div className="add-item-icon">
-                  <Plus size="0.5em" />
-                </div>
-              }
-              to="/settings/providers/new"
-            >
+            <CardListItem icon={<Server size="1em" />} to="/settings/providers">
               <CardListContent
-                title={t('settings.add_provider')}
-                description={t('settings.add_provider_desc')}
+                title={t('settings.providers')}
+                description={t('settings.providers_summary', {
+                  count: visibleAccounts.length,
+                  accounts: visibleAccounts.length,
+                })}
               />
             </CardListItem>
           </CardList>

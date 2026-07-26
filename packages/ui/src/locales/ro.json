@@ -262,7 +262,14 @@
     "edit_device_error": "Nu s-a putut actualiza dispozitivul",
     "loading_device_data": "Se încarcă datele dispozitivului...",
     "visit_annotation_label": "Adnotare vizite",
-    "visit_annotation_help": "Afișează fila Adnotare pe pagina de detalii a dispozitivului pentru etichetarea episoadelor de eliminare."
+    "visit_annotation_help": "Afișează fila Adnotare pe pagina de detalii a dispozitivului pentru etichetarea episoadelor de eliminare.",
+    "providers_intro": "Conturi cloud și integrări care aduc dispozitive în aplicație.",
+    "providers_summary_one": "{{accounts}} cont conectat",
+    "providers_summary_other": "{{accounts}} conturi conectate",
+    "device_count_one": "{{count}} dispozitiv",
+    "device_count_other": "{{count}} dispozitive",
+    "system_integrations": "Integrări de sistem",
+    "system_integrations_desc": "Provideri interni folosiți de dispozitivele adăugate local."
   },
   "common": {
     "loading": "Se încarcă...",

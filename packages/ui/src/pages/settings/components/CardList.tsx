@@ -53,7 +53,12 @@ export const CardListItem: React.FC<CardListItemProps> = ({
         <div className={'item-icon'}>{icon}</div>
         <div className="item-content">{children}</div>
       </div>
-      {trailing ?? (interactive ? <ChevronRight size={20} className="item-arrow" /> : null)}
+      {(trailing || interactive) && (
+        <div className="item-trailing">
+          {trailing}
+          {interactive && <ChevronRight size={20} className="item-arrow" />}
+        </div>
+      )}
     </>
   );
 

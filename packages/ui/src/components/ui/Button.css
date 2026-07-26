@@ -12,6 +12,8 @@
   cursor: pointer;
   white-space: nowrap;
   border: 2px solid transparent;
+  /* The class is also applied to <Link> for navigation actions. */
+  text-decoration: none;
 
   /* Button variants */
   &.primary {

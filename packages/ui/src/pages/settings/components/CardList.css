@@ -38,6 +38,7 @@
       align-items: center;
       gap: var(--space-md);
       flex: 1;
+      min-width: 0;
 
       .item-icon,
       .item-avatar {
@@ -95,12 +96,15 @@
     }
 
     .item-trailing {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
       flex-shrink: 0;
     }
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .settings-list .list-item {
     padding: var(--space-md);
 
