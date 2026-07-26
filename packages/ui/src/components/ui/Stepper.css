@@ -21,12 +21,12 @@
       border-radius: 50%;
       background-color: transparent;
       border: 2px solid var(--color-border);
-      color: var(--color-text-secondary);
+      color: var(--color-text-light);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: var(--font-weight-bold);
-      font-size: var(--font-size-sm);
+      font-weight: var(--font-bold);
+      font-size: var(--text-sm);
       transition: all 0.3s ease;
       margin-bottom: var(--space-xs);
       z-index: 2;
@@ -34,9 +34,9 @@
     }
 
     .step-label {
-      font-size: var(--font-size-xs);
-      color: var(--color-text-secondary);
-      font-weight: var(--font-weight-medium);
+      font-size: var(--text-xs);
+      color: var(--color-text-light);
+      font-weight: var(--font-medium);
       text-align: center;
       transition: color 0.3s ease;
       white-space: nowrap;
@@ -89,8 +89,8 @@
       }
 
       .step-label {
-        color: var(--color-text-primary);
-        font-weight: var(--font-weight-bold);
+        color: var(--color-text);
+        font-weight: var(--font-bold);
       }
     }
   }
