@@ -331,7 +331,10 @@
     "continue": "Continue",
     "account_name_hint": "A label for this account in your settings.",
     "no_configurable_settings": "This integration has no user-configurable settings.",
-    "surepet_unofficial_note": "Unofficial cloud access. Sure Petcare does not offer a public API. Your credentials are stored on your own server and are never sent anywhere else."
+    "surepet_unofficial_note": "Unofficial cloud access. Sure Petcare does not offer a public API. Your credentials are stored on your own server and are never sent anywhere else.",
+    "step_pick_provider": "Provider",
+    "step_connect": "Connect",
+    "step_link_pets": "Link pets"
   },
   "common": {
     "loading": "Loading...",

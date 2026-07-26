@@ -1,41 +1,10 @@
 import type { DiscoveredDeviceDTO, GetDeviceResponseDTO } from 'shared';
 import { isRecord } from '@/lib/utils';
-import type { RegisterSource, WizardState } from './wizardTypes';
 
-/** Visual step shown in the Stepper, derived from wizard phase. */
-export function getVisualStep(state: WizardState): number {
-  switch (state.phase) {
-    case 'account':
-      return 1;
-    case 'discover':
-      return 2;
-    case 'register':
-      return 3;
-  }
-}
-
-/** Where the back button in the register phase should land. */
-export function getRegistrationBackPhase(
-  source: RegisterSource,
-): 'account' | 'discover' {
-  return source.kind === 'skip-discovery' ? 'account' : 'discover';
-}
-
-/**
- * Stable identity for a given register source. Used as a React key on the
- * provider form so internal field state resets when the user picks a different
- * discovered device or switches between discovery and direct entry.
+/*
+ * Step sequencing lives in wizardPlan.ts. This file holds the pure device
+ * helpers, which are independent of how the wizard is navigated.
  */
-export function sourceKey(source: RegisterSource): string {
-  switch (source.kind) {
-    case 'discovery':
-      return `discovery:${source.device.externalId}`;
-    case 'direct':
-      return 'direct';
-    case 'skip-discovery':
-      return 'skip-discovery';
-  }
-}
 
 /** Random external id for devices that we add without provider-side discovery. */
 export function generateLocalExternalId(prefix: string): string {

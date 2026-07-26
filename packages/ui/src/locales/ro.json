@@ -278,7 +278,10 @@
     "continue": "Continuă",
     "account_name_hint": "O etichetă pentru acest cont în setări.",
     "no_configurable_settings": "Această integrare nu are setări configurabile.",
-    "surepet_unofficial_note": "Acces cloud neoficial. Sure Petcare nu oferă un API public. Datele tale sunt stocate pe serverul tău și nu sunt trimise nicăieri altundeva."
+    "surepet_unofficial_note": "Acces cloud neoficial. Sure Petcare nu oferă un API public. Datele tale sunt stocate pe serverul tău și nu sunt trimise nicăieri altundeva.",
+    "step_pick_provider": "Provider",
+    "step_connect": "Conectare",
+    "step_link_pets": "Asociere pisici"
   },
   "common": {
     "loading": "Se încarcă...",

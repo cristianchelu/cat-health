@@ -16,10 +16,10 @@ import DeviceAnnotationPage from './pages/devices/DeviceAnnotationPage.tsx';
 import Settings from './pages/settings/Settings.tsx';
 import LanguageRegionPage from './pages/settings/LanguageRegionPage.tsx';
 import AddEditPetPage from './pages/settings/AddEditPetPage.tsx';
+import ProviderWizardPage from './pages/settings/provider-wizard/ProviderWizardPage';
 import ProvidersPage from './pages/settings/providers/ProvidersPage';
 import ConnectProviderPage from './pages/settings/providers/ConnectProviderPage';
 import ProviderAccountPage from './pages/settings/providers/ProviderAccountPage';
-import AddDevicePage from './pages/settings/AddDevicePage.tsx';
 import AddEditFoodPage from './pages/settings/AddEditFoodPage.tsx';
 import EditDevicePage from './pages/settings/EditDevicePage.tsx';
 
@@ -54,7 +54,10 @@ const router = createBrowserRouter(
         { path: '/settings/providers', element: <ProvidersPage /> },
         { path: '/settings/providers/new', element: <ConnectProviderPage /> },
         { path: '/settings/providers/:id', element: <ProviderAccountPage /> },
-        { path: '/settings/devices/new', element: <AddDevicePage /> },
+        {
+          path: '/settings/devices/new',
+          element: <ProviderWizardPage entry="add-device" />,
+        },
         { path: '/settings/devices/:id', element: <EditDevicePage /> },
         { path: '/settings/foods/new', element: <AddEditFoodPage /> },
         { path: '/settings/foods/:id', element: <AddEditFoodPage /> },
