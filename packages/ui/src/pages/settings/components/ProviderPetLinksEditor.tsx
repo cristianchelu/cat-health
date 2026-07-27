@@ -87,15 +87,19 @@ const ProviderPetLinksEditor: React.FC<ProviderPetLinksEditorProps> = ({
   ];
 
   const updateLink = (externalPetId: string, petId: number) => {
-    setPetIdOverrides((prev) => {
-      const nextOverrides = { ...prev, [externalPetId]: petId };
-      const nextDisplay = baseLinks.map((link) => ({
-        ...link,
-        pet_id: nextOverrides[link.external_pet_id] ?? link.pet_id,
-      }));
-      onChange(petLinksForSave(nextDisplay));
-      return nextOverrides;
-    });
+    /*
+     * `onChange` sets state in the parent, so it stays out of the updater
+     * callback: React invokes updaters during render and twice under
+     * StrictMode, which would both warn and double-fire the parent's setter.
+     */
+    const nextOverrides = { ...petIdOverrides, [externalPetId]: petId };
+    setPetIdOverrides(nextOverrides);
+
+    const nextDisplay = baseLinks.map((link) => ({
+      ...link,
+      pet_id: nextOverrides[link.external_pet_id] ?? link.pet_id,
+    }));
+    onChange(petLinksForSave(nextDisplay));
   };
 
   if (isLoading) {
