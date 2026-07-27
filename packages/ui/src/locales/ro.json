@@ -286,7 +286,10 @@
     "select_account_subtitle": "Vom scana contul ales pentru dispozitive noi.",
     "your_connected_providers": "Providerii tăi conectați",
     "add_without_cloud_account": "Adaugă fără cont cloud",
-    "provider_missing_hint": "Nu vezi providerul? Conectează unul mai întâi în"
+    "provider_missing_hint": "Nu vezi providerul? Conectează unul mai întâi în",
+    "integrations": "Integrări",
+    "loading_devices": "Se încarcă dispozitivele...",
+    "error_loading_devices": "Nu s-au putut încărca dispozitivele"
   },
   "common": {
     "loading": "Se încarcă...",

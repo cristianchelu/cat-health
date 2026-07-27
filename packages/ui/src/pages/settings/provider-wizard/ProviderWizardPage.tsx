@@ -133,7 +133,9 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
   });
 
   const exit = React.useCallback(() => {
-    void navigate(entry === 'connect' ? '/settings/providers' : '/settings');
+    void navigate(
+      entry === 'connect' ? '/settings/providers' : '/settings/devices',
+    );
   }, [entry, navigate]);
 
   /** Where a connect flow lands once its remaining steps are exhausted. */

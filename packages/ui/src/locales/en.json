@@ -339,7 +339,10 @@
     "select_account_subtitle": "We'll scan the account you pick for anything new.",
     "your_connected_providers": "Your connected providers",
     "add_without_cloud_account": "Add without a cloud account",
-    "provider_missing_hint": "Don't see a provider? Connect one first under"
+    "provider_missing_hint": "Don't see a provider? Connect one first under",
+    "integrations": "Integrations",
+    "loading_devices": "Loading devices...",
+    "error_loading_devices": "Could not load devices"
   },
   "common": {
     "loading": "Loading...",

@@ -4,7 +4,6 @@ import { useDevices, useProviderAccounts } from '@/hooks/queries/deviceQueries';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import Avatar from '@/components/ui/Avatar';
-import { getDeviceIcon } from '@/components/icons/deviceIcons';
 import { CardList, CardListItem, CardListContent } from './components/CardList';
 import {
   Plus,
@@ -13,6 +12,7 @@ import {
   Smartphone,
   Database,
   Cat,
+  Plug,
   Server,
   Drumstick,
   Timer,
@@ -33,7 +33,7 @@ import './Settings.css';
 const Settings: React.FC = () => {
   const { t } = useTranslation();
   const { pets } = usePetContext();
-  const { data: devices = [] } = useDevices();
+  const devicesQuery = useDevices();
   const accountsQuery = useProviderAccounts();
   const { data: foods = [] } = useFoods();
   const { data: settings } = useSettings();
@@ -45,6 +45,7 @@ const Settings: React.FC = () => {
    */
   const visibleAccountCount = accountsQuery.data?.filter((a) => !a.internal)
     .length;
+  const deviceCount = devicesQuery.data?.length;
 
   const trackingGapBaseline = String(
     settings?.tracking_gap_threshold_minutes ?? '',
@@ -115,9 +116,14 @@ const Settings: React.FC = () => {
             </CardListItem>
           </CardList>
         </section>
+        {/*
+         * Providers and devices are two views of the same thing — what feeds
+         * data in — so they share a section rather than each owning a heading
+         * with a single row under it.
+         */}
         <section>
-          <SectionHeader icon={<Server size="1em" />}>
-            {t('settings.providers')}
+          <SectionHeader icon={<Plug size="1em" />}>
+            {t('settings.integrations')}
           </SectionHeader>
           <CardList>
             <CardListItem icon={<Server size="1em" />} to="/settings/providers">
@@ -135,42 +141,19 @@ const Settings: React.FC = () => {
                 }
               />
             </CardListItem>
-          </CardList>
-        </section>
-        <section>
-          <SectionHeader icon={<Smartphone size="1em" />}>
-            {t('settings.devices')}
-          </SectionHeader>
-          <CardList>
-            {devices.map((device) => {
-              const icon = getDeviceIcon(
-                device.type,
-                <SettingsIcon size="1em" />,
-              );
-              return (
-                <CardListItem
-                  key={device.id}
-                  icon={icon}
-                  to={`/settings/devices/${device.id}`}
-                >
-                  <CardListContent
-                    title={device.name}
-                    description={t(`device_types.${device.type}`)}
-                  />
-                </CardListItem>
-              );
-            })}
             <CardListItem
-              icon={
-                <div className="add-item-icon">
-                  <Plus size="0.5em" />
-                </div>
-              }
-              to="/settings/devices/new"
+              icon={<Smartphone size="1em" />}
+              to="/settings/devices"
             >
               <CardListContent
-                title={t('settings.add_device')}
-                description={t('settings.add_device_desc')}
+                title={t('settings.devices')}
+                description={
+                  devicesQuery.isError
+                    ? t('settings.error_loading_devices')
+                    : deviceCount === undefined
+                      ? undefined
+                      : t('settings.device_count', { count: deviceCount })
+                }
               />
             </CardListItem>
           </CardList>

@@ -19,6 +19,7 @@ import AddEditPetPage from './pages/settings/AddEditPetPage.tsx';
 import ProviderWizardPage from './pages/settings/provider-wizard/ProviderWizardPage';
 import ProvidersPage from './pages/settings/providers/ProvidersPage';
 import ProviderAccountPage from './pages/settings/providers/ProviderAccountPage';
+import DevicesPage from './pages/settings/devices/DevicesPage';
 import AddEditFoodPage from './pages/settings/AddEditFoodPage.tsx';
 import EditDevicePage from './pages/settings/EditDevicePage.tsx';
 
@@ -56,6 +57,7 @@ const router = createBrowserRouter(
           element: <ProviderWizardPage entry="connect" />,
         },
         { path: '/settings/providers/:id', element: <ProviderAccountPage /> },
+        { path: '/settings/devices', element: <DevicesPage /> },
         {
           path: '/settings/devices/new',
           element: <ProviderWizardPage entry="add-device" />,
