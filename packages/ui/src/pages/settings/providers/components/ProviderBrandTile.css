@@ -8,6 +8,14 @@
   letter-spacing: -0.02em;
   line-height: 1;
 
+  /*
+   * Drawn, not written: generated content stays out of the DOM, so the
+   * monogram can never leak into a wrapping <label>'s accessible name.
+   */
+  &[data-monogram]::before {
+    content: attr(data-monogram);
+  }
+
   .provider-brand-tile-icon {
     width: 55%;
     height: 55%;

@@ -25,6 +25,10 @@ export interface DiscoveryCandidate {
  *
  * Unsupported hardware is described rather than hidden: silently dropping a
  * device the user can see in the vendor's own app reads as a bug.
+ *
+ * `externalId` is deduplicated (first occurrence wins) because it is the row
+ * identity downstream: a provider echoing the same device twice would otherwise
+ * produce duplicate React keys and a single toggle flipping both rows.
  */
 export function describeCandidates(
   discovered: DiscoveredDeviceDTO[],
@@ -33,18 +37,25 @@ export function describeCandidates(
   supportedTypes: readonly DeviceType[],
 ): DiscoveryCandidate[] {
   const supported = new Set(supportedTypes);
+  const seen = new Set<string>();
+  const candidates: DiscoveryCandidate[] = [];
 
-  return discovered.map((device) => {
+  for (const device of discovered) {
+    if (seen.has(device.externalId)) continue;
+    seen.add(device.externalId);
+
     if (isAlreadyAdded(existingDevices, accountId, device)) {
       // Checked first: a device already imported is not interesting to the
       // user even if its type also happens to be unsupported.
-      return { device, disabledReason: 'already-added' };
+      candidates.push({ device, disabledReason: 'already-added' });
+    } else if (!supported.has(device.type)) {
+      candidates.push({ device, disabledReason: 'unsupported' });
+    } else {
+      candidates.push({ device });
     }
-    if (!supported.has(device.type)) {
-      return { device, disabledReason: 'unsupported' };
-    }
-    return { device };
-  });
+  }
+
+  return candidates;
 }
 
 export interface ImportOutcome {

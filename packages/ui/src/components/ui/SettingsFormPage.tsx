@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { LoadingState } from '@/components/ui/PageState';
-import { PageBackLink, type PageBackLinkProps } from '@/components/ui/PageBackLink';
 import { cn } from '@/lib/utils';
 import './SettingsFormPage.css';
 
@@ -14,11 +13,6 @@ interface SettingsFormPageProps extends Omit<
   headerActions?: React.ReactNode;
   isLoading?: boolean;
   loadingMessage?: string;
-  /**
-   * Back affordance above the header. When a `mobileTitle` is supplied the
-   * SectionHeader is hidden on mobile, since the back bar already names the page.
-   */
-  back?: PageBackLinkProps;
 }
 
 const SettingsFormPage = React.forwardRef<
@@ -33,7 +27,6 @@ const SettingsFormPage = React.forwardRef<
       headerActions,
       isLoading = false,
       loadingMessage,
-      back,
       children,
       ...props
     },
@@ -41,7 +34,6 @@ const SettingsFormPage = React.forwardRef<
   ) => {
     return (
       <div className={cn('settings-form-page', className)} ref={ref} {...props}>
-        {back && <PageBackLink {...back} />}
         {title != null && (
           <SectionHeader icon={icon} actions={headerActions}>
             {title}

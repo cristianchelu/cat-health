@@ -22,8 +22,6 @@ export type RegisterDeviceFormProps = {
 };
 
 export interface AddDeviceFlow {
-  /** If true, the shell jumps straight from account selection to registration. */
-  skipDiscovery?: boolean;
   /** If true, the user can open registration without picking a discovered row. */
   allowsDirectRegistration?: boolean;
   /**

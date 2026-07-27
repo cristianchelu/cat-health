@@ -33,6 +33,7 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
   const { data: providers = [] } = useProviders();
   const { data: devices = [] } = useDevices();
   const [selected, setSelected] = React.useState<string | null>(null);
+  const headingId = React.useId();
 
   const deviceCounts = React.useMemo(
     () => countDevicesByAccount(devices),
@@ -47,7 +48,12 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
       value: String(account.id),
       title: account.name,
       provider: account.provider,
-      meta: [identity, t('settings.device_count', { count })]
+      disabled: !account.enabled,
+      meta: [
+        identity,
+        t('settings.device_count', { count }),
+        account.enabled ? undefined : t('settings.disabled'),
+      ]
         .filter(Boolean)
         .join(' · '),
     };
@@ -56,17 +62,22 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
   /*
    * An account whose provider isn't registered has no manager behind it, so
    * discovery would fail outright — that's the seeded "Legacy Devices" row.
-   * Disabled accounts are excluded for the same reason.
+   * Nothing about it is actionable here, so it stays out of the list.
    */
-  const usable = accounts.filter(
-    (account) =>
-      account.enabled && providers.some((p) => p.name === account.provider),
+  const known = accounts.filter((account) =>
+    providers.some((p) => p.name === account.provider),
   );
+  /*
+   * A disabled account is listed but not selectable. Hiding it would leave a
+   * user whose only account is switched off in front of an empty picker with
+   * nothing to explain why their account vanished.
+   */
+  const selectable = known.filter((account) => account.enabled);
 
-  const cloudAccounts = usable.filter((a) => !a.internal);
+  const cloudAccounts = known.filter((a) => !a.internal);
   // Internal providers are how local hardware is added — a camera or an
   // ESPHome node has no cloud account behind it.
-  const localAccounts = usable.filter((a) => a.internal);
+  const localAccounts = known.filter((a) => a.internal);
 
   const groups: PickerGroup[] = [];
   if (cloudAccounts.length > 0) {
@@ -82,7 +93,7 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
     });
   }
 
-  const selectedAccount = usable.find((a) => String(a.id) === selected);
+  const selectedAccount = selectable.find((a) => String(a.id) === selected);
   const skipsDiscovery = selectedAccount
     ? (providers.find((p) => p.name === selectedAccount.provider)?.capabilities
         .skip_discovery ?? false)
@@ -90,17 +101,20 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
 
   return (
     <div className="connect-provider-step">
-      <h1>{t('settings.select_account_title')}</h1>
+      <h1 id={headingId}>{t('settings.select_account_title')}</h1>
       <p className="connect-provider-subtitle">
         {t('settings.select_account_subtitle')}
       </p>
 
-      <ProviderPickerList
-        legend={t('settings.select_account_title')}
-        groups={groups}
-        value={selected}
-        onChange={setSelected}
-      />
+      {/* The heading is the prompt; a legend would repeat it to a screen reader. */}
+      {groups.length > 0 && (
+        <ProviderPickerList
+          labelledBy={headingId}
+          groups={groups}
+          value={selected}
+          onChange={setSelected}
+        />
+      )}
 
       <p className="provider-note info">
         <Info size={18} aria-hidden="true" />

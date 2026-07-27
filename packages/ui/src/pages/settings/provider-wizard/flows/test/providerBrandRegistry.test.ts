@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { getProviderBrand } from '../providerBrandRegistry.ts';
+import type { TFunction } from 'i18next';
+
+import {
+  getProviderBrand,
+  providerBrandLabel,
+} from '../providerBrandRegistry.ts';
+
+/** Stand-in for i18next: resolves from a table, else honours `defaultValue`. */
+const fakeT = (table: Record<string, string>) =>
+  ((key: string, options?: { defaultValue?: string }) =>
+    table[key] ?? options?.defaultValue ?? key) as unknown as TFunction;
 
 describe('getProviderBrand', () => {
   it('resolves known providers to a human label', () => {
@@ -32,6 +42,60 @@ describe('getProviderBrand', () => {
     assert.ok(getProviderBrand('thingino').tileTextColor);
   });
 
+  it('uses a theme token for every tile colour', () => {
+    // A raw hex cannot follow the theme, and the one that existed sank into the
+    // background in dark mode.
+    for (const provider of [
+      'surepet',
+      'inference',
+      'esphome',
+      'camera',
+      'thingino',
+      'unknown',
+    ]) {
+      const brand = getProviderBrand(provider);
+      assert.match(brand.tileColor, /^var\(--/, `${provider} tile colour`);
+    }
+  });
+});
+
+describe('providerBrandLabel', () => {
+  const t = fakeT({
+    'device_types.camera': 'Cameră',
+    'common.unknown': 'Necunoscut',
+  });
+
+  it('translates common-noun labels', () => {
+    assert.equal(providerBrandLabel(getProviderBrand('camera'), t), 'Cameră');
+    assert.equal(
+      providerBrandLabel(getProviderBrand('unknown'), t),
+      'Necunoscut',
+    );
+    assert.equal(providerBrandLabel(getProviderBrand(''), t), 'Necunoscut');
+  });
+
+  it('leaves brand names alone', () => {
+    assert.equal(
+      providerBrandLabel(getProviderBrand('surepet'), t),
+      'Sure Petcare',
+    );
+    assert.equal(providerBrandLabel(getProviderBrand('esphome'), t), 'ESPHome');
+  });
+
+  it('falls back to English when the locales lack the key', () => {
+    // A label key must never render as `settings.whatever` on screen.
+    assert.equal(
+      providerBrandLabel(getProviderBrand('inference'), t),
+      'Inference',
+    );
+  });
+
+  it('shows an unrecognised provider key as-is', () => {
+    assert.equal(providerBrandLabel(getProviderBrand('petkit'), t), 'petkit');
+  });
+});
+
+describe('getProviderBrand identities', () => {
   it('exposes an account identity only for providers that have one', () => {
     assert.equal(
       typeof getProviderBrand('surepet').accountIdentity,

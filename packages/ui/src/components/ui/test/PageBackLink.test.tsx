@@ -1,3 +1,4 @@
+import * as React from 'react';
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import { cleanup, screen } from '@testing-library/react';
@@ -75,5 +76,56 @@ describe('PageBackLink', () => {
     );
 
     assert.ok(screen.getByText('Providers'));
+  });
+
+  it('keeps the mobile title a plain span by default', async () => {
+    // Most consumers render their own always-visible heading; promoting this
+    // unconditionally would give those pages two <h1>s.
+    await renderWithProviders(
+      <PageBackLink to="/settings" label="Settings" mobileTitle="Providers" />,
+      { router: { initialEntries: ['/settings/providers'] } },
+    );
+
+    assert.equal(screen.queryByRole('heading'), null);
+    assert.equal(screen.getByText('Providers').tagName, 'SPAN');
+  });
+
+  it('promotes the mobile title to a heading on request', async () => {
+    // Pages whose own <h1> is display:none on mobile need the title bar to
+    // carry the heading, or the accessibility tree has none at that width.
+    await renderWithProviders(
+      <PageBackLink
+        to="/devices"
+        label="Devices"
+        mobileTitle="Main Litterbox"
+        mobileTitleAs="h1"
+      />,
+      { router: { initialEntries: ['/devices/1'] } },
+    );
+
+    const heading = screen.getByRole('heading', { level: 1 });
+    assert.equal(heading.textContent, 'Main Litterbox');
+    assert.ok(heading.classList.contains('page-back-title'));
+  });
+
+  it('forwards its ref and passes wrapper attributes through', async () => {
+    const ref = React.createRef<HTMLDivElement>();
+    await renderWithProviders(
+      <PageBackLink
+        ref={ref}
+        to="/settings"
+        label="Settings"
+        id="providers-back"
+        data-testid="back-bar"
+        aria-label="Breadcrumb"
+      />,
+      { router: { initialEntries: ['/settings/providers'] } },
+    );
+
+    const bar = screen.getByTestId('back-bar');
+    assert.equal(ref.current, bar);
+    assert.equal(bar.id, 'providers-back');
+    assert.equal(bar.getAttribute('aria-label'), 'Breadcrumb');
+    assert.ok(bar.classList.contains('page-back'));
   });
 });

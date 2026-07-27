@@ -9,6 +9,7 @@ import {
   useUpdateProviderAccount,
   useDevices,
 } from '@/hooks/queries/deviceQueries';
+import { isRecord } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { FormInput, FormShell, FormSwitch } from '@/components/ui/form';
 import { LoadingState } from '@/components/ui/PageState';
@@ -21,7 +22,10 @@ import {
   CardListItem,
 } from '../components/CardList';
 import ProviderPetLinksEditor from '../components/ProviderPetLinksEditor';
-import { getProviderBrand } from '../provider-wizard/flows/providerBrandRegistry.ts';
+import {
+  getProviderBrand,
+  providerBrandLabel,
+} from '../provider-wizard/flows/providerBrandRegistry.ts';
 import {
   getAccountConfigModule,
   hasAccountConfigModule,
@@ -33,20 +37,36 @@ import './ProviderAccountPage.css';
 
 const EMPTY_PET_LINKS: ProviderPetLink[] = [];
 
+function isProviderPetLink(value: unknown): value is ProviderPetLink {
+  return (
+    isRecord(value) &&
+    typeof value.external_pet_id === 'string' &&
+    typeof value.pet_id === 'number'
+  );
+}
+
 const ProviderAccountPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const accountId = Number.parseInt(id ?? '0', 10);
+  const parsedId = Number.parseInt(id ?? '', 10);
+  const accountId = Number.isInteger(parsedId) && parsedId > 0 ? parsedId : 0;
 
-  const { data: providers = [] } = useProviders();
+  const { data: providers = [], isLoading: providersLoading } = useProviders();
   const { data: devices = [] } = useDevices();
   const {
     data: account,
-    isLoading,
+    isLoading: accountLoading,
     error: loadError,
-  } = useProviderAccount(accountId, true);
+  } = useProviderAccount(accountId, accountId > 0);
   const updateAccount = useUpdateProviderAccount(accountId);
+
+  /*
+   * Both queries gate the render. `supports_pet_linking` comes from `providers`,
+   * and saving replaces `config` wholesale — so rendering the form before that
+   * query lands would let a save drop every pet link on the account.
+   */
+  const isLoading = accountLoading || providersLoading;
 
   const [serverError, setServerError] = React.useState<string | undefined>();
 
@@ -84,11 +104,22 @@ const ProviderAccountPage: React.FC = () => {
   });
 
   const accountConfig = account?.config;
-  const petLinksBaseline = React.useMemo(() => {
-    if (!supportsPetLinking || !accountConfig) return EMPTY_PET_LINKS;
-    const config = accountConfig as { pet_links?: ProviderPetLink[] };
-    return Array.isArray(config.pet_links) ? config.pet_links : EMPTY_PET_LINKS;
+  const storedPetLinks = React.useMemo(() => {
+    if (!supportsPetLinking || !isRecord(accountConfig)) return EMPTY_PET_LINKS;
+    const stored = accountConfig.pet_links;
+    return Array.isArray(stored) ? stored.filter(isProviderPetLink) : EMPTY_PET_LINKS;
   }, [accountConfig, supportsPetLinking]);
+
+  /*
+   * The editor auto-matches cloud pets onto local profiles and renders those
+   * matches pre-selected, so the screen shows more than `storedPetLinks`. Track
+   * what it resolved and treat that as the baseline, so a save persists what the
+   * user was actually looking at and dirtiness isn't tripped on mount.
+   */
+  const [resolvedPetLinks, setResolvedPetLinks] = React.useState<
+    ProviderPetLink[] | null
+  >(null);
+  const petLinksBaseline = resolvedPetLinks ?? storedPetLinks;
 
   const petLinksBaselineKey = React.useMemo(
     () => JSON.stringify(petLinksBaseline),
@@ -112,7 +143,15 @@ const ProviderAccountPage: React.FC = () => {
   const onSubmit = async (values: ProviderAccountFormValues) => {
     setServerError(undefined);
 
-    const config = configModule.toConfig(values.config);
+    const hasConfigModule = hasAccountConfigModule(provider);
+    /*
+     * A provider on the generic fallback owns no editable config, so its stored
+     * config is carried through rather than flattened to an empty object — it
+     * may still hold pet links, and PATCH replaces config wholesale.
+     */
+    const config = hasConfigModule
+      ? configModule.toConfig(values.config)
+      : { ...(isRecord(account?.config) ? account.config : {}) };
     if (supportsPetLinking) {
       config.pet_links = petLinks;
     }
@@ -121,9 +160,9 @@ const ProviderAccountPage: React.FC = () => {
       await updateAccount.mutateAsync({
         name: values.name,
         enabled: values.enabled,
-        // Providers on the generic fallback own no config, so omit the field
-        // entirely rather than overwriting theirs with an empty object.
-        ...(hasAccountConfigModule(provider) ? { config } : {}),
+        // Omit entirely only when there is nothing of ours to write, so we never
+        // overwrite a provider's config with an empty object.
+        ...(hasConfigModule || supportsPetLinking ? { config } : {}),
       });
       void navigate('/settings/providers');
     } catch (err) {
@@ -176,7 +215,7 @@ const ProviderAccountPage: React.FC = () => {
         <header className="provider-brandhead">
           <ProviderBrandTile provider={provider} size="lg" />
           <div className="provider-brandhead-text">
-            <h1>{brand.label}</h1>
+            <h1>{providerBrandLabel(brand, t)}</h1>
             {identity && <p>{identity}</p>}
           </div>
         </header>
@@ -225,10 +264,10 @@ const ProviderAccountPage: React.FC = () => {
 
       {supportsPetLinking && accountId > 0 && (
         <ProviderPetLinksEditor
-          key={`${accountId}:${petLinksBaselineKey}`}
           accountId={accountId}
-          initialLinks={petLinksBaseline}
+          initialLinks={storedPetLinks}
           onChange={setPetLinks}
+          onBaselineResolved={setResolvedPetLinks}
         />
       )}
 

@@ -14,6 +14,8 @@ interface LinkPetsStepProps {
   onBack: () => void;
   /** Linking is optional — it can be done later from the provider's settings. */
   onSkip?: () => void;
+  /** Lets the shell guard Back once the user has edited a row. */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 /**
@@ -28,9 +30,27 @@ export const LinkPetsStep: React.FC<LinkPetsStepProps> = ({
   onFinish,
   onBack,
   onSkip,
+  onDirtyChange,
 }) => {
   const { t } = useTranslation();
+  /*
+   * Seeded from `initialLinks`, then rebased onto the editor's auto-matched
+   * baseline as soon as the cloud pet list resolves. Finishing must persist what
+   * is actually on screen — the name matches the editor pre-selected — not the
+   * empty list we started with.
+   */
   const [links, setLinks] = React.useState<ProviderPetLink[]>(initialLinks);
+  const [baseline, setBaseline] = React.useState<ProviderPetLink[]>(initialLinks);
+
+  const rebase = React.useCallback((resolved: ProviderPetLink[]) => {
+    setBaseline(resolved);
+    setLinks(resolved);
+  }, []);
+
+  const isDirty = JSON.stringify(links) !== JSON.stringify(baseline);
+  React.useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   return (
     <>
@@ -38,6 +58,7 @@ export const LinkPetsStep: React.FC<LinkPetsStepProps> = ({
         accountId={accountId}
         initialLinks={initialLinks}
         onChange={setLinks}
+        onBaselineResolved={rebase}
       />
 
       <p className="provider-note info">

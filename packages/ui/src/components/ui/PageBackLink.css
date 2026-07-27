@@ -12,9 +12,14 @@
   gap: var(--space-sm);
   margin-bottom: var(--space-md);
 
-  .page-back-iconbtn,
+  .page-back-iconbtn {
+    display: none;
+  }
+
   .page-back-title {
     display: none;
+    /* May be rendered as an <h1> (`mobileTitleAs`) — drop UA heading margins. */
+    margin: 0;
   }
 
   .page-back-link {
@@ -85,19 +90,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-    }
-
-    /*
-     * Sticky needs the gutter bleed too: without it, content scrolls through
-     * the inline padding on either side of the bar's background.
-     */
-    &.page-back--sticky {
-      position: sticky;
-      top: 0;
-      z-index: var(--z-index-sticky);
-      background: var(--color-background);
-      margin-inline: calc(-1 * var(--page-shell-padding-inline));
-      padding-inline: var(--page-shell-padding-inline);
     }
   }
 }

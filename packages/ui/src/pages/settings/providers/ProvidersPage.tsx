@@ -7,13 +7,17 @@ import { useProviderAccounts, useDevices } from '@/hooks/queries/deviceQueries';
 import { PageBackLink } from '@/components/ui/PageBackLink';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { StatusPill } from '@/components/ui/StatusPill';
+import { EmptyState, LoadingState } from '@/components/ui/PageState';
 import { cn } from '@/lib/utils';
 import {
   CardList,
   CardListContent,
   CardListItem,
 } from '../components/CardList';
-import { getProviderBrand } from '../provider-wizard/flows/providerBrandRegistry.ts';
+import {
+  getProviderBrand,
+  providerBrandLabel,
+} from '../provider-wizard/flows/providerBrandRegistry.ts';
 import { ProviderBrandTile } from './components/ProviderBrandTile';
 import { countDevicesByAccount } from './providerListUtils.ts';
 import './ProvidersPage.css';
@@ -27,6 +31,19 @@ const ProviderRow: React.FC<ProviderRowProps> = ({ account, deviceCount }) => {
   const { t } = useTranslation();
   const brand = getProviderBrand(account.provider);
   const identity = brand.accountIdentity?.(account.config);
+  const label = providerBrandLabel(brand, t);
+  /*
+   * The brand tile is decorative, so the service a row belongs to has to be
+   * readable text. Accounts named after their provider (the seeded internal
+   * ones) already say it in the title — repeating it there would just be noise.
+   */
+  const brandLabel =
+    account.name.trim().toLowerCase() === label.toLowerCase() ? null : label;
+  const meta = [
+    brandLabel,
+    identity,
+    t('settings.device_count', { count: deviceCount }),
+  ].filter((part): part is string => Boolean(part));
 
   return (
     <CardListItem
@@ -42,9 +59,14 @@ const ProviderRow: React.FC<ProviderRowProps> = ({ account, deviceCount }) => {
         title={account.name}
         description={
           <span className="provider-row-meta">
-            {identity && <span>{identity}</span>}
-            {identity && <span className="provider-row-sep" aria-hidden="true" />}
-            <span>{t('settings.device_count', { count: deviceCount })}</span>
+            {meta.map((part, index) => (
+              <React.Fragment key={part}>
+                {index > 0 && (
+                  <span className="provider-row-sep" aria-hidden="true" />
+                )}
+                <span>{part}</span>
+              </React.Fragment>
+            ))}
           </span>
         }
       />
@@ -54,16 +76,27 @@ const ProviderRow: React.FC<ProviderRowProps> = ({ account, deviceCount }) => {
 
 const ProvidersPage: React.FC = () => {
   const { t } = useTranslation();
-  const { data: accounts = [] } = useProviderAccounts();
-  const { data: devices = [] } = useDevices();
+  const accountsQuery = useProviderAccounts();
+  const devicesQuery = useDevices();
 
+  const devices = devicesQuery.data;
   const deviceCounts = React.useMemo(
-    () => countDevicesByAccount(devices),
+    () => countDevicesByAccount(devices ?? []),
     [devices],
   );
 
-  const userAccounts = accounts.filter((account) => !account.internal);
-  const systemAccounts = accounts.filter((account) => account.internal);
+  const accounts = accountsQuery.data;
+  const userAccounts = accounts?.filter((account) => !account.internal) ?? [];
+  const systemAccounts = accounts?.filter((account) => account.internal) ?? [];
+
+  /*
+   * Without this the first paint renders the "no providers yet" state and then
+   * swaps to the real list. On a Raspberry Pi that flash lasts long enough to
+   * mis-tap, so wait for both queries: the device counts are part of every row
+   * and "0 devices" is just as wrong as an empty list.
+   */
+  const isLoading = accountsQuery.isPending || devicesQuery.isPending;
+  const error = accountsQuery.error ?? devicesQuery.error;
 
   return (
     <div className="providers-page">
@@ -78,7 +111,7 @@ const ProvidersPage: React.FC = () => {
         actions={
           <Link
             to="/settings/providers/new"
-            className={cn('button', 'primary', 'md')}
+            className={cn('button', 'primary', 'md', 'providers-page-add')}
           >
             <Plus size="1em" />
             {t('settings.add_provider')}
@@ -88,46 +121,49 @@ const ProvidersPage: React.FC = () => {
         {t('settings.providers')}
       </SectionHeader>
 
-      <p className="providers-page-intro">{t('settings.providers_intro')}</p>
-
-      {userAccounts.length > 0 ? (
-        <CardList>
-          {userAccounts.map((account) => (
-            <ProviderRow
-              key={account.id}
-              account={account}
-              deviceCount={deviceCounts.get(account.id) ?? 0}
-            />
-          ))}
-        </CardList>
+      {isLoading ? (
+        <LoadingState message={t('settings.loading_providers')} />
+      ) : error ? (
+        <EmptyState
+          className="providers-page-error"
+          message={t('settings.error_loading_providers')}
+        />
       ) : (
-        <CardList>
-          <CardListItem
-            icon={<Server size="1em" />}
-            to="/settings/providers/new"
-          >
-            <CardListContent
-              title={t('settings.add_provider')}
-              description={t('settings.add_provider_desc')}
-            />
-          </CardListItem>
-        </CardList>
-      )}
+        <>
+          {userAccounts.length > 0 ? (
+            <CardList>
+              {userAccounts.map((account) => (
+                <ProviderRow
+                  key={account.id}
+                  account={account}
+                  deviceCount={deviceCounts.get(account.id) ?? 0}
+                />
+              ))}
+            </CardList>
+          ) : (
+            /*
+             * Deliberately not a tappable "Add provider" card: the header
+             * button (desktop) and the FAB (mobile) are already the one add
+             * affordance on this screen.
+             */
+            <EmptyState message={t('settings.no_providers')} />
+          )}
 
-      {systemAccounts.length > 0 && (
-        <section className="providers-page-system">
-          <h2>{t('settings.system_integrations')}</h2>
-          <p>{t('settings.system_integrations_desc')}</p>
-          <CardList>
-            {systemAccounts.map((account) => (
-              <ProviderRow
-                key={account.id}
-                account={account}
-                deviceCount={deviceCounts.get(account.id) ?? 0}
-              />
-            ))}
-          </CardList>
-        </section>
+          {systemAccounts.length > 0 && (
+            <section className="providers-page-system">
+              <h2>{t('settings.system_integrations')}</h2>
+              <CardList>
+                {systemAccounts.map((account) => (
+                  <ProviderRow
+                    key={account.id}
+                    account={account}
+                    deviceCount={deviceCounts.get(account.id) ?? 0}
+                  />
+                ))}
+              </CardList>
+            </section>
+          )}
+        </>
       )}
 
       <Link

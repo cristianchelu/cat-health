@@ -12,10 +12,5 @@
     .section-header {
       margin-bottom: var(--space-xl);
     }
-
-    /* The back bar's title already names the page — don't say it twice. */
-    &:has(.page-back-title:not(:empty)) > .section-header {
-      display: none;
-    }
   }
 }

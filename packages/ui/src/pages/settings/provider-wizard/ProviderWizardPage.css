@@ -96,21 +96,13 @@
     background-color: var(--color-surface-muted);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    cursor: pointer;
+    /* Hover/pointer live with the row's hit target in DiscoverDevicesStep.css —
+     * the row itself is only interactive for multi-select importable rows. */
     transition: border-color 0.2s;
-
-    &:hover {
-      border-color: var(--color-primary);
-    }
 
     &.disabled {
       opacity: 0.6;
-      cursor: not-allowed;
       background-color: var(--color-surface-highlight);
-
-      &:hover {
-        border-color: var(--color-border);
-      }
     }
 
     .device-info {
@@ -134,13 +126,6 @@
         color: var(--color-text-muted);
         font-family: monospace;
       }
-    }
-
-    .device-status {
-      font-size: var(--text-sm);
-      color: var(--color-text-light);
-      font-style: italic;
-      padding: 0 var(--space-sm);
     }
   }
 

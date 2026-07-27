@@ -1,20 +1,60 @@
-.discover-actions {
-  flex-wrap: wrap;
+.discover-devices-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
 
-  /* Pushes the count to the left of the action buttons. */
-  .discover-selected-count {
-    margin-right: auto;
-    align-self: center;
-    font-size: var(--text-sm);
-    color: var(--color-text-light);
+  /* Keyframes live globally (Card.css), same as PetSelector. */
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
 
-    b {
-      color: var(--color-text);
-      font-weight: var(--font-semibold);
+  /*
+   * Only multi-select rows carry a hit target, so only they get a pointer and
+   * a hover border — a row with nothing to activate must not look clickable.
+   */
+  .discover-row-hit {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+  }
+
+  .device-item:has(> .discover-row-hit:hover) {
+    border-color: var(--color-primary);
+  }
+
+  /* The selection is locked while the import loop walks it. */
+  &[data-importing] {
+    .discover-row-hit {
+      cursor: default;
+    }
+
+    .device-item:has(> .discover-row-hit:hover) {
+      border-color: var(--color-border);
+    }
+  }
+
+  .discover-actions {
+    flex-wrap: wrap;
+
+    /* Pushes the status to the left of the action buttons. */
+    .discover-status {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      margin-right: auto;
+      align-self: center;
+      font-size: var(--text-sm);
+      color: var(--color-text-light);
+
+      b {
+        color: var(--color-text);
+        font-weight: var(--font-semibold);
+      }
     }
   }
 }
 
+/* Shared with LinkPetsStep, so it stays outside .discover-devices-step. */
 .discover-import-error {
   margin: var(--space-md) 0 0;
   padding: var(--space-md);

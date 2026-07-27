@@ -2,7 +2,10 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { useProviders } from '@/hooks/queries/deviceQueries';
-import { getProviderBrand } from '../flows/providerBrandRegistry.ts';
+import {
+  getProviderBrand,
+  providerBrandLabel,
+} from '../flows/providerBrandRegistry.ts';
 import { hasAccountConfigModule } from '../flows/accountConfigRegistry.ts';
 import { ProviderPickerList } from '../components/ProviderPickerList';
 
@@ -26,6 +29,7 @@ export const PickProviderStep: React.FC<PickProviderStepProps> = ({
 }) => {
   const { t } = useTranslation();
   const { data: providers = [] } = useProviders();
+  const headingId = React.useId();
 
   // Internal providers are not user-addable, and a provider with no connect
   // form has nothing to ask for — there is no raw-JSON path any more.
@@ -33,19 +37,20 @@ export const PickProviderStep: React.FC<PickProviderStepProps> = ({
     .filter((p) => !p.internal && hasAccountConfigModule(p.name))
     .map((p) => ({
       value: p.name,
-      title: getProviderBrand(p.name).label,
+      title: providerBrandLabel(getProviderBrand(p.name), t),
       provider: p.name,
     }));
 
   return (
     <div className="connect-provider-step">
-      <h1>{t('settings.pick_provider_title')}</h1>
+      <h1 id={headingId}>{t('settings.pick_provider_title')}</h1>
       <p className="connect-provider-subtitle">
         {t('settings.pick_provider_subtitle')}
       </p>
 
+      {/* The heading is the prompt; a legend would repeat it to a screen reader. */}
       <ProviderPickerList
-        legend={t('settings.pick_provider_title')}
+        labelledBy={headingId}
         groups={[{ options }]}
         value={value}
         onChange={onChange}

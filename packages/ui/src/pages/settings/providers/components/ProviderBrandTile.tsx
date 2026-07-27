@@ -3,19 +3,26 @@ import { cn } from '@/lib/utils';
 import { getProviderBrand } from '../../provider-wizard/flows/providerBrandRegistry.ts';
 import './ProviderBrandTile.css';
 
-interface ProviderBrandTileProps {
+interface ProviderBrandTileProps extends React.ComponentProps<'div'> {
   provider: string;
   /** sm: list rows and picker · md: listing · lg: form brand header. */
   size?: 'sm' | 'md' | 'lg';
-  className?: string;
 }
 
-/** Coloured square carrying a provider's mark or monogram. */
-export const ProviderBrandTile: React.FC<ProviderBrandTileProps> = ({
-  provider,
-  size = 'md',
-  className,
-}) => {
+/**
+ * Coloured square carrying a provider's mark or monogram.
+ *
+ * Purely decorative: callers must render the provider name as real text
+ * themselves. `aria-hidden` alone is not enough — Chrome still folds hidden
+ * subtrees into the accessible name of a wrapping `<label>`, which turned the
+ * picker's SurePet radio into "S Sure Petcare". The monogram is therefore drawn
+ * with a `::before` from `data-monogram` so it is never text content at all,
+ * matching the icon variants that contribute nothing either.
+ */
+const ProviderBrandTile = React.forwardRef<
+  HTMLDivElement,
+  ProviderBrandTileProps
+>(({ provider, size = 'md', className, ...props }, ref) => {
   const brand = getProviderBrand(provider);
   const Icon = brand.Icon;
 
@@ -28,9 +35,16 @@ export const ProviderBrandTile: React.FC<ProviderBrandTileProps> = ({
         backgroundColor: brand.tileColor,
         color: brand.tileTextColor ?? 'var(--color-white)',
       }}
+      data-monogram={Icon ? undefined : brand.monogram}
       aria-hidden="true"
+      ref={ref}
+      {...props}
     >
-      {Icon ? <Icon className="provider-brand-tile-icon" /> : brand.monogram}
+      {Icon ? <Icon className="provider-brand-tile-icon" /> : null}
     </div>
   );
-};
+});
+
+ProviderBrandTile.displayName = 'ProviderBrandTile';
+
+export { ProviderBrandTile, type ProviderBrandTileProps };

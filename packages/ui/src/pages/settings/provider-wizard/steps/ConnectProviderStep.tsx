@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/Button';
 import { FormInput, FormShell } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form';
 import { ProviderBrandTile } from '../../providers/components/ProviderBrandTile';
-import { getProviderBrand } from '../flows/providerBrandRegistry.ts';
+import {
+  getProviderBrand,
+  providerBrandLabel,
+} from '../flows/providerBrandRegistry.ts';
 import { getAccountConfigModule } from '../flows/accountConfigRegistry.ts';
 import type { ProviderAccountFormValues } from '../flows/accountConfigTypes.ts';
 
@@ -18,6 +21,8 @@ interface ConnectProviderStepProps {
     name: string;
     config: Record<string, unknown>;
   }) => Promise<void> | void;
+  /** Returns to the provider picker. The header control abandons the wizard. */
+  onBack: () => void;
   onDirtyChange?: (dirty: boolean) => void;
 }
 
@@ -34,10 +39,11 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
   serverError,
   submitLabel,
   onSubmit,
+  onBack,
   onDirtyChange,
 }) => {
   const { t } = useTranslation();
-  const brand = getProviderBrand(provider);
+  const label = providerBrandLabel(getProviderBrand(provider), t);
   const configModule = getAccountConfigModule(provider);
   const Fields = configModule.Fields;
 
@@ -46,9 +52,10 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
     handleSubmit,
     formState: { isDirty },
   } = useAppForm<ProviderAccountFormValues>({
+    // No `enabled`: POST /devices/accounts always creates an enabled account
+    // and does not read the field, so a default here would be a dead control.
     defaultValues: {
-      name: brand.label,
-      enabled: true,
+      name: label,
       config: configModule.defaultConfigValues,
     },
   });
@@ -64,9 +71,7 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
         <header className="provider-brandhead">
           <ProviderBrandTile provider={provider} size="lg" />
           <div className="provider-brandhead-text">
-            <h1>
-              {t('settings.connect_provider_title', { provider: brand.label })}
-            </h1>
+            <h1>{t('settings.connect_provider_title', { provider: label })}</h1>
             <p>{t('settings.connect_provider_subtitle')}</p>
           </div>
         </header>
@@ -81,6 +86,14 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
           error={serverError}
           actionsSlot={
             <div className="form-actions">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onBack}
+                disabled={isSubmitting}
+              >
+                {t('settings.back')}
+              </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {submitLabel}
               </Button>

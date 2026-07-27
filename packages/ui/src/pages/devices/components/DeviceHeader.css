@@ -41,26 +41,9 @@
           color: var(--color-text-subtle);
         }
 
-        .device-type,
-        .device-provider {
+        /* Raw device-type key; the provider label comes pre-cased. */
+        .device-type {
           text-transform: capitalize;
-        }
-
-        .device-status {
-          text-transform: capitalize;
-          font-weight: var(--font-medium);
-
-          &.online {
-            color: var(--color-success);
-          }
-
-          &.offline {
-            color: var(--color-text-muted);
-          }
-
-          &.error {
-            color: var(--color-error);
-          }
         }
       }
     }
@@ -125,7 +108,11 @@
     align-items: stretch;
     gap: var(--space-sm);
 
-    /* The back bar already shows the device name — don't say it twice. */
+    /*
+     * The back bar already shows the device name — don't say it twice. It
+     * renders as the page's <h1> at this width (`mobileTitleAs`), so hiding
+     * this one leaves the heading intact for assistive tech.
+     */
     .device-name {
       display: none;
     }

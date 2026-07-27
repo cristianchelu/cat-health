@@ -43,7 +43,13 @@ const ADD_DEVICE_STEPS: WizardPlanStep[] = [
  *
  *   discovery + linking   pick > connect > discover > link-pets
  *   discovery only        pick > connect > discover
- *   skip_discovery        pick > connect
+ *   linking only          pick > connect > link-pets
+ *   neither               pick > connect
+ *
+ * Discovery is gated on `supports_discovery` being explicitly true, not on
+ * `skip_discovery` being absent: a provider that declares neither flag has not
+ * claimed it can discover anything, and offering the step anyway strands the
+ * user on an empty result with no way forward.
  *
  * Branching is on capabilities, never on provider name, per AGENTS.md.
  */
@@ -62,7 +68,7 @@ export function buildWizardPlan(
     { id: 'connect', labelKey: 'settings.step_connect' },
   ];
 
-  if (!capabilities.skip_discovery) {
+  if (capabilities.supports_discovery && !capabilities.skip_discovery) {
     steps.push({ id: 'discover', labelKey: 'settings.step_discover_devices' });
   }
 
@@ -73,10 +79,32 @@ export function buildWizardPlan(
   return { entry, steps };
 }
 
-/** 1-based index for the Stepper. Falls back to the first step when unknown. */
+/** Whether the plan actually contains a step, so navigation can't skip one it promised. */
+export function planHasStep(
+  plan: WizardPlan | null,
+  step: WizardStep,
+): boolean {
+  return plan?.steps.some((planStep) => planStep.id === step) ?? false;
+}
+
+/**
+ * 1-based index for the Stepper.
+ *
+ * `register` is not a planned step in the connect flow — it's a detour off
+ * discovery for providers that register one device at a time. Report it at
+ * discovery's position rather than falling back to step 1, which would make the
+ * stepper jump backwards mid-flow.
+ */
 export function getVisualStep(plan: WizardPlan, state: WizardState): number {
   const index = plan.steps.findIndex((step) => step.id === state.step);
-  return index === -1 ? 1 : index + 1;
+  if (index !== -1) return index + 1;
+
+  if (state.step === 'register') {
+    const discoverIndex = plan.steps.findIndex((s) => s.id === 'discover');
+    if (discoverIndex !== -1) return discoverIndex + 1;
+  }
+
+  return 1;
 }
 
 /**
@@ -84,6 +112,12 @@ export function getVisualStep(plan: WizardPlan, state: WizardState): number {
  *
  * A `skip-discovery` source never passed through discovery, so backing out of
  * registration must skip it too rather than landing on a step the user never saw.
+ *
+ * Backing past `connect` is deliberately `'exit'`, not `pick`. By the time a
+ * later step is on screen the account has already been created, and there is no
+ * DELETE for provider accounts — returning to the picker would let the user fill
+ * the credential form again and create a second, identical, permanently orphaned
+ * account. The shell sends this `'exit'` to the account that was just created.
  */
 export function getBackTarget(
   plan: WizardPlan | null,
@@ -105,14 +139,14 @@ export function getBackTarget(
     case 'pick':
       return { step: 'pick' };
     case 'connect':
-      // The provider is implied by the account we just created; the shell
-      // re-derives it, so `pick` is the honest destination here.
-      return { step: 'pick' };
+      return 'exit';
     case 'discover':
-      return {
-        step: 'discover',
-        accountId: 'accountId' in state ? state.accountId : 0,
-      };
+      // Only reachable from a step that carries an account, but don't invent a
+      // sentinel id if that ever stops being true — a discover step with
+      // `accountId: 0` renders a permanently blank page.
+      return 'accountId' in state
+        ? { step: 'discover', accountId: state.accountId }
+        : 'exit';
     default:
       return 'exit';
   }

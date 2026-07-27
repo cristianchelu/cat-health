@@ -6,6 +6,14 @@ import type { GetDeviceResponseDTO } from 'shared';
 import { Button } from '@/components/ui/Button';
 import { PageBackLink } from '@/components/ui/PageBackLink';
 import {
+  StatusPill,
+  type StatusPillVariant,
+} from '@/components/ui/StatusPill';
+import {
+  getProviderBrand,
+  providerBrandLabel,
+} from '@/pages/settings/provider-wizard/flows/providerBrandRegistry.ts';
+import {
   coerceEpochDate,
   formatRelativeTimeAgo,
   isMeaningfulLastSeen,
@@ -20,6 +28,14 @@ interface DeviceHeaderProps {
   className?: string;
 }
 
+const STATUS_VARIANTS: Record<string, StatusPillVariant> = {
+  online: 'ok',
+  offline: 'off',
+  error: 'error',
+};
+
+const formatType = (type: string) => type.replace(/_/g, ' ');
+
 export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
   device,
   className,
@@ -27,10 +43,6 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { formatDateTime, dateFnsLocale } = useFormatters();
-
-  const formatType = (type: string) => {
-    return type.replace(/_/g, ' ');
-  };
 
   const lastSeenCandidate = device.last_seen
     ? coerceEpochDate(device.last_seen)
@@ -56,10 +68,16 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
 
   return (
     <>
+      {/*
+        `mobileTitleAs` matters here: `.device-name` is `display: none` below
+        767px, which drops it out of the accessibility tree. Promoting the back
+        bar's title keeps exactly one <h1> per breakpoint.
+      */}
       <PageBackLink
         to="/devices"
         label={t('navigation.devices')}
         mobileTitle={device.name}
+        mobileTitleAs="h1"
       />
       <div className={cn('device-header', className)}>
         <div className="device-header-main">
@@ -70,10 +88,13 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
             <div className="device-meta">
               <span className="device-type">{formatType(device.type)}</span>
               <span className="separator">•</span>
-              <span className="device-provider">{device.provider}</span>
+              <span className="device-provider">
+                {providerBrandLabel(getProviderBrand(device.provider), t)}
+              </span>
               <span className="separator">•</span>
-              <span
-                className={cn('device-status', device.status)}
+              <StatusPill
+                variant={STATUS_VARIANTS[device.status ?? ''] ?? 'neutral'}
+                dot
                 title={
                   device.status === 'offline' && lastSeenAbsolute
                     ? lastSeenAbsolute
@@ -81,7 +102,7 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
                 }
               >
                 {statusLabel}
-              </span>
+              </StatusPill>
             </div>
           </div>
         </div>

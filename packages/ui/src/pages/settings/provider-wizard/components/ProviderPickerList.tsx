@@ -22,8 +22,12 @@ interface ProviderPickerListProps {
   groups: PickerGroup[];
   value: string | null;
   onChange: (value: string) => void;
-  /** Accessible name for the whole radio group. */
-  legend: string;
+  /**
+   * Id of the visible heading that already asks the question. The group is
+   * named by reference rather than by its own legend, so the prompt is not
+   * announced twice.
+   */
+  labelledBy: string;
   name?: string;
 }
 
@@ -38,12 +42,11 @@ export const ProviderPickerList: React.FC<ProviderPickerListProps> = ({
   groups,
   value,
   onChange,
-  legend,
+  labelledBy,
   name = 'provider-picker',
 }) => {
   return (
-    <fieldset className="provider-picker">
-      <legend className="sr-only">{legend}</legend>
+    <fieldset className="provider-picker" aria-labelledby={labelledBy}>
       {groups.map((group, groupIndex) => (
         <div className="provider-picker-group" key={group.label ?? groupIndex}>
           {group.label && (

@@ -11,17 +11,19 @@ interface StatusPillProps extends React.ComponentProps<'span'> {
 }
 
 /** Small rounded status label. Provider-agnostic — the caller picks the variant. */
-const StatusPill: React.FC<StatusPillProps> = ({
-  variant = 'neutral',
-  dot = false,
-  className,
-  children,
-  ...props
-}) => (
-  <span className={cn('status-pill', variant, className)} {...props}>
-    {dot && <span className="status-pill-dot" aria-hidden="true" />}
-    {children}
-  </span>
+const StatusPill = React.forwardRef<HTMLSpanElement, StatusPillProps>(
+  ({ variant = 'neutral', dot = false, className, children, ...props }, ref) => (
+    <span
+      className={cn('status-pill', variant, className)}
+      ref={ref}
+      {...props}
+    >
+      {dot && <span className="status-pill-dot" aria-hidden="true" />}
+      {children}
+    </span>
+  ),
 );
+
+StatusPill.displayName = 'StatusPill';
 
 export { StatusPill, type StatusPillProps, type StatusPillVariant };

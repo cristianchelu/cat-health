@@ -17,6 +17,8 @@ import {
   useDevices,
 } from '@/hooks/queries/deviceQueries';
 import { Server, Smartphone } from 'lucide-react';
+import { isRecord } from '@/lib/utils';
+import { useUnsavedBlocker } from '@/hooks/form';
 import { PageBackLink } from '@/components/ui/PageBackLink';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
@@ -32,6 +34,7 @@ import {
   buildWizardPlan,
   getBackTarget,
   getVisualStep,
+  planHasStep,
   sourceKey,
 } from './wizardPlan';
 import { importDevices } from './importSelection';
@@ -40,6 +43,16 @@ import './ProviderWizardPage.css';
 
 interface ProviderWizardPageProps {
   entry: WizardEntry;
+}
+
+const EMPTY_PET_LINKS: ProviderPetLink[] = [];
+
+function isProviderPetLink(value: unknown): value is ProviderPetLink {
+  return (
+    isRecord(value) &&
+    typeof value.external_pet_id === 'string' &&
+    typeof value.pet_id === 'number'
+  );
 }
 
 /**
@@ -67,7 +80,9 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
   );
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [stepDirty, setStepDirty] = React.useState(false);
-  const [discardOpen, setDiscardOpen] = React.useState(false);
+  const [pendingLeave, setPendingLeave] = React.useState<
+    (() => void) | null
+  >(null);
   const [isImporting, setIsImporting] = React.useState(false);
 
   const activeAccountId = 'accountId' in state ? state.accountId : null;
@@ -91,6 +106,23 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
 
   const plan = buildWizardPlan(entry, capabilities);
 
+  /*
+   * Normally empty — the connect flow creates the account moments earlier. It
+   * matters when re-entering an account that already has links: the editor seeds
+   * its auto-match from these, so a prior link keeps its local pet and metadata
+   * instead of being re-guessed from the name.
+   */
+  const existingPetLinks = React.useMemo<ProviderPetLink[]>(() => {
+    const config = account?.config;
+    if (!isRecord(config) || !Array.isArray(config.pet_links)) {
+      return EMPTY_PET_LINKS;
+    }
+    return config.pet_links.filter(isProviderPetLink);
+  }, [account?.config]);
+
+  const { blockerOpen, onConfirmLeave, onCancelLeave } =
+    useUnsavedBlocker(stepDirty);
+
   const {
     data: discoveredDevices,
     isLoading,
@@ -112,42 +144,61 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
     [navigate],
   );
 
-  const goBack = () => {
+  /**
+   * Abandon the wizard.
+   *
+   * Once the account exists, leaving lands on that account rather than the list:
+   * it was created, it can't be deleted, and dropping the user on the index
+   * makes a completed step look like it didn't happen.
+   */
+  const leaveWizard = React.useCallback(() => {
+    if (entry === 'connect' && activeAccountId != null) {
+      finishConnect(activeAccountId);
+      return;
+    }
+    exit();
+  }, [entry, activeAccountId, exit, finishConnect]);
+
+  const goBackNow = () => {
     const target = getBackTarget(plan, state);
     setServerError(null);
     setStepDirty(false);
     if (target === 'exit') {
-      exit();
+      leaveWizard();
       return;
     }
     setState(target);
   };
 
   /**
-   * The single back/exit control. On the first step it leaves the wizard; on
-   * later steps it walks back through the plan. Guarded when the current step
-   * holds unsaved input.
+   * Every way of leaving the current step routes through here, so a step that
+   * holds unsaved input always gets one confirm — and confirming goes where the
+   * control the user actually clicked said it would, instead of always exiting.
    */
-  const handleCancel = () => {
+  const requestLeave = (proceed: () => void) => {
     if (stepDirty) {
-      setDiscardOpen(true);
+      setPendingLeave(() => proceed);
       return;
     }
-    goBack();
+    proceed();
   };
+
+  const goBack = () => requestLeave(goBackNow);
 
   const title =
     entry === 'connect'
       ? t('settings.add_provider')
       : t('settings.add_device_title');
 
-  /** Where back goes, so the label never lies about the destination. */
-  const backLabel =
-    plan && getVisualStep(plan, state) > 1
-      ? t('settings.back')
-      : entry === 'connect'
-        ? t('settings.providers')
-        : t('navigation.settings');
+  /*
+   * The header control abandons the wizard; the footer `Back` walks the plan
+   * (AGENTS.md: "header Cancel still means abandon", "Wizards keep Back +
+   * Continue/Register labels via FormActions"). Labelling the header with its
+   * destination rather than "Back" keeps the two from reading as duplicates of
+   * each other.
+   */
+  const leaveLabel =
+    entry === 'connect' ? t('settings.providers') : t('navigation.settings');
 
   /** Advance past a step that has no work left for the current provider. */
   const afterDiscovery = (accountId: number) => {
@@ -165,14 +216,19 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
     if (!pickedProvider) return;
     setServerError(null);
     try {
-      setStepDirty(false);
       const created = await createAccount.mutateAsync({
         provider: pickedProvider,
         name: values.name,
         config: values.config,
       });
-      if (capabilities?.skip_discovery) {
-        finishConnect(created.id);
+      // Only once the credentials are safely persisted. Clearing it before the
+      // await left a failed connect with the typed credentials still on screen
+      // but the guard permanently off, so Back silently discarded them.
+      setStepDirty(false);
+      // Route through the plan rather than the raw flag, so a provider that
+      // skips discovery but links pets still gets the step the stepper promised.
+      if (!planHasStep(plan, 'discover')) {
+        afterDiscovery(created.id);
         return;
       }
       setState({ step: 'discover', accountId: created.id });
@@ -257,7 +313,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
     try {
       await updateAccount.mutateAsync({
         config: {
-          ...(account.config as Record<string, unknown>),
+          ...(isRecord(account.config) ? account.config : {}),
           pet_links: links,
         },
       });
@@ -284,13 +340,14 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
   return (
     <div className="provider-wizard-page">
       {/*
-       * The only back/exit affordance in the wizard. A header Cancel plus a
-       * footer Cancel plus this would be three ways to leave the same screen.
+       * Abandons the wizard — never a step-back. Steps own their own `Back` in
+       * FormActions, so this is labelled with where it lands instead of
+       * duplicating that word.
        */}
       <PageBackLink
-        label={backLabel}
+        label={leaveLabel}
         mobileTitle={title}
-        onNavigate={handleCancel}
+        onNavigate={() => requestLeave(leaveWizard)}
       />
 
       <SectionHeader
@@ -353,6 +410,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
                 : t('settings.connect')
             }
             onSubmit={handleConnectSubmit}
+            onBack={goBack}
             onDirtyChange={setStepDirty}
           />
         </div>
@@ -407,24 +465,33 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
         <div className="step-container">
           <LinkPetsStep
             accountId={state.accountId}
-            initialLinks={[]}
+            initialLinks={existingPetLinks}
             isSaving={updateAccount.isPending}
             serverError={serverError}
             onFinish={handleFinishLinking}
             onBack={goBack}
             onSkip={() => finishConnect(state.accountId)}
+            onDirtyChange={setStepDirty}
           />
         </div>
       )}
 
       <DiscardUnsavedDialog
-        open={discardOpen}
+        open={pendingLeave !== null}
         onConfirm={() => {
-          setDiscardOpen(false);
+          const proceed = pendingLeave;
+          setPendingLeave(null);
           setStepDirty(false);
-          exit();
+          proceed?.();
         }}
-        onCancel={() => setDiscardOpen(false)}
+        onCancel={() => setPendingLeave(null)}
+      />
+
+      {/* Router-level guard: the header control is not the only way out. */}
+      <DiscardUnsavedDialog
+        open={blockerOpen}
+        onConfirm={onConfirmLeave}
+        onCancel={onCancelLeave}
       />
     </div>
   );

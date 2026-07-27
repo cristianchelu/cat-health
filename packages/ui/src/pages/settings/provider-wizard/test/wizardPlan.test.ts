@@ -6,6 +6,7 @@ import {
   buildWizardPlan,
   getBackTarget,
   getVisualStep,
+  planHasStep,
   sourceKey,
 } from '../wizardPlan.ts';
 
@@ -23,6 +24,18 @@ const SKIP_DISCOVERY: ProviderCapabilities = {
 const DISCOVERY_ONLY: ProviderCapabilities = {
   supports_discovery: true,
   supported_device_types: ['litterbox'],
+};
+
+/** Nothing to discover, but pets still need mapping. */
+const LINKING_ONLY: ProviderCapabilities = {
+  skip_discovery: true,
+  supports_pet_linking: true,
+  supported_device_types: ['feeder'],
+};
+
+/** Declares no discovery capability at all — not the same as opting out of it. */
+const NO_CAPABILITY_FLAGS: ProviderCapabilities = {
+  supported_device_types: ['camera'],
 };
 
 const stepIds = (capabilities: ProviderCapabilities, entry = 'connect') =>
@@ -72,6 +85,28 @@ describe('buildWizardPlan', () => {
       !stepIds(DISCOVERY_AND_LINKING, 'add-device')?.includes('link-pets'),
     );
   });
+
+  it('plans linking without discovery', () => {
+    // The combination the plan claims to handle: nothing to import, but pets
+    // still have to be mapped. Previously the stepper promised the step and
+    // navigation jumped straight past it to the account page.
+    assert.deepEqual(stepIds(LINKING_ONLY), ['pick', 'connect', 'link-pets']);
+  });
+
+  it('does not offer discovery to a provider that never claimed it', () => {
+    // `!skip_discovery` used to be treated as "can discover", which stranded the
+    // user on an empty result with no way forward in the add-device entry.
+    assert.deepEqual(stepIds(NO_CAPABILITY_FLAGS), ['pick', 'connect']);
+  });
+});
+
+describe('planHasStep', () => {
+  it('reports what the stepper actually promised', () => {
+    const linkingOnly = buildWizardPlan('connect', LINKING_ONLY)!;
+    assert.equal(planHasStep(linkingOnly, 'discover'), false);
+    assert.equal(planHasStep(linkingOnly, 'link-pets'), true);
+    assert.equal(planHasStep(null, 'discover'), false);
+  });
 });
 
 describe('getVisualStep', () => {
@@ -89,6 +124,21 @@ describe('getVisualStep', () => {
   it('falls back to the first step for a step outside the plan', () => {
     const plan = buildWizardPlan('connect', SKIP_DISCOVERY)!;
     assert.equal(getVisualStep(plan, { step: 'discover', accountId: 1 }), 1);
+  });
+
+  it('holds a connect-flow registration at discovery instead of jumping to step 1', () => {
+    // `register` is a detour off discovery for providers that register one
+    // device at a time, and is never a planned connect step. Reporting it as
+    // step 1 made the stepper jump backwards in the middle of the flow.
+    const plan = buildWizardPlan('connect', DISCOVERY_AND_LINKING)!;
+    assert.equal(
+      getVisualStep(plan, {
+        step: 'register',
+        accountId: 1,
+        source: { kind: 'direct' },
+      }),
+      3,
+    );
   });
 
   it('lands a skipped-discovery registration on step 3, marking step 2 done', () => {
@@ -130,6 +180,33 @@ describe('getBackTarget', () => {
         source: { kind: 'skip-discovery' },
       }),
       { step: 'pick' },
+    );
+  });
+
+  it('exits rather than returning to the picker once the account exists', () => {
+    // The account was created on the connect step and there is no DELETE for
+    // provider accounts. Going back to `pick` let the user submit the credential
+    // form again, leaving a second identical account that could never be removed.
+    const connectPlan = buildWizardPlan('connect', DISCOVERY_AND_LINKING)!;
+    assert.equal(
+      getBackTarget(connectPlan, { step: 'discover', accountId: 7 }),
+      'exit',
+    );
+  });
+
+  it('steps back from linking to discovery, carrying the account', () => {
+    const connectPlan = buildWizardPlan('connect', DISCOVERY_AND_LINKING)!;
+    assert.deepEqual(
+      getBackTarget(connectPlan, { step: 'link-pets', accountId: 7 }),
+      { step: 'discover', accountId: 7 },
+    );
+  });
+
+  it('exits from linking when the flow had no discovery step', () => {
+    const linkingOnly = buildWizardPlan('connect', LINKING_ONLY)!;
+    assert.equal(
+      getBackTarget(linkingOnly, { step: 'link-pets', accountId: 7 }),
+      'exit',
     );
   });
 

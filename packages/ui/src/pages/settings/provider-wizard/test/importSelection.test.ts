@@ -60,6 +60,42 @@ describe('describeCandidates', () => {
     assert.equal(row.disabledReason, 'already-added');
   });
 
+  it('keeps one row per external id', () => {
+    // externalId is the row identity: a provider echoing the same device twice
+    // would otherwise duplicate React keys and one toggle would flip both.
+    const rows = describeCandidates(
+      [candidate('a'), candidate('a'), candidate('b')],
+      [],
+      1,
+      ['feeder'],
+    );
+    assert.deepEqual(
+      rows.map((r) => r.device.externalId),
+      ['a', 'b'],
+    );
+  });
+
+  it('keeps the first occurrence of a duplicated external id', () => {
+    const first = { ...candidate('a'), name: 'First' };
+    const second = { ...candidate('a'), name: 'Second' };
+    const rows = describeCandidates([first, second], [], 1, ['feeder']);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].device.name, 'First');
+  });
+
+  it('marks everything unsupported when the flow supports no types', () => {
+    const rows = describeCandidates(
+      [candidate('a'), candidate('b')],
+      [],
+      1,
+      [],
+    );
+    assert.deepEqual(
+      rows.map((r) => r.disabledReason),
+      ['unsupported', 'unsupported'],
+    );
+  });
+
   it('leaves importable devices undisabled', () => {
     const rows = describeCandidates([candidate('a'), candidate('b')], [], 1, [
       'feeder',

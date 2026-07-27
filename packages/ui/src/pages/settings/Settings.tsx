@@ -34,12 +34,17 @@ const Settings: React.FC = () => {
   const { t } = useTranslation();
   const { pets } = usePetContext();
   const { data: devices = [] } = useDevices();
-  const { data: accounts = [] } = useProviderAccounts();
+  const accountsQuery = useProviderAccounts();
   const { data: foods = [] } = useFoods();
   const { data: settings } = useSettings();
   const updateSettings = useUpdateSettings();
 
-  const visibleAccounts = accounts.filter((a) => !a.internal);
+  /*
+   * Undefined until the query lands, so the row shows no count at all rather
+   * than claiming "0 connected accounts" on every cold load.
+   */
+  const visibleAccountCount = accountsQuery.data?.filter((a) => !a.internal)
+    .length;
 
   const trackingGapBaseline = String(
     settings?.tracking_gap_threshold_minutes ?? '',
@@ -118,10 +123,16 @@ const Settings: React.FC = () => {
             <CardListItem icon={<Server size="1em" />} to="/settings/providers">
               <CardListContent
                 title={t('settings.providers')}
-                description={t('settings.providers_summary', {
-                  count: visibleAccounts.length,
-                  accounts: visibleAccounts.length,
-                })}
+                description={
+                  accountsQuery.isError
+                    ? t('settings.error_loading_providers')
+                    : visibleAccountCount === undefined
+                      ? undefined
+                      : t('settings.providers_summary', {
+                          count: visibleAccountCount,
+                          accounts: visibleAccountCount,
+                        })
+                }
               />
             </CardListItem>
           </CardList>

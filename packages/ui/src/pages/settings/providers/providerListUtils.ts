@@ -9,9 +9,12 @@ import type { GetDeviceResponseDTO } from 'shared';
  * Accounts with no devices are absent from the map; callers default to 0. That
  * keeps "0 devices" visible in the listing, which is exactly the signal you
  * want for an account whose connect flow was abandoned partway.
+ *
+ * Takes only the field it reads, so tests can build rows without inventing a
+ * whole device DTO (or casting one into existence).
  */
 export function countDevicesByAccount(
-  devices: GetDeviceResponseDTO[],
+  devices: ReadonlyArray<Pick<GetDeviceResponseDTO, 'provider_account_id'>>,
 ): Map<number, number> {
   const counts = new Map<number, number>();
   for (const device of devices) {

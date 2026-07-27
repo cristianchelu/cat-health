@@ -2,13 +2,11 @@
   max-width: var(--max-width-md);
   margin: 0 auto;
 
-  .providers-page-intro {
-    margin: 0 0 var(--space-lg);
-    font-size: var(--text-sm);
-    color: var(--color-text-light);
+  .providers-page-error {
+    color: var(--color-error);
   }
 
-  /* Dot-separated identity + device count under the account name. */
+  /* Dot-separated provider, identity and device count under the account name. */
   .provider-row-meta {
     display: flex;
     align-items: center;
@@ -28,18 +26,12 @@
     margin-top: var(--space-2xl);
 
     h2 {
-      margin: 0 0 var(--space-2xs);
+      margin: 0 0 var(--space-sm);
       font-size: var(--text-sm);
       font-weight: var(--font-semibold);
       color: var(--color-text-light);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-    }
-
-    p {
-      margin: 0 0 var(--space-sm);
-      font-size: var(--text-xs);
-      color: var(--color-text-muted);
     }
   }
 
@@ -49,7 +41,7 @@
 
   @media (max-width: 767px) {
     /* The header button is replaced by a thumb-reachable floating action. */
-    .section-header .button {
+    .providers-page-add {
       display: none;
     }
 

@@ -15,7 +15,19 @@ import './ProviderPetLinksEditor.css';
 interface ProviderPetLinksEditorProps {
   accountId: number;
   initialLinks: ProviderPetLink[];
+  /** A row was edited. Fires only for real user input. */
   onChange: (links: ProviderPetLink[]) => void;
+  /**
+   * The auto-matched baseline resolved (and re-fires if it changes).
+   *
+   * The editor matches cloud pets onto local profiles by name and renders those
+   * matches **pre-selected**, so what's on screen is not `initialLinks`. A
+   * consumer that only listened to `onChange` would save an empty list whenever
+   * the user accepts the matches without touching a dropdown — which is the
+   * common case. Consumers must treat this, not `initialLinks`, as the value to
+   * persist, and as the baseline to measure dirtiness against.
+   */
+  onBaselineResolved?: (links: ProviderPetLink[]) => void;
 }
 
 const UNLINKED_VALUE = '0';
@@ -24,6 +36,7 @@ const ProviderPetLinksEditor: React.FC<ProviderPetLinksEditorProps> = ({
   accountId,
   initialLinks,
   onChange,
+  onBaselineResolved,
 }) => {
   const { t } = useTranslation();
   const { data: localPets = [] } = usePets();
@@ -50,6 +63,20 @@ const ProviderPetLinksEditor: React.FC<ProviderPetLinksEditorProps> = ({
       })),
     [baseLinks, petIdOverrides],
   );
+
+  /*
+   * Kept in a ref so a caller passing an inline arrow doesn't re-fire the
+   * effect below on every render.
+   */
+  const onBaselineResolvedRef = React.useRef(onBaselineResolved);
+  React.useEffect(() => {
+    onBaselineResolvedRef.current = onBaselineResolved;
+  });
+
+  React.useEffect(() => {
+    if (!baseLinks.length) return;
+    onBaselineResolvedRef.current?.(petLinksForSave(baseLinks));
+  }, [baseLinks]);
 
   const localPetOptions = [
     { value: UNLINKED_VALUE, label: t('settings.pet_linking_unlinked') },

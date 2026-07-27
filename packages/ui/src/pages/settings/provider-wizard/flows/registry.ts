@@ -19,14 +19,17 @@ const defaultFlow: AddDeviceFlow = {
   RegisterDeviceForm: DefaultRegisterDeviceForm,
 };
 
+/*
+ * Whether discovery is skipped is not decided here: it comes from the API's
+ * `skip_discovery` capability, which is what both the step plan and navigation
+ * read. A local copy could only ever disagree with it.
+ */
 const inferenceFlow: AddDeviceFlow = {
-  skipDiscovery: true,
   supportedTypes: ['pet_recognizer'],
   RegisterDeviceForm: InferenceRegisterDeviceForm,
 };
 
 const cameraFlow: AddDeviceFlow = {
-  skipDiscovery: true,
   supportedTypes: ['camera'],
   RegisterDeviceForm: CameraRegisterDeviceForm,
 };

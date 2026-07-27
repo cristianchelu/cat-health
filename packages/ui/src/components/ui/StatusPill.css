@@ -1,4 +1,21 @@
 .status-pill {
+  /*
+   * Tints mix the accent into the surface, and labels mix it toward
+   * --color-text. The `-light` tokens can't be used here: they're a pale wash
+   * in light mode but a vivid fill in dark, which inverts the contrast.
+   *
+   * The mix ratios have to differ per theme — one pair cannot satisfy AA on
+   * both. `--status-pill-ink` is the accent's share of the label colour;
+   * `--status-pill-quiet-ink` is the grey token's share for the greyscale
+   * variants. Measured at 12px/600 against theme.css (AA needs 4.5:1):
+   *   light — ok 5.10 · warn 4.81 · error 6.20 · off 4.80 · neutral 6.61
+   *   dark  — ok 5.65 · warn 6.22 · error 4.74 · off 6.96 · neutral 12.02
+   * Re-measure before touching these numbers.
+   */
+  --status-pill-ink: 40%;
+  --status-pill-tint: 15%;
+  --status-pill-quiet-ink: 45%;
+
   display: inline-flex;
   align-items: center;
   gap: var(--space-2xs);
@@ -9,6 +26,12 @@
   font-weight: var(--font-semibold);
   white-space: nowrap;
 
+  @media (prefers-color-scheme: dark) {
+    /* Dark surfaces are already low-luminance, so the accent can stay vivid. */
+    --status-pill-ink: 65%;
+    --status-pill-quiet-ink: 100%;
+  }
+
   .status-pill-dot {
     width: 0.5rem;
     height: 0.5rem;
@@ -18,49 +41,59 @@
   }
 
   &.neutral {
-    color: var(--color-text-light);
+    color: color-mix(
+      in srgb,
+      var(--color-text-light) var(--status-pill-quiet-ink),
+      var(--color-text)
+    );
     background: var(--color-surface-muted);
   }
 
-  /*
-   * Tints are mixed from the accent, not taken from `-light` tokens: those
-   * invert between themes (pale in light, vivid in dark), which would put
-   * mid-tone text on a glaring background in dark mode.
-   */
-  /*
-   * Tints mix the accent into the surface, and labels mix it toward
-   * --color-text. The `-light` tokens can't be used here: they're a pale wash
-   * in light mode but a vivid fill in dark, which inverts the contrast.
-   */
+  &.off {
+    color: color-mix(
+      in srgb,
+      var(--color-text-muted) var(--status-pill-quiet-ink),
+      var(--color-text)
+    );
+    background: var(--color-surface-muted);
+  }
+
   &.ok {
-    color: color-mix(in srgb, var(--color-secondary) 65%, var(--color-text));
+    color: color-mix(
+      in srgb,
+      var(--color-secondary) var(--status-pill-ink),
+      var(--color-text)
+    );
     background: color-mix(
       in srgb,
-      var(--color-secondary) 15%,
+      var(--color-secondary) var(--status-pill-tint),
       var(--color-surface)
     );
   }
 
   &.warn {
-    color: color-mix(in srgb, var(--color-warning) 65%, var(--color-text));
+    color: color-mix(
+      in srgb,
+      var(--color-warning) var(--status-pill-ink),
+      var(--color-text)
+    );
     background: color-mix(
       in srgb,
-      var(--color-warning) 15%,
+      var(--color-warning) var(--status-pill-tint),
       var(--color-surface)
     );
   }
 
   &.error {
-    color: color-mix(in srgb, var(--color-error) 65%, var(--color-text));
+    color: color-mix(
+      in srgb,
+      var(--color-error) var(--status-pill-ink),
+      var(--color-text)
+    );
     background: color-mix(
       in srgb,
-      var(--color-error) 15%,
+      var(--color-error) var(--status-pill-tint),
       var(--color-surface)
     );
-  }
-
-  &.off {
-    color: var(--color-text-muted);
-    background: var(--color-surface-muted);
   }
 }

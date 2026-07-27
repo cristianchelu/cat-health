@@ -148,10 +148,17 @@ const LitterboxDetails: React.FC = () => {
 
   return (
     <div className="page-litterbox-details">
+      {/*
+        Explicit route, not history: the only entry point is the overview card,
+        and a reload or bookmark leaves `navigate(-1)` with nowhere to go.
+        `mobileTitleAs` gives the page its only heading on mobile — it has no
+        other <h1>, so promoting the title bar cannot produce a second one.
+      */}
       <PageBackLink
-        useHistory
-        label={t('litterbox_details.back')}
+        to="/overview"
+        label={t('navigation.overview')}
         mobileTitle={t('litterbox_details.title')}
+        mobileTitleAs="h1"
         actions={rangeActions}
       />
 
