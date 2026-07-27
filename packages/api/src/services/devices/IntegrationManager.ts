@@ -1,4 +1,5 @@
 import type { Kysely } from 'kysely';
+import { isRecord } from 'shared';
 import { MediaManager } from '../media/MediaManager.ts';
 import type { Database } from '../../database/index.ts';
 import type { Device } from '../../database/types/DeviceTable.ts';
@@ -78,12 +79,33 @@ export class IntegrationManager
     },
   ): Record<string, unknown> {
     const provider = this.providers.get(providerName);
-    const current =
-      args.runtimeState && typeof args.runtimeState === 'object'
-        ? (args.runtimeState as Record<string, unknown>)
-        : {};
+    // isRecord rejects arrays, so a `[]` runtime_state cannot be echoed back
+    // and re-persisted as '[]'.
+    const current = isRecord(args.runtimeState) ? args.runtimeState : {};
     if (!provider?.reconcileRuntimeState) return current;
     return provider.reconcileRuntimeState(args);
+  }
+
+  async validateAccountConfigChange(
+    accountId: number,
+    providerName: string,
+    args: { previousConfig: unknown; nextConfig: unknown },
+  ): Promise<string | null> {
+    const provider = this.providers.get(providerName);
+    // Only count devices when a provider actually cares — this runs on every
+    // account config PATCH.
+    if (!provider?.validateAccountConfigChange) return null;
+
+    const row = await this.deps.db
+      .selectFrom('device')
+      .select((eb) => eb.fn.countAll().as('device_count'))
+      .where('provider_account_id', '=', accountId)
+      .executeTakeFirst();
+
+    return provider.validateAccountConfigChange({
+      ...args,
+      registeredDeviceCount: Number(row?.device_count ?? 0),
+    });
   }
 
   async initialize() {

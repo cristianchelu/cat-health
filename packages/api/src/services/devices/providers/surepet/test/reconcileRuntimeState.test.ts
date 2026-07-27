@@ -82,13 +82,60 @@ describe('SurePetProvider.reconcileRuntimeState', () => {
   });
 
   it('tolerates junk on either side', () => {
-    assert.deepEqual(reconcile(null, null, null), {});
+    // Both configs unreadable means no credential change was detected, so the
+    // runtime state is returned as-is — a non-record one normalized to {}.
+    assert.deepEqual(reconcile(null, null, RUNTIME), RUNTIME);
     assert.deepEqual(reconcile(42, [], 'nonsense'), {});
+    assert.deepEqual(reconcile(42, [], []), {});
+
     // Junk config reads as "no email", so moving to a real one counts as a
     // change and only the non-credentials-derived install id survives.
     assert.deepEqual(reconcile(undefined, { email: 'a', password: 'b' }), {
       device_id: 'install-uuid',
     });
+
+    // ...and a junk runtime state on a real credential change stays empty
+    // rather than leaking array indices into the blob.
+    assert.deepEqual(
+      reconcile({ email: 'a', password: 'b' }, { email: 'c', password: 'b' }, [
+        'stray',
+      ]),
+      {},
+    );
+  });
+});
+
+describe('SurePetProvider.validateAccountConfigChange', () => {
+  const check = (
+    previousEmail: string,
+    nextEmail: string,
+    registeredDeviceCount: number,
+  ) =>
+    provider.validateAccountConfigChange({
+      previousConfig: { email: previousEmail, password: 'pw' },
+      nextConfig: { email: nextEmail, password: 'pw' },
+      registeredDeviceCount,
+    });
+
+  it('refuses an email change while devices are registered', () => {
+    const rejection = check('old@example.com', 'new@example.com', 2);
+    assert.ok(rejection, 'the edit must be refused');
+    assert.match(rejection, /2 device/);
+  });
+
+  it('allows an email change on an account with no devices', () => {
+    assert.equal(check('old@example.com', 'new@example.com', 0), null);
+  });
+
+  it('allows a password rotation with devices registered', () => {
+    assert.equal(
+      provider.validateAccountConfigChange({
+        previousConfig: { email: 'you@example.com', password: 'old' },
+        nextConfig: { email: 'you@example.com', password: 'new' },
+        registeredDeviceCount: 3,
+      }),
+      null,
+    );
   });
 });
 

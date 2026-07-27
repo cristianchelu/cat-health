@@ -100,7 +100,8 @@ export async function insertProviderAccount(
   db: Kysely<Database>,
   seed: ProviderAccountSeed = {},
 ): Promise<ProviderAccount> {
-  const now = Math.floor(Date.now() / 1000);
+  // Milliseconds — `provider_account.created_at` / `updated_at` are epoch ms.
+  const now = Date.now();
   return db
     .insertInto('provider_account')
     .values({

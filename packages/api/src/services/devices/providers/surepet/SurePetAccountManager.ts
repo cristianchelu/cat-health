@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import {
+  isRecord,
   parseWithSchema,
   ProductId,
   SurePetAccountConfigSchema,
   SurePetFeederConfigSchema,
   SurePetRuntimeStateSchema,
+  SurePetSyncConfigSchema,
   type ProviderRemotePet,
   type SurePetAccountConfig,
   type SurePetRuntimeState,
@@ -53,17 +55,37 @@ function parseAccountConfig(config: unknown): SurePetAccountConfig {
  * Runtime state is provider-owned and always optional — an account connected
  * for the first time has none. A missing or malformed blob is not an error;
  * it just means everything gets re-derived on the next login.
+ *
+ * Parsing is per field on purpose. `parseWithSchema` is Check-only, so a single
+ * bad value (say a numeric `token`) would otherwise discard the whole blob —
+ * including the sync cursor, and losing that makes `runFeedingSync` re-pull the
+ * household report plus the entire timeline.
  */
 function parseRuntimeState(runtimeState: unknown): SurePetRuntimeState {
-  const parsed = parseWithSchema(SurePetRuntimeStateSchema, runtimeState) ?? {};
+  // Copied, not aliased: `parseWithSchema` is Check-only and hands back the very
+  // object it was given, which here is the row loaded from the database.
+  const whole = parseWithSchema(SurePetRuntimeStateSchema, runtimeState);
+  if (whole) return { ...whole };
+  if (!isRecord(runtimeState)) return {};
 
-  return {
-    ...parsed,
-    device_id:
-      typeof parsed.device_id === 'string' && parsed.device_id.length > 0
-        ? parsed.device_id
-        : randomUUID(),
-  };
+  const salvaged: SurePetRuntimeState = {};
+  const { device_id, token, household_id, sync } = runtimeState;
+
+  if (typeof device_id === 'string' && device_id.length > 0) {
+    salvaged.device_id = device_id;
+  }
+  if (typeof token === 'string' && token.length > 0) {
+    salvaged.token = token;
+  }
+  if (typeof household_id === 'number' && Number.isFinite(household_id)) {
+    salvaged.household_id = household_id;
+  }
+  const parsedSync = parseWithSchema(SurePetSyncConfigSchema, sync);
+  if (parsedSync) {
+    salvaged.sync = parsedSync;
+  }
+
+  return salvaged;
 }
 
 export class SurePetAccountManager implements AccountManager {
@@ -77,6 +99,16 @@ export class SurePetAccountManager implements AccountManager {
   private timelinePollTimer: ReturnType<typeof setInterval> | null = null;
   private statePollTimer: ReturnType<typeof setInterval> | null = null;
   private syncInProgress = false;
+  /**
+   * Set by `shutdown()`. A manager is replaced (not just stopped) whenever the
+   * account config is edited: the route writes the reconciled `runtime_state`
+   * and then `initializeAccount` swaps in a fresh manager. Clearing the interval
+   * timers cannot cancel a `runFeedingSync()` already awaiting the network, and
+   * when that call resumed it wrote this instance's stale in-memory
+   * `{token, household_id, sync}` straight back over the reconciled row. Once
+   * retired, this instance must never persist again.
+   */
+  private retired = false;
 
   constructor(account: ProviderAccount, deps: ProviderDeps) {
     this.account = account;
@@ -141,6 +173,8 @@ export class SurePetAccountManager implements AccountManager {
   }
 
   async shutdown(): Promise<void> {
+    this.retired = true;
+
     if (this.timelinePollTimer) {
       clearInterval(this.timelinePollTimer);
       this.timelinePollTimer = null;
@@ -269,26 +303,41 @@ export class SurePetAccountManager implements AccountManager {
     }
   }
 
+  /**
+   * The SurePet client identity for this installation. Minted once and
+   * persisted immediately, *before* the first login — a login can fail (wrong
+   * password) and an unpersisted id would mean a brand new client identity on
+   * every restart.
+   */
+  private async ensureInstallIdentity(): Promise<string> {
+    const existing = this.runtime.device_id;
+    if (existing) return existing;
+
+    const deviceId = randomUUID();
+    this.runtime.device_id = deviceId;
+    await this.persistRuntimeState();
+    return deviceId;
+  }
+
   private async ensureClient(): Promise<SurePetClient> {
-    if (!this.runtime.device_id) {
-      this.runtime.device_id = randomUUID();
-      await this.persistRuntimeState();
-    }
+    const deviceId = await this.ensureInstallIdentity();
 
     if (!this.client) {
       this.client = new SurePetClient({
         email: this.config.email,
         password: this.config.password,
-        deviceId: this.runtime.device_id,
+        deviceId,
         token: this.runtime.token,
+        onToken: (token) => this.onTokenRefreshed(token),
       });
     }
 
-    const token = await this.client.login();
-    if (token !== this.runtime.token) {
-      this.runtime.token = token;
-      await this.persistRuntimeState();
-    }
+    // Reuse the persisted token. `ensureAuthenticated` only hits the network
+    // when `tokenSeemsValid()` says the stored one is unusable, so the common
+    // path is zero HTTPS round-trips and zero writes. An unconditional
+    // `login()` here used to mint a new token — and therefore a new
+    // `provider_account` UPDATE — on every poll, forever.
+    await this.client.ensureAuthenticated();
 
     if (this.runtime.household_id == null) {
       const bootstrap = await this.client.meStart();
@@ -310,6 +359,13 @@ export class SurePetAccountManager implements AccountManager {
     return this.client;
   }
 
+  /** Wired into SurePetClient so both fresh logins and 401 refreshes persist. */
+  private async onTokenRefreshed(token: string): Promise<void> {
+    if (token === this.runtime.token) return;
+    this.runtime.token = token;
+    await this.persistRuntimeState();
+  }
+
   /** pet_links are owned by provider account settings; always read fresh from DB before use. */
   private async reloadPetLinksFromDb(): Promise<void> {
     const row = await this.deps.db
@@ -325,6 +381,7 @@ export class SurePetAccountManager implements AccountManager {
   }
 
   private async refreshFeederStates(): Promise<void> {
+    if (this.retired) return;
     const client = await this.ensureClient();
 
     for (const controller of this.controllers.values()) {
@@ -342,7 +399,7 @@ export class SurePetAccountManager implements AccountManager {
   }
 
   private async runFeedingSync(): Promise<void> {
-    if (this.syncInProgress) return;
+    if (this.retired || this.syncInProgress) return;
     this.syncInProgress = true;
 
     try {
@@ -386,6 +443,9 @@ export class SurePetAccountManager implements AccountManager {
         this.deps.logger.error('SurePet timeline fetch failed:', error);
         return;
       }
+
+      // A replacement manager may have taken over during those fetches.
+      if (this.retired) return;
 
       await this.ingestFeedingDatapoints(datapoints);
 
@@ -698,8 +758,12 @@ export class SurePetAccountManager implements AccountManager {
    *
    * `updated_at` is deliberately not bumped: a token refresh is not a user-
    * visible modification of the account.
+   *
+   * A retired instance writes nothing — see {@link retired}.
    */
   private async persistRuntimeState(): Promise<void> {
+    if (this.retired) return;
+
     const runtime_state = { ...this.runtime };
     await this.deps.db
       .updateTable('provider_account')

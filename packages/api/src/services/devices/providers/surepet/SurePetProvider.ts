@@ -39,6 +39,38 @@ export class SurePetProvider implements DeviceProvider {
     );
   }
 
+  /**
+   * A different email is a different SurePet account, and every registered
+   * device row already holds an `external_id` naming a device in the *old*
+   * household. Nothing re-derives those ids on a config edit, so the account
+   * would come back "connected" while `buildLocalDeviceMap()` silently routed
+   * every incoming datapoint to `skippedUnmapped` and the state poller asked
+   * the cloud about devices it no longer owns.
+   *
+   * Re-discovery is not an option here: the feeder ids change, so the local
+   * device rows can only be replaced, and deleting them cascades away their
+   * whole event history. Refusing the edit keeps that history intact and makes
+   * the (rare) "I moved to another SurePet account" case an explicit one:
+   * unregister the devices, or add a second account.
+   */
+  validateAccountConfigChange({
+    previousConfig,
+    nextConfig,
+    registeredDeviceCount,
+  }: {
+    previousConfig: unknown;
+    nextConfig: unknown;
+    registeredDeviceCount: number;
+  }): string | null {
+    if (registeredDeviceCount === 0) return null;
+
+    const prev = isRecord(previousConfig) ? previousConfig : {};
+    const next = isRecord(nextConfig) ? nextConfig : {};
+    if (prev.email === next.email) return null;
+
+    return `Cannot change the account email while ${registeredDeviceCount} device(s) are registered to it: their remote ids belong to the previous account. Remove the devices first, or add a separate account.`;
+  }
+
   reconcileRuntimeState({
     previousConfig,
     nextConfig,

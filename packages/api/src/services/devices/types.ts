@@ -136,6 +136,23 @@ export interface DeviceProvider {
     nextConfig: unknown;
     runtimeState: unknown;
   }): Record<string, unknown>;
+  /**
+   * Veto a config edit the provider cannot honour for an already-wired account.
+   *
+   * Some config keys select *which* remote account is being talked to, so
+   * changing them silently invalidates the `device.external_id`s already
+   * persisted for this account (they name objects in the old remote account).
+   * Only the provider knows which of its keys are identity-bearing, so the
+   * generic route delegates here instead of inspecting vendor field names.
+   *
+   * Return a user-facing reason to refuse the PATCH with 400, or `null` to
+   * allow it. Omit the method to always allow.
+   */
+  validateAccountConfigChange?(args: {
+    previousConfig: unknown;
+    nextConfig: unknown;
+    registeredDeviceCount: number;
+  }): string | null;
 }
 
 export type ProviderListing = {
@@ -159,6 +176,15 @@ export interface DeviceIntegrationContext {
       runtimeState: unknown;
     },
   ): Record<string, unknown>;
+  /**
+   * Reason to reject a config edit, or null when it is allowed.
+   * See DeviceProvider.validateAccountConfigChange.
+   */
+  validateAccountConfigChange(
+    accountId: number,
+    providerName: string,
+    args: { previousConfig: unknown; nextConfig: unknown },
+  ): Promise<string | null>;
   initializeAccount(accountId: number): Promise<void>;
   getAccountManager(accountId: number): AccountManager | undefined;
   instantiateDeviceController(device: Device): DeviceController | undefined;

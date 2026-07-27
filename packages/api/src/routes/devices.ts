@@ -282,10 +282,11 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         params: GetProviderAccountParamsSchema,
         response: {
           '200': ProviderAccountSchema,
+          '404': Http404ResponseSchema,
         },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const { id } = request.params;
       const account = await db
         .selectFrom('provider_account')
@@ -293,7 +294,11 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('id', '=', id)
         .executeTakeFirst();
       if (!account) {
-        throw new Error('Account not found');
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: `Account ${id} not found`,
+        });
       }
       return mapAccount(account);
     },
@@ -308,6 +313,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         response: {
           '200': ProviderAccountSchema,
           '400': Http400ResponseSchema,
+          '404': Http404ResponseSchema,
         },
       },
     },
@@ -317,11 +323,15 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const existing = await db
         .selectFrom('provider_account')
-        .selectAll()
+        .select(['provider', 'config', 'runtime_state'])
         .where('id', '=', id)
         .executeTakeFirst();
       if (!existing) {
-        throw new Error('Account not found');
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: `Account ${id} not found`,
+        });
       }
 
       const updateData: Record<string, unknown> = {
@@ -344,6 +354,25 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
             message: `Invalid configuration for provider "${existing.provider}"`,
           });
         }
+
+        // Some config keys select which remote account is being talked to;
+        // changing them would orphan the devices already registered here.
+        const rejection = await integrationManager.validateAccountConfigChange(
+          id,
+          existing.provider,
+          {
+            previousConfig: parseJsonValue(existing.config),
+            nextConfig: updates.config,
+          },
+        );
+        if (rejection) {
+          return reply.code(400).send({
+            statusCode: 400,
+            error: 'Bad Request',
+            message: rejection,
+          });
+        }
+
         updateData.config = updates.config;
         // Config is user-owned and replaced wholesale; runtime state derived
         // from it may no longer apply, so let the provider decide what survives.
@@ -364,7 +393,11 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .returningAll()
         .executeTakeFirst();
       if (!result) {
-        throw new Error('Account not found');
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: `Account ${id} not found`,
+        });
       }
       await integrationManager.initializeAccount(id);
       return mapAccount(result);
@@ -593,9 +626,10 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const { id } = request.params;
       const updates = request.body;
 
-      // Build update query
+      // Build update query. Milliseconds: that is what `created_at` holds and
+      // what `mapDevice` reads back via `new Date(device.updated_at)`.
       const updateData: Record<string, unknown> = {
-        updated_at: Math.floor(Date.now() / 1000),
+        updated_at: Date.now(),
       };
 
       if (updates.name !== undefined) {

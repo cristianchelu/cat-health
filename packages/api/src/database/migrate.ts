@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 
 import { createDb, type Database } from './index.ts';
 
-function createMigrator(db: Kysely<Database>) {
+export function createMigrator(db: Kysely<Database>) {
   const dir = path.dirname(fileURLToPath(import.meta.url));
 
   return new Migrator({
@@ -18,6 +18,22 @@ function createMigrator(db: Kysely<Database>) {
   });
 }
 
+/**
+ * Applies every pending migration and **throws** if any of them fails.
+ *
+ * It deliberately does not auto-revert. Kysely's SQLite adapter reports
+ * `supportsTransactionalDdl === false`, so a failed migration is left
+ * half-applied — but `migrateDown()` would then revert the *previous*,
+ * successfully applied migration, and a `down` may be lossy by design (e.g.
+ * `202607201200_pet_birth_date_nullable` rebuilds `pet` with
+ * `COALESCE(birth_date, '1970-01-01')`, stamping a fake birth date on every
+ * pet that had none). Cascading a revert through unrelated tables to "clean up"
+ * an unrelated failure destroys far more than it saves, and the next boot
+ * re-applies and re-fails in a loop.
+ *
+ * So: fail loudly, leave the database as it is, and let a human look at it.
+ * Every `up` is written to be safe to re-run after a partial failure.
+ */
 export async function migrateToLatest(db: Kysely<Database>) {
   const migrator = createMigrator(db);
 
@@ -32,10 +48,10 @@ export async function migrateToLatest(db: Kysely<Database>) {
   });
 
   if (error) {
-    console.error('failed to migrate');
-    console.error(error);
-    await migrator.migrateDown();
-    process.exit(1);
+    console.error(
+      'failed to migrate; the database was left untouched (no automatic revert)',
+    );
+    throw error instanceof Error ? error : new Error(String(error));
   }
 }
 
@@ -54,8 +70,7 @@ export async function migrateDown(db: Kysely<Database>) {
 
   if (error) {
     console.error('failed to revert migration');
-    console.error(error);
-    process.exit(1);
+    throw error instanceof Error ? error : new Error(String(error));
   }
 }
 
@@ -67,6 +82,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     } else {
       await migrateToLatest(db);
     }
+  } catch (error) {
+    console.error(error);
+    process.exitCode = 1;
   } finally {
     await db.destroy();
   }

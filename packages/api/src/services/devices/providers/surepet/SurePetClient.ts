@@ -36,6 +36,12 @@ export interface SurePetClientCredentials {
   password: string;
   deviceId: string;
   token?: string;
+  /**
+   * Called with every freshly minted token, including the one from the 401
+   * retry inside `request()`. Without this, a token refreshed mid-request only
+   * lived in memory and the next process start had to log in again.
+   */
+  onToken?: (token: string) => Promise<void> | void;
 }
 
 export class SurePetClient {
@@ -43,12 +49,14 @@ export class SurePetClient {
   private password: string;
   private deviceId: string;
   private token?: string;
+  private onToken?: (token: string) => Promise<void> | void;
 
   constructor(credentials: SurePetClientCredentials) {
     this.email = credentials.email;
     this.password = credentials.password;
     this.deviceId = credentials.deviceId;
     this.token = credentials.token;
+    this.onToken = credentials.onToken;
   }
 
   getToken(): string | undefined {
@@ -85,9 +93,11 @@ export class SurePetClient {
     }
 
     this.token = token;
+    await this.onToken?.(token);
     return token;
   }
 
+  /** Logs in only when the stored token cannot plausibly still work. */
   async ensureAuthenticated(): Promise<void> {
     if (tokenSeemsValid(this.token)) return;
     await this.login();
