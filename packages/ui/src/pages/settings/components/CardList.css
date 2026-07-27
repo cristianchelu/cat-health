@@ -29,6 +29,27 @@
       border-bottom: none;
     }
 
+    /*
+     * `.card` clips to its own radius with overflow: hidden, so the global
+     * focus ring — 2px *outside* the element — loses its corners on the first
+     * and last row. Draw it inside instead, and give those rows the card's
+     * radius so the ring curves with the corner it sits in.
+     */
+    &:focus-visible {
+      outline: 2px solid var(--color-border-focus);
+      outline-offset: -2px;
+    }
+
+    &:first-child {
+      border-top-left-radius: var(--card-border-radius);
+      border-top-right-radius: var(--card-border-radius);
+    }
+
+    &:last-child {
+      border-bottom-left-radius: var(--card-border-radius);
+      border-bottom-right-radius: var(--card-border-radius);
+    }
+
     &:hover {
       background-color: var(--color-surface-highlight);
     }

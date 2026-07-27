@@ -18,8 +18,10 @@
   }
 
   .provider-picker-rows {
+    --picker-radius: var(--radius-2xl);
+
     background: var(--color-surface);
-    border-radius: var(--radius-2xl);
+    border-radius: var(--picker-radius);
     box-shadow: var(--shadow-md);
     overflow: hidden;
   }
@@ -35,6 +37,21 @@
 
     &:last-child {
       border-bottom: none;
+    }
+
+    /*
+     * The rows are square but the container is rounded and clips to it, so the
+     * end rows need its radius or their focus/selected ring is cut at the
+     * outer corners.
+     */
+    &:first-child {
+      border-top-left-radius: var(--picker-radius);
+      border-top-right-radius: var(--picker-radius);
+    }
+
+    &:last-child {
+      border-bottom-left-radius: var(--picker-radius);
+      border-bottom-right-radius: var(--picker-radius);
     }
 
     &:hover {
