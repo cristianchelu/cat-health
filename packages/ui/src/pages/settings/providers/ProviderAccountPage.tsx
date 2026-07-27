@@ -11,7 +11,13 @@ import {
 } from '@/hooks/queries/deviceQueries';
 import { isRecord } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
-import { FormInput, FormShell, FormSwitch } from '@/components/ui/form';
+import {
+  FormCard,
+  FormCardHead,
+  FormInput,
+  FormShell,
+  FormSwitch,
+} from '@/components/ui/form';
 import { LoadingState } from '@/components/ui/PageState';
 import { PageBackLink } from '@/components/ui/PageBackLink';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
@@ -211,14 +217,12 @@ const ProviderAccountPage: React.FC = () => {
         mobileTitle={account.name}
       />
 
-      <div className="provider-formcard">
-        <header className="provider-brandhead">
-          <ProviderBrandTile provider={provider} size="lg" />
-          <div className="provider-brandhead-text">
-            <h1>{providerBrandLabel(brand, t)}</h1>
-            {identity && <p>{identity}</p>}
-          </div>
-        </header>
+      <FormCard>
+        <FormCardHead
+          tile={<ProviderBrandTile provider={provider} size="lg" />}
+          title={providerBrandLabel(brand, t)}
+          subtitle={identity}
+        />
 
         <FormShell
           onSubmit={handleSubmit(onSubmit)}
@@ -260,7 +264,7 @@ const ProviderAccountPage: React.FC = () => {
             label={t('settings.enabled')}
           />
         </FormShell>
-      </div>
+      </FormCard>
 
       {supportsPetLinking && accountId > 0 && (
         <ProviderPetLinksEditor

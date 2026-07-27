@@ -1,0 +1,38 @@
+.device-type-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-xl);
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 14%,
+    var(--color-surface)
+  );
+  color: var(--color-primary);
+
+  /* The icons come from the shared registry already sized at 1em. */
+  svg {
+    width: 1em;
+    height: 1em;
+  }
+
+  &.sm {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-xl);
+  }
+
+  &.md {
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: var(--text-2xl);
+  }
+
+  &.lg {
+    width: 3.25rem;
+    height: 3.25rem;
+    font-size: var(--text-3xl);
+  }
+}

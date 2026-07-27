@@ -2,7 +2,12 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { FormInput, FormShell } from '@/components/ui/form';
+import {
+  FormCard,
+  FormCardHead,
+  FormInput,
+  FormShell,
+} from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form';
 import { ProviderBrandTile } from '../../providers/components/ProviderBrandTile';
 import {
@@ -67,14 +72,13 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
 
   return (
     <div className="connect-provider-step">
-      <div className="provider-formcard">
-        <header className="provider-brandhead">
-          <ProviderBrandTile provider={provider} size="lg" />
-          <div className="provider-brandhead-text">
-            <h1>{t('settings.connect_provider_title', { provider: label })}</h1>
-            <p>{t('settings.connect_provider_subtitle')}</p>
-          </div>
-        </header>
+      <FormCard>
+        <FormCardHead
+          titleAs="h2"
+          tile={<ProviderBrandTile provider={provider} size="lg" />}
+          title={t('settings.connect_provider_title', { provider: label })}
+          subtitle={t('settings.connect_provider_subtitle')}
+        />
 
         <FormShell
           onSubmit={handleSubmit((values) =>
@@ -122,7 +126,7 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
             rules={{ required: true }}
           />
         </FormShell>
-      </div>
+      </FormCard>
     </div>
   );
 };

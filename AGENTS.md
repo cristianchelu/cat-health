@@ -151,6 +151,7 @@ export default ComponentName;
 **Kit** (`packages/ui/src/components/ui/form/`):
 
 - `FormShell` — `<form>` + optional `FormError` + `FormActions`
+- `FormCard` / `FormCardHead` — the card an add/edit form sits on, plus its tile + title + subtitle header (provider brand tile, or `DeviceTypeTile` for devices)
 - `FormActions` — Cancel/Back (`secondary`) left, Save/Create/Register (`primary`) right
 - `FormError` — mutation error banner
 - `FormInput` / `FormSelect` / `FormTextarea` / `FormDatePicker` / `FormSwitch` — RHF-wired fields
@@ -170,6 +171,7 @@ export default ComponentName;
 **Chrome:**
 
 - Settings edit pages → `SettingsFormPage` + `LoadingState`
+- Provider / device add + edit → `PageBackLink` + `FormCard` + `FormCardHead` (never fields on the bare page background)
 - Destructives → `ConfirmDialog` (never `window.confirm`)
 - Full-page unsaved leave → `DiscardUnsavedDialog`
 - In-modal unsaved discard → `FormInlineDiscard`

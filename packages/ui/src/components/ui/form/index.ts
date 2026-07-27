@@ -4,6 +4,12 @@ export { Textarea, type TextareaProps } from './Textarea';
 export { Select, type SelectProps, type SelectOption } from './Select';
 export { DatePicker, type DatePickerProps } from './DatePicker';
 export { FormShell, type FormShellProps } from './FormShell';
+export {
+  FormCard,
+  FormCardHead,
+  type FormCardProps,
+  type FormCardHeadProps,
+} from './FormCard';
 export { FormActions, type FormActionsProps } from './FormActions';
 export {
   FormInlineDiscard,

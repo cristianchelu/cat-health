@@ -9,7 +9,8 @@ import {
 } from '@/components/ui/form';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm } from '@/hooks/form';
-import { DeviceSummary } from './shared/DeviceSummary';
+import { DeviceSummary } from '../../components/DeviceSummary';
+import { RegisterDeviceCard } from './shared/RegisterDeviceCard';
 import { mergeDiscoveredConfig } from '../wizardUtils';
 import type { RegisterDeviceFormProps } from './types';
 
@@ -75,47 +76,53 @@ export const DefaultRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
     <>
       <p className="step-description">{t('settings.confirm_device_details')}</p>
 
-      <FormShell
-        onSubmit={onSubmit}
-        error={serverError}
-        actions={{
-          onCancel: () => requestDiscard(onBack),
-          cancelLabel: t('settings.back'),
-          submitLabel: isSubmitting
-            ? t('settings.registering')
-            : t('settings.register_device'),
-          isSubmitting,
-        }}
+      <RegisterDeviceCard
+        account={account}
+        prefill={prefill}
+        type={prefill.type}
       >
-        <FormField label={t('settings.device_name_label')}>
-          <Input {...register('name', { required: true })} />
-        </FormField>
+        <FormShell
+          onSubmit={onSubmit}
+          error={serverError}
+          actions={{
+            onCancel: () => requestDiscard(onBack),
+            cancelLabel: t('settings.back'),
+            submitLabel: isSubmitting
+              ? t('settings.registering')
+              : t('settings.register_device'),
+            isSubmitting,
+          }}
+        >
+          <FormField label={t('settings.device_name_label')}>
+            <Input {...register('name', { required: true })} />
+          </FormField>
 
-        <FormField label={t('settings.api_key_label')}>
-          <Input
-            type="password"
-            placeholder={t('settings.api_key_placeholder')}
-            {...register('apiKey')}
-          />
-        </FormField>
+          <FormField label={t('settings.api_key_label')}>
+            <Input
+              type="password"
+              placeholder={t('settings.api_key_placeholder')}
+              {...register('apiKey')}
+            />
+          </FormField>
 
-        <DeviceSummary type={prefill.type} externalId={prefill.externalId} />
+          <DeviceSummary externalId={prefill.externalId} />
 
-        <FormField label={t('settings.visit_annotation_label')}>
-          <Controller
-            name="visitAnnotationEnabled"
-            control={control}
-            render={({ field }) => (
-              <LabeledSwitchField
-                checked={field.value}
-                onCheckedChange={field.onChange}
-                ref={field.ref}
-              />
-            )}
-          />
-          <p className="help-text">{t('settings.visit_annotation_help')}</p>
-        </FormField>
-      </FormShell>
+          <FormField label={t('settings.visit_annotation_label')}>
+            <Controller
+              name="visitAnnotationEnabled"
+              control={control}
+              render={({ field }) => (
+                <LabeledSwitchField
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  ref={field.ref}
+                />
+              )}
+            />
+            <p className="help-text">{t('settings.visit_annotation_help')}</p>
+          </FormField>
+        </FormShell>
+      </RegisterDeviceCard>
       <DiscardUnsavedDialog {...discardConfirm} />
     </>
   );

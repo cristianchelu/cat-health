@@ -141,32 +141,6 @@
     border-radius: var(--radius-md);
   }
 
-  .device-summary {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-    padding: var(--space-md);
-    background-color: var(--color-surface-muted);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-md);
-
-    .summary-item {
-      display: flex;
-      justify-content: space-between;
-      font-size: var(--text-sm);
-
-      .label {
-        color: var(--color-text-light);
-      }
-
-      .value {
-        font-weight: var(--font-medium);
-        color: var(--color-text);
-        font-family: monospace;
-      }
-    }
-  }
-
   .error-message {
     color: var(--color-error);
     font-size: var(--text-sm);

@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { FormField, FormShell, Input } from '@/components/ui/form';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm } from '@/hooks/form';
-import { DeviceSummary } from '../shared/DeviceSummary';
+import { DeviceSummary } from '../../../components/DeviceSummary';
+import { RegisterDeviceCard } from '../shared/RegisterDeviceCard';
 import type { RegisterDeviceFormProps } from '../types';
 
 interface SurePetFormValues {
@@ -57,24 +58,30 @@ export const SurePetRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
         {t('settings.surepet_confirm_device_details')}
       </p>
 
-      <FormShell
-        onSubmit={onSubmit}
-        error={serverError}
-        actions={{
-          onCancel: () => requestDiscard(onBack),
-          cancelLabel: t('settings.back'),
-          submitLabel: isSubmitting
-            ? t('settings.registering')
-            : t('settings.register_device'),
-          isSubmitting,
-        }}
+      <RegisterDeviceCard
+        account={account}
+        prefill={prefill}
+        type={prefill.type}
       >
-        <FormField label={t('settings.device_name_label')}>
-          <Input {...register('name', { required: true })} />
-        </FormField>
+        <FormShell
+          onSubmit={onSubmit}
+          error={serverError}
+          actions={{
+            onCancel: () => requestDiscard(onBack),
+            cancelLabel: t('settings.back'),
+            submitLabel: isSubmitting
+              ? t('settings.registering')
+              : t('settings.register_device'),
+            isSubmitting,
+          }}
+        >
+          <FormField label={t('settings.device_name_label')}>
+            <Input {...register('name', { required: true })} />
+          </FormField>
 
-        <DeviceSummary type={prefill.type} externalId={prefill.externalId} />
-      </FormShell>
+          <DeviceSummary externalId={prefill.externalId} />
+        </FormShell>
+      </RegisterDeviceCard>
       <DiscardUnsavedDialog {...discardConfirm} />
     </>
   );

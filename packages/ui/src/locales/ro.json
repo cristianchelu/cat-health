@@ -184,7 +184,6 @@
     "device_name_label": "Nume dispozitiv",
     "api_key_label": "Cheie API (Cheie criptare)",
     "api_key_placeholder": "Opțional dacă nu este configurat",
-    "type_label": "Tip:",
     "external_id_label": "ID extern:",
     "register_device_error": "Nu s-a putut înregistra dispozitivul. Verifică cheia API.",
     "registering": "Se înregistrează...",

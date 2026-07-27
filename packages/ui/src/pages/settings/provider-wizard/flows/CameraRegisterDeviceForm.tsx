@@ -4,6 +4,7 @@ import { FormField, FormShell, Input } from '@/components/ui/form';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm } from '@/hooks/form';
 import { DefaultRegisterDeviceForm } from './DefaultRegisterDeviceForm';
+import { RegisterDeviceCard } from './shared/RegisterDeviceCard';
 import { generateLocalExternalId } from '../wizardUtils';
 import type { RegisterDeviceFormProps } from './types';
 
@@ -62,33 +63,35 @@ const CameraDirectForm: React.FC<RegisterDeviceFormProps> = ({
     <>
       <p className="step-description">{t('settings.manual_setup_desc')}</p>
 
-      <FormShell
-        onSubmit={onSubmit}
-        error={serverError}
-        actions={{
-          onCancel: () => requestDiscard(onBack),
-          cancelLabel: t('settings.back'),
-          submitLabel: isSubmitting
-            ? t('settings.registering')
-            : t('settings.register_device'),
-          isSubmitting,
-        }}
-      >
-        <FormField label={t('settings.device_name_label')}>
-          <Input
-            placeholder={t('settings.device_name_placeholder')}
-            {...register('name', { required: true })}
-          />
-        </FormField>
+      <RegisterDeviceCard account={account} type="camera">
+        <FormShell
+          onSubmit={onSubmit}
+          error={serverError}
+          actions={{
+            onCancel: () => requestDiscard(onBack),
+            cancelLabel: t('settings.back'),
+            submitLabel: isSubmitting
+              ? t('settings.registering')
+              : t('settings.register_device'),
+            isSubmitting,
+          }}
+        >
+          <FormField label={t('settings.device_name_label')}>
+            <Input
+              placeholder={t('settings.device_name_placeholder')}
+              {...register('name', { required: true })}
+            />
+          </FormField>
 
-        <FormField label={t('settings.snapshot_url_label')}>
-          <Input
-            placeholder={t('settings.snapshot_url_placeholder')}
-            {...register('snapshotUrl', { required: true })}
-          />
-          <p className="help-text">{t('settings.snapshot_url_help')}</p>
-        </FormField>
-      </FormShell>
+          <FormField label={t('settings.snapshot_url_label')}>
+            <Input
+              placeholder={t('settings.snapshot_url_placeholder')}
+              {...register('snapshotUrl', { required: true })}
+            />
+            <p className="help-text">{t('settings.snapshot_url_help')}</p>
+          </FormField>
+        </FormShell>
+      </RegisterDeviceCard>
       <DiscardUnsavedDialog {...discardConfirm} />
     </>
   );

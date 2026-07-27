@@ -8,6 +8,8 @@ import {
 } from '@/hooks/queries/deviceQueries';
 import { Button } from '@/components/ui/Button';
 import {
+  FormCard,
+  FormCardHead,
   FormField,
   FormShell,
   FormSwitch,
@@ -15,10 +17,16 @@ import {
   Select,
   Textarea,
 } from '@/components/ui/form';
-import { SettingsFormPage } from '@/components/ui/SettingsFormPage';
+import { LoadingState } from '@/components/ui/PageState';
+import { PageBackLink } from '@/components/ui/PageBackLink';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm, useUnsavedBlocker } from '@/hooks/form';
-import { Smartphone } from 'lucide-react';
+import { DeviceSummary } from './components/DeviceSummary';
+import { DeviceTypeTile } from './components/DeviceTypeTile';
+import {
+  getProviderBrand,
+  providerBrandLabel,
+} from './provider-wizard/flows/providerBrandRegistry.ts';
 import './EditDevicePage.css';
 
 interface DeviceFormValues {
@@ -174,39 +182,41 @@ const EditDevicePage: React.FC = () => {
           visit_annotation_enabled: data.visitAnnotationEnabled,
         },
       });
-      navigate('/settings');
+      navigate('/settings/devices');
     } catch (err) {
       console.error(err);
       setSubmitError(t('settings.edit_device_error'));
     }
   };
 
+  const backLink = (mobileTitle?: string) => (
+    <PageBackLink
+      to="/settings/devices"
+      label={t('settings.devices')}
+      mobileTitle={mobileTitle}
+    />
+  );
+
   if (isLoading) {
     return (
-      <SettingsFormPage
-        className="edit-device-page"
-        title={t('settings.edit_device_title')}
-        icon={<Smartphone size="1em" />}
-        isLoading
-        loadingMessage={t('settings.loading_device_data')}
-      />
+      <div className="edit-device-page">
+        {backLink()}
+        <LoadingState message={t('settings.loading_device_data')} />
+      </div>
     );
   }
 
   if (error || !device) {
     return (
-      <SettingsFormPage
-        className="edit-device-page"
-        title={t('settings.edit_device_title')}
-        icon={<Smartphone size="1em" />}
-      >
+      <div className="edit-device-page">
+        {backLink()}
         <div className="error-state">
           <p>{t('devices.error_loading_device')}</p>
-          <Button onClick={() => navigate('/settings')}>
+          <Button onClick={() => navigate('/settings/devices')}>
             {t('settings.back')}
           </Button>
         </div>
-      </SettingsFormPage>
+      </div>
     );
   }
 
@@ -214,127 +224,130 @@ const EditDevicePage: React.FC = () => {
     .filter((d) => d.type !== 'pet_recognizer' && d.id !== deviceId)
     .map((d) => ({ value: d.id.toString(), label: `${d.name} (${d.type})` }));
 
+  const providerLabel = providerBrandLabel(
+    getProviderBrand(device.provider),
+    t,
+  );
+
   return (
-    <SettingsFormPage
-      className="edit-device-page"
-      title={t('settings.edit_device_title')}
-      icon={<Smartphone size="1em" />}
-    >
-      <FormShell
-        onSubmit={handleSubmit(onFormSubmit)}
-        error={submitError}
-        actions={{
-          onCancel: () => navigate('/settings'),
-          cancelLabel: t('settings.cancel'),
-          submitLabel: updateDevice.isPending
-            ? t('settings.saving')
-            : t('settings.save_changes'),
-          isSubmitting: updateDevice.isPending,
-          submitDisabled: !isDirty,
-        }}
-      >
-        <FormField label={t('settings.device_name_label')}>
-          <Input {...register('name', { required: true })} />
-        </FormField>
+    <div className="edit-device-page">
+      {backLink(device.name)}
 
-        <FormSwitch
-          name="enabled"
-          control={control}
-          label={t('settings.enabled')}
+      <FormCard>
+        <FormCardHead
+          tile={<DeviceTypeTile type={device.type} size="lg" />}
+          title={device.name}
+          subtitle={`${t(`device_types.${device.type}`)} · ${providerLabel}`}
         />
 
-        <FormSwitch
-          name="visitAnnotationEnabled"
-          control={control}
-          label={t('settings.visit_annotation_label')}
-          description={t('settings.visit_annotation_help')}
-        />
-
-        <div className="device-summary">
-          <div className="summary-item">
-            <span className="label">{t('settings.type_label')}</span>
-            <span className="value">{t(`device_types.${device.type}`)}</span>
-          </div>
-          <div className="summary-item">
-            <span className="label">{t('settings.external_id_label')}</span>
-            <span className="value">{device.external_id}</span>
-          </div>
-        </div>
-
-        {device.type === 'camera' && (
-          <FormField label={t('settings.snapshot_url_label')}>
-            <Input
-              {...register('snapshotUrl')}
-              placeholder={t('settings.snapshot_url_placeholder')}
-            />
-            <p className="help-text">{t('settings.snapshot_url_help')}</p>
+        <FormShell
+          onSubmit={handleSubmit(onFormSubmit)}
+          error={submitError}
+          actions={{
+            onCancel: () => navigate('/settings/devices'),
+            cancelLabel: t('settings.cancel'),
+            submitLabel: updateDevice.isPending
+              ? t('settings.saving')
+              : t('settings.save_changes'),
+            isSubmitting: updateDevice.isPending,
+            submitDisabled: !isDirty,
+          }}
+        >
+          <FormField label={t('settings.device_name_label')}>
+            <Input {...register('name', { required: true })} />
           </FormField>
-        )}
 
-        {device.provider === 'thingino' && device.type === 'camera' && (
-          <>
-            <FormField label={t('settings.ssh_user_label')}>
-              <Input {...register('sshUser')} placeholder="root" />
-            </FormField>
-            <FormField label={t('settings.ssh_key_path_label')}>
+          <FormSwitch
+            name="enabled"
+            control={control}
+            label={t('settings.enabled')}
+          />
+
+          <FormSwitch
+            name="visitAnnotationEnabled"
+            control={control}
+            label={t('settings.visit_annotation_label')}
+            description={t('settings.visit_annotation_help')}
+          />
+
+          <DeviceSummary externalId={device.external_id} />
+
+          {device.type === 'camera' && (
+            <FormField label={t('settings.snapshot_url_label')}>
               <Input
-                {...register('sshPrivateKeyPath')}
-                placeholder="/path/to/key"
+                {...register('snapshotUrl')}
+                placeholder={t('settings.snapshot_url_placeholder')}
               />
+              <p className="help-text">{t('settings.snapshot_url_help')}</p>
             </FormField>
-            <FormField label={t('settings.remote_path_label')}>
-              <Input
-                {...register('remotePath')}
-                placeholder="/mnt/sd/recordings"
-              />
-            </FormField>
-            <FormField label={t('settings.clip_duration_label')}>
-              <Input
-                type="number"
-                {...register('clipDurationSeconds', { valueAsNumber: true })}
-              />
-            </FormField>
-          </>
-        )}
+          )}
 
-        {device.type === 'pet_recognizer' && (
-          <>
-            <FormField label={t('settings.source_device_label')}>
-              <Select
-                {...register('sourceDeviceId', { required: true })}
-                placeholder={t('settings.source_device_placeholder')}
-                options={sourceDeviceOptions}
-              />
-            </FormField>
+          {device.provider === 'thingino' && device.type === 'camera' && (
+            <>
+              <FormField label={t('settings.ssh_user_label')}>
+                <Input {...register('sshUser')} placeholder="root" />
+              </FormField>
+              <FormField label={t('settings.ssh_key_path_label')}>
+                <Input
+                  {...register('sshPrivateKeyPath')}
+                  placeholder="/path/to/key"
+                />
+              </FormField>
+              <FormField label={t('settings.remote_path_label')}>
+                <Input
+                  {...register('remotePath')}
+                  placeholder="/mnt/sd/recordings"
+                />
+              </FormField>
+              <FormField label={t('settings.clip_duration_label')}>
+                <Input
+                  type="number"
+                  {...register('clipDurationSeconds', { valueAsNumber: true })}
+                />
+              </FormField>
+            </>
+          )}
 
-            <FormField label={t('settings.model_label')}>
-              <Input
-                {...register('model', { required: true })}
-                placeholder={t('settings.model_placeholder')}
-              />
-            </FormField>
+          {device.type === 'pet_recognizer' && (
+            <>
+              <FormField label={t('settings.source_device_label')}>
+                <Select
+                  {...register('sourceDeviceId', { required: true })}
+                  placeholder={t('settings.source_device_placeholder')}
+                  options={sourceDeviceOptions}
+                />
+              </FormField>
 
-            <FormField label={t('settings.prompt_template_label')}>
-              <Textarea
-                {...register('promptTemplate', { required: true })}
-                rows={6}
-              />
-            </FormField>
+              <FormField label={t('settings.model_label')}>
+                <Input
+                  {...register('model', { required: true })}
+                  placeholder={t('settings.model_placeholder')}
+                />
+              </FormField>
 
-            <FormSwitch
-              name="autoIdentify"
-              control={control}
-              label={t('settings.auto_identify_label')}
-            />
-          </>
-        )}
-      </FormShell>
+              <FormField label={t('settings.prompt_template_label')}>
+                <Textarea
+                  {...register('promptTemplate', { required: true })}
+                  rows={6}
+                />
+              </FormField>
+
+              <FormSwitch
+                name="autoIdentify"
+                control={control}
+                label={t('settings.auto_identify_label')}
+              />
+            </>
+          )}
+        </FormShell>
+      </FormCard>
+
       <DiscardUnsavedDialog
         open={blockerOpen}
         onConfirm={onConfirmLeave}
         onCancel={onCancelLeave}
       />
-    </SettingsFormPage>
+    </div>
   );
 };
 

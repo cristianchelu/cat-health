@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/form';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm } from '@/hooks/form';
+import { RegisterDeviceCard } from './shared/RegisterDeviceCard';
 import { generateLocalExternalId } from '../wizardUtils';
 import type { RegisterDeviceFormProps } from './types';
 
@@ -87,61 +88,63 @@ export const InferenceRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
     <>
       <p className="step-description">{t('settings.configure_recognizer')}</p>
 
-      <FormShell
-        onSubmit={onSubmit}
-        error={serverError}
-        actions={{
-          onCancel: () => requestDiscard(onBack),
-          cancelLabel: t('settings.back'),
-          submitLabel: isSubmitting
-            ? t('settings.registering')
-            : t('settings.create_recognizer'),
-          isSubmitting,
-        }}
-      >
-        <FormField label={t('settings.recognizer_name_label')}>
-          <Input
-            placeholder={t('settings.recognizer_name_placeholder')}
-            {...register('name', { required: true })}
-          />
-        </FormField>
+      <RegisterDeviceCard account={account} type="pet_recognizer">
+        <FormShell
+          onSubmit={onSubmit}
+          error={serverError}
+          actions={{
+            onCancel: () => requestDiscard(onBack),
+            cancelLabel: t('settings.back'),
+            submitLabel: isSubmitting
+              ? t('settings.registering')
+              : t('settings.create_recognizer'),
+            isSubmitting,
+          }}
+        >
+          <FormField label={t('settings.recognizer_name_label')}>
+            <Input
+              placeholder={t('settings.recognizer_name_placeholder')}
+              {...register('name', { required: true })}
+            />
+          </FormField>
 
-        <FormField label={t('settings.source_device_label')}>
-          <Select
-            placeholder={t('settings.source_device_placeholder')}
-            options={sourceOptions}
-            {...register('sourceDeviceId', { required: true })}
-          />
-        </FormField>
+          <FormField label={t('settings.source_device_label')}>
+            <Select
+              placeholder={t('settings.source_device_placeholder')}
+              options={sourceOptions}
+              {...register('sourceDeviceId', { required: true })}
+            />
+          </FormField>
 
-        <FormField label={t('settings.model_label')}>
-          <Input
-            placeholder={t('settings.model_placeholder')}
-            {...register('model', { required: true })}
-          />
-        </FormField>
+          <FormField label={t('settings.model_label')}>
+            <Input
+              placeholder={t('settings.model_placeholder')}
+              {...register('model', { required: true })}
+            />
+          </FormField>
 
-        <FormField label={t('settings.prompt_template_label')}>
-          <Textarea
-            rows={6}
-            {...register('promptTemplate', { required: true })}
-          />
-        </FormField>
+          <FormField label={t('settings.prompt_template_label')}>
+            <Textarea
+              rows={6}
+              {...register('promptTemplate', { required: true })}
+            />
+          </FormField>
 
-        <FormField label={t('settings.auto_identify_label')}>
-          <Controller
-            name="autoIdentify"
-            control={control}
-            render={({ field }) => (
-              <LabeledSwitchField
-                checked={field.value}
-                onCheckedChange={field.onChange}
-                ref={field.ref}
-              />
-            )}
-          />
-        </FormField>
-      </FormShell>
+          <FormField label={t('settings.auto_identify_label')}>
+            <Controller
+              name="autoIdentify"
+              control={control}
+              render={({ field }) => (
+                <LabeledSwitchField
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  ref={field.ref}
+                />
+              )}
+            />
+          </FormField>
+        </FormShell>
+      </RegisterDeviceCard>
       <DiscardUnsavedDialog {...discardConfirm} />
     </>
   );

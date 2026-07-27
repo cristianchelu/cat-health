@@ -233,7 +233,6 @@
     "device_name_label": "Device Name",
     "api_key_label": "API Key (Encryption Key)",
     "api_key_placeholder": "Optional if not configured",
-    "type_label": "Type:",
     "external_id_label": "External ID:",
     "register_device_error": "Failed to register device. Please check the API key.",
     "registering": "Registering...",
