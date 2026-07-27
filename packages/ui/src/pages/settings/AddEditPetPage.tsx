@@ -85,7 +85,17 @@ const AddEditPetPage: React.FC = () => {
 
   return (
     <div className="page-add-edit-pet">
+      {/*
+        Keyed per pet: PetForm seeds react-hook-form from `defaultValues`, which
+        RHF reads once per mount, and holds the avatar/away-from-home state in
+        its own `useState`. A param-only route change (/settings/pets/1 →
+        /settings/pets/2) reuses this component, so without the key the form
+        would keep the previous pet's values while the page reads as the new
+        one — and `isDirty` would be false, so the unsaved-changes guard would
+        not catch it either.
+      */}
       <PetForm
+        key={isEditing ? petId : 'new'}
         title={isEditing ? t('settings.edit_pet') : t('settings.add_pet_title')}
         petId={isEditing ? petId : undefined}
         isAway={pet?.is_away ?? false}
