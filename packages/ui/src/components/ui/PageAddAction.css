@@ -1,0 +1,41 @@
+/*
+ * Two top-level classes rather than one root: the header link and the FAB mount
+ * at different points in the page, so no single element can contain both. They
+ * are kept in one stylesheet because the breakpoint that hides one must be the
+ * same one that shows the other.
+ */
+.page-add-fab {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  /* The header button is replaced by a thumb-reachable floating action. */
+  .page-add-link {
+    display: none;
+  }
+
+  .page-add-fab {
+    /*
+     * Sticky, not fixed. The app shell is a flex column with MobileNav as a
+     * sibling, so the nav can never overlap content and the FAB needs no
+     * nav-sized offset — `bottom: 0` sits it directly above the nav.
+     */
+    position: sticky;
+    bottom: 0;
+    float: right;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    margin-top: var(--space-lg);
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    color: var(--color-text-inverted);
+    box-shadow: var(--shadow-lg);
+
+    &:hover {
+      background: var(--color-primary-dark);
+    }
+  }
+}

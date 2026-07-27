@@ -1,14 +1,13 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
-import { Plus, Server } from 'lucide-react';
+import { Server } from 'lucide-react';
 import type { ProviderAccountDTO } from 'shared';
 import { useProviderAccounts, useDevices } from '@/hooks/queries/deviceQueries';
 import { PageBackLink } from '@/components/ui/PageBackLink';
+import { PageAddFab, PageAddLink } from '@/components/ui/PageAddAction';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { EmptyState, LoadingState } from '@/components/ui/PageState';
-import { cn } from '@/lib/utils';
 import {
   CardList,
   CardListContent,
@@ -109,13 +108,10 @@ const ProvidersPage: React.FC = () => {
       <SectionHeader
         icon={<Server size="1em" />}
         actions={
-          <Link
+          <PageAddLink
             to="/settings/providers/new"
-            className={cn('button', 'primary', 'md', 'providers-page-add')}
-          >
-            <Plus size="1em" />
-            {t('settings.add_provider')}
-          </Link>
+            label={t('settings.add_provider')}
+          />
         }
       >
         {t('settings.providers')}
@@ -166,13 +162,10 @@ const ProvidersPage: React.FC = () => {
         </>
       )}
 
-      <Link
+      <PageAddFab
         to="/settings/providers/new"
-        className="providers-page-fab"
-        aria-label={t('settings.add_provider')}
-      >
-        <Plus size={24} />
-      </Link>
+        label={t('settings.add_provider')}
+      />
     </div>
   );
 };
