@@ -30,8 +30,20 @@ const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
     ): string => {
       if (!dateValue) return '';
 
+      const raw = String(dateValue);
+
+      /*
+       * Already a plain calendar date — hand it straight to the input. Routing
+       * it through `new Date()` would read it as UTC midnight and then format
+       * it in local time, showing the previous day to everyone west of UTC
+       * (AGENTS.md: never derive a local calendar date from a UTC instant).
+       * Re-picking the shown date would then write a value that differs from
+       * the stored one, marking an untouched form dirty.
+       */
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+
       try {
-        const date = new Date(String(dateValue));
+        const date = new Date(raw);
         if (isNaN(date.getTime())) return '';
 
         return format(date, 'yyyy-MM-dd');
