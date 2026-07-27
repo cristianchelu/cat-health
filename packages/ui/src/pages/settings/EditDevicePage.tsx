@@ -135,7 +135,7 @@ const EditDevicePage: React.FC = () => {
     defaultValues: DEFAULT_FORM_VALUES,
     values: device ? deviceToFormValues(device) : undefined,
   });
-  const { blockerOpen, onConfirmLeave, onCancelLeave } =
+  const { blockerOpen, onConfirmLeave, onCancelLeave, markSaved } =
     useUnsavedBlocker(isDirty);
 
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -182,6 +182,7 @@ const EditDevicePage: React.FC = () => {
           visit_annotation_enabled: data.visitAnnotationEnabled,
         },
       });
+      markSaved();
       navigate('/settings/devices');
     } catch (err) {
       console.error(err);

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
+import * as React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider, useNavigate } from 'react-router';
@@ -12,7 +13,7 @@ afterEach(() => {
 
 function LeaveGuardProbe({ isDirty }: { isDirty: boolean }) {
   const navigate = useNavigate();
-  const { blockerOpen, onConfirmLeave, onCancelLeave, allowLeave } =
+  const { blockerOpen, onConfirmLeave, onCancelLeave, markSaved } =
     useUnsavedBlocker(isDirty);
 
   return (
@@ -23,7 +24,7 @@ function LeaveGuardProbe({ isDirty }: { isDirty: boolean }) {
       <button
         type="button"
         onClick={() => {
-          allowLeave();
+          markSaved();
           navigate('/other');
         }}
       >
@@ -99,7 +100,7 @@ describe('useUnsavedBlocker', () => {
     assert.equal(screen.queryByTestId('other'), null);
   });
 
-  it('allowLeave bypasses the blocker while still dirty', async () => {
+  it('markSaved bypasses the blocker while still dirty', async () => {
     const user = userEvent.setup();
     renderWithDirty(true);
 
@@ -107,5 +108,53 @@ describe('useUnsavedBlocker', () => {
 
     assert.ok(await screen.findByTestId('other'));
     assert.equal(screen.queryByTestId('blocker'), null);
+  });
+
+  it('re-arms after markSaved once the form reports clean again', async () => {
+    const user = userEvent.setup();
+
+    // A form that stays mounted after saving: dirty lingers until the refetch
+    // rebuilds its baseline, then the user edits again.
+    function StayingProbe() {
+      const [dirty, setDirty] = React.useState(true);
+      const navigate = useNavigate();
+      const { blockerOpen, markSaved } = useUnsavedBlocker(dirty);
+
+      return (
+        <div>
+          <button type="button" onClick={() => markSaved()}>
+            Save
+          </button>
+          <button type="button" onClick={() => setDirty(false)}>
+            Refetch settles
+          </button>
+          <button type="button" onClick={() => setDirty(true)}>
+            Edit again
+          </button>
+          <button type="button" onClick={() => navigate('/other')}>
+            Leave
+          </button>
+          <p data-testid="blocker">{blockerOpen ? 'open' : 'closed'}</p>
+        </div>
+      );
+    }
+
+    const router = createMemoryRouter(
+      [
+        { path: '/', element: <StayingProbe /> },
+        { path: '/other', element: <p data-testid="other">Other page</p> },
+      ],
+      { initialEntries: ['/'] },
+    );
+    render(<RouterProvider router={router} />);
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Refetch settles' }));
+    await user.click(screen.getByRole('button', { name: 'Edit again' }));
+
+    // The suppression from the earlier save must not still be in force.
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    assert.equal(screen.getByTestId('blocker').textContent, 'open');
+    assert.equal(screen.queryByTestId('other'), null);
   });
 });

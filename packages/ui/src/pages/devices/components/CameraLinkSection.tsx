@@ -129,6 +129,7 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({
     setDraft: setConfigDraft,
     patchDraft,
     isDirty,
+    commit,
     requestReset,
     discardConfirm,
   } = useDraftForm(configBaseline, {
@@ -198,7 +199,10 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({
   const handleSaveConfig = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!isDirty) return;
-    updateConfigMutation.mutate({ config: buildConfig() });
+    updateConfigMutation.mutate(
+      { config: buildConfig() },
+      { onSuccess: () => commit() },
+    );
   };
 
   const toggleAcquisitionType = (type: 'snapshot' | 'recording') => {

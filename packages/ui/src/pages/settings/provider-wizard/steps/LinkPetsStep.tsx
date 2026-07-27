@@ -50,6 +50,9 @@ export const LinkPetsStep: React.FC<LinkPetsStepProps> = ({
   const isDirty = JSON.stringify(links) !== JSON.stringify(baseline);
   React.useEffect(() => {
     onDirtyChange?.(isDirty);
+    // Matches every sibling step: without the cleanup, unmounting while dirty
+    // leaves the wizard's `stepDirty` stuck on and guarding a step that is gone.
+    return () => onDirtyChange?.(false);
   }, [isDirty, onDirtyChange]);
 
   return (

@@ -120,7 +120,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
     return config.pet_links.filter(isProviderPetLink);
   }, [account?.config]);
 
-  const { blockerOpen, onConfirmLeave, onCancelLeave } =
+  const { blockerOpen, onConfirmLeave, onCancelLeave, markSaved } =
     useUnsavedBlocker(stepDirty);
 
   const {
@@ -132,18 +132,27 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
     enabled: state.step === 'discover',
   });
 
+  /*
+   * Every deliberate way out of the wizard funnels through `exit` or
+   * `finishConnect`, so both disarm the router blocker: the step's own
+   * `requestLeave` confirm has already run where one was warranted, and
+   * `setStepDirty(false)` would land a render too late to be seen by a
+   * `navigate()` in the same tick.
+   */
   const exit = React.useCallback(() => {
+    markSaved();
     void navigate(
       entry === 'connect' ? '/settings/providers' : '/settings/devices',
     );
-  }, [entry, navigate]);
+  }, [entry, markSaved, navigate]);
 
   /** Where a connect flow lands once its remaining steps are exhausted. */
   const finishConnect = React.useCallback(
     (accountId: number) => {
+      markSaved();
       void navigate(`/settings/providers/${accountId}`);
     },
-    [navigate],
+    [markSaved, navigate],
   );
 
   /**

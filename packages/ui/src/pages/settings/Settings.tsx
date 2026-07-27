@@ -54,6 +54,7 @@ const Settings: React.FC = () => {
     draft: trackingGapInput,
     setDraft: setTrackingGapInput,
     isDirty: trackingGapDirty,
+    commit: commitTrackingGap,
     requestReset: requestTrackingGapReset,
     discardConfirm: trackingGapDiscardConfirm,
   } = useDraftForm(trackingGapBaseline, {
@@ -73,6 +74,9 @@ const Settings: React.FC = () => {
       {
         onSuccess: () => {
           setTrackingGapInput(String(parsedTrackingGap));
+          // The settings query still holds the old threshold until it refetches;
+          // without this the row stays "dirty" and guards navigation after a save.
+          commitTrackingGap();
         },
       },
     );

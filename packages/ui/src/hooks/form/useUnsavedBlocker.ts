@@ -6,10 +6,16 @@ interface UseUnsavedBlockerResult {
   onConfirmLeave: () => void;
   onCancelLeave: () => void;
   /**
-   * Call before an intentional leave after a successful save so the blocker
-   * does not fire while React still has a stale dirty render.
+   * Call in the success path of a save (or delete) before navigating away.
+   *
+   * Two things make the raw `isDirty` unusable at that moment: react-router
+   * registers the blocker in an effect, so a `navigate()` in the same tick as
+   * the state update that clears dirty still sees the previous render's flag;
+   * and forms whose baseline comes from a query stay dirty until the refetch
+   * lands. This suppresses the guard until `isDirty` reports clean again,
+   * after which it re-arms on its own.
    */
-  allowLeave: () => void;
+  markSaved: () => void;
 }
 
 /**
@@ -17,16 +23,24 @@ interface UseUnsavedBlockerResult {
  * returned open/confirm/cancel handlers.
  */
 function useUnsavedBlocker(isDirty: boolean): UseUnsavedBlockerResult {
-  const allowLeaveRef = React.useRef(false);
+  const savedRef = React.useRef(false);
+
+  // Re-arm once the form genuinely settles back to clean. Deliberately runs
+  // after every commit rather than on an `isDirty` transition, so calling
+  // `markSaved()` on an already-clean form cannot disable the guard for the
+  // rest of the component's life.
+  React.useEffect(() => {
+    if (!isDirty) {
+      savedRef.current = false;
+    }
+  });
 
   const shouldBlock = React.useCallback<BlockerFunction>(
     ({ currentLocation, nextLocation }) => {
-      if (allowLeaveRef.current) {
+      if (savedRef.current) {
         return false;
       }
-      return (
-        isDirty && currentLocation.pathname !== nextLocation.pathname
-      );
+      return isDirty && currentLocation.pathname !== nextLocation.pathname;
     },
     [isDirty],
   );
@@ -35,8 +49,8 @@ function useUnsavedBlocker(isDirty: boolean): UseUnsavedBlockerResult {
 
   const blockerOpen = blocker.state === 'blocked';
 
-  const allowLeave = React.useCallback(() => {
-    allowLeaveRef.current = true;
+  const markSaved = React.useCallback(() => {
+    savedRef.current = true;
   }, []);
 
   const onConfirmLeave = React.useCallback(() => {
@@ -55,7 +69,7 @@ function useUnsavedBlocker(isDirty: boolean): UseUnsavedBlockerResult {
     blockerOpen,
     onConfirmLeave,
     onCancelLeave,
-    allowLeave,
+    markSaved,
   };
 }
 

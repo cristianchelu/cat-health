@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import * as React from 'react';
+import { act, render, renderHook, waitFor } from '@testing-library/react';
 
 import { useDraftForm } from '../useDraftForm.ts';
 
@@ -140,5 +141,62 @@ describe('useDraftForm', () => {
     });
     assert.equal(result.current.draft.name, 'Mochi');
     assert.equal(result.current.isDirty, false);
+  });
+
+  it('never commits a dirty render when only the baseline changed', () => {
+    const committed: boolean[] = [];
+
+    function Probe({
+      baseline,
+      baselineKey,
+    }: {
+      baseline: { gap: string };
+      baselineKey: string;
+    }) {
+      const { isDirty } = useDraftForm(baseline, { baselineKey });
+      // Recorded from an effect so only *committed* renders count — a render
+      // React throws away cannot arm the navigation guard.
+      React.useEffect(() => {
+        committed.push(isDirty);
+      });
+      return null;
+    }
+
+    const { rerender } = render(
+      <Probe baseline={{ gap: '' }} baselineKey="loading" />,
+    );
+    committed.length = 0;
+
+    // Query resolves: the untouched form must never read as dirty.
+    rerender(<Probe baseline={{ gap: '30' }} baselineKey="30" />);
+
+    assert.deepEqual(committed, [false]);
+  });
+
+  it('commit holds dirty false until the server baseline catches up', () => {
+    const { result, rerender } = renderHook(
+      ({ baseline, baselineKey }) => useDraftForm(baseline, { baselineKey }),
+      { initialProps: { baseline: { gap: '30' }, baselineKey: '30' } },
+    );
+
+    act(() => {
+      result.current.patchDraft({ gap: '45' });
+    });
+    assert.equal(result.current.isDirty, true);
+
+    // Saved, but the query still serves the old value.
+    act(() => {
+      result.current.commit();
+    });
+    assert.equal(result.current.isDirty, false);
+    assert.equal(result.current.draft.gap, '45');
+
+    rerender({ baseline: { gap: '30' }, baselineKey: '30' });
+    assert.equal(result.current.isDirty, false);
+
+    // Refetch lands with the saved value; the commit is superseded.
+    rerender({ baseline: { gap: '45' }, baselineKey: '45' });
+    assert.equal(result.current.isDirty, false);
+    assert.equal(result.current.draft.gap, '45');
   });
 });

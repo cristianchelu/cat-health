@@ -68,7 +68,7 @@ const LanguageRegionPage: React.FC = () => {
     },
   );
 
-  const { blockerOpen, onConfirmLeave, onCancelLeave, allowLeave } =
+  const { blockerOpen, onConfirmLeave, onCancelLeave, markSaved } =
     useUnsavedBlocker(isDirty && Boolean(settings));
 
   const timezoneOptions = React.useMemo(() => {
@@ -96,7 +96,7 @@ const LanguageRegionPage: React.FC = () => {
       },
       {
         onSuccess: () => {
-          allowLeave();
+          markSaved();
           navigate('/settings');
         },
       },

@@ -45,17 +45,27 @@ const FeederFoodSection: React.FC<FeederFoodSectionProps> = ({
     [compartments],
   );
 
-  const assignmentsBaselineKey = JSON.stringify(
-    Object.fromEntries(readFeederFoodAssignments(device.config)),
-  );
+  /*
+   * Give every rendered compartment an explicit entry, `null` when unlinked, so
+   * the baseline carries the same keys the draft will. A stored config only has
+   * entries for linked compartments, so without this, picking a food and then
+   * setting it back to "unlinked" compares `{"0":null}` against `{}` and the
+   * section reads as dirty forever — enabling Save and guarding navigation on a
+   * form that is visually untouched.
+   */
   const baselineAssignments = React.useMemo((): FoodAssignmentsDraft => {
-    return Object.fromEntries(readFeederFoodAssignments(device.config));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- baselineKey drives sync
-  }, [assignmentsBaselineKey]);
+    const stored = new Map(readFeederFoodAssignments(device.config));
+    return Object.fromEntries(
+      compartmentOrder.map((id) => [id, stored.get(id) ?? null]),
+    );
+  }, [device.config, compartmentOrder]);
+
+  const assignmentsBaselineKey = JSON.stringify(baselineAssignments);
   const {
     draft: assignments,
     setDraft: setAssignments,
     isDirty,
+    commit,
     requestReset,
     discardConfirm,
   } = useDraftForm(baselineAssignments, {
@@ -94,7 +104,7 @@ const FeederFoodSection: React.FC<FeederFoodSectionProps> = ({
       new Map(Object.entries(assignments)),
       compartmentOrder,
     );
-    updateDevice.mutate({ config });
+    updateDevice.mutate({ config }, { onSuccess: () => commit() });
   };
 
   return (

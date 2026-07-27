@@ -68,7 +68,7 @@ const PetForm: React.FC<PetFormProps> = ({
   const awayDirty = petId != null && awayFromHome !== isAway;
   const formDirty = isDirty || avatarDirty || awayDirty;
 
-  const { blockerOpen, onConfirmLeave, onCancelLeave, allowLeave } =
+  const { blockerOpen, onConfirmLeave, onCancelLeave, markSaved } =
     useUnsavedBlocker(formDirty);
 
   React.useEffect(() => {
@@ -78,7 +78,7 @@ const PetForm: React.FC<PetFormProps> = ({
   const handleFormSubmit = async (data: PostPetRequestDTO) => {
     const saved = await onSubmit(data, avatarFile, awayFromHome);
     if (!saved) return;
-    allowLeave();
+    markSaved();
     onCancel();
   };
 
@@ -202,6 +202,9 @@ const PetForm: React.FC<PetFormProps> = ({
           isConfirming={isDeleting}
           onConfirm={() => {
             setDeleteOpen(false);
+            // The pet is going away, so pending edits to it are moot — don't
+            // ask the user to confirm discarding them on the way out.
+            markSaved();
             onDelete();
           }}
           onCancel={() => setDeleteOpen(false)}

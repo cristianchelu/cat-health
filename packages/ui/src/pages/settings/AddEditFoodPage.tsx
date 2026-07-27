@@ -132,7 +132,7 @@ const AddEditFoodPage: React.FC = () => {
     defaultValues: DEFAULT_FORM_VALUES,
     values: food ? foodToFormValues(food) : undefined,
   });
-  const { blockerOpen, onConfirmLeave, onCancelLeave, allowLeave } =
+  const { blockerOpen, onConfirmLeave, onCancelLeave, markSaved } =
     useUnsavedBlocker(isDirty);
 
   const [error, setError] = useState<string | null>(null);
@@ -174,7 +174,7 @@ const AddEditFoodPage: React.FC = () => {
       } else {
         await updateFoodMutation.mutateAsync(payload);
       }
-      allowLeave();
+      markSaved();
       navigate('/settings');
     } catch (err) {
       console.error(err);

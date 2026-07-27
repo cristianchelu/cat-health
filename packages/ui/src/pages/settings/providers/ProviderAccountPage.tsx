@@ -139,7 +139,7 @@ const ProviderAccountPage: React.FC = () => {
   } = useDraftForm(petLinksBaseline, { baselineKey: petLinksBaselineKey });
 
   const dirty = isDirty || (supportsPetLinking && petLinksDirty);
-  const { blockerOpen, onConfirmLeave, onCancelLeave } =
+  const { blockerOpen, onConfirmLeave, onCancelLeave, markSaved } =
     useUnsavedBlocker(dirty);
 
   const accountDevices = devices.filter(
@@ -170,6 +170,7 @@ const ProviderAccountPage: React.FC = () => {
         // overwrite a provider's config with an empty object.
         ...(hasConfigModule || supportsPetLinking ? { config } : {}),
       });
+      markSaved();
       void navigate('/settings/providers');
     } catch (err) {
       console.error(err);
