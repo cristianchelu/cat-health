@@ -3,7 +3,13 @@ import { cn } from '@/lib/utils';
 import './Button.css';
 
 interface ButtonProps extends React.ComponentProps<'button'> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  variant?:
+    | 'primary'
+    | 'secondary'
+    | 'outline'
+    | 'ghost'
+    | 'danger'
+    | 'neutral';
   size?: 'sm' | 'md' | 'lg';
   icon?: boolean;
 }

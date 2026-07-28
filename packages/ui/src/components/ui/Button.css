@@ -51,6 +51,26 @@
     }
   }
 
+  /*
+   * A button that sits next to form controls: same surface, same neutral 1px
+   * border as `.input` and `.select`, so the two can share a border in a
+   * ControlGroup. The other variants are either filled or primary-bordered,
+   * which next to a `<select>` reads as a control left in an active state.
+   *
+   * Tints on `:focus-visible` rather than `:focus`, so clicking it does not
+   * leave it looking held down until something else takes focus.
+   */
+  &.neutral {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    border: var(--border-thin);
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--color-surface-muted);
+    }
+  }
+
   &.ghost {
     background-color: transparent;
     color: var(--color-text);
