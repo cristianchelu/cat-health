@@ -2,7 +2,7 @@
   max-width: var(--max-width-sm);
   margin: 0 auto;
 
-  .section-header {
+  .page-header {
     margin-bottom: var(--space-2xl);
   }
 
@@ -32,7 +32,8 @@
   }
 
   .connect-provider-step {
-    > h1 {
+    /* The step prompt sits under the wizard's own <h1> in `PageHeader`. */
+    > h2 {
       margin: 0 0 var(--space-2xs);
       font-size: var(--text-xl);
       font-weight: var(--font-bold);
@@ -152,7 +153,7 @@
   @media (max-width: 767px) {
     padding: var(--space-sm);
 
-    .section-header {
+    .page-header {
       margin-bottom: var(--space-xl);
     }
 

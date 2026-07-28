@@ -246,6 +246,7 @@
     "create_recognizer": "Creează recunoaștere",
     "snapshot_url_placeholder": "http://ip-camera/snapshot.jpg",
     "edit_device_title": "Editează dispozitiv",
+    "edit_provider_title": "Editează furnizor",
     "edit_device_error": "Nu s-a putut actualiza dispozitivul",
     "loading_device_data": "Se încarcă datele dispozitivului...",
     "visit_annotation_label": "Adnotare vizite",

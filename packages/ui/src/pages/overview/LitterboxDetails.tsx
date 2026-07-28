@@ -8,7 +8,7 @@ import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import { daysToUntrackedIntervals } from '@/lib/untrackedIntervals';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { PageBackLink } from '@/components/ui/PageBackLink';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent } from '@/components/ui/Card';
 import {
   LitterboxMetricChart,
@@ -151,14 +151,10 @@ const LitterboxDetails: React.FC = () => {
       {/*
         Explicit route, not history: the only entry point is the overview card,
         and a reload or bookmark leaves `navigate(-1)` with nowhere to go.
-        `mobileTitleAs` gives the page its only heading on mobile — it has no
-        other <h1>, so promoting the title bar cannot produce a second one.
       */}
-      <PageBackLink
-        to="/overview"
-        label={t('navigation.overview')}
-        mobileTitle={t('litterbox_details.title')}
-        mobileTitleAs="h1"
+      <PageHeader
+        back={{ to: '/overview', label: t('navigation.overview') }}
+        title={t('litterbox_details.title')}
         actions={rangeActions}
       />
 

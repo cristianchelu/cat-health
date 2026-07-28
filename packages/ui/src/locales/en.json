@@ -299,6 +299,7 @@
     "remote_path_label": "Remote Recording Path",
     "clip_duration_label": "Clip Duration (seconds)",
     "edit_device_title": "Edit Device",
+    "edit_provider_title": "Edit Provider",
     "edit_device_error": "Failed to update device",
     "loading_device_data": "Loading device data...",
     "visit_annotation_label": "Visit Annotation",

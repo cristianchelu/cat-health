@@ -77,7 +77,7 @@ function matchAll(source: string, re: RegExp): string[] {
  * Known limitation: this is one flat set, so a declaration in *any* file
  * legitimizes a reference from *any other* file. It cannot tell you that a
  * token is out of scope at the point of use. That is deliberate — cross-file
- * resolution is real and relied on here (`PageBackLink.css` reads
+ * resolution is real and relied on here (`styles/page-shell.css` reads
  * `--page-shell-padding-inline`, declared only on `main` in `App.css`), and
  * modelling the cascade properly would need a real CSS parser.
  */

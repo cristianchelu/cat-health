@@ -19,8 +19,7 @@ import {
 import { Server, Smartphone } from 'lucide-react';
 import { isRecord } from '@/lib/utils';
 import { useUnsavedBlocker } from '@/hooks/form';
-import { PageBackLink } from '@/components/ui/PageBackLink';
-import { SectionHeader } from '@/components/ui/SectionHeader';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import Stepper from '@/components/ui/Stepper';
 import { PickProviderStep } from './steps/PickProviderStep';
@@ -355,13 +354,11 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
        * FormActions, so this is labelled with where it lands instead of
        * duplicating that word.
        */}
-      <PageBackLink
-        label={leaveLabel}
-        mobileTitle={title}
-        onNavigate={() => requestLeave(leaveWizard)}
-      />
-
-      <SectionHeader
+      <PageHeader
+        back={{
+          label: leaveLabel,
+          onNavigate: () => requestLeave(leaveWizard),
+        }}
         icon={
           entry === 'connect' ? (
             <Server size="1em" />
@@ -369,9 +366,8 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
             <Smartphone size="1em" />
           )
         }
-      >
-        {title}
-      </SectionHeader>
+        title={title}
+      />
 
       {/*
        * Hidden on the first step in both flows: it would have nothing to say

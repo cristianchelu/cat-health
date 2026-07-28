@@ -4,9 +4,8 @@ import { Settings as SettingsIcon, Smartphone } from 'lucide-react';
 import type { DeviceType } from 'shared';
 import { useDevices } from '@/hooks/queries/deviceQueries';
 import { useRegionalPreferences } from '@/contexts/RegionalPreferencesProvider';
-import { PageBackLink } from '@/components/ui/PageBackLink';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { PageAddFab, PageAddLink } from '@/components/ui/PageAddAction';
-import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ListToolbar } from '@/components/ui/ListToolbar';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { SortControl } from '@/components/ui/SortControl';
@@ -97,23 +96,17 @@ const DevicesPage: React.FC = () => {
 
   return (
     <div className="settings-devices-page">
-      <PageBackLink
-        to="/settings"
-        label={t('navigation.settings')}
-        mobileTitle={t('settings.devices')}
-      />
-
-      <SectionHeader
+      <PageHeader
+        back={{ to: '/settings', label: t('navigation.settings') }}
         icon={<Smartphone size="1em" />}
+        title={t('settings.devices')}
         actions={
           <PageAddLink
             to="/settings/devices/new"
             label={t('settings.add_device')}
           />
         }
-      >
-        {t('settings.devices')}
-      </SectionHeader>
+      />
 
       {devicesQuery.isPending ? (
         <LoadingState message={t('settings.loading_devices')} />

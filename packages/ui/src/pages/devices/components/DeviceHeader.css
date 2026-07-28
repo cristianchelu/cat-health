@@ -1,124 +1,65 @@
+/*
+ * The device name and its actions live in `PageHeader`, which is why the
+ * action styles below are not nested under `.device-header` — they are handed
+ * to the header as `actions` and render inside it.
+ */
 .device-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
   margin-bottom: var(--space-lg);
 
-  .device-header-main {
+  .device-meta {
     display: flex;
     align-items: center;
-    gap: var(--space-md);
-    flex: 1;
-    min-width: 0;
-
-    .device-info {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2xs);
-      min-width: 0;
-
-      .device-name {
-        font-size: var(--text-2xl); /* Increased size for page title */
-        font-weight: var(--font-bold);
-        color: var(--color-text);
-        line-height: var(--line-height-tight);
-        margin: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .device-meta {
-        display: flex;
-        align-items: center;
-        gap: var(--space-xs);
-        font-size: var(--text-sm);
-        color: var(--color-text-muted);
-        flex-wrap: wrap;
-
-        .separator {
-          color: var(--color-text-subtle);
-        }
-
-        /* Raw device-type key; the provider label comes pre-cased. */
-        .device-type {
-          text-transform: capitalize;
-        }
-      }
-    }
-  }
-
-  .device-header-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2xs);
-    flex-shrink: 0;
-  }
-
-  .edit-button {
-    flex-shrink: 0;
-
-    .icon {
-      height: 1rem;
-      width: 1rem;
-    }
-  }
-
-  .device-header-icon-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    padding: var(--space-xs);
-    border: none;
-    border-radius: var(--radius-sm);
-    background: transparent;
+    gap: var(--space-xs);
+    font-size: var(--text-sm);
     color: var(--color-text-muted);
-    text-decoration: none;
-    cursor: pointer;
-    transition: var(--transition-fast);
+    flex-wrap: wrap;
 
-    &:hover {
-      color: var(--color-text);
-      background-color: var(--color-surface-muted);
+    .separator {
+      color: var(--color-text-subtle);
     }
 
-    &:focus-visible {
-      outline: 2px solid var(--color-primary);
-      outline-offset: 2px;
-    }
-
-    .icon {
-      height: 1rem;
-      width: 1rem;
+    /* Raw device-type key; the provider label comes pre-cased. */
+    .device-type {
+      text-transform: capitalize;
     }
   }
+}
 
-  .device-last-seen {
-    font-size: var(--text-xs);
-    color: var(--color-text-muted);
-    white-space: nowrap;
-    flex-shrink: 0;
+.edit-button {
+  flex-shrink: 0;
+
+  .icon {
+    height: 1rem;
+    width: 1rem;
+  }
+}
+
+.device-header-icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: var(--space-xs);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition-fast);
+
+  &:hover {
+    color: var(--color-text);
+    background-color: var(--color-surface-muted);
   }
 
-  /* Responsive adjustments. 767px is the app's mobile boundary (App.css). */
-  @media (max-width: 767px) {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-sm);
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 
-    /*
-     * The back bar already shows the device name — don't say it twice. It
-     * renders as the page's <h1> at this width (`mobileTitleAs`), so hiding
-     * this one leaves the heading intact for assistive tech.
-     */
-    .device-name {
-      display: none;
-    }
-
-    .device-last-seen {
-      text-align: right;
-    }
+  .icon {
+    height: 1rem;
+    width: 1rem;
   }
 }

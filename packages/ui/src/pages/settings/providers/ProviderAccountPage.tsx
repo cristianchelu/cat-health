@@ -19,7 +19,7 @@ import {
   FormSwitch,
 } from '@/components/ui/form';
 import { LoadingState } from '@/components/ui/PageState';
-import { PageBackLink } from '@/components/ui/PageBackLink';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm, useDraftForm, useUnsavedBlocker } from '@/hooks/form';
 import {
@@ -178,13 +178,22 @@ const ProviderAccountPage: React.FC = () => {
     }
   };
 
+  /*
+   * The account's name is the page title once it loads; until then the page can
+   * only say which page it is, so the mobile bar has something to show either
+   * way.
+   */
+  const header = (title: React.ReactNode) => (
+    <PageHeader
+      back={{ to: '/settings/providers', label: t('settings.providers') }}
+      title={title}
+    />
+  );
+
   if (isLoading) {
     return (
       <div className="provider-account-page">
-        <PageBackLink
-          to="/settings/providers"
-          label={t('settings.providers')}
-        />
+        {header(t('settings.edit_provider_title'))}
         <LoadingState message={t('settings.loading_provider_data')} />
       </div>
     );
@@ -193,10 +202,7 @@ const ProviderAccountPage: React.FC = () => {
   if (loadError || !account) {
     return (
       <div className="provider-account-page">
-        <PageBackLink
-          to="/settings/providers"
-          label={t('settings.providers')}
-        />
+        {header(t('settings.edit_provider_title'))}
         <div className="provider-account-error">
           <p>{t('settings.error_loading_provider')}</p>
           <Button onClick={() => void navigate('/settings/providers')}>
@@ -212,16 +218,13 @@ const ProviderAccountPage: React.FC = () => {
 
   return (
     <div className="provider-account-page">
-      <PageBackLink
-        to="/settings/providers"
-        label={t('settings.providers')}
-        mobileTitle={account.name}
-      />
+      {header(account.name)}
 
       <FormCard>
         <FormCardHead
           tile={<ProviderBrandTile provider={provider} size="lg" />}
           title={providerBrandLabel(brand, t)}
+          titleAs="h2"
           subtitle={identity}
         />
 

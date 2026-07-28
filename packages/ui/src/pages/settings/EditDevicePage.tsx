@@ -18,7 +18,7 @@ import {
   Textarea,
 } from '@/components/ui/form';
 import { LoadingState } from '@/components/ui/PageState';
-import { PageBackLink } from '@/components/ui/PageBackLink';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm, useUnsavedBlocker } from '@/hooks/form';
 import { DeviceSummary } from './components/DeviceSummary';
@@ -190,18 +190,22 @@ const EditDevicePage: React.FC = () => {
     }
   };
 
-  const backLink = (mobileTitle?: string) => (
-    <PageBackLink
-      to="/settings/devices"
-      label={t('settings.devices')}
-      mobileTitle={mobileTitle}
+  /*
+   * The device's name is the page title once it loads; until then the page can
+   * only say which page it is, so the mobile bar has something to show either
+   * way.
+   */
+  const header = (title: React.ReactNode) => (
+    <PageHeader
+      back={{ to: '/settings/devices', label: t('settings.devices') }}
+      title={title}
     />
   );
 
   if (isLoading) {
     return (
       <div className="edit-device-page">
-        {backLink()}
+        {header(t('settings.edit_device_title'))}
         <LoadingState message={t('settings.loading_device_data')} />
       </div>
     );
@@ -210,7 +214,7 @@ const EditDevicePage: React.FC = () => {
   if (error || !device) {
     return (
       <div className="edit-device-page">
-        {backLink()}
+        {header(t('settings.edit_device_title'))}
         <div className="error-state">
           <p>{t('devices.error_loading_device')}</p>
           <Button onClick={() => navigate('/settings/devices')}>
@@ -232,12 +236,13 @@ const EditDevicePage: React.FC = () => {
 
   return (
     <div className="edit-device-page">
-      {backLink(device.name)}
+      {header(device.name)}
 
       <FormCard>
         <FormCardHead
           tile={<DeviceTypeTile type={device.type} size="lg" />}
           title={device.name}
+          titleAs="h2"
           subtitle={`${t(`device_types.${device.type}`)} · ${providerLabel}`}
         />
 

@@ -43,7 +43,7 @@ export const PickProviderStep: React.FC<PickProviderStepProps> = ({
 
   return (
     <div className="connect-provider-step">
-      <h1 id={headingId}>{t('settings.pick_provider_title')}</h1>
+      <h2 id={headingId}>{t('settings.pick_provider_title')}</h2>
       <p className="connect-provider-subtitle">
         {t('settings.pick_provider_subtitle')}
       </p>

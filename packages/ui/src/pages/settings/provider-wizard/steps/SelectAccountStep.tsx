@@ -101,7 +101,7 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
 
   return (
     <div className="connect-provider-step">
-      <h1 id={headingId}>{t('settings.select_account_title')}</h1>
+      <h2 id={headingId}>{t('settings.select_account_title')}</h2>
       <p className="connect-provider-subtitle">
         {t('settings.select_account_subtitle')}
       </p>

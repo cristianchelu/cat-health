@@ -1,0 +1,130 @@
+/*
+ * Desktop: "← Settings" on its own row, the <h1> and its actions below it.
+ * Mobile:  one app-bar row — round back button, title, actions.
+ *
+ * The heading is a single element placed into a named area, so the two layouts
+ * cannot disagree about what the page is called. Only the back control has two
+ * variants (text link vs icon button); one is always `display: none`, which
+ * also keeps it out of the accessibility tree.
+ */
+.page-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'back  back'
+    'title actions';
+  align-items: center;
+  gap: var(--space-xs) var(--space-md);
+  margin-bottom: var(--space-lg);
+
+  .page-header-back {
+    grid-area: back;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .page-header-back-button {
+    display: none;
+  }
+
+  .page-header-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text-light);
+    text-decoration: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color var(--transition-fast);
+
+    &:hover {
+      color: var(--color-text);
+    }
+  }
+
+  .page-header-title {
+    grid-area: title;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+
+    svg {
+      width: 1.25em;
+      height: 1.25em;
+      flex-shrink: 0;
+      color: var(--color-primary);
+    }
+
+    h1 {
+      margin: 0;
+      min-width: 0;
+      font-size: var(--text-2xl);
+      font-weight: var(--font-bold);
+      line-height: var(--line-height-tight);
+      color: var(--color-text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .page-header-actions {
+    grid-area: actions;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+  }
+
+  @media (max-width: 767px) {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'back title actions';
+    gap: var(--space-sm);
+    padding-block: var(--space-md) var(--space-xs);
+    margin-bottom: var(--space-md);
+
+    .page-header-back-link {
+      display: none;
+    }
+
+    .page-header-back-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      /* 38px — between --space tokens, so a literal like the design uses. */
+      width: 2.375rem;
+      height: 2.375rem;
+      flex-shrink: 0;
+      border: 0;
+      border-radius: var(--radius-full);
+      background: var(--color-surface);
+      box-shadow: var(--shadow-sm);
+      color: var(--color-text-light);
+      cursor: pointer;
+      transition: background-color var(--transition-fast);
+
+      &:hover {
+        background: var(--color-surface-muted);
+        color: var(--color-text);
+      }
+    }
+
+    .page-header-title {
+      /* The back button already anchors the row; a second mark crowds it. */
+      svg {
+        display: none;
+      }
+
+      h1 {
+        font-size: var(--text-lg);
+      }
+    }
+  }
+}
