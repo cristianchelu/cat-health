@@ -1,0 +1,15 @@
+.meta-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  /* Long device and account names have to be allowed to wrap onto a second row. */
+  flex-wrap: wrap;
+
+  .meta-line-sep {
+    width: 3px;
+    height: 3px;
+    border-radius: var(--radius-full);
+    background: var(--color-text-subtle);
+    flex-shrink: 0;
+  }
+}

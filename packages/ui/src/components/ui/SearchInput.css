@@ -1,0 +1,69 @@
+.search-input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  padding: 0 var(--space-sm);
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text-muted);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+
+  /*
+   * The ring belongs to the whole field, not the bare <input> sitting inside
+   * it — matching `.input`, whose border and focus ring are the same element.
+   */
+  &:focus-within {
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--color-primary) 20%, transparent);
+  }
+
+  .search-input-icon {
+    flex-shrink: 0;
+  }
+
+  .search-input-field {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--text-sm);
+    line-height: var(--line-height-normal);
+    padding: var(--space-xs) 0;
+
+    &::placeholder {
+      color: var(--color-text-muted);
+    }
+
+    /* We render our own clear button; the UA one would sit next to it. */
+    &::-webkit-search-cancel-button {
+      appearance: none;
+    }
+  }
+
+  .search-input-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: var(--space-3xs);
+    border: none;
+    border-radius: var(--radius-full);
+    background: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: var(--transition-fast);
+
+    &:hover {
+      background-color: var(--color-surface-highlight);
+      color: var(--color-text);
+    }
+  }
+}

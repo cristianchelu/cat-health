@@ -1,0 +1,6 @@
+.sort-control {
+  /* Sizes to its widest option instead of the `.select` default of 100%. */
+  .sort-control-select {
+    width: auto;
+  }
+}

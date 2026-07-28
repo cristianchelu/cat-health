@@ -341,7 +341,10 @@
     "provider_missing_hint": "Don't see a provider? Connect one first under",
     "integrations": "Integrations",
     "loading_devices": "Loading devices...",
-    "error_loading_devices": "Could not load devices"
+    "error_loading_devices": "Could not load devices",
+    "search_devices": "Search devices",
+    "no_devices_yet": "No devices yet.",
+    "no_matching_devices": "No devices match your search."
   },
   "common": {
     "loading": "Loading...",
@@ -369,7 +372,14 @@
     "unknown": "Unknown",
     "poop_icon_alt": "Poop icon",
     "water_fountain_icon_alt": "Water fountain icon",
-    "litterbox_icon_alt": "Litterbox icon"
+    "litterbox_icon_alt": "Litterbox icon",
+    "clear": "Clear",
+    "sort_by": "Sort by",
+    "sort_by_type": "Type",
+    "sort_by_name": "Name",
+    "sort_by_provider": "Provider",
+    "sort_ascending": "Ascending",
+    "sort_descending": "Descending"
   },
   "event_details": {
     "duration_label": "Duration:",

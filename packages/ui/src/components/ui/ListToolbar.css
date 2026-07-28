@@ -1,0 +1,39 @@
+.list-toolbar {
+  display: flex;
+  /*
+   * Stretch, not center: the controls in here are sized by their own padding
+   * and line-height, so a `<select>` and a search field never land on the same
+   * height on their own — and a 3px difference reads as one of them floating.
+   */
+  align-items: stretch;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+
+  .list-toolbar-search {
+    flex: 1;
+    /*
+     * Below this the box stops being a search box — the segmented sort control
+     * is ~162px, and on a 320px screen that leaves barely two characters of
+     * visible text. A min-width rather than a breakpoint, so the wrap fires on
+     * the constraint that actually matters: whichever controls a toolbar happens
+     * to carry, it wraps exactly when they no longer leave room to type.
+     */
+    min-width: 8rem;
+  }
+
+  /*
+   * Trailing controls size to their content. A native <select> would otherwise
+   * stretch to the shared `.select` width: 100%.
+   */
+  > :not(.list-toolbar-search) {
+    flex: none;
+    width: auto;
+  }
+
+  /*
+   * A safety valve for toolbars that grow a third control, not a phone
+   * treatment: search plus one control still fits on a 320px row, and dropping
+   * the control onto its own line just leaves it stranded there.
+   */
+  flex-wrap: wrap;
+}

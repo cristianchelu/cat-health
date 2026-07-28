@@ -5,10 +5,16 @@ import { I18nextProvider, initReactI18next } from 'react-i18next';
 import i18n from 'i18next';
 import { MemoryRouter, type MemoryRouterProps } from 'react-router';
 
-/** Minimal keys used by ConfirmDialog / FormInlineDiscard / Dialog close. */
+/**
+ * Minimal keys used by ConfirmDialog / FormInlineDiscard / Dialog close /
+ * SearchInput / SortControl.
+ */
 const testResources = {
   common: {
     cancel: 'Cancel',
+    clear: 'Clear',
+    sort_ascending: 'Ascending',
+    sort_descending: 'Descending',
     confirm: 'Confirm',
     discard: 'Discard',
     keep_editing: 'Keep editing',

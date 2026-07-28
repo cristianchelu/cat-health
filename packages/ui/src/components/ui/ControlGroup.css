@@ -1,0 +1,37 @@
+.control-group {
+  display: flex;
+  /* Segments equalise to the tallest, so a select and a button share a baseline. */
+  align-items: stretch;
+
+  > * {
+    /*
+     * Segments overlap by exactly the border they share, so the seam reads as
+     * one line rather than two. The focus ring is a box-shadow, which paints
+     * outside the border and would otherwise be clipped by the next segment —
+     * hence the stacking context and the lift on focus.
+     */
+    position: relative;
+    border-radius: 0;
+
+    &:focus,
+    &:focus-visible,
+    &:focus-within {
+      z-index: 1;
+    }
+  }
+
+  > * + * {
+    margin-inline-start: -1px;
+  }
+
+  /* Only the outer corners of the whole widget stay round. */
+  > :first-child {
+    border-start-start-radius: var(--radius-md);
+    border-end-start-radius: var(--radius-md);
+  }
+
+  > :last-child {
+    border-start-end-radius: var(--radius-md);
+    border-end-end-radius: var(--radius-md);
+  }
+}
