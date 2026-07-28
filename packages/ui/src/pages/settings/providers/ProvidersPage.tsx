@@ -7,6 +7,7 @@ import { PageBackLink } from '@/components/ui/PageBackLink';
 import { PageAddFab, PageAddLink } from '@/components/ui/PageAddAction';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { StatusPill } from '@/components/ui/StatusPill';
+import { MetaLine } from '@/components/ui/MetaLine';
 import { EmptyState, LoadingState } from '@/components/ui/PageState';
 import {
   CardList,
@@ -42,7 +43,7 @@ const ProviderRow: React.FC<ProviderRowProps> = ({ account, deviceCount }) => {
     brandLabel,
     identity,
     t('settings.device_count', { count: deviceCount }),
-  ].filter((part): part is string => Boolean(part));
+  ];
 
   return (
     <CardListItem
@@ -56,18 +57,7 @@ const ProviderRow: React.FC<ProviderRowProps> = ({ account, deviceCount }) => {
     >
       <CardListContent
         title={account.name}
-        description={
-          <span className="provider-row-meta">
-            {meta.map((part, index) => (
-              <React.Fragment key={part}>
-                {index > 0 && (
-                  <span className="provider-row-sep" aria-hidden="true" />
-                )}
-                <span>{part}</span>
-              </React.Fragment>
-            ))}
-          </span>
-        }
+        description={<MetaLine parts={meta} />}
       />
     </CardListItem>
   );

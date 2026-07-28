@@ -7,21 +7,6 @@
   }
 
   /* Dot-separated provider, identity and device count under the account name. */
-  .provider-row-meta {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    flex-wrap: wrap;
-
-    .provider-row-sep {
-      width: 3px;
-      height: 3px;
-      border-radius: var(--radius-full);
-      background: var(--color-text-subtle);
-      flex-shrink: 0;
-    }
-  }
-
   .providers-page-system {
     margin-top: var(--space-2xl);
 
@@ -34,5 +19,4 @@
       letter-spacing: 0.05em;
     }
   }
-
 }
