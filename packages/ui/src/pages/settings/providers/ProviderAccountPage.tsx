@@ -291,13 +291,17 @@ const ProviderAccountPage: React.FC = () => {
               <CardListContent title={device.name} description={device.type} />
             </CardListItem>
           ))}
+          {/*
+           * Naming the account carries this page's answer to "which provider?"
+           * into the wizard, so it opens on discovery instead of asking again.
+           */}
           <CardListItem
             icon={
               <div className="add-item-icon">
                 <Plus size="0.5em" />
               </div>
             }
-            to="/settings/devices/new"
+            to={`/settings/devices/new?account=${accountId}`}
           >
             <CardListContent
               title={t('settings.add_device')}

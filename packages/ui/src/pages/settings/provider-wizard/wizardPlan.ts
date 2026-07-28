@@ -1,4 +1,8 @@
-import type { ProviderCapabilities } from 'shared';
+import type {
+  ProviderAccountDTO,
+  ProviderCapabilities,
+  ProviderInfoDTO,
+} from 'shared';
 import type {
   RegisterSource,
   WizardEntry,
@@ -77,6 +81,58 @@ export function buildWizardPlan(
   }
 
   return { entry, steps };
+}
+
+/**
+ * The step that follows choosing an account in `add-device`.
+ *
+ * Branches on the same capability the plan does, so navigation can never skip a
+ * discovery step the stepper promised.
+ */
+export function stepAfterAccountPick(
+  account: ProviderAccountDTO,
+  providers: ProviderInfoDTO[],
+): WizardState {
+  const skipsDiscovery =
+    providers.find((p) => p.name === account.provider)?.capabilities
+      .skip_discovery ?? false;
+
+  return skipsDiscovery
+    ? {
+        step: 'register',
+        accountId: account.id,
+        source: { kind: 'skip-discovery' },
+      }
+    : { step: 'discover', accountId: account.id };
+}
+
+/**
+ * Where an `add-device` wizard opens.
+ *
+ * Arriving from a provider account has already answered "which account?", so
+ * asking again on the pick step reads as the app having forgotten where the user
+ * came from. A seeded account lands on the step the picker would have sent them
+ * to anyway.
+ *
+ * The seed is held to the same bar the picker applies, and falls back to the
+ * picker rather than trusting it: an account that doesn't exist, is switched
+ * off, or has no registered provider behind it has no manager to discover with,
+ * so honouring it would strand the user on a step that can never resolve.
+ */
+export function initialAddDeviceState(
+  accountId: number | null,
+  accounts: ProviderAccountDTO[],
+  providers: ProviderInfoDTO[],
+): WizardState {
+  if (accountId == null) return { step: 'pick' };
+
+  const seeded = accounts.find((account) => account.id === accountId);
+  if (!seeded?.enabled) return { step: 'pick' };
+  if (!providers.some((p) => p.name === seeded.provider)) {
+    return { step: 'pick' };
+  }
+
+  return stepAfterAccountPick(seeded, providers);
 }
 
 /** Whether the plan actually contains a step, so navigation can't skip one it promised. */

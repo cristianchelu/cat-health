@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import type {
   DiscoveredDeviceDTO,
   PostDeviceRequestDTO,
@@ -20,6 +20,7 @@ import { Server, Smartphone } from 'lucide-react';
 import { isRecord } from '@/lib/utils';
 import { useUnsavedBlocker } from '@/hooks/form';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { LoadingState } from '@/components/ui/PageState';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import Stepper from '@/components/ui/Stepper';
 import { PickProviderStep } from './steps/PickProviderStep';
@@ -33,8 +34,10 @@ import {
   buildWizardPlan,
   getBackTarget,
   getVisualStep,
+  initialAddDeviceState,
   planHasStep,
   sourceKey,
+  stepAfterAccountPick,
 } from './wizardPlan';
 import { importDevices } from './importSelection';
 import '../providerForm.css';
@@ -45,6 +48,14 @@ interface ProviderWizardPageProps {
 }
 
 const EMPTY_PET_LINKS: ProviderPetLink[] = [];
+
+/** The account an `add-device` link asked to start from, if it named a usable one. */
+function readSeedAccountId(search: URLSearchParams): number | null {
+  const raw = search.get('account');
+  if (raw == null) return null;
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
 
 function isProviderPetLink(value: unknown): value is ProviderPetLink {
   return (
@@ -67,13 +78,26 @@ function isProviderPetLink(value: unknown): value is ProviderPetLink {
 const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { data: providers = [] } = useProviders();
-  const { data: accounts = [] } = useProviderAccounts();
+  const [searchParams] = useSearchParams();
+  const { data: providers = [], isPending: providersPending } = useProviders();
+  const { data: accounts = [], isPending: accountsPending } =
+    useProviderAccounts();
   const { data: existingDevices = [] } = useDevices();
   const addDevice = useAddDevice();
   const createAccount = useCreateProviderAccount();
 
+  const seedAccountId =
+    entry === 'add-device' ? readSeedAccountId(searchParams) : null;
+
   const [state, setState] = React.useState<WizardState>({ step: 'pick' });
+  /*
+   * A seed can only be resolved against the account and provider lists, which
+   * arrive async, so the first render can't do it. Holding the picker back until
+   * then keeps the user from seeing the question they already answered blink past
+   * on its way to being skipped; it is read only on the pick step, so the moment
+   * the seed resolves — or is rejected — this stops mattering.
+   */
+  const [seedPending, setSeedPending] = React.useState(seedAccountId != null);
   const [pickedProvider, setPickedProvider] = React.useState<string | null>(
     null,
   );
@@ -83,6 +107,19 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
     (() => void) | null
   >(null);
   const [isImporting, setIsImporting] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!seedPending || providersPending || accountsPending) return;
+    setState(initialAddDeviceState(seedAccountId, accounts, providers));
+    setSeedPending(false);
+  }, [
+    seedPending,
+    providersPending,
+    accountsPending,
+    seedAccountId,
+    accounts,
+    providers,
+  ]);
 
   const activeAccountId = 'accountId' in state ? state.accountId : null;
   const selectedAccount = accounts.find((a) => a.id === activeAccountId);
@@ -253,16 +290,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
     if (!picked) return;
     setServerError(null);
     setStepDirty(false);
-    // Branch on the same capability the step plan uses, so the stepper can
-    // never promise a discovery step that navigation then skips.
-    const skipsDiscovery =
-      providers.find((p) => p.name === picked.provider)?.capabilities
-        .skip_discovery ?? false;
-    setState(
-      skipsDiscovery
-        ? { step: 'register', accountId, source: { kind: 'skip-discovery' } }
-        : { step: 'discover', accountId },
-    );
+    setState(stepAfterAccountPick(picked, providers));
   };
 
   const handleSelectDiscovered = (device: DiscoveredDeviceDTO) => {
@@ -397,10 +425,14 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
 
       {state.step === 'pick' && entry === 'add-device' && (
         <div className="step-container">
-          <SelectAccountStep
-            accounts={accounts}
-            onContinue={handleContinueFromAccount}
-          />
+          {seedPending ? (
+            <LoadingState />
+          ) : (
+            <SelectAccountStep
+              accounts={accounts}
+              onContinue={handleContinueFromAccount}
+            />
+          )}
         </div>
       )}
 

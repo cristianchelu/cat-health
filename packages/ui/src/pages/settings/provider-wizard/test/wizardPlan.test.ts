@@ -1,13 +1,19 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { ProviderCapabilities } from 'shared';
+import type {
+  ProviderAccountDTO,
+  ProviderCapabilities,
+  ProviderInfoDTO,
+} from 'shared';
 
 import {
   buildWizardPlan,
   getBackTarget,
   getVisualStep,
+  initialAddDeviceState,
   planHasStep,
   sourceKey,
+  stepAfterAccountPick,
 } from '../wizardPlan.ts';
 
 const DISCOVERY_AND_LINKING: ProviderCapabilities = {
@@ -227,6 +233,96 @@ describe('getBackTarget', () => {
       }),
       { step: 'discover', accountId: 3 },
     );
+  });
+});
+
+const PROVIDERS: ProviderInfoDTO[] = [
+  { name: 'surepet', internal: false, capabilities: DISCOVERY_AND_LINKING },
+  { name: 'esphome', internal: true, capabilities: SKIP_DISCOVERY },
+];
+
+const account = (
+  overrides: Partial<ProviderAccountDTO>,
+): ProviderAccountDTO => ({
+  id: 1,
+  provider: 'surepet',
+  name: 'Home',
+  config: {},
+  enabled: true,
+  internal: false,
+  created_at: '2026-01-01T00:00:00.000Z',
+  updated_at: '2026-01-01T00:00:00.000Z',
+  ...overrides,
+});
+
+describe('stepAfterAccountPick', () => {
+  it('sends a discoverable account to discovery', () => {
+    assert.deepEqual(stepAfterAccountPick(account({ id: 7 }), PROVIDERS), {
+      step: 'discover',
+      accountId: 7,
+    });
+  });
+
+  it('jumps a skip-discovery account straight to registration', () => {
+    assert.deepEqual(
+      stepAfterAccountPick(
+        account({ id: 4, provider: 'esphome', internal: true }),
+        PROVIDERS,
+      ),
+      { step: 'register', accountId: 4, source: { kind: 'skip-discovery' } },
+    );
+  });
+
+  it('does not claim skip-discovery for an unregistered provider', () => {
+    // An absent provider has not declared `skip_discovery`, so this keeps the
+    // planned three steps rather than inventing a jump over the middle one.
+    // Callers are expected to filter these out first — `initialAddDeviceState`
+    // does, and the picker only offers registered providers.
+    assert.deepEqual(
+      stepAfterAccountPick(account({ id: 9, provider: 'ghost' }), PROVIDERS),
+      { step: 'discover', accountId: 9 },
+    );
+  });
+});
+
+describe('initialAddDeviceState', () => {
+  const accounts = [
+    account({ id: 1 }),
+    account({ id: 2, provider: 'esphome', internal: true }),
+    account({ id: 3, enabled: false }),
+    account({ id: 4, provider: 'legacy' }),
+  ];
+
+  it('opens on the picker when no account was named', () => {
+    assert.deepEqual(initialAddDeviceState(null, accounts, PROVIDERS), {
+      step: 'pick',
+    });
+  });
+
+  it('skips the picker for the account the link came from', () => {
+    assert.deepEqual(initialAddDeviceState(1, accounts, PROVIDERS), {
+      step: 'discover',
+      accountId: 1,
+    });
+    assert.deepEqual(initialAddDeviceState(2, accounts, PROVIDERS), {
+      step: 'register',
+      accountId: 2,
+      source: { kind: 'skip-discovery' },
+    });
+  });
+
+  it('falls back to the picker for an account it must not honour', () => {
+    // Each of these would strand the user on a step that can never resolve:
+    // an id that matches nothing, a switched-off account, and the seeded
+    // "Legacy Devices" row whose provider has no manager behind it.
+    const rejected = { step: 'pick' };
+    assert.deepEqual(initialAddDeviceState(99, accounts, PROVIDERS), rejected);
+    assert.deepEqual(initialAddDeviceState(3, accounts, PROVIDERS), rejected);
+    assert.deepEqual(initialAddDeviceState(4, accounts, PROVIDERS), rejected);
+  });
+
+  it('falls back to the picker before the lists have loaded', () => {
+    assert.deepEqual(initialAddDeviceState(1, [], []), { step: 'pick' });
   });
 });
 
