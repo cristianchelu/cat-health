@@ -42,7 +42,7 @@ export interface SeedDeviceDef {
   key: 'litterbox' | 'fountain' | 'feeder';
   name: string;
   type: 'litterbox' | 'water_fountain' | 'feeder';
-  provider: 'esphome' | 'unknown';
+  provider: 'esphome';
   external_id: string;
   config: Record<string, unknown>;
 }
@@ -638,7 +638,7 @@ export function buildSeedScenario(options: SeedScenarioOptions): SeedScenario {
       key: 'feeder',
       name: withPrefix(prefix, 'Biscuit Dispenser Mk. VII'),
       type: 'feeder',
-      provider: 'unknown',
+      provider: 'esphome',
       external_id: 'demo-feeder-1',
       config: {
         food_compartments: [

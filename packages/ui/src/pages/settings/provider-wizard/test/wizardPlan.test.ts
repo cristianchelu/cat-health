@@ -313,8 +313,8 @@ describe('initialAddDeviceState', () => {
 
   it('falls back to the picker for an account it must not honour', () => {
     // Each of these would strand the user on a step that can never resolve:
-    // an id that matches nothing, a switched-off account, and the seeded
-    // "Legacy Devices" row whose provider has no manager behind it.
+    // an id that matches nothing, a switched-off account, and an account
+    // whose provider has no manager behind it.
     const rejected = { step: 'pick' };
     assert.deepEqual(initialAddDeviceState(99, accounts, PROVIDERS), rejected);
     assert.deepEqual(initialAddDeviceState(3, accounts, PROVIDERS), rejected);

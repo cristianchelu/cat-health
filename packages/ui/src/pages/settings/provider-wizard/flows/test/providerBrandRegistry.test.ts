@@ -20,8 +20,8 @@ describe('getProviderBrand', () => {
   });
 
   it('falls back to a neutral tile for unknown providers', () => {
-    // The seeded "Legacy Devices" account uses provider `unknown`, and new
-    // providers can appear before this registry learns about them.
+    // Literal `unknown`, empty, and providers this registry has not learned
+    // about yet all need a usable tile rather than a throw.
     for (const provider of ['unknown', 'petkit', 'xiaomi', '']) {
       const brand = getProviderBrand(provider);
       assert.ok(brand.label.length > 0, `${provider} has no label`);

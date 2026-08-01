@@ -27,7 +27,7 @@ export interface SeedResult {
 
 async function resolveProviderAccountId(
   db: Kysely<Database>,
-  provider: 'esphome' | 'unknown',
+  provider: 'esphome',
 ): Promise<number> {
   const row = await db
     .selectFrom('provider_account')

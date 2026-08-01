@@ -100,9 +100,9 @@ const FALLBACK_BRAND: Omit<ProviderBrand, 'label' | 'monogram'> = {
 };
 
 /**
- * Always returns a usable brand. Unknown providers — including the seeded
- * `unknown` / "Legacy Devices" account and anything added later — get a neutral
- * tile labelled with the raw provider key rather than throwing.
+ * Always returns a usable brand. Unknown providers — a missing key, the
+ * literal `unknown`, or anything added before this registry learns about it —
+ * get a neutral tile labelled with the raw provider key rather than throwing.
  */
 export function getProviderBrand(provider: string): ProviderBrand {
   const known = PROVIDER_BRANDS[provider];

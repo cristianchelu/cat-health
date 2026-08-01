@@ -61,8 +61,8 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
 
   /*
    * An account whose provider isn't registered has no manager behind it, so
-   * discovery would fail outright — that's the seeded "Legacy Devices" row.
-   * Nothing about it is actionable here, so it stays out of the list.
+   * discovery would fail outright. Nothing about it is actionable here, so it
+   * stays out of the list.
    */
   const known = accounts.filter((account) =>
     providers.some((p) => p.name === account.provider),

@@ -22,23 +22,9 @@ export async function up(db: Kysely<Record<string, never>>): Promise<void> {
       )
       .execute();
 
-    // Create a default provider account for existing devices
-    const result = await db
-      .insertInto('provider_account')
-      .values({
-        provider: 'unknown',
-        name: 'Legacy Devices',
-        config: JSON.stringify({}),
-        internal: 1,
-        enabled: 0,
-      })
-      .returning('id')
-      .executeTakeFirst();
-
-    const defaultAccountId = result?.id ?? 1;
-
-    // Create dummy accounts for internal providers
-    await db
+    // Internal providers get a seeded account so local hardware can be added
+    // without a cloud login. Pre-architecture device rows attach to ESPHome.
+    const internalAccounts = await db
       .insertInto('provider_account')
       .values([
         {
@@ -54,7 +40,13 @@ export async function up(db: Kysely<Record<string, never>>): Promise<void> {
           internal: 1,
         },
       ])
+      .returning(['id', 'provider'])
       .execute();
+
+    const defaultAccountId =
+      internalAccounts.find((a) => a.provider === 'esphome')?.id ??
+      internalAccounts[0]?.id ??
+      1;
 
     // 2. Recreate device table with new schema
     // We create device_new, copy data, drop device, rename device_new -> device

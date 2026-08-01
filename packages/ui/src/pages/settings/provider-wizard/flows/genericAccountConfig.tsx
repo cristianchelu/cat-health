@@ -8,12 +8,12 @@ import type {
 } from './accountConfigTypes.ts';
 
 /**
- * Fallback for providers with no connect form: `esphome`, `camera`, `thingino`
- * and the seeded `unknown` / "Legacy Devices" account.
+ * Fallback for providers with no connect form: `esphome`, `camera`, `thingino`,
+ * and any other provider that stores `config = {}` because real settings live
+ * on individual devices.
  *
- * All of them store `config = {}` — their real settings live on individual
- * devices — so there is genuinely nothing to edit here beyond the account name
- * and enabled flag that the shell already provides.
+ * There is genuinely nothing to edit here beyond the account name and enabled
+ * flag that the shell already provides.
  *
  * This replaces the old raw-JSON textarea, and is strictly safer than it: that
  * textarea let a typo destroy a working account's config, whereas `toConfig`
