@@ -238,6 +238,54 @@ describe('devices API litterbox reidentify', () => {
     );
   });
 
+  it('leaves visits with a non-pet cause alone', async () => {
+    // The weight trace says "Heavy Cat", but a human already ruled that the
+    // vacuum knocked the box. Re-identification must not hand the guess back.
+    const visitAt = new Date('2026-07-01T12:00:00.000Z');
+    const raw = Buffer.from(
+      encodeLitterboxRawData({
+        version: LITTERBOX_RAW_DATA_VERSION_1,
+        startTimeMs: visitAt.getTime(),
+        weights: gramsPlateauAround(5200, 800),
+      }),
+    );
+
+    const visit = await insertLitterboxEvent(ctx.db, {
+      pet_id: null,
+      caused_by: 'robot_vacuum',
+      attributed_by: 'manual',
+      device_id: deviceId,
+      timestamp: visitAt,
+      elimination_type: 'unknown',
+      raw_data: raw,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/devices/${deviceId}/litterbox-visits/reidentify`,
+    });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().updated_pet, 0);
+
+    const row = await ctx.db
+      .selectFrom('event')
+      .selectAll()
+      .where('id', '=', visit.id)
+      .executeTakeFirstOrThrow();
+    assert.equal(row.pet_id, null);
+    assert.equal(row.caused_by, 'robot_vacuum');
+    assert.equal(row.attributed_by, 'manual');
+
+    // No pet means no weight reading to hang off the visit either.
+    const weightChild = await ctx.db
+      .selectFrom('event')
+      .selectAll()
+      .where('parent_event_id', '=', visit.id)
+      .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+      .executeTakeFirst();
+    assert.equal(weightChild, undefined);
+  });
+
   it('respects the after query window', async () => {
     const early = new Date('2026-06-01T10:00:00.000Z');
     const late = new Date('2026-06-02T10:00:00.000Z');

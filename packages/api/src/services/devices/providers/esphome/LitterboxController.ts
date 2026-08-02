@@ -8,6 +8,7 @@ import {
 } from './BaseESPHomeController.ts';
 import { StateAnalyzer, determineEliminationType } from './StateAnalyzer.ts';
 import { persistedLitterboxSegments } from './persistedLitterboxSegments.ts';
+import { attributionColumns } from '../../../../domain/eventAttribution.ts';
 
 const MAINTENANCE_THRESHOLD = -20;
 const NO_ELIMINATION_THRESHOLD = 10;
@@ -245,6 +246,8 @@ export class LitterboxController extends BaseESPHomeController {
             segments,
           },
           pet_id: petId,
+          // The load cell matched a known cat's weight; that is the whole basis.
+          attributed_by: 'weight',
           raw_data: rawData,
           human_verified: false,
         });
@@ -254,7 +257,7 @@ export class LitterboxController extends BaseESPHomeController {
             .insertInto('event')
             .values({
               parent_event_id: insertedEventId,
-              pet_id: petId,
+              ...attributionColumns('pet', petId, 'weight'),
               device_id: this.deviceId,
               timestamp: session.startTime,
               data: {

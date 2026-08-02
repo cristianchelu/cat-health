@@ -1,4 +1,9 @@
-import type { EventDataDTO, GetEventDTO } from 'shared';
+import type {
+  EventAttributionSourceDTO,
+  EventCauseDTO,
+  EventDataDTO,
+  GetEventDTO,
+} from 'shared';
 
 import type { EventData } from '../../domain/events.ts';
 import { parseStoredEventData } from '../../database/types/storedEventData.ts';
@@ -25,6 +30,8 @@ interface EventRow {
   id: number;
   parent_event_id: number | null;
   pet_id: number | null;
+  caused_by: EventCauseDTO;
+  attributed_by: EventAttributionSourceDTO | null;
   device_id: number | null;
   timestamp: Date;
   data: unknown;
@@ -41,6 +48,8 @@ export function serializeEventRow(row: EventRow): GetEventDTO | null {
     id: row.id,
     parent_event_id: row.parent_event_id,
     pet_id: row.pet_id,
+    caused_by: row.caused_by,
+    attributed_by: row.attributed_by,
     device_id: row.device_id,
     timestamp: row.timestamp.toISOString(),
     data: eventDataToDto(data),

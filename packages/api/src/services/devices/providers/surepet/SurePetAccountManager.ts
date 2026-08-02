@@ -27,6 +27,7 @@ import {
   resolveFoodIdForCompartment,
 } from '../../../food/enrichFoodIntake.ts';
 import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
+import { attributionColumns } from '../../../../domain/eventAttribution.ts';
 import { SurePetClient, SurePetClientError } from './SurePetClient.ts';
 import { FeederController } from './FeederController.ts';
 import {
@@ -678,6 +679,8 @@ export class SurePetAccountManager implements AccountManager {
       timestamp: event.timestamp,
       data: event.data,
       pet_id: event.pet_id,
+      // SurePet identifies by the implanted chip the hardware reads, not a guess.
+      attributed_by: 'microchip',
       raw_data: event.raw_data,
       human_verified: event.human_verified,
     });
@@ -689,7 +692,12 @@ export class SurePetAccountManager implements AccountManager {
         .values(
           buildMoistureChildEventValues({
             parentEventId: resultId,
-            petId: event.pet_id ?? null,
+            // Same basis as the meal it came from: the feeder read a chip.
+            attribution: attributionColumns(
+              event.pet_id != null ? 'pet' : 'unknown',
+              event.pet_id ?? null,
+              event.pet_id != null ? 'microchip' : null,
+            ),
             timestamp: event.timestamp,
             moistureMl,
           }),

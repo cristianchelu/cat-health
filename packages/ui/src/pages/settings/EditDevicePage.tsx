@@ -331,10 +331,13 @@ const EditDevicePage: React.FC = () => {
                 />
               </FormField>
 
-              <FormField label={t('settings.prompt_template_label')}>
+              <FormField
+                label={t('settings.prompt_template_label')}
+                description={t('settings.prompt_template_help')}
+              >
                 <Textarea
                   {...register('promptTemplate', { required: true })}
-                  rows={6}
+                  rows={8}
                 />
               </FormField>
 

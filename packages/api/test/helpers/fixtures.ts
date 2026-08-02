@@ -1,7 +1,10 @@
 import type { Kysely } from 'kysely';
 
+import type { EventAttributionSourceDTO, EventCauseDTO } from 'shared';
+
 import type { Database } from '../../src/database/index.ts';
 import type { Event } from '../../src/database/types/EventTable.ts';
+import { attributionColumns } from '../../src/domain/eventAttribution.ts';
 import type { EventData, FoodIntakeEventData, LitterboxUseEventData, PetPresenceEventData, WaterIntakeEventData } from '../../src/domain/events.ts';
 import type { NewPet, Pet } from '../../src/database/types/PetTable.ts';
 import type {
@@ -24,7 +27,11 @@ type ProviderAccountSeed = Partial<
 >;
 
 type LitterboxEventSeed = {
-  pet_id: number;
+  /** `null` seeds an unresolved visit — the device saw a use, nobody claimed it. */
+  pet_id: number | null;
+  /** Defaults to `pet` when `pet_id` is set, otherwise the unresolved `unknown`. */
+  caused_by?: EventCauseDTO;
+  attributed_by?: EventAttributionSourceDTO;
   device_id?: number | null;
   timestamp?: Date;
   human_verified?: boolean;
@@ -38,12 +45,14 @@ type LitterboxEventSeed = {
 
 type WaterIntakeEventSeed = {
   pet_id: number;
+  attributed_by?: EventAttributionSourceDTO;
   device_id?: number | null;
   timestamp?: Date;
 } & Pick<WaterIntakeEventData, 'amount'>;
 
 type FoodIntakeEventSeed = {
   pet_id: number;
+  attributed_by?: EventAttributionSourceDTO;
   device_id?: number | null;
   timestamp?: Date;
   human_verified?: boolean;
@@ -51,6 +60,7 @@ type FoodIntakeEventSeed = {
 
 type WeightMeasurementEventSeed = {
   pet_id: number;
+  attributed_by?: EventAttributionSourceDTO;
   device_id?: number | null;
   parent_event_id?: number | null;
   timestamp?: Date;
@@ -59,6 +69,7 @@ type WeightMeasurementEventSeed = {
 
 type PetPresenceEventSeed = {
   pet_id: number;
+  attributed_by?: EventAttributionSourceDTO;
   timestamp?: Date;
   human_verified?: boolean;
 } & Pick<PetPresenceEventData, 'state' | 'previous_state' | 'context'>;
@@ -132,7 +143,11 @@ export async function insertLitterboxEvent(
   return db
     .insertInto('event')
     .values({
-      pet_id: seed.pet_id,
+      ...attributionColumns(
+        seed.caused_by ?? (seed.pet_id != null ? 'pet' : 'unknown'),
+        seed.pet_id,
+        seed.attributed_by ?? null,
+      ),
       device_id: seed.device_id ?? null,
       parent_event_id: null,
       timestamp: seed.timestamp ?? new Date(),
@@ -156,7 +171,7 @@ export async function insertWaterIntakeEvent(
   return db
     .insertInto('event')
     .values({
-      pet_id: seed.pet_id,
+      ...attributionColumns('pet', seed.pet_id, seed.attributed_by ?? null),
       device_id: seed.device_id ?? null,
       parent_event_id: null,
       timestamp: seed.timestamp ?? new Date(),
@@ -228,7 +243,7 @@ export async function insertFoodIntakeEvent(
   return db
     .insertInto('event')
     .values({
-      pet_id: seed.pet_id,
+      ...attributionColumns('pet', seed.pet_id, seed.attributed_by ?? null),
       device_id: seed.device_id ?? null,
       parent_event_id: null,
       timestamp: seed.timestamp ?? new Date(),
@@ -247,7 +262,7 @@ export async function insertWeightMeasurementEvent(
   return db
     .insertInto('event')
     .values({
-      pet_id: seed.pet_id,
+      ...attributionColumns('pet', seed.pet_id, seed.attributed_by ?? null),
       device_id: seed.device_id ?? null,
       parent_event_id: seed.parent_event_id ?? null,
       timestamp: seed.timestamp ?? new Date(),
@@ -276,7 +291,7 @@ export async function insertPetPresenceEvent(
   return db
     .insertInto('event')
     .values({
-      pet_id: seed.pet_id,
+      ...attributionColumns('pet', seed.pet_id, seed.attributed_by ?? null),
       device_id: null,
       parent_event_id: null,
       timestamp: seed.timestamp ?? new Date(),

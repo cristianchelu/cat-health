@@ -49,13 +49,17 @@ import {
 } from '../services/analytics/trendCoverage.ts';
 import { isBucketTracked } from '../services/analytics/analyticsCoverage.ts';
 
-import type { GetEventDTO } from 'shared';
+import type { EventCauseDTO, GetEventDTO } from 'shared';
 import { parseStoredEventData } from '../database/types/storedEventData.ts';
 import {
   eventDataFromDto,
   requireSerializedEventRow,
   serializeEventRow,
 } from './mappers/events.ts';
+import {
+  attributionColumns,
+  attributionColumnsFromRequest,
+} from '../domain/eventAttribution.ts';
 import type { EventData } from '../domain/events.ts';
 
 const Http404ResponseSchema = Type.Object({
@@ -317,6 +321,8 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     async (request) => {
       const {
         pet_id,
+        caused_by,
+        attributed_by,
         device_id,
         startTime,
         endTime,
@@ -339,6 +345,17 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       if (pet_id !== undefined) {
         query = query.where('pet_id', '=', pet_id);
         countQuery = countQuery.where('pet_id', '=', pet_id);
+      }
+
+      // `caused_by=unknown` is the review queue: everything nothing has decided.
+      if (caused_by !== undefined) {
+        query = query.where('caused_by', '=', caused_by);
+        countQuery = countQuery.where('caused_by', '=', caused_by);
+      }
+
+      if (attributed_by !== undefined) {
+        query = query.where('attributed_by', '=', attributed_by);
+        countQuery = countQuery.where('attributed_by', '=', attributed_by);
       }
 
       if (device_id !== undefined) {
@@ -460,18 +477,37 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PostEventRequestSchema,
         response: {
           '200': GetEventSchema,
+          '400': Http400BadRequestSchema,
         },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const {
         pet_id,
+        caused_by,
+        attributed_by,
         device_id,
         data,
         parent_event_id,
         timestamp: bodyTimestamp,
         human_verified: bodyHumanVerified,
       } = request.body;
+
+      // Anything posted through the API is someone entering it by hand unless
+      // they say otherwise — device paths write their own events directly.
+      const attribution = attributionColumnsFromRequest({
+        pet_id,
+        caused_by,
+        attributed_by,
+        defaultSource: 'manual',
+      });
+      if (attribution === 'invalid') {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'pet_id may only be set when caused_by is "pet"',
+        });
+      }
 
       let storedEventData: EventData = eventDataFromDto(data);
       let nutrients: Record<string, number> | undefined;
@@ -501,11 +537,14 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
             ? storedEventData.context === 'manual'
             : false);
 
+      // `pet_id` is required on POST, so the body always states a decision.
+      const columns = attribution ?? attributionColumns('unknown', null, null);
+
       const result = await db
         .insertInto('event')
         .values({
           parent_event_id: parent_event_id || null,
-          pet_id,
+          ...columns,
           device_id,
           timestamp: eventTimestamp,
           data: storedEventData,
@@ -521,7 +560,11 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           .values(
             buildMoistureChildEventValues({
               parentEventId: result.id,
-              petId: result.pet_id,
+              attribution: {
+                pet_id: result.pet_id,
+                caused_by: result.caused_by,
+                attributed_by: result.attributed_by,
+              },
               timestamp: result.timestamp,
               moistureMl: nutrients.moisture_ml,
             }),
@@ -636,6 +679,8 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       // even when the client only updates `data`. Clear broken references before applying the patch.
       const fkRepair: {
         pet_id?: null;
+        caused_by?: EventCauseDTO;
+        attributed_by?: null;
         device_id?: null;
         parent_event_id?: null;
       } = {};
@@ -646,7 +691,16 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           .select('id')
           .where('id', '=', existing.pet_id)
           .executeTakeFirst();
-        if (!ok) fkRepair.pet_id = null;
+        // A deleted pet takes its attribution with it: the event drops back to
+        // unresolved rather than to a non-pet cause, because a missing pet row
+        // says nothing about what caused the event. Dropping `caused_by` to
+        // 'unknown' alongside is required, not cosmetic — 'pet' with a null
+        // `pet_id` would otherwise claim we still know an animal did it.
+        if (!ok) {
+          fkRepair.pet_id = null;
+          fkRepair.caused_by = 'unknown';
+          fkRepair.attributed_by = null;
+        }
       }
       if (existing.device_id != null) {
         const ok = await db
@@ -666,14 +720,10 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       }
 
       // Only validate FK for a real pet row id (positive integer). 0 / NaN / null must not hit this lookup.
-      let patchBody = body;
       if (body.pet_id !== undefined && body.pet_id !== null) {
         const p = body.pet_id;
-        const invalidPetId =
-          typeof p !== 'number' || !Number.isInteger(p) || p < 1;
-        if (invalidPetId) {
-          patchBody = { ...body, pet_id: null };
-        } else {
+        const validPetId = Number.isInteger(p) && p >= 1;
+        if (validPetId) {
           const ok = await db
             .selectFrom('pet')
             .select('id')
@@ -689,13 +739,35 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         }
       }
 
-      const { data: patchEventData, ...patchRest } = patchBody;
+      // `pet_id` and `caused_by` are one decision; never spread them from the
+      // body separately or a half-update can contradict itself. A PATCH is a
+      // person editing an event, so a cause they settle here is `manual`.
+      const attribution = attributionColumnsFromRequest({
+        ...body,
+        defaultSource: 'manual',
+      });
+      if (attribution === 'invalid') {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'pet_id may only be set when caused_by is "pet"',
+        });
+      }
+
+      const { data: patchEventData, human_verified, attributed_by } = body;
+
+      // `attributed_by` on its own restates how we know something the body is
+      // not otherwise changing, so it applies without a full re-decision.
+      const attributionUpdate =
+        attribution ??
+        (attributed_by !== undefined ? { attributed_by } : undefined);
 
       const result = await db
         .updateTable('event')
         .set({
           ...fkRepair,
-          ...patchRest,
+          ...(human_verified !== undefined ? { human_verified } : {}),
+          ...(attributionUpdate ?? {}),
           ...(patchEventData !== undefined
             ? { data: eventDataFromDto(patchEventData) }
             : {}),

@@ -11,6 +11,10 @@ import {
   mergeAnalyzerIntoLitterboxData,
 } from '../devices/providers/esphome/analyzeLitterboxUse.ts';
 import { StateAnalyzer } from '../devices/providers/esphome/StateAnalyzer.ts';
+import {
+  attributionColumns,
+  isNonPetCause,
+} from '../../domain/eventAttribution.ts';
 import type { Selectable } from 'kysely';
 
 export interface ReidentifyLitterboxVisitsResult {
@@ -69,8 +73,15 @@ async function reidentifyOneVisit(
   const analyzer = new StateAnalyzer(knownWeights);
   const analysis = analyzer.processEvent(weights);
 
+  // A visit already attributed to something other than a pet — the vacuum
+  // knocked the box, someone scooped it — must not be re-attributed by weight,
+  // or every re-run hands back the guess a human already rejected. Only the
+  // attribution freezes; the analysis below still refreshes.
+  const attributionFrozen = isNonPetCause(row.caused_by);
+
   let newPetId: number | null = null;
   if (
+    !attributionFrozen &&
     analysis.detectedCatIndex >= 0 &&
     analysis.detectedCatIndex < knownWeights.length
   ) {
@@ -78,7 +89,7 @@ async function reidentifyOneVisit(
     newPetId = petIdsByWeight.get(detectedWeight) ?? null;
   }
 
-  const petChanged = row.pet_id !== newPetId;
+  const petChanged = !attributionFrozen && row.pet_id !== newPetId;
 
   const newData = row.human_verified
     ? existing
@@ -90,7 +101,16 @@ async function reidentifyOneVisit(
     await db
       .updateTable('event')
       .set({
-        pet_id: newPetId,
+        // Weight is the whole basis for this pass, so it is what gets recorded.
+        // Losing a match returns the visit to unresolved rather than asserting
+        // a cause the analyzer never established.
+        ...(petChanged
+          ? attributionColumns(
+              newPetId !== null ? 'pet' : 'unknown',
+              newPetId,
+              newPetId !== null ? 'weight' : null,
+            )
+          : {}),
         data: newData,
       })
       .where('id', '=', row.id)
@@ -116,12 +136,15 @@ async function reidentifyOneVisit(
       type: 'weight_measurement',
       weight: newWeightGrams,
     };
+    // A weight reading only exists when the analyzer matched a pet, so the
+    // child always carries that same pet on the same basis as its parent.
+    const weightAttribution = attributionColumns('pet', newPetId, 'weight');
     if (weightChild) {
       const oldData = weightChild.data as WeightMeasurementEventData;
       if (oldData.weight !== newWeightGrams || weightChild.pet_id !== newPetId) {
         await db
           .updateTable('event')
-          .set({ pet_id: newPetId, data: weightData })
+          .set({ ...weightAttribution, data: weightData })
           .where('id', '=', weightChild.id)
           .execute();
         weightChanged = true;
@@ -131,7 +154,7 @@ async function reidentifyOneVisit(
         .insertInto('event')
         .values({
           parent_event_id: row.id,
-          pet_id: newPetId,
+          ...weightAttribution,
           device_id: row.device_id,
           timestamp: row.timestamp,
           data: weightData,

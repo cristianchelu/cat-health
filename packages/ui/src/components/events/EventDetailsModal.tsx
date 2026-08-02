@@ -27,6 +27,14 @@ import {
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDraftForm } from '@/hooks/form';
 import {
+  attributionFromEvent,
+  attributionFromSelectValue,
+  attributionToPatch,
+  attributionSelectOptions,
+  attributionSelectValue,
+  causeLabelKey,
+} from '@/lib/eventAttribution';
+import {
   parseLitterboxUseEliminationType,
   type EventDataDTO,
   type GetEventDTO,
@@ -203,7 +211,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const displayEvent = event ? (eventFromServer ?? event) : null;
   const draftBaseline = React.useMemo(
     () => ({
-      petId: displayEvent?.pet_id ?? null,
+      pet: displayEvent
+        ? attributionFromEvent(displayEvent)
+        : { petId: null, causedBy: 'unknown' as const },
       eliminationType:
         displayEvent?.data?.type === 'litterbox_use'
           ? (displayEvent.data.elimination_type ?? 'unknown')
@@ -213,9 +223,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           ? (displayEvent.data.straining ?? false)
           : false,
     }),
-    [displayEvent?.data, displayEvent?.pet_id],
+    [displayEvent],
   );
-  const draftBaselineKey = `${displayEvent?.id ?? 'new'}|${draftBaseline.petId}|${draftBaseline.eliminationType}|${draftBaseline.straining}`;
+  const draftBaselineKey = `${displayEvent?.id ?? 'new'}|${attributionSelectValue(draftBaseline.pet)}|${draftBaseline.eliminationType}|${draftBaseline.straining}`;
   const { draft, patchDraft, isDirty, requestDiscard, discardConfirm } =
     useDraftForm(draftBaseline, { baselineKey: draftBaselineKey });
 
@@ -297,10 +307,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   }
 
   const handlePetChange = (e: React.ChangeEvent<HTMLSelectElement>) =>
-    patchDraft({
-      petId:
-        e.target.value === 'null' ? null : Number.parseInt(e.target.value, 10),
-    });
+    patchDraft({ pet: attributionFromSelectValue(e.target.value) });
 
   const handleEliminationTypeChange = (
     e: React.ChangeEvent<HTMLSelectElement>,
@@ -334,19 +341,17 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     updateEvent({
       eventId: displayEvent.id,
       data: {
-        pet_id: draft.petId,
+        ...attributionToPatch(draft.pet),
         ...(litterboxData && { data: litterboxData }),
         human_verified: true,
       },
     });
   };
 
-  const petOptions = pets
-    ? [
-        { value: 'null', label: t('common.unknown') },
-        ...pets.map((p) => ({ value: String(p.id), label: p.name })),
-      ]
-    : [{ value: 'null', label: t('common.unknown') }];
+  const petOptions = attributionSelectOptions(pets, {
+    unknown: t('common.unknown'),
+    cause: (cause) => t(causeLabelKey(cause)),
+  });
 
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);
@@ -579,7 +584,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               <div className="pet-selector-wrapper">
                 <Select
                   options={petOptions}
-                  value={draft.petId == null ? 'null' : String(draft.petId)}
+                  value={attributionSelectValue(draft.pet)}
                   onChange={handlePetChange}
                   className="pet-select"
                   disabled={isUpdating}

@@ -7,7 +7,12 @@ import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 import apiClient from '@/api/apiClient';
 import { testDeviceIdentification } from '@/api/devices';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import type { GetEventsResponseDTO, GetEventMediaResponseDTO } from 'shared';
+import type {
+  GetEventsResponseDTO,
+  GetEventMediaResponseDTO,
+  EventCauseDTO,
+} from 'shared';
+import { causeLabelKey } from '@/lib/eventAttribution';
 import './TestRecognitionModal.css';
 
 interface TestRecognitionModalProps {
@@ -20,6 +25,8 @@ interface TestRecognitionModalProps {
 interface TestResult {
   mediaId: number;
   petName: string;
+  /** `'error'` is the local failure marker, not a verdict from the model. */
+  causedBy: EventCauseDTO | 'error';
   rawResponse: string;
   isCorrect: boolean | null;
 }
@@ -50,6 +57,7 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
         new Map(prev).set(mediaId, {
           mediaId,
           petName: response.pet_name,
+          causedBy: response.caused_by,
           rawResponse: response.raw_response,
           isCorrect: actualPetId !== null && response.pet_id === actualPetId,
         }),
@@ -60,6 +68,7 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
         new Map(prev).set(mediaId, {
           mediaId,
           petName: 'error',
+          causedBy: 'error',
           rawResponse: error instanceof Error ? error.message : t('pet_recognizer.unknown_error'),
           isCorrect: false,
         }),
@@ -178,7 +187,12 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
                           <XCircle size={20} />
                         )}
                         <span className="result-name">
-                          {result.petName === 'error' ? t('pet_recognizer.unknown_error') : result.petName}
+                          {result.causedBy === 'error'
+                            ? t('pet_recognizer.unknown_error')
+                            : result.causedBy === 'pet' ||
+                                result.causedBy === 'unknown'
+                              ? result.petName
+                              : t(causeLabelKey(result.causedBy))}
                         </span>
                       </div>
                     )}

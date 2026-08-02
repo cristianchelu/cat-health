@@ -64,6 +64,8 @@ describe('events API list', () => {
       .insertInto('event')
       .values({
         pet_id: pet.id,
+        caused_by: 'pet',
+        attributed_by: null,
         device_id: null,
         parent_event_id: null,
         timestamp: new Date(),

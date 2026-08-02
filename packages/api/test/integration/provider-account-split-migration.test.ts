@@ -9,6 +9,7 @@ import { sql, type Kysely } from 'kysely';
 import { createDb, type Database } from '../../src/database/index.ts';
 import { createMigrator } from '../../src/database/migrate.ts';
 import * as splitMigration from '../../src/database/migrations/202607261200_split_provider_account_runtime_state.ts';
+import * as timestampsMigration from '../../src/database/migrations/202607271200_internal_account_names_and_ms_timestamps.ts';
 
 /**
  * Ids well clear of the internal accounts that `20251121_device_architecture`
@@ -255,12 +256,11 @@ describe('202607261200 provider_account config/runtime_state split', () => {
     assert.ok(byName.has('ESPHome'), 'ESPHome Provider was not renamed');
 
     // Idempotent: applying it twice must not double-multiply or re-rename.
+    // Re-run the migration's `up` directly rather than replaying the migrator —
+    // Kysely rejects a re-run whose name is no longer the last applied one, so
+    // going through the migrator would break every time a migration is added.
     const before = rows;
-    await sql`DELETE FROM kysely_migration WHERE name = '202607271200_internal_account_names_and_ms_timestamps'`.execute(
-      db,
-    );
-    const { error: again } = await createMigrator(db).migrateToLatest();
-    assert.equal(again, undefined);
+    await timestampsMigration.up(untyped());
 
     const { rows: after } = await sql<{
       id: number;

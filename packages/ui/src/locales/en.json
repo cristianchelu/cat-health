@@ -290,7 +290,8 @@
     "source_device_placeholder": "Select device to monitor",
     "model_label": "Model",
     "model_placeholder": "openai/gpt-4o-mini",
-    "prompt_template_label": "Prompt Template",
+    "prompt_template_label": "Scene description",
+    "prompt_template_help": "Describe what this camera sees — the furniture and equipment always in frame, and which pets may appear. How to answer is built in; this is only the context that cannot be guessed from the image.",
     "auto_identify_label": "Auto-identify",
     "create_recognizer": "Create Recognizer",
     "snapshot_url_placeholder": "http://camera-ip/snapshot.jpg",
@@ -381,6 +382,17 @@
     "sort_by_provider": "Provider",
     "sort_ascending": "Ascending",
     "sort_descending": "Descending"
+  },
+  "event_attribution": {
+    "cause_pet": "A pet",
+    "cause_robot_vacuum": "Robot vacuum",
+    "cause_human": "A person",
+    "cause_other_animal": "Another animal",
+    "cause_environment": "Environment",
+    "source_microchip": "Microchip",
+    "source_recognizer": "Photo recognition",
+    "source_weight": "Weight",
+    "source_manual": "Set by hand"
   },
   "event_details": {
     "duration_label": "Duration:",

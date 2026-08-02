@@ -15,10 +15,38 @@ import { RegisterDeviceCard } from './shared/RegisterDeviceCard';
 import { generateLocalExternalId } from '../wizardUtils';
 import type { RegisterDeviceFormProps } from './types';
 
-const DEFAULT_PROMPT_TEMPLATE =
-  "You are identifying cats. Here are reference photos:\n\n{{reference_images}}\n\nWho is the cat in this new image? Reply with ONLY the cat's name, or 'unknown'.";
+/**
+ * Scene context, not instructions.
+ *
+ * The output contract — one word, the cause vocabulary, when to abstain — lives
+ * in the server's system message, so it is versioned with the code and reaches
+ * every device. Repeating any of it here only creates something to contradict,
+ * and measurably did: an earlier instruction-shaped default scored worse than
+ * naming the furniture.
+ *
+ * What belongs here is the part neither the code nor the model can know: what
+ * this particular camera is looking at. Telling the model that the white
+ * cylinder is a fountain and not a robot vacuum is what took recognition from
+ * 24/39 to 39/39 on real captures.
+ */
+const DEFAULT_PROMPT_TEMPLATE = [
+  'Describe what this camera sees, so the model can tell the animals apart from',
+  'the surroundings. For example:',
+  '',
+  'This camera watches a pet water fountain in a hallway. The fountain is a',
+  'white cylinder standing on tiled floor. It is equipment and is always in',
+  'frame — it is never itself a cause, and it is not a robot vacuum.',
+  '',
+  'Pets that may appear here:',
+  '{{reference_images}}',
+].join('\n');
 
-const DEFAULT_MODEL = 'openai/gpt-4o-mini';
+/**
+ * Vision-capable and cheap ($0.09/$0.34 per 1M tokens); the recognizer sends a
+ * handful of 256px thumbnails per call. Successor to the `google/gemma-3-27b-it`
+ * this project has been running.
+ */
+const DEFAULT_MODEL = 'google/gemma-4-31b-it';
 
 interface InferenceFormValues {
   name: string;
@@ -123,9 +151,12 @@ export const InferenceRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
             />
           </FormField>
 
-          <FormField label={t('settings.prompt_template_label')}>
+          <FormField
+            label={t('settings.prompt_template_label')}
+            description={t('settings.prompt_template_help')}
+          >
             <Textarea
-              rows={6}
+              rows={8}
               {...register('promptTemplate', { required: true })}
             />
           </FormField>

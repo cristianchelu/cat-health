@@ -241,7 +241,8 @@
     "source_device_placeholder": "Selectează dispozitiv de monitorizat",
     "model_label": "Model",
     "model_placeholder": "openai/gpt-4o-mini",
-    "prompt_template_label": "Șablon prompt",
+    "prompt_template_label": "Descrierea scenei",
+    "prompt_template_help": "Descrie ce vede această cameră — mobilierul și echipamentele mereu în cadru și ce animale pot apărea. Modul de răspuns este predefinit; aici pui doar contextul care nu poate fi ghicit din imagine.",
     "auto_identify_label": "Auto-identificare",
     "create_recognizer": "Creează recunoaștere",
     "snapshot_url_placeholder": "http://ip-camera/snapshot.jpg",
@@ -328,6 +329,17 @@
     "sort_by_provider": "Furnizor",
     "sort_ascending": "Crescător",
     "sort_descending": "Descrescător"
+  },
+  "event_attribution": {
+    "cause_pet": "Un animal de companie",
+    "cause_robot_vacuum": "Aspirator robot",
+    "cause_human": "O persoană",
+    "cause_other_animal": "Alt animal",
+    "cause_environment": "Mediu",
+    "source_microchip": "Microcip",
+    "source_recognizer": "Recunoaștere foto",
+    "source_weight": "Greutate",
+    "source_manual": "Setat manual"
   },
   "event_details": {
     "duration_label": "Durată:",

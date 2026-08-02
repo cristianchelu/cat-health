@@ -16,10 +16,61 @@ export const LITTERBOX_SAMPLE_HZ = 10;
  */
 export type LitterboxAnalysisStatePeriod = LitterboxAnalysisStatePeriodDTO;
 
+/**
+ * What caused the event.
+ *
+ * `unknown` is the unresolved state — it wants a human, and it is what the
+ * review queue selects on. Every other value is a decision someone or something
+ * already made. `pet` says an animal of ours did it; `pet_id` then names which,
+ * or stays null when we know it was a pet but not which one.
+ *
+ * The remaining values say the event happened without a pet, by naming what did
+ * it rather than what it wasn't — the robot vacuum knocking the fountain, a
+ * person refilling a bowl. Only `pet` may carry a `pet_id`; a DB CHECK enforces
+ * that and nothing else, so this list can grow without a migration.
+ */
+export const EventCauseSchema = Type.Union([
+  Type.Literal("unknown"),
+  Type.Literal("pet"),
+  Type.Literal("robot_vacuum"),
+  Type.Literal("human"),
+  Type.Literal("other_animal"),
+  Type.Literal("environment"),
+]);
+export type EventCauseDTO = Static<typeof EventCauseSchema>;
+
+/** Causes that mean no pet of ours was involved — everything but `pet`/`unknown`. */
+export const NON_PET_CAUSES = [
+  "robot_vacuum",
+  "human",
+  "other_animal",
+  "environment",
+] as const satisfies readonly EventCauseDTO[];
+
+/**
+ * How the cause was established, in rough order of trust: an RFID chip is not a
+ * guess, a weight plateau is. Null when nothing has decided yet.
+ *
+ * This is the axis `human_verified` currently half-covers. `manual` is the
+ * honest version of "a human decided this", uncoupled from "a human edited some
+ * other field on this event".
+ */
+export const EventAttributionSourceSchema = Type.Union([
+  Type.Literal("microchip"),
+  Type.Literal("recognizer"),
+  Type.Literal("weight"),
+  Type.Literal("manual"),
+]);
+export type EventAttributionSourceDTO = Static<
+  typeof EventAttributionSourceSchema
+>;
+
 const GetEventFieldsSchema = Type.Object({
   id: Type.Number(),
   parent_event_id: Type.Union([Type.Number(), Type.Null()]),
   pet_id: Type.Union([Type.Number(), Type.Null()]),
+  caused_by: EventCauseSchema,
+  attributed_by: Type.Union([EventAttributionSourceSchema, Type.Null()]),
   device_id: Type.Union([Type.Null(), Type.Number()]),
   timestamp: Type.String({ format: "date-time" }),
   data: EventDataSchema,
@@ -46,9 +97,18 @@ export const GetEventsSchema = Type.Array(GetEventSchema);
 export type GetEventsDTO = Static<typeof GetEventsSchema>;
 
 export const PostEventRequestSchema = Type.Intersect([
-  Type.Omit(GetEventSchema, ["id", "timestamp", "raw_data"]),
+  Type.Omit(GetEventSchema, [
+    "id",
+    "timestamp",
+    "raw_data",
+    "caused_by",
+    "attributed_by",
+  ]),
   Type.Object({
     timestamp: Type.Optional(Type.String({ format: "date-time" })),
+    /** Omit to let `pet_id` speak: a pet if present, otherwise unresolved. */
+    caused_by: Type.Optional(EventCauseSchema),
+    attributed_by: Type.Optional(EventAttributionSourceSchema),
   }),
 ]);
 export type PostEventRequestDTO = Static<typeof PostEventRequestSchema>;
@@ -58,6 +118,9 @@ export type PatchEventParamsDTO = Static<typeof PatchEventParamsSchema>;
 
 export const PatchEventRequestSchema = Type.Object({
   pet_id: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
+  /** A non-pet cause clears `pet_id`; a `pet_id` in the same body implies `pet`. */
+  caused_by: Type.Optional(EventCauseSchema),
+  attributed_by: Type.Optional(EventAttributionSourceSchema),
   data: Type.Optional(EventDataSchema),
   human_verified: Type.Optional(Type.Boolean()),
 });
@@ -65,6 +128,9 @@ export type PatchEventRequestDTO = Static<typeof PatchEventRequestSchema>;
 
 export const GetEventsQuerySchema = Type.Object({
   pet_id: Type.Optional(Type.Number()),
+  /** `unknown` is the "needs a human" queue. */
+  caused_by: Type.Optional(EventCauseSchema),
+  attributed_by: Type.Optional(EventAttributionSourceSchema),
   device_id: Type.Optional(Type.Number()),
   startTime: Type.Optional(Type.String({ format: "date-time" })), // ISO 8601 format
   endTime: Type.Optional(Type.String({ format: "date-time" })),

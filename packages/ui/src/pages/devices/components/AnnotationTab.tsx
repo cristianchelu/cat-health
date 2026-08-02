@@ -12,6 +12,7 @@ import AnnotationWorkspace, {
 } from './AnnotationWorkspace';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useUnsavedBlocker } from '@/hooks/form';
+import { causeLabelKey } from '@/lib/eventAttribution';
 import './AnnotationTab.css';
 import { CheckCheck, ListChecks, CircleDot, Ban } from 'lucide-react';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
@@ -722,9 +723,14 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
                       : status === 'session'
                         ? t('annotation.status_session')
                         : t('annotation.status_none');
-                const petName = event.pet_id
-                  ? petMap.get(event.pet_id)
-                  : undefined;
+                const petName =
+                  event.caused_by === 'unknown'
+                    ? undefined
+                    : event.caused_by === 'pet'
+                      ? (event.pet_id
+                          ? petMap.get(event.pet_id)
+                          : t(causeLabelKey('pet')))
+                      : t(causeLabelKey(event.caused_by));
                 const isSelected = event.id === selectedEventId;
 
                 return (

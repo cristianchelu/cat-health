@@ -130,7 +130,9 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
           {showEliminationSegments && (
             <EventEliminationSegments segments={badgeSegments} />
           )}
-          {showPet && event.pet_id && <EventPet petId={event.pet_id} />}
+          {showPet && (
+            <EventPet petId={event.pet_id} causedBy={event.caused_by} />
+          )}
           {showDevice && event.device_id && (
             <EventDevice deviceId={event.device_id} />
           )}

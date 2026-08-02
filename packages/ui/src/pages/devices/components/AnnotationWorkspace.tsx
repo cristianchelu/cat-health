@@ -28,6 +28,14 @@ import WeightSignalChart from '@/components/events/WeightSignalChart';
 import LitterboxWeightBlock from '@/components/events/LitterboxWeightBlock';
 import { decodeLitterboxRawData } from '@/components/events/decodeLitterboxRawData';
 import { deriveDetectorBouts } from '@/lib/litterboxDetectorBouts';
+import {
+  attributionFromEvent,
+  attributionFromSelectValue,
+  attributionToPatch,
+  attributionSelectOptions,
+  attributionSelectValue,
+  causeLabelKey,
+} from '@/lib/eventAttribution';
 import type {
   GetEventDTO,
   LitterboxAnalysisStatePeriod,
@@ -85,14 +93,6 @@ function hasPersistedBouts(event: GetEventDTO): boolean {
     annotation != null &&
     Object.prototype.hasOwnProperty.call(annotation, 'bouts')
   );
-}
-
-/** Select value "null" = unknown cat; only positive DB ids are sent (never 0/NaN — JSON would show null for NaN). */
-function resolvePetIdFromSelect(nextPetId: string): number | null {
-  if (nextPetId === 'null' || nextPetId.trim() === '') return null;
-  const n = Number.parseInt(nextPetId, 10);
-  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) return null;
-  return n;
 }
 
 function boutsEqual(
@@ -198,7 +198,7 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
 
   const serverDraftBaseline = React.useMemo(
     () => ({
-      petId: event.pet_id != null ? String(event.pet_id) : 'null',
+      petId: attributionSelectValue(attributionFromEvent(event)),
       eliminationType: litterboxData.elimination_type ?? 'unknown',
       straining: litterboxData.straining ?? false,
       excluded: litterboxData.annotation?.excluded ?? false,
@@ -313,12 +313,11 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
     ) => {
       const eventData = eventDataRef.current;
       const eventId = eventIdRef.current;
-      const resolvedPetId = resolvePetIdFromSelect(nextPetId);
       const previousEliminationType = eventData.elimination_type;
       await patchEvent({
         eventId,
         data: {
-          pet_id: resolvedPetId,
+          ...attributionToPatch(attributionFromSelectValue(nextPetId)),
           data: {
             ...eventData,
             elimination_type: nextElimType,
@@ -432,7 +431,10 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
       await patchEvent({
         eventId: event.id,
         data: {
+          // Scooping is a person's doing — resolved, not unresolved, so it must
+          // not come back in the "needs a human" queue.
           pet_id: null,
+          caused_by: 'human',
           data: {
             type: 'litterbox_maintenance',
             maintenance_type: 'scoop',
@@ -494,10 +496,10 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
     [handleBoutsChange, localBouts, selectedBoutIndex],
   );
 
-  const petOptions = [
-    { value: 'null', label: t('common.unknown') },
-    ...(pets ?? []).map((p) => ({ value: String(p.id), label: p.name })),
-  ];
+  const petOptions = attributionSelectOptions(pets, {
+    unknown: t('common.unknown'),
+    cause: (cause) => t(causeLabelKey(cause)),
+  });
 
   const eliminationOptions = ELIMINATION_TYPES.map(({ value, label }) => ({
     value,

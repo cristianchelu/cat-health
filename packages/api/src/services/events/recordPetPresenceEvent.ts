@@ -2,6 +2,8 @@ import type { Kysely } from 'kysely';
 import type { Database } from '../../database/index.ts';
 import type { NewEvent } from '../../database/types/EventTable.ts';
 import type { PetPresenceEventData } from '../../domain/events.ts';
+import type { EventAttributionSourceDTO } from 'shared';
+import { attributionColumns } from '../../domain/eventAttribution.ts';
 
 export interface RecordPetPresenceEventDeps {
   db: Kysely<Database>;
@@ -12,6 +14,8 @@ export interface RecordPetPresenceEventInput {
   data: PetPresenceEventData;
   timestamp?: Date;
   human_verified?: boolean;
+  /** Presence is something a person records, unless a caller knows better. */
+  attributed_by?: EventAttributionSourceDTO;
 }
 
 export async function recordPetPresenceEvent(
@@ -21,7 +25,7 @@ export async function recordPetPresenceEvent(
   const timestamp = input.timestamp ?? new Date();
 
   const event: NewEvent<PetPresenceEventData> = {
-    pet_id: input.petId,
+    ...attributionColumns('pet', input.petId, input.attributed_by ?? 'manual'),
     device_id: null,
     parent_event_id: null,
     timestamp,

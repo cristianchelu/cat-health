@@ -2,6 +2,12 @@ import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 import { getMediaPath } from '../../../../mediaPaths.ts';
+import {
+  attributionColumns,
+  isResolvedCause,
+} from '../../../../domain/eventAttribution.ts';
+import type { Kysely } from 'kysely';
+import type { Database } from '../../../../database/index.ts';
 import type { DeviceStatus } from 'shared';
 import {
   InferenceAccountConfigSchema,
@@ -15,9 +21,135 @@ import type {
   ProviderAccount,
 } from '../../types.ts';
 import type { DeviceMediaReadyEvent } from '../../EventBus.ts';
-import type { PetRecognizerConfig, InferenceAccountConfig } from 'shared';
+import { NON_PET_CAUSES } from 'shared';
+import type {
+  PetRecognizerConfig,
+  InferenceAccountConfig,
+  EventCauseDTO,
+} from 'shared';
 
 const RESIZE_SIZE = 256;
+
+/**
+ * The instruction that decides a verdict, kept out of `prompt_template` on
+ * purpose: that field is per-device user config, so putting it here is what
+ * reaches recognizers configured before a cause existed.
+ *
+ * A cause must be *visible*. An earlier wording said "if no pet is in the
+ * image, reply with whichever of these caused it", which forced a pick from the
+ * list whenever no cat was in frame — and a snapshot fires on the sensor, so the
+ * animal has often already left. Measured against real captures, that reliably
+ * turned an empty frame containing only the water fountain into `robot_vacuum`:
+ * a white cylinder on the floor reads as one. Ordinary drinks would have been
+ * attributed to the vacuum and dropped from the pet's intake, which is the exact
+ * corruption the cause vocabulary exists to prevent.
+ */
+export const RECOGNIZER_SYSTEM_MESSAGE =
+  'You are a pet identification assistant. Respond with ONLY one word. ' +
+  'Reply with the pet name from the options provided if you recognise the animal. ' +
+  'If you can clearly SEE what caused this instead of a pet, reply with one of: ' +
+  `${NON_PET_CAUSES.join(', ')}. ` +
+  'Otherwise reply "unknown" — including when the scene is empty, when it shows ' +
+  'only furniture or equipment such as a bowl, fountain or litter tray, or when ' +
+  'an animal is present but you cannot say which pet it is. Do not guess.';
+
+/** Punctuation and casing vary between models; compare on a flattened form. */
+function normalizeVerdict(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+export interface PetIdentificationResult {
+  pet_id: number | null;
+  caused_by: EventCauseDTO;
+  /** The pet's name, or the cause token — display fallback only. */
+  pet_name: string;
+  raw_response: string;
+}
+
+/**
+ * Every path where we could not look. `unknown` is the honest answer: failing to
+ * see a cat is not evidence that no cat was there.
+ */
+function unidentified(rawResponse: string): PetIdentificationResult {
+  return {
+    pet_id: null,
+    caused_by: 'unknown',
+    pet_name: 'unknown',
+    raw_response: rawResponse,
+  };
+}
+
+/**
+ * The model's free-text answer → a verdict.
+ *
+ * Cause tokens are tested first, and against the whole normalised answer, while
+ * the pet match below is a substring test. Order matters: a pet called "Human"
+ * or "Roomba" would otherwise match inside a cause token and claim a positive
+ * identification. Whole-answer matching is also what keeps "a human is holding
+ * the cat" from being read as the `human` cause.
+ */
+export function resolveIdentification(
+  rawResponse: string,
+  pets: Array<{ id: number; name: string }>,
+): PetIdentificationResult {
+  const normalized = normalizeVerdict(rawResponse);
+  const cause = NON_PET_CAUSES.find((c) => c === normalized);
+  if (cause) {
+    return {
+      pet_id: null,
+      caused_by: cause,
+      pet_name: cause,
+      raw_response: rawResponse,
+    };
+  }
+
+  const responseLower = rawResponse.toLowerCase();
+  for (const pet of pets) {
+    if (responseLower.includes(pet.name.toLowerCase())) {
+      return {
+        pet_id: pet.id,
+        caused_by: 'pet',
+        pet_name: pet.name,
+        raw_response: rawResponse,
+      };
+    }
+  }
+
+  return unidentified(rawResponse);
+}
+
+/**
+ * Persist a verdict, but only onto an event nobody has resolved yet.
+ *
+ * The guard lives in the WHERE clause rather than a preceding SELECT: a
+ * read-then-write would race with a decision made while the inference call was
+ * in flight, which is a wide window — seconds of network round-trip.
+ *
+ * Resolved is resolved, whoever resolved it. This deliberately does not consult
+ * `human_verified`, which tracks whether a human touched the event at all — a
+ * different question from whether its attribution is settled.
+ */
+export async function recordIdentification(
+  db: Kysely<Database>,
+  eventId: number,
+  result: PetIdentificationResult,
+): Promise<'applied' | 'already_attributed' | 'unresolved'> {
+  if (!isResolvedCause(result.caused_by)) return 'unresolved';
+
+  const update = await db
+    .updateTable('event')
+    .set(
+      attributionColumns(result.caused_by, result.pet_id, 'recognizer'),
+    )
+    .where('id', '=', eventId)
+    .where('caused_by', '=', 'unknown')
+    .executeTakeFirst();
+
+  return update.numUpdatedRows === 0n ? 'already_attributed' : 'applied';
+}
 
 async function resizeImageToBase64(buffer: Buffer): Promise<string> {
   const resized = await sharp(buffer)
@@ -95,11 +227,7 @@ export class PetRecognizerController implements DeviceController {
 
   async identifyPetFromMedia(
     mediaId: number,
-  ): Promise<{
-    pet_id: number | null;
-    pet_name: string;
-    raw_response: string;
-  }> {
+  ): Promise<PetIdentificationResult> {
     console.log(`Running pet identification for media ${mediaId}`);
 
     try {
@@ -112,11 +240,7 @@ export class PetRecognizerController implements DeviceController {
 
       if (!targetMedia) {
         console.warn(`Media ${mediaId} not found`);
-        return {
-          pet_id: null,
-          pet_name: 'unknown',
-          raw_response: 'Media not found',
-        };
+        return unidentified('Media not found');
       }
 
       const targetImagePath = path.join(getMediaPath(), targetMedia.file_path);
@@ -187,11 +311,7 @@ export class PetRecognizerController implements DeviceController {
 
       if (referenceImages.length === 0) {
         console.warn('No reference images configured for any pet');
-        return {
-          pet_id: null,
-          pet_name: 'unknown',
-          raw_response: 'No reference images',
-        };
+        return unidentified('No reference images');
       }
 
       // 3. Build the prompt with reference images
@@ -214,12 +334,7 @@ export class PetRecognizerController implements DeviceController {
           | Array<{ type: string; image_url?: { url: string }; text?: string }>;
       }> = [];
 
-      // System message
-      messages.push({
-        role: 'system',
-        content:
-          'You are a pet identification assistant. Respond with ONLY the pet name from the options provided, or "unknown" if you cannot identify the pet with confidence.',
-      });
+      messages.push({ role: 'system', content: RECOGNIZER_SYSTEM_MESSAGE });
 
       // User message with images
       const userContent: Array<{
@@ -248,10 +363,15 @@ export class PetRecognizerController implements DeviceController {
         }
       }
 
-      // Add the target image
+      // Add the target image.
+      // Phrased as a cause, not "who is the cat": the old wording presupposed a
+      // cat and measurably pushed the model into naming one even for a person.
+      // It stays here rather than in `prompt_template` because it is part of the
+      // output contract, which is code's to own — the template supplies scene
+      // context, not instructions.
       userContent.push({
         type: 'text',
-        text: '\n\nWho is the cat in this new image?',
+        text: '\n\nWhat caused this new image?',
       });
       userContent.push({
         type: 'image_url',
@@ -295,42 +415,20 @@ export class PetRecognizerController implements DeviceController {
       console.log(`AI response: ${rawResponse}`);
 
       // 6. Parse response to match pet name
-      let identifiedPetId: number | null = null;
-      let identifiedPetName = 'unknown';
-
-      const responseLower = rawResponse.toLowerCase();
-      for (const pet of pets) {
-        if (responseLower.includes(pet.name.toLowerCase())) {
-          identifiedPetId = pet.id;
-          identifiedPetName = pet.name;
-          break;
-        }
-      }
-
-      console.log(
-        `AI identified pet as: ${identifiedPetName} (ID: ${identifiedPetId})`,
-      );
-
       this.deps.presence.recordActivity(this.deviceId);
 
-      return {
-        pet_id: identifiedPetId,
-        pet_name: identifiedPetName,
-        raw_response: rawResponse,
-      };
+      const identification = resolveIdentification(rawResponse, pets);
+      console.log(
+        `AI verdict: ${identification.caused_by} (${identification.pet_name})`,
+      );
+      return identification;
     } catch (error) {
       console.error(`Failed to identify pet:`, error);
       throw error;
     }
   }
 
-  async identifyPet(
-    eventId: number,
-  ): Promise<{
-    pet_id: number | null;
-    pet_name: string;
-    raw_response: string;
-  }> {
+  async identifyPet(eventId: number): Promise<PetIdentificationResult> {
     console.log(`Running pet identification for event ${eventId}`);
 
     try {
@@ -349,27 +447,30 @@ export class PetRecognizerController implements DeviceController {
         console.warn(
           `Invariant violation: device.event.media_ready fired without linked media for event ${eventId}`,
         );
-        return { pet_id: null, pet_name: 'unknown', raw_response: 'No media' };
+        return unidentified('No media');
       }
 
       const snapshotMedia = eventMedia.find((m) => m.relation === 'snapshot');
       const mediaId = snapshotMedia?.id ?? eventMedia[0].id;
       const result = await this.identifyPetFromMedia(mediaId);
 
-      // Update event.pet_id if identified
-      if (result.pet_id !== null) {
-        await this.deps.db
-          .updateTable('event')
-          .set({ pet_id: result.pet_id })
-          .where('id', '=', eventId)
-          .execute();
+      const outcome = await recordIdentification(
+        this.deps.db,
+        eventId,
+        result,
+      );
 
+      if (outcome === 'unresolved') {
         console.log(
-          `Updated event ${eventId} with pet_id ${result.pet_id} (${result.pet_name})`,
+          `Could not identify pet in event ${eventId}, AI said: ${result.raw_response}`,
+        );
+      } else if (outcome === 'already_attributed') {
+        console.log(
+          `Left event ${eventId} alone — already attributed; AI said ${result.pet_name}`,
         );
       } else {
         console.log(
-          `Could not identify pet in event ${eventId}, AI said: ${result.raw_response}`,
+          `Attributed event ${eventId} as ${result.caused_by} (${result.pet_name})`,
         );
       }
 

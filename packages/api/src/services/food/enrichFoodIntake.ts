@@ -4,6 +4,7 @@ import type { Food } from '../../database/types/FoodTable.ts';
 import type { FoodIntakeEventData, FoodIntakeFoodType } from '../../domain/events.ts';
 import type { Insertable } from 'kysely';
 import type { EventTable } from '../../database/types/EventTable.ts';
+import type { EventAttributionColumns } from '../../domain/eventAttribution.ts';
 
 type FoodNutrientItem = { nutrient: string; unit: string; value: number };
 
@@ -85,13 +86,14 @@ export function enrichFoodIntakeEventData(
 
 export function buildMoistureChildEventValues(options: {
   parentEventId: number;
-  petId: number | null;
+  /** Mirrors the parent meal: moisture from food nobody ate isn't a cat's water. */
+  attribution: EventAttributionColumns;
   timestamp: Date;
   moistureMl: number;
 }): Insertable<EventTable> {
   return {
     parent_event_id: options.parentEventId,
-    pet_id: options.petId,
+    ...options.attribution,
     device_id: null,
     timestamp: options.timestamp,
     data: {

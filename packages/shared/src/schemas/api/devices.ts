@@ -1,6 +1,7 @@
 import { Type, type Static } from '@fastify/type-provider-typebox';
 import { DeviceTypeSchema } from "../../constants/devices.ts";
 import { ProviderCapabilitiesSchema } from './integrations.ts';
+import { EventCauseSchema } from './events.ts';
 
 export const DeviceStatusSchema = Type.Union([
   Type.Literal("online"),
@@ -231,6 +232,8 @@ export type PostDeviceTestIdentifyRequestDTO = Static<typeof PostDeviceTestIdent
 export const PostDeviceTestIdentifyResponseSchema = Type.Object({
   pet_id: Type.Union([Type.Number(), Type.Null()]),
   pet_name: Type.String(),
+  /** A non-pet cause only when the model said so; failing to look reports `unknown`. */
+  caused_by: EventCauseSchema,
   raw_response: Type.String(),
 });
 export type PostDeviceTestIdentifyResponseDTO = Static<typeof PostDeviceTestIdentifyResponseSchema>;

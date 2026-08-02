@@ -15,6 +15,7 @@ import {
 } from './scenario.ts';
 import { HEALTHY_WEIGHT_GRAMS } from './metrics.ts';
 import { seedPetAvatars } from './avatars.ts';
+import { attributionColumns } from '../../domain/eventAttribution.ts';
 
 export interface SeedResult {
   pets: Array<{ key: string; id: number; name: string }>;
@@ -289,14 +290,22 @@ export async function runSeedDemo(
     const inserted = await db
       .insertInto('event')
       .values({
-        pet_id: petId,
+        // A demo feeder reads a chip, same as the real one.
+        ...attributionColumns('pet', petId, 'microchip'),
         device_id: feederId,
         timestamp,
         data: foodData,
         raw_data: null,
         human_verified: true,
       })
-      .returning(['id', 'pet_id', 'timestamp', 'data'])
+      .returning([
+        'id',
+        'pet_id',
+        'caused_by',
+        'attributed_by',
+        'timestamp',
+        'data',
+      ])
       .executeTakeFirstOrThrow();
 
     eventCounts.food_intake += 1;
@@ -308,7 +317,11 @@ export async function runSeedDemo(
         .values(
           buildMoistureChildEventValues({
             parentEventId: inserted.id,
-            petId: inserted.pet_id,
+            attribution: {
+              pet_id: inserted.pet_id,
+              caused_by: inserted.caused_by,
+              attributed_by: inserted.attributed_by,
+            },
             timestamp: inserted.timestamp,
             moistureMl,
           }),
