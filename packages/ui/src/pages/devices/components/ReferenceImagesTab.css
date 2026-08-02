@@ -14,6 +14,10 @@
       p {
         margin: 0;
       }
+
+      p + p {
+        margin-top: var(--space-xs);
+      }
     }
 
     .test-button {
@@ -62,8 +66,28 @@
         }
       }
 
+      .switch,
       .add-images-button {
         flex-shrink: 0;
+      }
+    }
+
+    /*
+     * Faded, not hidden: the photos are still there, and the card has to show
+     * that turning the switch back on costs nothing. Everything but the switch
+     * dims, so the way back stays the one thing at full contrast.
+     */
+    &.is-ignored {
+      .avatar,
+      .pet-info h3,
+      .images-grid,
+      .add-images-button {
+        opacity: 0.45;
+      }
+
+      .image-count {
+        color: var(--color-text-muted);
+        font-style: italic;
       }
     }
 

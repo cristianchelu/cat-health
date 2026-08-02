@@ -4,7 +4,10 @@ import { describe, it } from 'node:test';
 import { NON_PET_CAUSES } from 'shared';
 
 import { InferenceProvider } from '../InferenceProvider.ts';
-import { resolveIdentification } from '../PetRecognizerController.ts';
+import {
+  resolveIdentification,
+  watchedPets,
+} from '../PetRecognizerController.ts';
 
 describe('InferenceProvider', () => {
   const provider = new InferenceProvider();
@@ -101,5 +104,85 @@ describe('resolveIdentification', () => {
       PETS,
     );
     assert.equal(result.caused_by, 'unknown');
+  });
+
+  it('will not name a pet that was not among the candidates', () => {
+    // A recognizer with Bean switched off never shows the model her photos, but
+    // the model can still say "Bean" — from the scene description, or from a
+    // plain wrong guess. Matching against every pet on record would attribute
+    // the event to the one pet this camera is configured never to see.
+    const result = resolveIdentification('Bean', [PETS[0]]);
+    assert.equal(result.pet_id, null);
+    assert.equal(result.caused_by, 'unknown');
+  });
+
+  it('resolves nothing when every pet is switched off', () => {
+    const result = resolveIdentification('Mochi', []);
+    assert.equal(result.caused_by, 'unknown');
+  });
+});
+
+describe('watchedPets', () => {
+  const PETS = [
+    { id: 1, name: 'Mochi' },
+    { id: 2, name: 'Bean' },
+  ];
+  const REFS = { '1': [10, 11], '2': [20] };
+
+  it('watches every pet with reference images when none are switched off', () => {
+    const watched = watchedPets(PETS, { reference_images: REFS });
+    assert.deepEqual(
+      watched.map((w) => w.pet.name),
+      ['Mochi', 'Bean'],
+    );
+    assert.deepEqual(watched[0].mediaIds, [10, 11]);
+  });
+
+  it('drops a pet that is switched off, and keeps their photos configured', () => {
+    const config = { reference_images: REFS, ignored_pets: [2] };
+    const watched = watchedPets(PETS, config);
+
+    assert.deepEqual(
+      watched.map((w) => w.pet.name),
+      ['Mochi'],
+    );
+    // The exclusion is about who this camera is asked about, not about
+    // discarding curation: switching Bean back on must not cost a re-pick.
+    assert.deepEqual(config.reference_images['2'], [20]);
+  });
+
+  it('drops a pet with no reference images', () => {
+    const watched = watchedPets(PETS, { reference_images: { '1': [10] } });
+    assert.deepEqual(
+      watched.map((w) => w.pet.name),
+      ['Mochi'],
+    );
+  });
+
+  it('treats an empty reference list the same as a missing one', () => {
+    const watched = watchedPets(PETS, {
+      reference_images: { '1': [10], '2': [] },
+    });
+    assert.deepEqual(
+      watched.map((w) => w.pet.name),
+      ['Mochi'],
+    );
+  });
+
+  it('ignores an id for a pet that no longer exists', () => {
+    // Deleting a pet does not rewrite every recognizer's config, so a stale id
+    // outlives them. It must not shift or drop anyone else.
+    const watched = watchedPets(PETS, {
+      reference_images: REFS,
+      ignored_pets: [99],
+    });
+    assert.equal(watched.length, 2);
+  });
+
+  it('watches nobody when every pet is switched off', () => {
+    assert.deepEqual(
+      watchedPets(PETS, { reference_images: REFS, ignored_pets: [1, 2] }),
+      [],
+    );
   });
 });

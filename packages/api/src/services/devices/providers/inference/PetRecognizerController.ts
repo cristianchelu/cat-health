@@ -53,6 +53,36 @@ export const RECOGNIZER_SYSTEM_MESSAGE =
   'only furniture or equipment such as a bowl, fountain or litter tray, or when ' +
   'an animal is present but you cannot say which pet it is. Do not guess.';
 
+/**
+ * The pets this camera is asked about.
+ *
+ * Two ways to be left out, and they mean different things. The switch being off
+ * says this camera never sees that pet — a cat who ignores the hallway fountain,
+ * an indoor-only pet on a garden camera. Having no reference photos says we have
+ * nothing to show the model, so there is nothing to compare against.
+ *
+ * Both matter beyond tidiness: every extra name is another way for the model to
+ * hedge. On real captures, one cat who never uses the fountain took recognition
+ * of the cat who does from 39/39 to 12/39 — not by claiming the wrong cat, but
+ * by turning a certain answer into a coin flip the model declined to call.
+ */
+export function watchedPets<T extends { id: number }>(
+  pets: T[],
+  config: Pick<PetRecognizerConfig, 'reference_images' | 'ignored_pets'>,
+): Array<{ pet: T; mediaIds: number[] }> {
+  const ignored = new Set(config.ignored_pets ?? []);
+  const watched: Array<{ pet: T; mediaIds: number[] }> = [];
+
+  for (const pet of pets) {
+    if (ignored.has(pet.id)) continue;
+    const mediaIds = config.reference_images[pet.id.toString()] ?? [];
+    if (mediaIds.length === 0) continue;
+    watched.push({ pet, mediaIds });
+  }
+
+  return watched;
+}
+
 /** Punctuation and casing vary between models; compare on a flattened form. */
 function normalizeVerdict(raw: string): string {
   return raw
@@ -90,10 +120,14 @@ function unidentified(rawResponse: string): PetIdentificationResult {
  * or "Roomba" would otherwise match inside a cause token and claim a positive
  * identification. Whole-answer matching is also what keeps "a human is holding
  * the cat" from being read as the `human` cause.
+ *
+ * `candidates` is the pets the model was offered, not every pet on record — a
+ * name outside that set is a name it was never given, so there is nothing to
+ * resolve it against and the answer falls through to `unknown`.
  */
 export function resolveIdentification(
   rawResponse: string,
-  pets: Array<{ id: number; name: string }>,
+  candidates: Array<{ id: number; name: string }>,
 ): PetIdentificationResult {
   const normalized = normalizeVerdict(rawResponse);
   const cause = NON_PET_CAUSES.find((c) => c === normalized);
@@ -107,7 +141,7 @@ export function resolveIdentification(
   }
 
   const responseLower = rawResponse.toLowerCase();
-  for (const pet of pets) {
+  for (const pet of candidates) {
     if (responseLower.includes(pet.name.toLowerCase())) {
       return {
         pet_id: pet.id,
@@ -247,19 +281,14 @@ export class PetRecognizerController implements DeviceController {
       const targetImageBuffer = await fs.readFile(targetImagePath);
       const targetImageDataUrl = await resizeImageToBase64(targetImageBuffer);
 
-      // 2. Load reference images for all pets
+      // 2. Load reference images for the pets this camera watches
       const pets = await this.deps.db.selectFrom('pet').selectAll().execute();
+      const watched = watchedPets(pets, this.config);
 
-      // Collect all media IDs across all pets in one pass
+      // Collect all media IDs across those pets in one pass
       const allMediaIds: number[] = [];
-      const petMediaMap = new Map<number, number[]>();
-
-      for (const pet of pets) {
-        const ids = this.config.reference_images[pet.id.toString()] || [];
-        if (ids.length > 0) {
-          petMediaMap.set(pet.id, ids);
-          allMediaIds.push(...ids);
-        }
+      for (const { mediaIds } of watched) {
+        allMediaIds.push(...mediaIds);
       }
 
       // Batch-resolve all media IDs in a single query
@@ -282,12 +311,9 @@ export class PetRecognizerController implements DeviceController {
         images: string[];
       }> = [];
 
-      for (const pet of pets) {
-        const ids = petMediaMap.get(pet.id);
-        if (!ids) continue;
-
+      for (const { pet, mediaIds } of watched) {
         const images: string[] = [];
-        for (const id of ids) {
+        for (const id of mediaIds) {
           const media = mediaById.get(id);
           if (!media) continue;
           try {
@@ -310,7 +336,10 @@ export class PetRecognizerController implements DeviceController {
       }
 
       if (referenceImages.length === 0) {
-        console.warn('No reference images configured for any pet');
+        console.warn(
+          `No pets to compare against on device ${this.deviceId}: none have ` +
+            'reference images, or all of them are switched off',
+        );
         return unidentified('No reference images');
       }
 
@@ -417,7 +446,16 @@ export class PetRecognizerController implements DeviceController {
       // 6. Parse response to match pet name
       this.deps.presence.recordActivity(this.deviceId);
 
-      const identification = resolveIdentification(rawResponse, pets);
+      // Only pets the model was actually shown. Matching against every pet in
+      // the database would let an excluded one back in through the answer: the
+      // model can name a cat it was never offered — from the scene description,
+      // or from a plain wrong guess — and a substring match would then attribute
+      // the event to a pet this camera is configured never to see.
+      const candidates = referenceImages.map(({ pet_id, pet_name }) => ({
+        id: pet_id,
+        name: pet_name,
+      }));
+      const identification = resolveIdentification(rawResponse, candidates);
       console.log(
         `AI verdict: ${identification.caused_by} (${identification.pet_name})`,
       );

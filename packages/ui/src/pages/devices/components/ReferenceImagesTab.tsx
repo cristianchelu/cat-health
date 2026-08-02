@@ -4,6 +4,8 @@ import { usePetContext } from '@/hooks/context/usePetContext';
 import { useUpdateDevice } from '@/hooks/queries/deviceQueries';
 import { Button } from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
+import { Switch } from '@/components/ui/Switch';
+import { cn } from '@/lib/utils';
 import { Cat, ImagePlus, X, Sparkles } from 'lucide-react';
 import type { GetDeviceResponseDTO, PetRecognizerConfig } from 'shared';
 import ReferenceImagePicker from '@/components/devices/ReferenceImagePicker';
@@ -24,9 +26,34 @@ const ReferenceImagesTab: React.FC<ReferenceImagesTabProps> = ({ device }) => {
 
   const config = device.config as PetRecognizerConfig;
   const referenceImages = config.reference_images || {};
+  const ignoredPets = React.useMemo(
+    () => new Set(config.ignored_pets ?? []),
+    [config.ignored_pets],
+  );
   const referenceMedia = (device as Record<string, unknown>).reference_media as
     | Record<string, Array<{ id: number; file_path: string }>>
     | undefined;
+
+  /**
+   * Stored as the excluded ids, not the included ones, so a pet adopted after
+   * this device was set up is watched for by default — the same thing that
+   * happened before the field existed. An empty list is dropped rather than
+   * written, which keeps a device nobody has excluded anything on identical to
+   * one that predates the feature.
+   */
+  const handleWatchedChange = (petId: number, watched: boolean) => {
+    const next = new Set(ignoredPets);
+    if (watched) next.delete(petId);
+    else next.add(petId);
+
+    const nextConfig: PetRecognizerConfig = {
+      ...config,
+      ignored_pets: [...next],
+    };
+    if (next.size === 0) delete nextConfig.ignored_pets;
+
+    updateDevice({ config: nextConfig });
+  };
 
   const handleRemoveImage = (petId: number, mediaId: number) => {
     const petIdStr = petId.toString();
@@ -71,6 +98,7 @@ const ReferenceImagesTab: React.FC<ReferenceImagesTabProps> = ({ device }) => {
       <div className="tab-header">
         <div className="tab-description">
           <p>{t('pet_recognizer.tab_description')}</p>
+          <p>{t('pet_recognizer.watch_help')}</p>
         </div>
         <Button
           variant="secondary"
@@ -86,9 +114,13 @@ const ReferenceImagesTab: React.FC<ReferenceImagesTabProps> = ({ device }) => {
         {pets.map((pet) => {
           const petIdStr = pet.id.toString();
           const refs = referenceMedia?.[petIdStr] ?? [];
+          const isWatched = !ignoredPets.has(pet.id);
 
           return (
-            <div key={pet.id} className="pet-card">
+            <div
+              key={pet.id}
+              className={cn('pet-card', !isWatched && 'is-ignored')}
+            >
               <div className="pet-header">
                 <Avatar
                   src={pet.avatar_url}
@@ -98,9 +130,25 @@ const ReferenceImagesTab: React.FC<ReferenceImagesTabProps> = ({ device }) => {
                 <div className="pet-info">
                   <h3>{pet.name}</h3>
                   <span className="image-count">
-                    {t('pet_recognizer.reference_images_count', { count: refs.length })}
+                    {isWatched
+                      ? t('pet_recognizer.reference_images_count', {
+                          count: refs.length,
+                        })
+                      : t('pet_recognizer.pet_not_watched')}
                   </span>
                 </div>
+                <Switch
+                  checked={isWatched}
+                  onCheckedChange={(checked) =>
+                    handleWatchedChange(pet.id, checked)
+                  }
+                  aria-label={t('pet_recognizer.watch_pet_label', {
+                    name: pet.name,
+                  })}
+                  title={t('pet_recognizer.watch_pet_label', {
+                    name: pet.name,
+                  })}
+                />
                 <Button
                   variant="secondary"
                   size="sm"
