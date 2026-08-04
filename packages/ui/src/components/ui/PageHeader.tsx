@@ -28,6 +28,12 @@ interface PageHeaderProps
   back?: PageHeaderBack;
   /** The page title — rendered as the page's one `<h1>`. */
   title?: React.ReactNode;
+  /**
+   * Secondary line under the title: what the page holds, not what you can do
+   * to it. Counts and status belong here rather than in `actions`, which is
+   * for controls. Rendered inside a `<p>`, so keep it to phrasing content.
+   */
+  subtitle?: React.ReactNode;
   /** Decorative mark beside the title. Hidden on mobile, where the row is tight. */
   icon?: React.ReactNode;
   /** Trailing controls. */
@@ -53,7 +59,7 @@ interface PageHeaderProps
  * offered the one its width applies to.
  */
 const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
-  ({ back, title, icon, actions, className, ...props }, ref) => {
+  ({ back, title, subtitle, icon, actions, className, ...props }, ref) => {
     const navigate = useNavigate();
     const { to, useHistory, onNavigate, label } = back ?? {};
 
@@ -109,7 +115,12 @@ const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
         {title != null ? (
           <div className="page-header-title">
             {icon}
-            <h1>{title}</h1>
+            <div className="page-header-title-text">
+              <h1>{title}</h1>
+              {subtitle ? (
+                <p className="page-header-subtitle">{subtitle}</p>
+              ) : null}
+            </div>
           </div>
         ) : null}
 

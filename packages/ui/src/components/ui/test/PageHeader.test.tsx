@@ -36,6 +36,19 @@ describe('PageHeader', () => {
     assert.equal(headings[0].textContent, 'Devices');
   });
 
+  it('keeps the subtitle out of the heading', async () => {
+    // The subtitle sits beside the <h1> in the title area, not inside it: a
+    // page's accessible name is what it is called, not how many things it holds.
+    await renderWithProviders(
+      <PageHeader title="Devices" subtitle="3 devices" />,
+      { router: { initialEntries: ['/devices'] } },
+    );
+
+    const heading = screen.getByRole('heading', { level: 1 });
+    assert.equal(heading.textContent, 'Devices');
+    assert.ok(screen.getByText('3 devices'));
+  });
+
   it('names the back control after where it lands, not the current page', async () => {
     await renderWithProviders(
       <PageHeader

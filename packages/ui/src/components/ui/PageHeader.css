@@ -75,6 +75,29 @@
     }
   }
 
+  .page-header-title-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    min-width: 0;
+  }
+
+  /*
+   * A `<p>` laid out as a row so a caller can mix text with a pill — the
+   * subtitle carries counts and status, and a warn pill has to keep its tone.
+   */
+  .page-header-subtitle {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    min-width: 0;
+    font-size: var(--text-sm);
+    line-height: var(--line-height-tight);
+    color: var(--color-text-light);
+  }
+
   .page-header-actions {
     grid-area: actions;
     display: flex;
@@ -125,6 +148,13 @@
       h1 {
         font-size: var(--text-lg);
       }
+    }
+
+    /* The app-bar row is already tight; the subtitle stays on one line. */
+    .page-header-subtitle {
+      font-size: var(--text-xs);
+      flex-wrap: nowrap;
+      overflow: hidden;
     }
   }
 }
