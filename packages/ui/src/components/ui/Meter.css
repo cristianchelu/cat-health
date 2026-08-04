@@ -9,7 +9,7 @@
   }
 
   &.sm {
-    height: var(--space-3xs);
+    height: var(--space-2xs);
     max-width: 4rem;
   }
 

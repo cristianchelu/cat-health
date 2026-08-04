@@ -4,12 +4,15 @@
   gap: var(--space-sm);
   width: 100%;
 
+  /* Set solid and spaced like the whole-width primary row, for the same
+   * reason: the head belongs to the bar directly under it. */
   .split-meter-head {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-2xs);
-    margin-bottom: var(--space-3xs);
+    margin-bottom: var(--space-2xs);
+    line-height: 1;
   }
 
   .split-meter-label {
@@ -18,8 +21,14 @@
     color: var(--color-text-light);
   }
 
+  /*
+   * The same size as a whole-width primary value. A split is still the card's
+   * one headline reading, and shrinking it because there are two of them makes
+   * a dual-bowl feeder look like it says less than a single-bowl one. It fits
+   * because these cells only ever carry a percentage.
+   */
   .split-meter-value {
-    font-size: var(--text-sm);
+    font-size: var(--text-lg);
     font-weight: var(--font-bold);
     color: var(--tone-ink, var(--color-text));
     white-space: nowrap;

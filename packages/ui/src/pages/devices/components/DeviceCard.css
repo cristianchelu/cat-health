@@ -48,8 +48,8 @@
     color: var(--color-primary);
 
     svg {
-      width: var(--space-xl);
-      height: var(--space-xl);
+      width: var(--space-lg);
+      height: var(--space-lg);
     }
   }
 
@@ -76,11 +76,16 @@
     }
   }
 
+  /*
+   * Two lines that have to fit beside a 40px tile without setting the header's
+   * height themselves, so both run tight rather than at the body leading.
+   */
   .device-card-identity {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
+    line-height: var(--line-height-tight);
   }
 
   .device-card-name,
@@ -97,7 +102,9 @@
   }
 
   .device-card-model {
+    margin-top: var(--space-3xs);
     font-size: var(--text-xs);
+    font-weight: var(--font-medium);
     color: var(--color-text-light);
   }
 
@@ -113,11 +120,17 @@
     flex: none;
   }
 
+  /*
+   * Set solid. The row's only job is to sit directly above its gauge, and body
+   * leading on an 18px value opens a half-line gap between the two that reads
+   * as the label belonging to nothing.
+   */
   .device-card-primary-row {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-sm);
+    line-height: 1;
   }
 
   .device-card-primary-label {

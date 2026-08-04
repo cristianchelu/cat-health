@@ -1,6 +1,6 @@
 .segment-meter {
   display: flex;
-  gap: var(--space-3xs);
+  gap: var(--space-2xs);
   height: var(--space-xs);
   width: 100%;
 
