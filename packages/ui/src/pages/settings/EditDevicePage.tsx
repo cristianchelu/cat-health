@@ -18,7 +18,7 @@ import {
   Textarea,
 } from '@/components/ui/form';
 import { LoadingState } from '@/components/ui/PageState';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm, useUnsavedBlocker } from '@/hooks/form';
 import { DeviceSummary } from './components/DeviceSummary';
@@ -196,10 +196,12 @@ const EditDevicePage: React.FC = () => {
    * way.
    */
   const header = (title: React.ReactNode) => (
-    <PageHeader
-      back={{ to: '/settings/devices', label: t('settings.devices') }}
-      title={title}
-    />
+    <AppHeader>
+      <AppHeaderBar
+        back={{ to: '/settings/devices', label: t('settings.devices') }}
+        title={title}
+      />
+    </AppHeader>
   );
 
   if (isLoading) {

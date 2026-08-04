@@ -1,10 +1,10 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Settings as SettingsIcon, Smartphone } from 'lucide-react';
+import { Settings as SettingsIcon } from 'lucide-react';
 import type { DeviceType } from 'shared';
 import { useDevices } from '@/hooks/queries/deviceQueries';
 import { useRegionalPreferences } from '@/contexts/RegionalPreferencesProvider';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { PageAddFab, PageAddLink } from '@/components/ui/PageAddAction';
 import { ListToolbar } from '@/components/ui/ListToolbar';
 import { SearchInput } from '@/components/ui/SearchInput';
@@ -96,17 +96,18 @@ const DevicesPage: React.FC = () => {
 
   return (
     <div className="settings-devices-page">
-      <PageHeader
-        back={{ to: '/settings', label: t('navigation.settings') }}
-        icon={<Smartphone size="1em" />}
-        title={t('settings.devices')}
-        actions={
-          <PageAddLink
-            to="/settings/devices/new"
-            label={t('settings.add_device')}
-          />
-        }
-      />
+      <AppHeader>
+        <AppHeaderBar
+          back={{ to: '/settings', label: t('navigation.settings') }}
+          title={t('settings.devices')}
+          actions={
+            <PageAddLink
+              to="/settings/devices/new"
+              label={t('settings.add_device')}
+            />
+          }
+        />
+      </AppHeader>
 
       {devicesQuery.isPending ? (
         <LoadingState message={t('settings.loading_devices')} />

@@ -19,7 +19,7 @@ import {
   FormSwitch,
 } from '@/components/ui/form';
 import { LoadingState } from '@/components/ui/PageState';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm, useDraftForm, useUnsavedBlocker } from '@/hooks/form';
 import {
@@ -113,7 +113,9 @@ const ProviderAccountPage: React.FC = () => {
   const storedPetLinks = React.useMemo(() => {
     if (!supportsPetLinking || !isRecord(accountConfig)) return EMPTY_PET_LINKS;
     const stored = accountConfig.pet_links;
-    return Array.isArray(stored) ? stored.filter(isProviderPetLink) : EMPTY_PET_LINKS;
+    return Array.isArray(stored)
+      ? stored.filter(isProviderPetLink)
+      : EMPTY_PET_LINKS;
   }, [accountConfig, supportsPetLinking]);
 
   /*
@@ -184,10 +186,12 @@ const ProviderAccountPage: React.FC = () => {
    * way.
    */
   const header = (title: React.ReactNode) => (
-    <PageHeader
-      back={{ to: '/settings/providers', label: t('settings.providers') }}
-      title={title}
-    />
+    <AppHeader>
+      <AppHeaderBar
+        back={{ to: '/settings/providers', label: t('settings.providers') }}
+        title={title}
+      />
+    </AppHeader>
   );
 
   if (isLoading) {

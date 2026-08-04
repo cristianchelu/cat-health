@@ -7,18 +7,13 @@ import { describe, it } from 'node:test';
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
- * The components allowed to emit an `<h1>`: `PageHeader` and its replacement
- * `AppHeaderBar`, which is where a page title belongs, and `FormCardHead`,
- * whose `titleAs` lets a card carry the heading on the form screens that have
- * no page title of their own.
- *
- * Two title bars is a transitional state — `PageHeader` comes off this list
- * with its last caller.
+ * The one component allowed to emit an `<h1>`: `AppHeaderBar`, which is where a
+ * page title belongs. `FormCardHead` can still be asked for one through its
+ * `titleAs`, but it renders a computed tag rather than a literal, and every
+ * route now has an app bar above it — so nothing asks.
  */
 const HEADING_OWNERS = new Set([
   path.join('components', 'ui', 'AppHeader.tsx'),
-  path.join('components', 'ui', 'PageHeader.tsx'),
-  path.join('components', 'ui', 'form', 'FormCard.tsx'),
 ]);
 
 /** `<h1`, `<h1>`, `<h1 className=…` — a literal element, not a computed tag. */
@@ -41,9 +36,9 @@ function lineOf(source: string, index: number): number {
 }
 
 /**
- * A page gets its heading from `PageHeader`, and only from there.
+ * A page gets its heading from `AppHeaderBar`, and only from there.
  *
- * `PageHeader` moves one `<h1>` between grid areas so the desktop heading and
+ * `AppHeaderBar` moves one `<h1>` between grid areas so the desktop heading and
  * the mobile title bar are the same element — that is what stops them saying
  * different things, as `/settings/devices` once did ("← Settings" on desktop,
  * "← Devices" on mobile). A page that also hand-rolls its own `<h1>` puts a
@@ -51,7 +46,7 @@ function lineOf(source: string, index: number): number {
  * steps did, until their prompts became `<h2>`s under the wizard's title.
  */
 describe('page headings', () => {
-  it('come from PageHeader, not from hand-rolled <h1>s', () => {
+  it('come from AppHeaderBar, not from hand-rolled <h1>s', () => {
     const offenders: string[] = [];
 
     for (const file of sourceFiles(SRC)) {
@@ -67,7 +62,7 @@ describe('page headings', () => {
     assert.deepEqual(
       offenders.sort(),
       [],
-      'Render the page title through `PageHeader` instead — a second <h1> is ' +
+      'Render the page title through `AppHeaderBar` instead — a second <h1> is ' +
         'a second thing the page can call itself:\n' +
         offenders.join('\n'),
     );

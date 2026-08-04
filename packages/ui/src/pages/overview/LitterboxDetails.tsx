@@ -8,7 +8,7 @@ import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import { daysToUntrackedIntervals } from '@/lib/untrackedIntervals';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { Card, CardContent } from '@/components/ui/Card';
 import {
   LitterboxMetricChart,
@@ -152,11 +152,13 @@ const LitterboxDetails: React.FC = () => {
         Explicit route, not history: the only entry point is the overview card,
         and a reload or bookmark leaves `navigate(-1)` with nowhere to go.
       */}
-      <PageHeader
-        back={{ to: '/overview', label: t('navigation.overview') }}
-        title={t('litterbox_details.title')}
-        actions={rangeActions}
-      />
+      <AppHeader>
+        <AppHeaderBar
+          back={{ to: '/overview', label: t('navigation.overview') }}
+          title={t('litterbox_details.title')}
+          actions={rangeActions}
+        />
+      </AppHeader>
 
       <section className="litterbox-details-chart-grid">
         <section className="litterbox-details-chart-section litterbox-details-chart-section--wide">

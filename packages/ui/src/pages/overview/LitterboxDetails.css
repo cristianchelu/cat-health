@@ -15,7 +15,7 @@
   }
 
   /* The page is a flex column with its own gap; the header's margin doubles it. */
-  .page-header {
+  .app-header {
     margin-bottom: 0;
   }
 
@@ -68,7 +68,9 @@
     }
 
     .litterbox-metric-chart {
-      --litterbox-metric-chart-plot-height: var(--litterbox-details-metric-chart-height);
+      --litterbox-metric-chart-plot-height: var(
+        --litterbox-details-metric-chart-height
+      );
       height: var(--litterbox-metric-chart-plot-height);
       min-height: var(--litterbox-metric-chart-plot-height);
     }
@@ -102,12 +104,11 @@
       --litterbox-dot-grid-dot-size: 1rem;
       --litterbox-dot-grid-gap: var(--space-sm);
       min-height: calc(
-        var(--litterbox-details-dot-grid-min-stack-dots)
-          * var(--litterbox-dot-grid-dot-size)
-        + (var(--litterbox-details-dot-grid-min-stack-dots) - 1)
-          * var(--litterbox-dot-grid-gap)
-        + var(--litterbox-dot-grid-gap)
-        + 1.125rem
+        var(--litterbox-details-dot-grid-min-stack-dots) *
+          var(--litterbox-dot-grid-dot-size) +
+          (var(--litterbox-details-dot-grid-min-stack-dots) - 1) *
+          var(--litterbox-dot-grid-gap) + var(--litterbox-dot-grid-gap) +
+          1.125rem
       );
     }
 
@@ -140,19 +141,19 @@
 
   /*
    * A date range plus its two steppers cannot share the app-bar row with the
-   * title on a phone — the title loses, and `PageHeader` ellipsises it away to
-   * nothing. Give the range its own row. Pages whose actions are a couple of
+   * title on a phone — the title loses, and `AppHeaderBar` ellipsises it away
+   * to nothing. Give the range its own row. Pages whose actions are a couple of
    * icon buttons keep the single-row default.
    */
   @media (max-width: 767px) {
-    .page-header {
+    .app-header-bar {
       grid-template-columns: auto minmax(0, 1fr);
       grid-template-areas:
         'back    title'
         'actions actions';
     }
 
-    .page-header-actions {
+    .app-header-actions {
       justify-content: center;
     }
   }

@@ -16,10 +16,9 @@ import {
   useUpdateProviderAccount,
   useDevices,
 } from '@/hooks/queries/deviceQueries';
-import { Server, Smartphone } from 'lucide-react';
 import { isRecord } from '@/lib/utils';
 import { useUnsavedBlocker } from '@/hooks/form';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { LoadingState } from '@/components/ui/PageState';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import Stepper from '@/components/ui/Stepper';
@@ -103,9 +102,9 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
   );
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [stepDirty, setStepDirty] = React.useState(false);
-  const [pendingLeave, setPendingLeave] = React.useState<
-    (() => void) | null
-  >(null);
+  const [pendingLeave, setPendingLeave] = React.useState<(() => void) | null>(
+    null,
+  );
   const [isImporting, setIsImporting] = React.useState(false);
 
   React.useEffect(() => {
@@ -382,20 +381,15 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
        * FormActions, so this is labelled with where it lands instead of
        * duplicating that word.
        */}
-      <PageHeader
-        back={{
-          label: leaveLabel,
-          onNavigate: () => requestLeave(leaveWizard),
-        }}
-        icon={
-          entry === 'connect' ? (
-            <Server size="1em" />
-          ) : (
-            <Smartphone size="1em" />
-          )
-        }
-        title={title}
-      />
+      <AppHeader>
+        <AppHeaderBar
+          back={{
+            label: leaveLabel,
+            onNavigate: () => requestLeave(leaveWizard),
+          }}
+          title={title}
+        />
+      </AppHeader>
 
       {/*
        * Hidden on the first step in both flows: it would have nothing to say

@@ -20,3 +20,26 @@
   width: calc(100% + 2 * var(--page-shell-padding-inline));
   max-width: none;
 }
+
+/*
+ * The narrow form shells drop their reading measure on a phone.
+ *
+ * 30rem is a measure for prose on a wide screen; below 768px it is either wider
+ * than the screen (does nothing) or narrower (leaves gutters). Those gutters
+ * used to be invisible. They aren't now: every page leads with an `AppHeader`
+ * that bleeds out through `main`'s padding to reach the screen edges, and it
+ * can only bleed as far as its own page box — so a 30rem page on a 45rem phone
+ * left the app bar floating in the middle of the screen with the shadow
+ * cutting down both sides.
+ *
+ * Listed here rather than four times over because it is one rule about the
+ * shell, and the four pages are only incidentally the ones that have a measure.
+ */
+@media (max-width: 767px) {
+  .settings-form-page,
+  .edit-device-page,
+  .provider-account-page,
+  .provider-wizard-page {
+    max-width: none;
+  }
+}

@@ -2,7 +2,7 @@
   max-width: var(--max-width-sm);
   margin: 0 auto;
 
-  .page-header {
+  .app-header {
     margin-bottom: var(--space-2xl);
   }
 
@@ -32,7 +32,7 @@
   }
 
   .connect-provider-step {
-    /* The step prompt sits under the wizard's own <h1> in `PageHeader`. */
+    /* The step prompt sits under the wizard's own <h1> in `AppHeaderBar`. */
     > h2 {
       margin: 0 0 var(--space-2xs);
       font-size: var(--text-xl);
@@ -151,9 +151,15 @@
   }
 
   @media (max-width: 767px) {
-    padding: var(--space-sm);
+    /*
+     * Trailing edge only. Inline padding here would sit inside `main`'s, and
+     * the app bar bleeds back out through exactly one of those — a second inset
+     * leaves it short of the screen edge on both sides. Leading padding pushes
+     * the bar down off the top, which it then snaps back to on the first scroll.
+     */
+    padding-block-end: var(--space-sm);
 
-    .page-header {
+    .app-header {
       margin-bottom: var(--space-xl);
     }
 

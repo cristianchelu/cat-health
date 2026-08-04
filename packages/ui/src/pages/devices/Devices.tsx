@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { DeviceListItemDTO, SignalTone } from 'shared';
 import { useDevices } from '@/hooks/queries/deviceQueries';
 import { useRegionalPreferences } from '@/contexts/RegionalPreferencesProvider';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { PageAddFab, PageAddLink } from '@/components/ui/PageAddAction';
 import { EmptyState, LoadingState } from '@/components/ui/PageState';
 import { StatusPill } from '@/components/ui/StatusPill';
@@ -64,24 +64,31 @@ const Devices: React.FC = () => {
 
   return (
     <div className="page-devices">
-      <PageHeader
-        title={t('navigation.devices')}
-        subtitle={
-          devices && devices.length > 0 ? (
-            <>
-              {t('settings.device_count', { count: devices.length })}
-              {needingAttention > 0 ? (
-                <StatusPill variant="warn">
-                  {t('devices.needing_attention', { count: needingAttention })}
-                </StatusPill>
-              ) : null}
-            </>
-          ) : null
-        }
-        actions={
-          <PageAddLink to={ADD_DEVICE_ROUTE} label={t('settings.add_device')} />
-        }
-      />
+      <AppHeader>
+        <AppHeaderBar
+          title={t('navigation.devices')}
+          subtitle={
+            devices && devices.length > 0 ? (
+              <>
+                {t('settings.device_count', { count: devices.length })}
+                {needingAttention > 0 ? (
+                  <StatusPill variant="warn">
+                    {t('devices.needing_attention', {
+                      count: needingAttention,
+                    })}
+                  </StatusPill>
+                ) : null}
+              </>
+            ) : null
+          }
+          actions={
+            <PageAddLink
+              to={ADD_DEVICE_ROUTE}
+              label={t('settings.add_device')}
+            />
+          }
+        />
+      </AppHeader>
 
       <DeviceGrid
         devices={sorted}

@@ -4,11 +4,8 @@ import { Link, useNavigate } from 'react-router';
 import { ListChecks, Pencil } from 'lucide-react';
 import type { GetDeviceResponseDTO } from 'shared';
 import { Button } from '@/components/ui/Button';
-import { PageHeader } from '@/components/ui/PageHeader';
-import {
-  StatusPill,
-  type StatusPillVariant,
-} from '@/components/ui/StatusPill';
+import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
+import { StatusPill, type StatusPillVariant } from '@/components/ui/StatusPill';
 import {
   getProviderBrand,
   providerBrandLabel,
@@ -19,7 +16,6 @@ import {
   isMeaningfulLastSeen,
 } from '@/lib/formatRelativeTime';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
-import { cn } from '@/lib/utils';
 import { isVisitAnnotationEnabled } from '@/lib/deviceAnnotation';
 import './DeviceHeader.css';
 
@@ -67,10 +63,33 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
       : t(`devices.status.${device.status}`);
 
   return (
-    <>
-      <PageHeader
+    <AppHeader className={className}>
+      <AppHeaderBar
         back={{ to: '/devices', label: t('navigation.devices') }}
         title={device.name}
+        /* What the title can't say: type, provider, and how it's doing. */
+        subtitle={
+          <span className="device-meta">
+            <span className="device-type">{formatType(device.type)}</span>
+            <span className="separator">•</span>
+            <span className="device-provider">
+              {providerBrandLabel(getProviderBrand(device.provider), t)}
+            </span>
+            {/* No separator before the pill — it is not a text item, and on a
+                phone the meta line wraps, which left a bullet dangling. */}
+            <StatusPill
+              variant={STATUS_VARIANTS[device.status ?? ''] ?? 'neutral'}
+              dot
+              title={
+                device.status === 'offline' && lastSeenAbsolute
+                  ? lastSeenAbsolute
+                  : undefined
+              }
+            >
+              {statusLabel}
+            </StatusPill>
+          </span>
+        }
         actions={
           <>
             {isVisitAnnotationEnabled(device) && (
@@ -95,28 +114,6 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
           </>
         }
       />
-      {/* What the title bar can't say: type, provider, and how it's doing. */}
-      <div className={cn('device-header', className)}>
-        <div className="device-meta">
-          <span className="device-type">{formatType(device.type)}</span>
-          <span className="separator">•</span>
-          <span className="device-provider">
-            {providerBrandLabel(getProviderBrand(device.provider), t)}
-          </span>
-          <span className="separator">•</span>
-          <StatusPill
-            variant={STATUS_VARIANTS[device.status ?? ''] ?? 'neutral'}
-            dot
-            title={
-              device.status === 'offline' && lastSeenAbsolute
-                ? lastSeenAbsolute
-                : undefined
-            }
-          >
-            {statusLabel}
-          </StatusPill>
-        </div>
-      </div>
-    </>
+    </AppHeader>
   );
 };

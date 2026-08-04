@@ -1,27 +1,22 @@
 /*
- * The device name and its actions live in `PageHeader`, which is why the
- * action styles below are not nested under `.device-header` — they are handed
- * to the header as `actions` and render inside it.
+ * Everything here is handed to `AppHeaderBar` — the name as `title`, the meta
+ * line as `subtitle`, the two controls as `actions` — so nothing is nested
+ * under a page-level wrapper: these all render inside the header.
+ *
+ * `.app-header-subtitle` already lays the meta line out as a wrapping row in
+ * the right size and tone, and collapses it to one line on a phone. All that is
+ * left for the meta line itself is what the shared rule can't know.
  */
-.device-header {
-  margin-bottom: var(--space-lg);
+.device-meta {
+  display: contents;
 
-  .device-meta {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
-    flex-wrap: wrap;
+  .separator {
+    color: var(--color-text-subtle);
+  }
 
-    .separator {
-      color: var(--color-text-subtle);
-    }
-
-    /* Raw device-type key; the provider label comes pre-cased. */
-    .device-type {
-      text-transform: capitalize;
-    }
+  /* Raw device-type key; the provider label comes pre-cased. */
+  .device-type {
+    text-transform: capitalize;
   }
 }
 

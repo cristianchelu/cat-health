@@ -5,10 +5,6 @@
   grid-template-columns: auto 1fr;
   grid-template-areas: 'sidebar main';
 
-  header {
-    grid-area: header;
-  }
-
   main {
     grid-area: main;
     --page-shell-padding-block: var(--space-sm);
@@ -68,6 +64,5 @@
       min-height: 0;
       overflow: hidden;
     }
-
   }
 }

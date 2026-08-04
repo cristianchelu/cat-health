@@ -1,9 +1,8 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Server } from 'lucide-react';
 import type { ProviderAccountDTO } from 'shared';
 import { useProviderAccounts, useDevices } from '@/hooks/queries/deviceQueries';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { PageAddFab, PageAddLink } from '@/components/ui/PageAddAction';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MetaLine } from '@/components/ui/MetaLine';
@@ -88,17 +87,18 @@ const ProvidersPage: React.FC = () => {
 
   return (
     <div className="providers-page">
-      <PageHeader
-        back={{ to: '/settings', label: t('navigation.settings') }}
-        icon={<Server size="1em" />}
-        title={t('settings.providers')}
-        actions={
-          <PageAddLink
-            to="/settings/providers/new"
-            label={t('settings.add_provider')}
-          />
-        }
-      />
+      <AppHeader>
+        <AppHeaderBar
+          back={{ to: '/settings', label: t('navigation.settings') }}
+          title={t('settings.providers')}
+          actions={
+            <PageAddLink
+              to="/settings/providers/new"
+              label={t('settings.add_provider')}
+            />
+          }
+        />
+      </AppHeader>
 
       {isLoading ? (
         <LoadingState message={t('settings.loading_providers')} />
