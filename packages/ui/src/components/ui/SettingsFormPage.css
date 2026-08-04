@@ -1,4 +1,12 @@
 .settings-form-page {
+  /*
+   * Explicit width, so the measure holds whatever the parent is. The food
+   * editor wraps this in a `Tabs` root (a flex column) to share tab context
+   * with the app bar, and `margin: 0 auto` there turns off the cross-axis
+   * stretch a block child got for free — leaving the page shrink-to-fit and
+   * the app bar too narrow to reach either screen edge.
+   */
+  width: 100%;
   max-width: var(--max-width-sm);
   margin: 0 auto;
 

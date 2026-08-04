@@ -4,7 +4,11 @@ import { Link, useNavigate } from 'react-router';
 import { ListChecks, Pencil } from 'lucide-react';
 import type { GetDeviceResponseDTO } from 'shared';
 import { Button } from '@/components/ui/Button';
-import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
+import {
+  AppHeader,
+  AppHeaderBar,
+  AppHeaderRow,
+} from '@/components/ui/AppHeader';
 import { StatusPill, type StatusPillVariant } from '@/components/ui/StatusPill';
 import {
   getProviderBrand,
@@ -22,6 +26,12 @@ import './DeviceHeader.css';
 interface DeviceHeaderProps {
   device: GetDeviceResponseDTO;
   className?: string;
+  /**
+   * The page's tab list, rendered as the app bar's bottom row. It sits inside
+   * the header rather than under it so that scrolling a long history away still
+   * leaves you somewhere to go — see `AppHeader`'s `revealTabsOnly`.
+   */
+  tabs?: React.ReactNode;
 }
 
 const STATUS_VARIANTS: Record<string, StatusPillVariant> = {
@@ -35,6 +45,7 @@ const formatType = (type: string) => type.replace(/_/g, ' ');
 export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
   device,
   className,
+  tabs,
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -114,6 +125,7 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
           </>
         }
       />
+      {tabs ? <AppHeaderRow>{tabs}</AppHeaderRow> : null}
     </AppHeader>
   );
 };

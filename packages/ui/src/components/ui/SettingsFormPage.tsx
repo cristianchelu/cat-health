@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
   AppHeader,
   AppHeaderBar,
+  AppHeaderRow,
   type AppHeaderBack,
 } from '@/components/ui/AppHeader';
 import { LoadingState } from '@/components/ui/PageState';
@@ -20,6 +21,14 @@ interface SettingsFormPageProps extends Omit<
    */
   back?: AppHeaderBack;
   headerActions?: React.ReactNode;
+  /**
+   * The form's tab list, rendered as the app bar's bottom row. A long form
+   * scrolls its own tab strip out of reach if the strip sits in the page; in
+   * the header it comes back with a nudge up — see `AppHeader`'s
+   * `revealTabsOnly`. The `Tabs` root has to wrap this component for the
+   * triggers to find their context.
+   */
+  tabs?: React.ReactNode;
   isLoading?: boolean;
   loadingMessage?: string;
 }
@@ -34,6 +43,7 @@ const SettingsFormPage = React.forwardRef<
       title,
       back,
       headerActions,
+      tabs,
       isLoading = false,
       loadingMessage,
       children,
@@ -46,6 +56,7 @@ const SettingsFormPage = React.forwardRef<
         {title != null && (
           <AppHeader>
             <AppHeaderBar back={back} title={title} actions={headerActions} />
+            {tabs ? <AppHeaderRow>{tabs}</AppHeaderRow> : null}
           </AppHeader>
         )}
         {isLoading ? <LoadingState message={loadingMessage} /> : children}

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router';
+import { Clock, LayoutGrid, Settings, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
@@ -54,26 +55,41 @@ const DeviceDetails: React.FC = () => {
 
   return (
     <div className="device-details-page">
-      <DeviceHeader device={device} />
       <Tabs
         value={activeTab}
         onValueChange={handleTabChange}
         className="device-tabs"
       >
-        <TabsList>
-          <TabsTrigger value="overview">
-            {t('devices.tab_overview')}
-          </TabsTrigger>
-          <TabsTrigger value="history">{t('devices.tab_history')}</TabsTrigger>
-          {device.type === 'pet_recognizer' && (
-            <TabsTrigger value="reference-images">
-              {t('pet_recognizer.tab_label')}
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="settings">
-            {t('devices.tab_settings')}
-          </TabsTrigger>
-        </TabsList>
+        {/*
+          The tab list is handed to the header rather than rendered here: it
+          belongs to the app bar's bottom edge, which is what a nudge up brings
+          back once the title has scrolled away.
+        */}
+        <DeviceHeader
+          device={device}
+          tabs={
+            <TabsList>
+              <TabsTrigger value="overview">
+                <LayoutGrid size={15} aria-hidden="true" />
+                {t('devices.tab_overview')}
+              </TabsTrigger>
+              <TabsTrigger value="history">
+                <Clock size={15} aria-hidden="true" />
+                {t('devices.tab_history')}
+              </TabsTrigger>
+              {device.type === 'pet_recognizer' && (
+                <TabsTrigger value="reference-images">
+                  <Sparkles size={15} aria-hidden="true" />
+                  {t('pet_recognizer.tab_label')}
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="settings">
+                <Settings size={15} aria-hidden="true" />
+                {t('devices.tab_settings')}
+              </TabsTrigger>
+            </TabsList>
+          }
+        />
         <TabsContent value="overview">
           <div className="device-content">
             <ProviderDeviceView device={device} />

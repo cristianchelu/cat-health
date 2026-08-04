@@ -188,31 +188,19 @@ const AddEditFoodPage: React.FC = () => {
   const isPending = createFood.isPending || updateFoodMutation.isPending;
 
   return (
-    <SettingsFormPage
-      className="add-edit-food-page"
-      title={
-        isNew ? t('settings.add_food_title') : t('settings.edit_food_title')
-      }
-      back={{ to: '/settings', label: t('navigation.settings') }}
-      isLoading={!isNew && isLoading}
-      loadingMessage={t('common.loading')}
-    >
-      <FormShell
-        onSubmit={handleSubmit(onFormSubmit)}
-        error={error}
-        actions={{
-          onCancel: () => navigate('/settings'),
-          cancelLabel: t('settings.cancel'),
-          submitLabel: isPending
-            ? t('settings.saving')
-            : isNew
-              ? t('settings.food_create')
-              : t('settings.save_changes'),
-          isSubmitting: isPending,
-          submitDisabled: !isDirty,
-        }}
-      >
-        <Tabs defaultValue="basic" className="add-edit-food-tabs">
+    /*
+     * The `Tabs` root wraps the whole page so its triggers can live in the app
+     * bar while the panels stay inside the form. The triggers are
+     * `type="button"`, so sitting outside the <form> costs them nothing.
+     */
+    <Tabs defaultValue="basic" className="add-edit-food-tabs">
+      <SettingsFormPage
+        className="add-edit-food-page"
+        title={
+          isNew ? t('settings.add_food_title') : t('settings.edit_food_title')
+        }
+        back={{ to: '/settings', label: t('navigation.settings') }}
+        tabs={
           <TabsList>
             <TabsTrigger value="basic">
               {t('settings.food_tab_basic')}
@@ -221,7 +209,25 @@ const AddEditFoodPage: React.FC = () => {
               {t('settings.food_tab_nutrients')}
             </TabsTrigger>
           </TabsList>
-
+        }
+        isLoading={!isNew && isLoading}
+        loadingMessage={t('common.loading')}
+      >
+        <FormShell
+          onSubmit={handleSubmit(onFormSubmit)}
+          error={error}
+          actions={{
+            onCancel: () => navigate('/settings'),
+            cancelLabel: t('settings.cancel'),
+            submitLabel: isPending
+              ? t('settings.saving')
+              : isNew
+                ? t('settings.food_create')
+                : t('settings.save_changes'),
+            isSubmitting: isPending,
+            submitDisabled: !isDirty,
+          }}
+        >
           <TabsContent value="basic" className="add-edit-food-tab-content">
             <FormField label={t('settings.food_name_label')}>
               <Input
@@ -337,14 +343,14 @@ const AddEditFoodPage: React.FC = () => {
               </FormField>
             </div>
           </TabsContent>
-        </Tabs>
-      </FormShell>
-      <DiscardUnsavedDialog
-        open={blockerOpen}
-        onConfirm={onConfirmLeave}
-        onCancel={onCancelLeave}
-      />
-    </SettingsFormPage>
+        </FormShell>
+        <DiscardUnsavedDialog
+          open={blockerOpen}
+          onConfirm={onConfirmLeave}
+          onCancel={onCancelLeave}
+        />
+      </SettingsFormPage>
+    </Tabs>
   );
 };
 
