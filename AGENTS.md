@@ -46,6 +46,23 @@ This is a **Pet Assistant** application focused on cat health monitoring through
 
 **ALWAYS** use `useFormatters()` from `@/contexts/RegionalPreferencesProvider` for display formatting. Calendar math (`yyyy-MM-dd` ranges, API query windows) uses `date-fns` + `useRegionalPreferences().timezone` — not display prefs.
 
+### Code comments
+
+Comments are documentation for whoever reads the file next. They are not a message to a reviewer and not a record of the conversation that produced the code.
+
+**NEVER**:
+
+- Address the reader or the requester (“you’ll notice”, “as discussed”, “your concern about…”).
+- Narrate the change or its history (“now we also…”, “this used to…”, “previously this shipped…”). That is what git is for.
+- Re-argue a decision that is already settled, or defend the code against an objection nobody reading it has.
+- Use markdown headings, bold, or bullet lists inside a comment.
+- Restate the signature or the line directly below.
+
+**ALWAYS**:
+
+- State what the code does, and why it is shaped that way, in plain declarative prose.
+- Keep it to a sentence or two. A decision that genuinely needs paragraphs goes in `{root}/docs/` or `{root}/summaries/`, and the comment points at it.
+
 ### CSS Architecture
 
 **IMPORTANT**: We prioritize native, semantic CSS with minimal inline styles. NO FUCKING TAILWIND.
