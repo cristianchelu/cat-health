@@ -1,0 +1,16 @@
+.segment-meter {
+  display: flex;
+  gap: var(--space-3xs);
+  height: var(--space-xs);
+  width: 100%;
+
+  .segment {
+    flex: 1;
+    border-radius: var(--radius-full);
+    background-color: var(--color-surface-muted);
+
+    &.lit {
+      background-color: var(--tone-fill);
+    }
+  }
+}

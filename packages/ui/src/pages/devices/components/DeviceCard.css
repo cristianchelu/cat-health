@@ -1,23 +1,47 @@
 .device-card {
-  cursor: pointer;
+  /*
+   * Tier heights are fixed so every card in the grid lines its rows up, and a
+   * signal moving between slots never reflows the row it sits in.
+   */
+  --device-card-primary-height: var(--space-3xl);
+  --device-card-gauge-height: var(--space-md);
 
-  .device-header-group {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+
+  &:hover {
+    box-shadow: var(--shadow-lg);
   }
 
-  .device-icon-wrapper {
-    width: var(--space-3xl);
-    height: var(--space-3xl);
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .device-card-head {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-md) 0;
+  }
+
+  .device-card-tile {
+    position: relative;
+    width: var(--space-3xl);
+    height: var(--space-3xl);
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
     background-color: var(--color-surface-muted);
     border-radius: var(--radius-md);
     color: var(--color-primary);
-    flex-shrink: 0;
-    position: relative;
 
     svg {
       width: var(--space-xl);
@@ -25,32 +49,189 @@
     }
   }
 
-  .status-indicator {
+  .device-card-status {
     position: absolute;
-    bottom: calc(var(--space-3xs) * -1);
     right: calc(var(--space-3xs) * -1);
+    bottom: calc(var(--space-3xs) * -1);
     width: var(--space-sm);
     height: var(--space-sm);
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     border: var(--space-3xs) solid var(--color-surface);
 
-    &.status-online {
+    &.online {
       background-color: var(--color-success);
     }
 
-    &.status-offline {
-      background-color: var(--color-text-light);
+    &.offline,
+    &.unknown {
+      background-color: var(--color-text-muted);
     }
 
-    &.status-error {
+    &.error {
       background-color: var(--color-error);
     }
   }
 
-  .no-status-data {
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
+  .device-card-identity {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .device-card-name,
+  .device-card-model {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .device-card-name {
+    font-size: var(--text-base);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+  }
+
+  .device-card-model {
+    font-size: var(--text-xs);
+    color: var(--color-text-light);
+  }
+
+  .device-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     padding: var(--space-md);
-    text-align: center;
+  }
+
+  .device-card-primary {
+    min-height: var(--device-card-primary-height);
+    flex: none;
+  }
+
+  .device-card-primary-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  .device-card-primary-label {
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-light);
+  }
+
+  .device-card-primary-value {
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    color: var(--tone-ink, var(--color-text));
+    white-space: nowrap;
+  }
+
+  /* A fixed zone, so a taller gauge kind cannot shift the meta lines down. */
+  .device-card-gauge {
+    margin-top: var(--space-2xs);
+    min-height: var(--device-card-gauge-height);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .device-card-meta {
+    margin-top: var(--space-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .device-card-meta-line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    min-width: 0;
+    font-size: var(--text-xs);
+    color: var(--color-text-light);
+  }
+
+  .device-card-meta-icon {
+    display: inline-flex;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+  }
+
+  .device-card-meta-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .device-card-meta-bar {
+    margin-left: auto;
+  }
+
+  .device-card-meta-value {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    color: var(--tone-ink, var(--color-text));
+    text-align: right;
+  }
+
+  /* A bar already pushed itself right, so the value follows it instead. */
+  .device-card-meta-bar + .device-card-meta-value {
+    margin-left: var(--space-2xs);
+  }
+
+  .device-card-drawer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+
+    &.footer {
+      padding: 0 var(--space-md) var(--space-sm);
+      min-height: var(--space-lg);
+      margin-top: auto;
+    }
+
+    &.inline {
+      flex: none;
+    }
+  }
+
+  /* The tooltip trigger wrapping each cell; carries no styling of its own. */
+  .device-card-drawer-cell {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .device-card-drawer-icon {
+    display: inline-flex;
+    color: var(--color-primary);
+  }
+
+  /*
+   * One card, two layouts. Below the breakpoint the card is narrow enough that
+   * names need every pixel, so the drawer takes its own footer row. Above it
+   * the card is wide enough that a whole row for two glyphs is waste, and they
+   * ride in the header instead.
+   *
+   * 19rem sits between the two widths the design was drawn at: a 220px card in
+   * a desktop grid stays narrow, and a phone's single 384px column goes wide.
+   */
+  .device-card-drawer.inline {
+    display: none;
+  }
+
+  @container (min-width: 19rem) {
+    .device-card-drawer.inline {
+      display: flex;
+    }
+
+    .device-card-drawer.footer {
+      display: none;
+    }
   }
 }

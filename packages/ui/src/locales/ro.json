@@ -529,6 +529,57 @@
       "signal": {
         "tooltip": "Semnal: {{rssi}} dBm"
       }
+    },
+    "needing_attention_one": "{{count}} necesită atenție",
+    "needing_attention_other": "{{count}} necesită atenție",
+    "attention": {
+      "soon": "Va necesita atenție în curând",
+      "now": "Necesită atenție acum"
+    },
+    "signals": {
+      "no_readings": "Nicio citire",
+      "offline": "Deconectat",
+      "last_seen": "Văzut ultima dată",
+      "pump_flow": "Debit pompă",
+      "water_level": "Apă",
+      "water_freshness": "Prospețime apă",
+      "filter_life": "Durată filtru",
+      "feeder_fill": "Hrană",
+      "last_refreshed": "Ultima actualizare",
+      "battery": "Baterie",
+      "signal_strength": "Semnal",
+      "recognition": "Recunoaștere",
+      "waste_since_scoop": "Deșeuri",
+      "litter_remaining": "Așternut rămas",
+      "deep_clean": "Curățare completă",
+      "visits_since_clean": "Vizite de la curățare",
+      "values": {
+        "pump_ok": "Normal",
+        "pump_error": "Defecțiune",
+        "never_seen": "Niciodată văzut",
+        "food_wet": "Umedă",
+        "food_dry": "Uscată",
+        "bowl": "Bol"
+      },
+      "units": {
+        "percent": "{{value}}%",
+        "with_unit": "{{value}} {{unit}}",
+        "days_left_one": "{{count}} zi rămasă",
+        "days_left_other": "{{count}} zile rămase",
+        "days_overdue_one": "{{count}} zi întârziere",
+        "days_overdue_other": "{{count}} zile întârziere",
+        "deposits_one": "{{count}} depunere",
+        "deposits_other": "{{count}} depuneri",
+        "battery": "Baterie {{value}}%"
+      },
+      "quality": {
+        "excellent": "Excelent",
+        "good": "Bun",
+        "fair": "Acceptabil",
+        "weak": "Slab",
+        "very_weak": "Foarte slab"
+      },
+      "signal_strength_summary": "{{quality}} ({{dbm}} dBm)"
     }
   },
   "annotation": {

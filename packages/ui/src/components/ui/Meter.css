@@ -1,0 +1,26 @@
+.meter {
+  width: 100%;
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface-muted);
+  overflow: hidden;
+
+  &.md {
+    height: var(--space-xs);
+  }
+
+  &.sm {
+    height: var(--space-3xs);
+    max-width: 4rem;
+  }
+
+  .meter-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background-color: var(--tone-fill);
+  }
+
+  &.stale .meter-fill {
+    display: none;
+  }
+}

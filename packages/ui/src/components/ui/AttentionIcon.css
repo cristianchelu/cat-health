@@ -1,0 +1,18 @@
+.attention-icon {
+  width: var(--space-lg);
+  height: var(--space-lg);
+  flex-shrink: 0;
+
+  &.soon {
+    color: var(--color-warning);
+  }
+
+  &.now {
+    color: var(--color-error);
+  }
+
+  /* The glyph reads against the triangle's fill, not the card behind it. */
+  .attention-icon-mark {
+    stroke: var(--color-surface);
+  }
+}

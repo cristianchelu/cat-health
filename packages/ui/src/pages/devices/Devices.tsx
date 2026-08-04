@@ -1,38 +1,123 @@
-import React from 'react';
-import { useNavigate } from 'react-router';
+import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import type { DeviceListItemDTO, SignalTone } from 'shared';
 import { useDevices } from '@/hooks/queries/deviceQueries';
+import { useRegionalPreferences } from '@/contexts/RegionalPreferencesProvider';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { PageAddFab, PageAddLink } from '@/components/ui/PageAddAction';
+import { EmptyState, LoadingState } from '@/components/ui/PageState';
+import { StatusPill } from '@/components/ui/StatusPill';
+import { rankDeviceSignals } from '@/lib/deviceSignalRanking';
 import DeviceCard from './components/DeviceCard';
-import { Button } from '@/components/ui/Button';
 import './Devices.css';
 
+const ADD_DEVICE_ROUTE = '/settings/devices/new';
+
+/** Worst first, so the devices a user has to do something about come first. */
+const ATTENTION_ORDER: Record<SignalTone, number> = {
+  now: 0,
+  soon: 1,
+  calm: 2,
+};
+
+/**
+ * The monitoring dashboard.
+ *
+ * Ungrouped and sorted by attention: grouping by device type buries a single
+ * red box under whichever heading it belongs to, and the question this page
+ * answers is "does anything need me", not "what do I own". `/settings/devices`
+ * is the list for the latter.
+ */
 const Devices: React.FC = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const { intlLanguageTag } = useRegionalPreferences();
   const { data: devices, isLoading, error } = useDevices();
 
-  if (isLoading) {
-    return <div className="page-devices">{t('devices.loading')}</div>;
-  }
+  const collator = React.useMemo(
+    () => new Intl.Collator(intlLanguageTag),
+    [intlLanguageTag],
+  );
 
-  if (error) {
-    return <div className="page-devices">{t('devices.error_loading')}</div>;
-  }
+  const { sorted, needingAttention } = React.useMemo(() => {
+    const withAttention = (devices ?? []).map(
+      (device): { device: DeviceListItemDTO; attention: SignalTone } => ({
+        device,
+        attention: rankDeviceSignals(device.signals).attention ?? 'calm',
+      }),
+    );
+
+    withAttention.sort((a, b) => {
+      const byAttention =
+        ATTENTION_ORDER[a.attention] - ATTENTION_ORDER[b.attention];
+      return byAttention !== 0
+        ? byAttention
+        : collator.compare(a.device.name, b.device.name);
+    });
+
+    return {
+      sorted: withAttention.map((entry) => entry.device),
+      needingAttention: withAttention.filter(
+        (entry) => entry.attention !== 'calm',
+      ).length,
+    };
+  }, [devices, collator]);
 
   return (
     <div className="page-devices">
-      {devices?.map((device) => (
+      <PageHeader
+        title={t('navigation.devices')}
+        subtitle={
+          devices && devices.length > 0 ? (
+            <>
+              {t('settings.device_count', { count: devices.length })}
+              {needingAttention > 0 ? (
+                <StatusPill variant="warn">
+                  {t('devices.needing_attention', { count: needingAttention })}
+                </StatusPill>
+              ) : null}
+            </>
+          ) : null
+        }
+        actions={
+          <PageAddLink to={ADD_DEVICE_ROUTE} label={t('settings.add_device')} />
+        }
+      />
+
+      <DeviceGrid
+        devices={sorted}
+        isLoading={isLoading}
+        hasError={Boolean(error)}
+      />
+
+      <PageAddFab to={ADD_DEVICE_ROUTE} label={t('settings.add_device')} />
+    </div>
+  );
+};
+
+const DeviceGrid: React.FC<{
+  devices: DeviceListItemDTO[];
+  isLoading: boolean;
+  hasError: boolean;
+}> = ({ devices, isLoading, hasError }) => {
+  const { t } = useTranslation();
+
+  if (isLoading) {
+    return <LoadingState message={t('devices.loading')} />;
+  }
+
+  if (hasError) {
+    return <EmptyState message={t('devices.error_loading')} />;
+  }
+
+  if (devices.length === 0) {
+    return <EmptyState message={t('devices.no_devices_found')} />;
+  }
+
+  return (
+    <div className="page-devices-grid">
+      {devices.map((device) => (
         <DeviceCard key={device.id} device={device} />
       ))}
-
-      {devices?.length === 0 && (
-        <div className="empty-state">
-          <p>{t('devices.no_devices_found')}</p>
-          <Button onClick={() => navigate('/settings/devices/new')}>
-            {t('settings.add_device')}
-          </Button>
-        </div>
-      )}
     </div>
   );
 };

@@ -1,0 +1,30 @@
+.deposit-pips {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  height: var(--space-xs);
+
+  .pip {
+    width: var(--space-sm);
+    height: var(--space-sm);
+    border-radius: var(--radius-full);
+    background-color: var(--color-surface-muted);
+
+    /* The litterbox domain colours, shared with the elimination charts. */
+    &.urination {
+      background-color: var(--color-litterbox-urination);
+    }
+
+    &.defecation {
+      background-color: var(--color-litterbox-defecation);
+    }
+
+    &.both {
+      background-color: var(--color-litterbox-both);
+    }
+
+    &.unknown {
+      background-color: var(--color-litterbox-unknown);
+    }
+  }
+}

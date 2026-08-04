@@ -606,6 +606,57 @@
       "signal": {
         "tooltip": "Signal strength: {{rssi}} dBm"
       }
+    },
+    "needing_attention_one": "{{count}} needs attention",
+    "needing_attention_other": "{{count}} need attention",
+    "attention": {
+      "soon": "Needs attention soon",
+      "now": "Needs attention now"
+    },
+    "signals": {
+      "no_readings": "No readings",
+      "offline": "Offline",
+      "last_seen": "Last seen",
+      "pump_flow": "Pump flow",
+      "water_level": "Water",
+      "water_freshness": "Water freshness",
+      "filter_life": "Filter life",
+      "feeder_fill": "Food",
+      "last_refreshed": "Last updated",
+      "battery": "Battery",
+      "signal_strength": "Signal",
+      "recognition": "Recognition",
+      "waste_since_scoop": "Waste",
+      "litter_remaining": "Litter remaining",
+      "deep_clean": "Deep clean",
+      "visits_since_clean": "Visits since clean",
+      "values": {
+        "pump_ok": "Normal",
+        "pump_error": "Fault",
+        "never_seen": "Never seen",
+        "food_wet": "Wet",
+        "food_dry": "Dry",
+        "bowl": "Bowl"
+      },
+      "units": {
+        "percent": "{{value}}%",
+        "with_unit": "{{value}} {{unit}}",
+        "days_left_one": "{{count}} day left",
+        "days_left_other": "{{count}} days left",
+        "days_overdue_one": "{{count}} day overdue",
+        "days_overdue_other": "{{count}} days overdue",
+        "deposits_one": "{{count}} deposit",
+        "deposits_other": "{{count}} deposits",
+        "battery": "Battery {{value}}%"
+      },
+      "quality": {
+        "excellent": "Excellent",
+        "good": "Good",
+        "fair": "Fair",
+        "weak": "Weak",
+        "very_weak": "Very weak"
+      },
+      "signal_strength_summary": "{{quality}} ({{dbm}} dBm)"
     }
   },
   "annotation": {

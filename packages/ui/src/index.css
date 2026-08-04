@@ -1,6 +1,7 @@
 @import './theme.css';
 @import './styles/page-shell.css';
 @import './styles/untracked-pattern.css';
+@import './styles/signal-tone.css';
 
 /* Base styles */
 html {

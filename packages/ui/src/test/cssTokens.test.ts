@@ -31,7 +31,6 @@ const KNOWN_BROKEN = new Set([
   'pages/devices/components/FeederFoodSection.css',
   'pages/devices/components/ReferenceImagesTab.css',
   'pages/devices/components/SureFeederStatus.css',
-  'pages/devices/components/WaterFountainStatus.css',
 ]);
 
 function filesWithin(dir: string, extensions: string[]): string[] {

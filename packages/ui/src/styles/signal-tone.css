@@ -1,0 +1,45 @@
+/*
+ * Shared tone recipe for signal gauges.
+ *
+ * `--tone-fill` paints bars, segments and pips; `--tone-ink` writes the value
+ * beside them. Ink is mixed toward --color-text rather than used raw because
+ * --color-warning on a light surface fails contrast at small sizes, and the
+ * `-light` tokens invert between themes. Same approach as StatusPill.css, and
+ * the mix ratios differ per theme for the same reason.
+ *
+ * Measured at 12px/600 against theme.css (AA needs 4.5:1):
+ *   light — calm 5.12 · soon 4.83 · now 6.18
+ *   dark  — calm 5.61 · soon 6.20 · now 4.76
+ * Re-measure before touching these numbers.
+ */
+.tone {
+  --tone-ink-share: 40%;
+
+  @media (prefers-color-scheme: dark) {
+    --tone-ink-share: 65%;
+  }
+
+  &.calm {
+    --tone-accent: var(--color-success);
+  }
+
+  &.soon {
+    --tone-accent: var(--color-warning);
+  }
+
+  &.now {
+    --tone-accent: var(--color-error);
+  }
+
+  /* No reading to colour: an offline gauge shows an empty track. */
+  &.stale {
+    --tone-accent: var(--color-text-muted);
+  }
+
+  --tone-fill: var(--tone-accent);
+  --tone-ink: color-mix(
+    in srgb,
+    var(--tone-accent) var(--tone-ink-share),
+    var(--color-text)
+  );
+}

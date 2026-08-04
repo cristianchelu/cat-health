@@ -1,0 +1,11 @@
+/*
+ * A tone carrier around a Lucide glyph. The icon strokes `currentColor`, so
+ * the same `--tone-fill` that paints meters, segments and pips paints the
+ * battery — one token, one colour, whatever the shape.
+ */
+.battery-level {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--tone-fill);
+}
