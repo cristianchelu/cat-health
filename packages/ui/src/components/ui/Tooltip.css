@@ -1,62 +1,49 @@
-.tooltip-container {
-  position: relative;
-  display: inline-flex;
+/*
+ * Radix portals the content to the body and places it against whichever edge
+ * it settled on after avoiding collisions, so there is no positioning to do
+ * here — only what the label looks like.
+ */
+.tooltip-content {
+  z-index: var(--z-index-tooltip);
+  max-width: 16rem;
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-text);
+  color: var(--color-surface);
+  font-size: var(--text-xs);
+  line-height: var(--line-height-tight);
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  animation: tooltip-in var(--transition-fast) ease-out;
 
-  .tooltip-content {
-    visibility: hidden;
-    background-color: var(--color-text);
-    color: var(--color-surface);
-    text-align: center;
-    border-radius: var(--radius-sm);
-    padding: var(--space-xs) var(--space-sm);
-    position: absolute;
-    z-index: var(--z-index-tooltip);
-    opacity: 0;
-    transition: opacity var(--transition-fast);
-    font-size: var(--text-xs);
-    white-space: nowrap;
-    pointer-events: none;
-    box-shadow: var(--shadow-md);
-
-    /* Position logic */
-    &.tooltip-top {
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      margin-bottom: var(--space-xs);
-    }
-
-    &.tooltip-bottom {
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      margin-top: var(--space-xs);
-    }
-
-    &.tooltip-left {
-      right: 100%;
-      top: 50%;
-      transform: translateY(-50%);
-      margin-right: var(--space-xs);
-    }
-
-    &.tooltip-right {
-      left: 100%;
-      top: 50%;
-      transform: translateY(-50%);
-      margin-left: var(--space-xs);
-    }
+  .tooltip-arrow {
+    fill: var(--color-text);
   }
+}
 
-  &:hover .tooltip-content {
-    visibility: visible;
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+  }
+  to {
     opacity: 1;
   }
 }
 
+/* A dark page needs the label lighter than the text it explains, not darker. */
 @media (prefers-color-scheme: dark) {
-  .tooltip-container .tooltip-content {
+  .tooltip-content {
     background-color: var(--color-surface-highlight);
     color: var(--color-text);
+
+    .tooltip-arrow {
+      fill: var(--color-surface-highlight);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip-content {
+    animation: none;
   }
 }
