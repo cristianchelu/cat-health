@@ -39,6 +39,14 @@
     min-width: 0;
     font-size: var(--text-sm);
     color: var(--color-text);
+    /*
+     * "Carbohydrates" and "Phosphorus" are single words with nowhere to wrap,
+     * so on a 320px screen they ran out under the value box. Only these two,
+     * only at that width — everything else has room from 360px up.
+     */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .nutrient-entry .nutrient-value-input {
@@ -51,14 +59,28 @@
     min-width: 10rem;
   }
 
+  /*
+   * Stays a row on a phone. Eleven nutrients stacked three-deep is a page you
+   * scroll past rather than fill in, and the two controls only need enough room
+   * for a number and a unit — the label takes what's left and wraps if it must.
+   * Narrower bases than the desktop 10rem, and both allowed to shrink, so this
+   * survives down to a 320px screen.
+   */
   @media (max-width: 768px) {
     .nutrient-entry {
-      flex-direction: column;
-      align-items: stretch;
+      gap: var(--space-sm);
     }
 
     .nutrient-entry .nutrient-value-input {
+      flex: 0 1 4.5rem;
+      width: auto;
+      min-width: 0;
       max-width: none;
+    }
+
+    .nutrient-entry .select {
+      flex: 0 1 8rem;
+      min-width: 0;
     }
   }
 }
