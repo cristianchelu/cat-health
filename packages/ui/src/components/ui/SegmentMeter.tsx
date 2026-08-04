@@ -7,6 +7,11 @@ interface SegmentMeterProps
   extends Omit<React.ComponentProps<'div'>, 'children'> {
   lit: number;
   of: number;
+  /**
+   * Relative width per segment, as the signal declared it. Omit for a scale
+   * whose steps are even shares of what it measures.
+   */
+  weights?: readonly number[];
   tone?: MeterTone;
   label?: string;
   valueText?: string;
@@ -18,9 +23,15 @@ interface SegmentMeterProps
  *
  * Every lit segment carries the same tone. The count is the reading; shading
  * them individually would imply a precision the sensor does not have.
+ *
+ * Segments are even unless the signal weighted them, because where a sensor's
+ * steps fall is a property of that sensor and not of how many there are.
  */
 const SegmentMeter = React.forwardRef<HTMLDivElement, SegmentMeterProps>(
-  ({ lit, of, tone = 'calm', label, valueText, className, ...props }, ref) => (
+  (
+    { lit, of, weights, tone = 'calm', label, valueText, className, ...props },
+    ref,
+  ) => (
     <div
       className={cn('segment-meter', 'tone', tone, className)}
       ref={ref}
@@ -36,6 +47,7 @@ const SegmentMeter = React.forwardRef<HTMLDivElement, SegmentMeterProps>(
         <span
           key={index}
           className={cn('segment', index < lit && 'lit')}
+          style={weights ? { flex: weights[index] ?? 1 } : undefined}
           aria-hidden="true"
         />
       ))}

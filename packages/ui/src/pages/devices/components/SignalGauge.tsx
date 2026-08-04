@@ -54,6 +54,7 @@ export const SignalGauge: React.FC<SignalGaugeProps> = ({
         <SegmentMeter
           lit={stale ? 0 : display.lit}
           of={display.of}
+          weights={display.weights}
           tone={effectiveTone}
           label={label}
         />

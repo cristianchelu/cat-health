@@ -100,6 +100,15 @@ export const SignalDisplaySchema = Type.Union([
     kind: Type.Literal('segments'),
     lit: Type.Number(),
     of: Type.Number(),
+    /**
+     * Relative track width per segment, defaulting to even. Steps are not
+     * always equal shares of the thing measured: a hopper's beams sit near the
+     * base, so its "empty" step is the last few grams rather than a third of
+     * the tank, and drawing it as a third overstates what is left. Only the
+     * controller knows where its sensor's steps actually fall, so it is the
+     * one that says — an evenly-stepped scale such as an RSSI ladder omits it.
+     */
+    weights: Type.Optional(Type.Array(Type.Number())),
   }),
   /** Deposit pips in visit order; `of` is the track length. */
   Type.Object({
