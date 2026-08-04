@@ -1,7 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { Globe } from 'lucide-react';
 import { SettingsFormPage } from '@/components/ui/SettingsFormPage';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { FormField, FormShell, Select } from '@/components/ui/form';
@@ -107,7 +106,7 @@ const LanguageRegionPage: React.FC = () => {
     <SettingsFormPage
       className="language-region-page"
       title={t('settings.language_region')}
-      icon={<Globe size="1em" />}
+      back={{ to: '/settings', label: t('navigation.settings') }}
       isLoading={!settings}
       loadingMessage={t('common.loading')}
     >

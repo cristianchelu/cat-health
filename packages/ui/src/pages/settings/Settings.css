@@ -1,22 +1,4 @@
 .page-settings {
-  .settings-header {
-    margin-bottom: var(--space-3xl);
-    text-align: center;
-
-    h1 {
-      font-size: var(--text-3xl);
-      font-weight: var(--font-bold);
-      color: var(--color-text);
-      margin-bottom: var(--space-sm);
-    }
-
-    .settings-description {
-      font-size: var(--text-lg);
-      color: var(--color-text-light);
-      margin: 0;
-    }
-  }
-
   .add-item-icon {
     /* background-color: var(--color-surface-muted); */
     color: var(--color-text-muted);

@@ -1,6 +1,5 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Cat } from 'lucide-react';
 import type { PostPetRequestDTO } from 'shared';
 import { Button } from '@/components/ui/Button';
 import { SettingsFormPage } from '@/components/ui/SettingsFormPage';
@@ -90,7 +89,7 @@ const PetForm: React.FC<PetFormProps> = ({
     <SettingsFormPage
       className="pet-form"
       title={title || t('settings.add_pet_title')}
-      icon={<Cat size={20} />}
+      back={{ to: '/settings', label: t('navigation.settings') }}
     >
       <FormShell
         onSubmit={handleSubmit(handleFormSubmit)}

@@ -17,7 +17,6 @@ import { SettingsFormPage } from '@/components/ui/SettingsFormPage';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm, useUnsavedBlocker } from '@/hooks/form';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
-import { Drumstick } from 'lucide-react';
 import type { FoodTypeDTO, NutrientNameDTO, NutrientUnitDTO } from 'shared';
 import type { GetFoodDTO } from 'shared';
 
@@ -194,7 +193,7 @@ const AddEditFoodPage: React.FC = () => {
       title={
         isNew ? t('settings.add_food_title') : t('settings.edit_food_title')
       }
-      icon={<Drumstick size="1em" />}
+      back={{ to: '/settings', label: t('navigation.settings') }}
       isLoading={!isNew && isLoading}
       loadingMessage={t('common.loading')}
     >

@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevices, useProviderAccounts } from '@/hooks/queries/deviceQueries';
 import { usePetContext } from '@/hooks/context/usePetContext';
+import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import Avatar from '@/components/ui/Avatar';
 import { CardList, CardListItem, CardListContent } from './components/CardList';
@@ -43,8 +44,9 @@ const Settings: React.FC = () => {
    * Undefined until the query lands, so the row shows no count at all rather
    * than claiming "0 connected accounts" on every cold load.
    */
-  const visibleAccountCount = accountsQuery.data?.filter((a) => !a.internal)
-    .length;
+  const visibleAccountCount = accountsQuery.data?.filter(
+    (a) => !a.internal,
+  ).length;
   const deviceCount = devicesQuery.data?.length;
 
   const trackingGapBaseline = String(
@@ -84,6 +86,10 @@ const Settings: React.FC = () => {
 
   return (
     <div className="page-settings">
+      <AppHeader>
+        <AppHeaderBar title={t('navigation.settings')} />
+      </AppHeader>
+
       <div className="settings-container">
         <section>
           <SectionHeader icon={<Cat size="1em" />}>
@@ -273,8 +279,8 @@ const Settings: React.FC = () => {
                 trackingGapDirty && !trackingGapIsValid
                   ? t('settings.tracking_gap_invalid')
                   : updateSettings.isError
-                  ? t('settings.tracking_gap_save_error')
-                  : null
+                    ? t('settings.tracking_gap_save_error')
+                    : null
               }
             />
           </CardList>

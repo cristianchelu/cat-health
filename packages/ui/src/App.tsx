@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Outlet, useMatches } from 'react-router';
 import Sidebar from './components/layout/Sidebar';
 import MobileNav from './components/navigation/MobileNav';
-import PetSelector from './components/navigation/PetSelector';
 import { PetProvider } from './contexts/PetProvider';
 import RegionalPreferencesProvider from './contexts/RegionalPreferencesProvider';
 import { TooltipProvider } from './components/ui/Tooltip';
@@ -32,7 +31,6 @@ function App() {
                 onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 showPetSelector={showPetSelector}
               />
-              {showPetSelector ? <PetSelector variant="mobile" /> : null}
               <main>
                 <div id="content">
                   <Outlet />

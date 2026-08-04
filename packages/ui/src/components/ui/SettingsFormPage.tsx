@@ -1,5 +1,9 @@
 import * as React from 'react';
-import { SectionHeader } from '@/components/ui/SectionHeader';
+import {
+  AppHeader,
+  AppHeaderBar,
+  type AppHeaderBack,
+} from '@/components/ui/AppHeader';
 import { LoadingState } from '@/components/ui/PageState';
 import { cn } from '@/lib/utils';
 import './SettingsFormPage.css';
@@ -9,7 +13,12 @@ interface SettingsFormPageProps extends Omit<
   'title'
 > {
   title?: React.ReactNode;
-  icon?: React.ReactNode;
+  /**
+   * Where leaving lands. These screens are reached from one place and edit one
+   * thing, so they are the pages most likely to be arrived at by deep link —
+   * name the destination rather than trusting history.
+   */
+  back?: AppHeaderBack;
   headerActions?: React.ReactNode;
   isLoading?: boolean;
   loadingMessage?: string;
@@ -23,7 +32,7 @@ const SettingsFormPage = React.forwardRef<
     {
       className,
       title,
-      icon,
+      back,
       headerActions,
       isLoading = false,
       loadingMessage,
@@ -35,9 +44,9 @@ const SettingsFormPage = React.forwardRef<
     return (
       <div className={cn('settings-form-page', className)} ref={ref} {...props}>
         {title != null && (
-          <SectionHeader icon={icon} actions={headerActions}>
-            {title}
-          </SectionHeader>
+          <AppHeader>
+            <AppHeaderBar back={back} title={title} actions={headerActions} />
+          </AppHeader>
         )}
         {isLoading ? <LoadingState message={loadingMessage} /> : children}
       </div>

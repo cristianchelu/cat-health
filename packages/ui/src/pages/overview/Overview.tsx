@@ -6,6 +6,12 @@ import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetEvents } from '@/hooks/queries/petQueries';
 import { useDevices } from '@/hooks/queries/deviceQueries';
 import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
+import {
+  AppHeader,
+  AppHeaderBar,
+  AppHeaderRow,
+} from '@/components/ui/AppHeader';
+import PetSelector from '@/components/navigation/PetSelector';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { Button } from '@/components/ui/Button';
@@ -95,6 +101,19 @@ const Overview: React.FC = () => {
 
   return (
     <div className="page-overview">
+      {/*
+        On a phone the pet strip *is* the app bar: switching cat is the reason
+        you come back to the top of this page, and a title row above it would
+        only push it further from the thumb. Desktop keeps the title and leaves
+        switching to the sidebar, where there is room for it.
+      */}
+      <AppHeader>
+        <AppHeaderBar desktopOnly title={t('navigation.overview')} />
+        <AppHeaderRow>
+          <PetSelector variant="mobile" />
+        </AppHeaderRow>
+      </AppHeader>
+
       <section className="widget-grid">
         {showNoPetsEmpty && (
           <div className="empty-state">

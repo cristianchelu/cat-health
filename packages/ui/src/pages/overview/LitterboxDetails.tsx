@@ -8,7 +8,12 @@ import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import { daysToUntrackedIntervals } from '@/lib/untrackedIntervals';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
+import {
+  AppHeader,
+  AppHeaderBar,
+  AppHeaderRow,
+} from '@/components/ui/AppHeader';
+import PetSelector from '@/components/navigation/PetSelector';
 import { Card, CardContent } from '@/components/ui/Card';
 import {
   LitterboxMetricChart,
@@ -158,6 +163,14 @@ const LitterboxDetails: React.FC = () => {
           title={t('litterbox_details.title')}
           actions={rangeActions}
         />
+        {/*
+          A detail page, so it keeps its title bar — but the pet strip still
+          rides along underneath, because the numbers on this page are one cat's
+          and switching is how you compare them.
+        */}
+        <AppHeaderRow>
+          <PetSelector variant="mobile" />
+        </AppHeaderRow>
       </AppHeader>
 
       <section className="litterbox-details-chart-grid">

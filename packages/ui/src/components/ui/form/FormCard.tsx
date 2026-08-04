@@ -30,9 +30,9 @@ interface FormCardHeadProps extends Omit<
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   /**
-   * Heading level for `title`. Pages where the card carries the page heading
-   * keep the default `h1`; screens that already render a `SectionHeader` above
-   * the card pass `h2` so the outline stays in order.
+   * Heading level for `title`. Every route now leads with an `AppHeaderBar`, so
+   * the card is never the page heading and `h2` is the default; `h1` is left
+   * reachable for a screen that has no app bar above it.
    */
   titleAs?: 'h1' | 'h2';
 }
@@ -43,7 +43,7 @@ interface FormCardHeadProps extends Omit<
  */
 const FormCardHead = React.forwardRef<HTMLElement, FormCardHeadProps>(
   (
-    { className, tile, title, subtitle, titleAs: Title = 'h1', ...props },
+    { className, tile, title, subtitle, titleAs: Title = 'h2', ...props },
     ref,
   ) => (
     <header className={cn('form-card-head', className)} ref={ref} {...props}>
