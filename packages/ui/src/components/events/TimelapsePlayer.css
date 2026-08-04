@@ -117,7 +117,7 @@
 
   .timelapse-player-time {
     flex: 0 0 auto;
-    font-size: var(--font-size-sm);
+    font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }

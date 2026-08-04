@@ -106,8 +106,15 @@
           opacity: 1;
         }
 
+        /* Mixed toward the text colour rather than used raw: --color-warning
+         * on a tinted surface fails AA at this size. Same recipe as
+         * StatusPill and signal-tone. */
         .metric-value {
-          color: var(--color-warning-dark);
+          color: color-mix(
+            in srgb,
+            var(--color-warning) 40%,
+            var(--color-text)
+          );
         }
       }
 

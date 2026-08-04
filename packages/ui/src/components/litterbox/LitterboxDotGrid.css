@@ -121,12 +121,12 @@
     text-align: center;
 
     &.date {
-      color: var(--color-text-secondary);
+      color: var(--color-text-light);
     }
 
     &.month {
       letter-spacing: -0.03em;
-      color: var(--color-text-secondary);
+      color: var(--color-text-light);
     }
   }
 }

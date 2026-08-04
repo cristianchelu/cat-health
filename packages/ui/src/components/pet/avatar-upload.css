@@ -1,29 +1,29 @@
 .avatar-upload {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-xs);
   .label {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-sm);
     font-weight: 600;
-    color: var(--color-text-secondary);
+    color: var(--color-text-light);
   }
   .drop-zone {
     position: relative;
     border: 2px dashed var(--color-border);
     border-radius: var(--radius-md);
-    padding: var(--space-4);
+    padding: var(--space-md);
     min-height: 160px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    background: var(--color-bg-elevated);
+    background: var(--color-surface);
     transition:
       border-color 0.15s,
       background 0.15s;
     &.drag {
       border-color: var(--color-primary);
-      background: var(--color-bg-subtle);
+      background: var(--color-surface-muted);
     }
     &.disabled {
       opacity: 0.6;
@@ -33,12 +33,12 @@
   .placeholder {
     text-align: center;
     color: var(--color-text-muted);
-    font-size: var(--font-size-sm);
+    font-size: var(--text-sm);
     p {
-      margin: var(--space-2) 0 var(--space-1);
+      margin: var(--space-xs) 0 var(--space-2xs);
     }
     small {
-      font-size: var(--font-size-xs);
+      font-size: var(--text-xs);
     }
   }
   .preview {
@@ -50,22 +50,23 @@
   }
   .clear-btn {
     position: absolute;
-    top: var(--space-2);
-    right: var(--space-2);
-    background: var(--color-bg-overlay);
+    top: var(--space-xs);
+    right: var(--space-xs);
+    /* Sits over the preview image, so the surface has to stay translucent. */
+    background: rgba(from var(--color-surface) r g b / 0.8);
   }
   .file-input {
     display: none;
   }
   .error {
-    color: var(--color-danger);
-    font-size: var(--font-size-xs);
+    color: var(--color-error);
+    font-size: var(--text-xs);
   }
   .file-info {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    font-size: var(--font-size-xs);
-    color: var(--color-text-secondary);
+    gap: var(--space-xs);
+    font-size: var(--text-xs);
+    color: var(--color-text-light);
   }
 }

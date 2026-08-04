@@ -1,25 +1,25 @@
 .feeder-food-section {
   .feeder-food-section-help {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
-    margin: 0 0 var(--spacing-md);
+    color: var(--color-text-light);
+    font-size: var(--text-sm);
+    margin: 0 0 var(--space-md);
   }
 
   .feeder-food-section-muted {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
+    color: var(--color-text-light);
+    font-size: var(--text-sm);
     margin: 0;
   }
 
   .feeder-food-section-compartments {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: var(--space-md);
   }
 
   .feeder-food-section-error {
     color: var(--color-error);
-    font-size: var(--font-size-sm);
-    margin: var(--spacing-md) 0 0;
+    font-size: var(--text-sm);
+    margin: var(--space-md) 0 0;
   }
 }

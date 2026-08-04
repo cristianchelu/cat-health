@@ -16,6 +16,6 @@
   .device-settings-content {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-lg);
+    gap: var(--space-lg);
   }
 }

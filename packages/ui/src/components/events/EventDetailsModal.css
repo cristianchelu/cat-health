@@ -255,7 +255,7 @@
       content: "";
       width: 0.35rem;
       height: 0.6rem;
-      border: solid var(--color-text-inverse);
+      border: solid var(--color-text-inverted);
       border-width: 0 2px 2px 0;
       opacity: 0;
       transform: rotate(45deg) translateY(-1px);

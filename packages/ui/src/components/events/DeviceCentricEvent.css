@@ -1,8 +1,8 @@
 .device-centric-event {
   &.device-connectivity-event {
     .timeline-value {
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-normal);
+      font-size: var(--text-sm);
+      font-weight: var(--font-normal);
       color: var(--color-text-muted);
     }
   }
