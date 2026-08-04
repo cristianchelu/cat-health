@@ -10,14 +10,18 @@
   display: flex;
   flex-direction: column;
   background-color: var(--color-surface);
-  border-radius: var(--radius-lg);
+  /* Geometry from Card: a device card is a card, and the grid mixes the two. */
+  border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-md);
   overflow: hidden;
   text-decoration: none;
   color: inherit;
+  transition:
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 
   &:hover {
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-xl);
   }
 
   &:focus-visible {
