@@ -1,8 +1,10 @@
+/* A composed field, so it takes its height from the control scale like `.input`. */
 .search-input {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
   min-width: 0;
+  min-height: var(--control-height-md);
   padding: 0 var(--space-sm);
   border: var(--border-thin);
   border-radius: var(--radius-md);
@@ -36,7 +38,7 @@
     font: inherit;
     font-size: var(--text-sm);
     line-height: var(--line-height-normal);
-    padding: var(--space-xs) 0;
+    padding: var(--space-2xs) 0;
 
     &::placeholder {
       color: var(--color-text-muted);

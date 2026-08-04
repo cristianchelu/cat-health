@@ -1,4 +1,3 @@
 .page-add-edit-pet {
-  max-width: var(--max-width-content);
-  margin: 0 auto;
+  /* Measure and header come from the PetForm's SettingsFormPage; keep page identity. */
 }

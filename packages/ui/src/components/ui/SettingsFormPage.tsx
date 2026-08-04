@@ -52,7 +52,11 @@ const SettingsFormPage = React.forwardRef<
     ref,
   ) => {
     return (
-      <div className={cn('settings-form-page', className)} ref={ref} {...props}>
+      <div
+        className={cn('page-shell-narrow', 'settings-form-page', className)}
+        ref={ref}
+        {...props}
+      >
         {title != null && (
           <AppHeader>
             <AppHeaderBar back={back} title={title} actions={headerActions} />

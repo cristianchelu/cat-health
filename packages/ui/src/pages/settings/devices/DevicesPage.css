@@ -1,7 +1,5 @@
+/* Measure from `.page-shell-narrow` (page-shell.css). */
 .settings-devices-page {
-  max-width: var(--max-width-md);
-  margin: 0 auto;
-
   .settings-devices-error {
     color: var(--color-error);
   }

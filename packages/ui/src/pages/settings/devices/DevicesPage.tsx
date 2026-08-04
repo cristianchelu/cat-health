@@ -95,7 +95,7 @@ const DevicesPage: React.FC = () => {
   const deviceCount = devices?.length ?? 0;
 
   return (
-    <div className="settings-devices-page">
+    <div className="page-shell-narrow settings-devices-page">
       <AppHeader>
         <AppHeaderBar
           back={{ to: '/settings', label: t('navigation.settings') }}

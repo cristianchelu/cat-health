@@ -1,5 +1,8 @@
+/* Height from the shared control scale, as `.input` — see Input.css. */
 .select {
   width: 100%;
+  min-height: var(--control-height-md);
+  padding: var(--space-2xs) var(--space-sm);
   border: var(--border-thin);
   border-radius: var(--radius-md);
   background-color: var(--color-surface);
@@ -38,17 +41,20 @@
 
   /* Size variants */
   &.sm {
-    padding: var(--space-2xs) var(--space-sm);
+    min-height: var(--control-height-sm);
+    padding: var(--space-3xs) var(--space-sm);
     font-size: var(--text-xs);
   }
 
   &.md {
-    padding: var(--space-xs) var(--space-sm);
+    min-height: var(--control-height-md);
+    padding: var(--space-2xs) var(--space-sm);
     font-size: var(--text-sm);
   }
 
   &.lg {
-    padding: var(--space-sm) var(--space-md);
+    min-height: var(--control-height-lg);
+    padding: var(--space-xs) var(--space-md);
     font-size: var(--text-base);
   }
 }

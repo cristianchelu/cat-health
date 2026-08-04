@@ -1,9 +1,10 @@
 .list-toolbar {
   display: flex;
   /*
-   * Stretch, not center: the controls in here are sized by their own padding
-   * and line-height, so a `<select>` and a search field never land on the same
-   * height on their own — and a 3px difference reads as one of them floating.
+   * Stretch, not center. The shared control scale already lands a `<select>`
+   * and a search field on the same height; this keeps a control that opts out
+   * of the scale — a segmented group, a wrapped custom widget — on the row's
+   * height rather than floating in the middle of it.
    */
   align-items: stretch;
   gap: var(--space-sm);

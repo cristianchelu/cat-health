@@ -1,17 +1,35 @@
+/*
+ * Sized by height, not by padding. A button and the `.input` beside it differ
+ * in font size, line-height and border, so paddings that matched still left
+ * the two boxes different heights — the button was 13px taller than the field
+ * it sat next to. Each size names a step on the shared control scale instead,
+ * and the label is centred in whatever that resolves to.
+ *
+ * `--button-padding-inline` is the knob for callers that need a tighter box
+ * (an icon-only action in a dense row); reach for that rather than re-declaring
+ * `padding`, which no longer decides the height and so only breaks the square.
+ */
 .button {
+  --button-height: var(--control-height-md);
+  --button-padding-inline: var(--space-md);
+  --button-font-size: var(--text-sm);
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-lg);
+  min-height: var(--button-height);
+  padding: 0 var(--button-padding-inline);
   border-radius: var(--radius-md);
   font-weight: var(--font-medium);
-  font-size: var(--text-base);
-  line-height: 1.5;
+  font-size: var(--button-font-size);
+  line-height: var(--line-height-normal);
   transition: all var(--transition-fast);
   cursor: pointer;
   white-space: nowrap;
-  border: 2px solid transparent;
+  /* Matches the field border, so a button and an input share a seam cleanly. */
+  border: var(--border-thin);
+  border-color: transparent;
   /* The class is also applied to <Link> for navigation actions. */
   text-decoration: none;
 
@@ -63,7 +81,7 @@
   &.neutral {
     background-color: var(--color-surface);
     color: var(--color-text);
-    border: var(--border-thin);
+    border-color: var(--color-border);
 
     &:hover,
     &:focus-visible {
@@ -72,10 +90,10 @@
   }
 
   &.ghost {
+    --button-padding-inline: var(--space-sm);
+
     background-color: transparent;
     color: var(--color-text);
-    border: none;
-    padding: var(--space-xs) var(--space-sm);
 
     &:hover,
     &:focus {
@@ -97,13 +115,15 @@
 
   /* Button sizes */
   &.sm {
-    padding: var(--space-xs) var(--space-sm);
-    font-size: var(--text-sm);
+    --button-height: var(--control-height-sm);
+    --button-padding-inline: var(--space-sm);
+    --button-font-size: var(--text-xs);
   }
 
   &.lg {
-    padding: var(--space-md) var(--space-xl);
-    font-size: var(--text-lg);
+    --button-height: var(--control-height-lg);
+    --button-padding-inline: var(--space-lg);
+    --button-font-size: var(--text-base);
   }
 
   /* Button states */
@@ -113,8 +133,10 @@
     cursor: not-allowed;
   }
 
-  /* Button with icons */
+  /* The mark is the whole label, so the box is as wide as it is tall. */
   &.icon {
-    padding: var(--space-sm);
+    --button-padding-inline: 0;
+
+    width: var(--button-height);
   }
 }

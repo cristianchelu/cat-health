@@ -28,7 +28,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     return (
       <button
-        className={cn('button', variant, size, icon, className)}
+        className={cn('button', variant, size, icon && 'icon', className)}
         ref={ref}
         {...props}
       >

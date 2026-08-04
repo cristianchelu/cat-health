@@ -196,7 +196,7 @@ const ProviderAccountPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="provider-account-page">
+      <div className="page-shell-narrow provider-account-page">
         {header(t('settings.edit_provider_title'))}
         <LoadingState message={t('settings.loading_provider_data')} />
       </div>
@@ -205,7 +205,7 @@ const ProviderAccountPage: React.FC = () => {
 
   if (loadError || !account) {
     return (
-      <div className="provider-account-page">
+      <div className="page-shell-narrow provider-account-page">
         {header(t('settings.edit_provider_title'))}
         <div className="provider-account-error">
           <p>{t('settings.error_loading_provider')}</p>
@@ -221,7 +221,7 @@ const ProviderAccountPage: React.FC = () => {
   const Fields = configModule.Fields;
 
   return (
-    <div className="provider-account-page">
+    <div className="page-shell-narrow provider-account-page">
       {header(account.name)}
 
       <FormCard>

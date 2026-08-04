@@ -86,7 +86,7 @@ const ProvidersPage: React.FC = () => {
   const error = accountsQuery.error ?? devicesQuery.error;
 
   return (
-    <div className="providers-page">
+    <div className="page-shell-narrow providers-page">
       <AppHeader>
         <AppHeaderBar
           back={{ to: '/settings', label: t('navigation.settings') }}

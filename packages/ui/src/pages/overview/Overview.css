@@ -6,11 +6,9 @@
 
   width: 100%;
   min-width: 0;
-  max-width: var(--max-width-content);
-  margin: 0 auto;
 
   section {
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--page-section-gap);
     width: 100%;
     min-width: 0;
   }

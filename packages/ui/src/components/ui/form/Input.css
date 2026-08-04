@@ -1,5 +1,12 @@
+/*
+ * Height comes from the shared control scale (see theme.css), padding only
+ * keeps the text off the border. A field and the button beside it are then the
+ * same height by construction rather than by two paddings that happen to agree.
+ */
 .input {
   width: 100%;
+  min-height: var(--control-height-md);
+  padding: var(--space-2xs) var(--space-sm);
   border: var(--border-thin);
   border-radius: var(--radius-md);
   background-color: var(--color-surface);
@@ -37,17 +44,20 @@
 
   /* Size variants */
   &.sm {
-    padding: var(--space-2xs) var(--space-sm);
+    min-height: var(--control-height-sm);
+    padding: var(--space-3xs) var(--space-sm);
     font-size: var(--text-xs);
   }
 
   &.md {
-    padding: var(--space-xs) var(--space-sm);
+    min-height: var(--control-height-md);
+    padding: var(--space-2xs) var(--space-sm);
     font-size: var(--text-sm);
   }
 
   &.lg {
-    padding: var(--space-sm) var(--space-md);
+    min-height: var(--control-height-lg);
+    padding: var(--space-xs) var(--space-md);
     font-size: var(--text-base);
   }
 

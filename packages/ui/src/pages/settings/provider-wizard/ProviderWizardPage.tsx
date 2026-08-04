@@ -375,7 +375,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
   const selectionMode = flow?.buildDeviceFromDiscovery ? 'multi' : 'single';
 
   return (
-    <div className="provider-wizard-page">
+    <div className="page-shell-narrow provider-wizard-page">
       {/*
        * Abandons the wizard — never a step-back. Steps own their own `Back` in
        * FormActions, so this is labelled with where it lands instead of

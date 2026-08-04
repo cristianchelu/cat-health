@@ -13,7 +13,7 @@
 
   .settings-container {
     display: grid;
-    gap: var(--space-xl);
+    gap: var(--page-section-gap);
     grid-template-columns: 1fr;
 
     .settings-tracking-gap-editor {
@@ -39,26 +39,6 @@
 
     @media (min-width: 1024px) {
       grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .settings-header {
-      margin-bottom: var(--space-2xl);
-      text-align: left;
-
-      h1 {
-        font-size: var(--text-2xl);
-      }
-
-      .settings-description {
-        font-size: var(--text-base);
-      }
-    }
-
-    .settings-container {
-      gap: var(--space-xl);
     }
   }
 }

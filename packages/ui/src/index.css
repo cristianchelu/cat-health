@@ -26,6 +26,21 @@ body {
   flex-direction: column;
 }
 
+/*
+ * Form controls take their font from the UA, not from the document — an
+ * inherited `font-family` and `line-height` never reach them. That is how one
+ * class came to measure two different heights depending on which element wore
+ * it: `CardListItem` and the header's back control each render an <a> for a
+ * route and a <button> for an action, and the <button> came out several pixels
+ * shorter on the UA's `line-height: normal`.
+ */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
 /* Reset margins */
 h1,
 h2,

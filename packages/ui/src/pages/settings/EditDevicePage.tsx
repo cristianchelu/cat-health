@@ -206,7 +206,7 @@ const EditDevicePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="edit-device-page">
+      <div className="page-shell-narrow edit-device-page">
         {header(t('settings.edit_device_title'))}
         <LoadingState message={t('settings.loading_device_data')} />
       </div>
@@ -215,7 +215,7 @@ const EditDevicePage: React.FC = () => {
 
   if (error || !device) {
     return (
-      <div className="edit-device-page">
+      <div className="page-shell-narrow edit-device-page">
         {header(t('settings.edit_device_title'))}
         <div className="error-state">
           <p>{t('devices.error_loading_device')}</p>
@@ -237,7 +237,7 @@ const EditDevicePage: React.FC = () => {
   );
 
   return (
-    <div className="edit-device-page">
+    <div className="page-shell-narrow edit-device-page">
       {header(device.name)}
 
       <FormCard>

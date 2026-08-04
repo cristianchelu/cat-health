@@ -14,14 +14,15 @@
 .app-header {
   display: flex;
   flex-direction: column;
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--page-header-gap);
 
   @media (max-width: 767px) {
     position: sticky;
     top: calc(-1 * var(--page-shell-padding-block));
     z-index: var(--z-index-sticky);
     box-sizing: border-box;
-    margin-block: calc(-1 * var(--page-shell-padding-block)) var(--space-md);
+    margin-block: calc(-1 * var(--page-shell-padding-block))
+      var(--page-header-gap);
     margin-inline: calc(-1 * var(--page-shell-padding-inline));
     width: calc(100% + 2 * var(--page-shell-padding-inline));
     padding-inline: var(--page-shell-padding-inline);
@@ -40,13 +41,33 @@
  * also keeps it out of the accessibility tree.
  */
 .app-header-bar {
+  /*
+   * The <h1>'s first line. Trailing actions are centred on this rather than on
+   * the title cell, so they land at the same height whether or not the page
+   * puts a subtitle under its heading.
+   */
+  --app-header-title-line: calc(var(--text-3xl) * var(--line-height-tight));
+
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
     'back  back'
     'title actions';
-  align-items: center;
-  gap: var(--space-xs) var(--space-md);
+  /*
+   * Top, not centre. The row is as tall as its tallest cell, so centring moved
+   * the heading and its action by half of whatever else the row happened to
+   * carry — /devices sat its Add button 10px below where /overview did, on the
+   * strength of having a subtitle. Anchored to the top, the <h1> starts at the
+   * same offset on every route.
+   */
+  align-items: start;
+  column-gap: var(--space-md);
+  row-gap: var(--space-xs);
+
+  /* No back control means no first row, and the row gap would be dead space. */
+  &:not(:has(.app-header-back)) {
+    row-gap: 0;
+  }
 
   .app-header-back {
     grid-area: back;
@@ -71,7 +92,6 @@
     border: 0;
     padding: 0;
     cursor: pointer;
-    font-family: inherit;
     transition: color var(--transition-fast);
 
     &:hover {
@@ -133,11 +153,21 @@
     align-items: center;
     gap: var(--space-sm);
     min-width: 0;
+    /*
+     * A floor the height of the heading's first line, so a control shorter than
+     * the <h1> — an icon button, a ghost `sm` — still centres on the title
+     * rather than hanging from the top of the row.
+     */
+    min-height: var(--app-header-title-line);
   }
 
   @media (max-width: 767px) {
+    --app-header-title-line: calc(var(--text-xl) * var(--line-height-tight));
+
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas: 'back title actions';
+    /* One app-bar row, where centring is what lines the three cells up. */
+    align-items: center;
     gap: var(--space-sm);
     padding-block: var(--space-md) var(--space-xs);
 
@@ -149,9 +179,9 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      /* 38px — between --space tokens, so a literal like the design uses. */
-      width: 2.375rem;
-      height: 2.375rem;
+      /* Square, on the same step as the actions it shares the bar with. */
+      width: var(--control-height-md);
+      height: var(--control-height-md);
       flex-shrink: 0;
       border: 0;
       border-radius: var(--radius-full);

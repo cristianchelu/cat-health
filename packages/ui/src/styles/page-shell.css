@@ -2,10 +2,41 @@
  * Opt-in shell layout classes for the direct child of #content.
  *
  * Compose as needed:
+ * - .page-shell-narrow — the narrow page measure, for single-column lists and forms.
  * - .page-viewport-fill — fill height below the mobile header stack (see App.css).
  * - .page-shell-wide — drop #content max-width so the page can use the full main column.
  * - .page-shell-bleed — extend into main padding (uses --page-shell-padding-* on main).
+ *
+ * A page picks a measure from `.page-shell-narrow` or the #content default and
+ * declares no width of its own. There were six, each centred inside the last,
+ * and the only thing the middle four bought was the app bar landing somewhere
+ * different on every navigation.
  */
+.page-shell-narrow {
+  /*
+   * Explicit width, so the measure holds whatever the parent is. The food
+   * editor wraps its page in a `Tabs` root (a flex column), where `margin: auto`
+   * turns off the cross-axis stretch a block child gets for free — leaving the
+   * page shrink-to-fit and the app bar too narrow to reach either screen edge.
+   */
+  width: 100%;
+  max-width: var(--page-measure-narrow);
+  margin-inline: auto;
+
+  /*
+   * No measure on a phone. 36rem is a measure for a wide screen; below 768px it
+   * is either wider than the screen (does nothing) or narrower (leaves gutters).
+   * Those gutters are not invisible: every page leads with an `AppHeader` that
+   * bleeds out through `main`'s padding to reach the screen edges, and it can
+   * only bleed as far as its own page box — so a 36rem page on a 45rem phone
+   * leaves the app bar floating mid-screen with the shadow cutting down both
+   * sides.
+   */
+  @media (max-width: 767px) {
+    max-width: none;
+  }
+}
+
 .page-viewport-fill {
   @media (max-width: 767px) {
     flex: 1 1 0;
@@ -19,27 +50,4 @@
   margin-inline: calc(-1 * var(--page-shell-padding-inline));
   width: calc(100% + 2 * var(--page-shell-padding-inline));
   max-width: none;
-}
-
-/*
- * The narrow form shells drop their reading measure on a phone.
- *
- * 30rem is a measure for prose on a wide screen; below 768px it is either wider
- * than the screen (does nothing) or narrower (leaves gutters). Those gutters
- * used to be invisible. They aren't now: every page leads with an `AppHeader`
- * that bleeds out through `main`'s padding to reach the screen edges, and it
- * can only bleed as far as its own page box — so a 30rem page on a 45rem phone
- * left the app bar floating in the middle of the screen with the shadow
- * cutting down both sides.
- *
- * Listed here rather than four times over because it is one rule about the
- * shell, and the four pages are only incidentally the ones that have a measure.
- */
-@media (max-width: 767px) {
-  .settings-form-page,
-  .edit-device-page,
-  .provider-account-page,
-  .provider-wizard-page {
-    max-width: none;
-  }
 }

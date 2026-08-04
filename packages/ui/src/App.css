@@ -7,14 +7,17 @@
 
   main {
     grid-area: main;
-    --page-shell-padding-block: var(--space-sm);
+    /* One gutter on both axes, so the page sits in an even frame. */
+    --page-shell-padding-block: var(--space-xl);
     --page-shell-padding-inline: var(--space-xl);
     padding: var(--page-shell-padding-block) var(--page-shell-padding-inline);
     overflow: auto;
     min-width: 0;
 
     #content {
-      max-width: var(--max-width-content);
+      /* The default measure; a page opts down to `.page-shell-narrow` or out
+         with `.page-shell-wide` (page-shell.css). */
+      max-width: var(--page-measure-wide);
       margin: 0 auto;
       width: 100%;
       min-width: 0;

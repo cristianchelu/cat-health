@@ -140,8 +140,11 @@
     flex-shrink: 0;
     margin-left: auto;
 
+    /* Icon-only, so the box is square rather than carrying label padding. */
     .button.sm {
-      padding: var(--space-xs);
+      --button-padding-inline: 0;
+
+      width: var(--button-height);
     }
   }
 
