@@ -2,12 +2,19 @@ import { type Entity as EspHomeEntity } from 'esphome-client';
 import sharp from 'sharp';
 import {
   analyzeDrinkingFromSamples,
+  DEVICE_SIGNAL_KEYS,
   encodeWaterRawData,
+  type DeviceSignal,
   type DrinkingAnalysis,
   WATER_RAW_DATA_VERSION_1,
   type WaterFountainState,
 } from 'shared';
 import type { Camera, ProviderDeps, Device } from '../../types.ts';
+import {
+  daysRemainingSignal,
+  percentSignal,
+  statusSignal,
+} from '../../signalBuilders.ts';
 import type { PendingMedia } from '../../../media/MediaManager.ts';
 import type { NewEvent } from '../../../../database/types/EventTable.ts';
 import type { WaterIntakeEventData } from '../../../../domain/events.ts';
@@ -558,6 +565,47 @@ export class FountainController
       );
       return undefined;
     }
+  }
+
+  getSignals(): DeviceSignal[] {
+    const signals: DeviceSignal[] = [
+      percentSignal(
+        { key: DEVICE_SIGNAL_KEYS.WATER_LEVEL, icon: 'water' },
+        this.state.waterLevel,
+      ),
+    ];
+
+    if (this.state.filterDaysRemaining !== undefined) {
+      signals.push(
+        daysRemainingSignal(
+          { key: DEVICE_SIGNAL_KEYS.FILTER_LIFE, icon: 'filter' },
+          this.state.filterDaysRemaining,
+          this.config.filterIntervalDays,
+        ),
+      );
+    }
+
+    if (this.state.waterDaysRemaining !== undefined) {
+      signals.push(
+        daysRemainingSignal(
+          { key: DEVICE_SIGNAL_KEYS.WATER_FRESHNESS, icon: 'drop' },
+          this.state.waterDaysRemaining,
+        ),
+      );
+    }
+
+    if (this.state.pumpStatus !== undefined) {
+      const faulted = this.state.pumpStatus === 'error';
+      signals.push(
+        statusSignal(
+          { key: DEVICE_SIGNAL_KEYS.PUMP_FLOW, icon: faulted ? 'alert' : 'check' },
+          `devices.signals.values.pump_${this.state.pumpStatus}`,
+          faulted,
+        ),
+      );
+    }
+
+    return [...signals, ...this.diagnosticSignals()];
   }
 
   getState() {

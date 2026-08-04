@@ -5,14 +5,35 @@ import {
   LogLevel,
 } from 'esphome-client';
 import { type Static, Type } from '@fastify/type-provider-typebox';
-import { requireWithSchema, type DeviceStatus, type EntityDTO } from 'shared';
+import {
+  requireWithSchema,
+  type DeviceSignal,
+  type DeviceStatus,
+  type EntityDTO,
+} from 'shared';
 import type { DeviceController, ProviderDeps, Device } from '../../types.ts';
+import { batterySignal, signalStrengthSignal } from '../../signalBuilders.ts';
+import { WIFI_RSSI_LADDER } from '../../signalStrength.ts';
 
 export const ESPHomeConfigSchema = Type.Object({
   host: Type.String({ minLength: 1 }),
   port: Type.Optional(Type.Number()),
   encryptionKey: Type.Optional(Type.String()),
   clientId: Type.Optional(Type.String()),
+  /**
+   * Days a fresh filter lasts on this device, which is what a filter-life bar
+   * is drawn against. The device reports days remaining but not the interval
+   * they count down from, and assuming one would put an invented number on a
+   * gauge. Unset means the signal shows its countdown without a bar.
+   */
+  filterIntervalDays: Type.Optional(Type.Number({ minimum: 1 })),
+  /**
+   * Grams of waste that mean this box needs emptying. Household-specific, so
+   * there is no default: unset means waste is reported without an urgency band.
+   */
+  wasteThresholdG: Type.Optional(Type.Number({ minimum: 1 })),
+  /** Kilograms of litter a full box holds, which a litter-level bar needs. */
+  litterFullKg: Type.Optional(Type.Number({ minimum: 0.1 })),
 });
 export type ESPHomeConfig = Static<typeof ESPHomeConfigSchema>;
 
@@ -438,6 +459,60 @@ export abstract class BaseESPHomeController implements DeviceController {
     };
 
     return dto as EntityDTO;
+  }
+
+  /** Latest numeric reading for an object id, or null when absent or unread. */
+  protected sensorNumber(objectId: string): number | null {
+    const key = this.getEntityKey(objectId);
+    if (key === null) return null;
+    const value = this.sensorValues.get(key);
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  }
+
+  /**
+   * Latest numeric reading for the first entity of a device class. ESPHome
+   * device classes are stable across configs in a way object ids are not, so
+   * diagnostics resolve by class and fall back to conventional object ids.
+   */
+  private sensorByDeviceClass(deviceClass: string): number | null {
+    for (const entity of this.entityDefinitions.values()) {
+      if (
+        'deviceClass' in entity &&
+        entity.deviceClass === deviceClass &&
+        typeof this.sensorValues.get(entity.key) === 'number'
+      ) {
+        return this.sensorValues.get(entity.key) as number;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Signal strength and battery, which every ESPHome node may expose and no
+   * device type owns. Concrete controllers spread these into their own signals.
+   */
+  protected diagnosticSignals(): DeviceSignal[] {
+    const signals: DeviceSignal[] = [];
+
+    const rssi =
+      this.sensorByDeviceClass('signal_strength') ??
+      this.sensorNumber('wifi_signal') ??
+      this.sensorNumber('wifi_signal_db');
+    if (rssi !== null) {
+      signals.push(signalStrengthSignal(rssi, WIFI_RSSI_LADDER));
+    }
+
+    const battery =
+      this.sensorByDeviceClass('battery') ?? this.sensorNumber('battery_level');
+    if (battery !== null) {
+      signals.push(batterySignal(battery));
+    }
+
+    return signals;
+  }
+
+  getSignals(): DeviceSignal[] {
+    return this.diagnosticSignals();
   }
 
   getState() {

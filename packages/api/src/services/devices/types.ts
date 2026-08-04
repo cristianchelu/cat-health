@@ -1,5 +1,6 @@
 import type { Kysely } from 'kysely';
 import type {
+  DeviceSignal,
   DeviceStatus,
   DeviceType,
   EventType,
@@ -70,6 +71,13 @@ export interface DeviceController {
   disconnect(): Promise<void>;
   getStatus(): DeviceStatus;
   getState?(): Record<string, unknown>;
+  /**
+   * Device health, normalized away from vendor field names. Read from state
+   * already in memory, so it stays synchronous and safe to call per row on the
+   * devices list. Counters that need the event log are derived outside the
+   * controller.
+   */
+  getSignals?(): DeviceSignal[];
 }
 
 export function isCamera(controller: DeviceController): controller is Camera {

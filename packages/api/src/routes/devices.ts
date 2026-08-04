@@ -23,11 +23,20 @@ import {
   ReidentifyLitterboxVisitsQuerySchema,
   ReidentifyLitterboxVisitsResponseSchema,
 } from 'shared';
-import { isRecord } from 'shared';
+import { DEVICE_SIGNAL_KEYS, isRecord } from 'shared';
 import type { Device } from '../database/types/DeviceTable.ts';
 import type { ProviderAccount } from '../database/types/ProviderAccountTable.ts';
-import type { GetDeviceResponseDTO, ProviderAccountDTO } from 'shared';
+import type {
+  DeviceSignal,
+  GetDeviceResponseDTO,
+  ProviderAccountDTO,
+} from 'shared';
 import { reidentifyLitterboxVisits } from '../services/litterbox/reidentifyLitterboxVisits.ts';
+import { getDepositsSinceScoop } from '../services/litterbox/depositsSinceScoop.ts';
+import { presenceSignals } from '../services/devices/presenceSignals.ts';
+
+/** Deposit track length on a device card. */
+const DEPOSIT_PIP_SLOTS = 8;
 
 type DeviceWithProvider = Device & { provider: string };
 
@@ -66,8 +75,14 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
   // --- Helpers ---
 
+  /**
+   * `includeState` is off for the list: `state` is the controller's whole
+   * payload, which for ESPHome is its entire entity table. The grid renders
+   * `signals`, so shipping state per row would be dead weight on every load.
+   */
   const mapDevice = async (
     device: DeviceWithProvider,
+    { includeState = true }: { includeState?: boolean } = {},
   ): Promise<GetDeviceResponseDTO> => {
     const mapped: GetDeviceResponseDTO = {
       id: device.id,
@@ -95,13 +110,18 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         ? new Date(snapshot.lastSeenMs).toISOString()
         : null;
 
+    const providerSignals: DeviceSignal[] = [];
+
     try {
       const controller = integrationManager.instantiateDeviceController({
         ...device,
         config: asConfigRecord(mapped.config),
       });
-      if (controller?.getState) {
+      if (includeState && controller?.getState) {
         mapped.state = controller.getState();
+      }
+      if (controller?.getSignals) {
+        providerSignals.push(...controller.getSignals());
       }
     } catch (error) {
       mapped.status = 'error';
@@ -110,6 +130,15 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         'Failed to load device controller state',
       );
     }
+
+    mapped.signals = [
+      ...presenceSignals(
+        mapped.status,
+        snapshot.lastSeenMs != null ? new Date(snapshot.lastSeenMs) : null,
+        Date.now(),
+      ),
+      ...providerSignals,
+    ];
 
     return mapped;
   };
@@ -182,6 +211,56 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         }
       }
       mapped.reference_media = referenceMedia;
+    }
+  }
+
+  /**
+   * Attach the deposit breakdown to litterbox waste signals.
+   *
+   * The box weighs its waste but cannot say what produced it, so the pips come
+   * from the event log. Devices with no waste sensor still get the signal, with
+   * the summed elimination weight standing in for the reading.
+   */
+  async function enrichLitterboxDeposits(devices: GetDeviceResponseDTO[]) {
+    const litterboxes = devices.filter((d) => d.type === 'litterbox');
+    if (litterboxes.length === 0) return;
+
+    const deposits = await getDepositsSinceScoop(
+      db,
+      litterboxes.map((d) => d.id),
+    );
+
+    for (const device of litterboxes) {
+      const entry = deposits.get(device.id);
+      if (!entry) continue;
+
+      /* Overflow past the track is shown as the most recent deposits. What a
+       * 10-plus visit box should look like is still an open design question. */
+      const pips = entry.pips.slice(-DEPOSIT_PIP_SLOTS);
+      const display = {
+        kind: 'pips' as const,
+        of: DEPOSIT_PIP_SLOTS,
+        pips,
+      };
+
+      const signals = device.signals ?? [];
+      const waste = signals.find(
+        (signal) => signal.key === DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP,
+      );
+
+      if (waste) {
+        waste.display = display;
+      } else {
+        signals.push({
+          key: DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP,
+          label_key: `devices.signals.${DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP}`,
+          value: { kind: 'number', value: Math.round(entry.weight), unit: 'g' },
+          display,
+          icon: 'waste',
+          category: 'primary',
+        });
+        device.signals = signals;
+      }
     }
   }
 
@@ -478,8 +557,13 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .selectAll('device')
         .select('provider_account.provider as provider')
         .execute();
-      const mapped = await Promise.all(devices.map((d) => mapDevice(d)));
-      await enrichReferenceMedia(mapped);
+      const mapped = await Promise.all(
+        devices.map((d) => mapDevice(d, { includeState: false })),
+      );
+      await Promise.all([
+        enrichReferenceMedia(mapped),
+        enrichLitterboxDeposits(mapped),
+      ]);
       return mapped;
     },
   );
@@ -577,7 +661,10 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
               : device.camera_config,
         };
       }
-      await enrichReferenceMedia([mapped]);
+      await Promise.all([
+        enrichReferenceMedia([mapped]),
+        enrichLitterboxDeposits([mapped]),
+      ]);
       return mapped;
     },
   );

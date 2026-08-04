@@ -1,5 +1,21 @@
 /** SurePetcare cloud API constants (ported from py-surepetcare). */
 
+import type { RssiLadder } from '../../signalStrength.ts';
+
+/**
+ * SurePetcare's own dBm-to-bars ladder, read off the `SpDeviceConnection`
+ * icon in their web app (reverse-engineered; not official API docs).
+ *
+ * Not the WiFi ladder, because `device_rssi` measures the feeder's link to the
+ * hub over SurePetcare's own radio, and their scale runs 19 dB tighter at the
+ * top. `-Infinity` is theirs too: their weakest bin and their default both
+ * yield one bar, so the scale has no zero state.
+ *
+ * Bounds are half-open here where theirs are exclusive at both ends, which
+ * drops exactly -60 and -75 through to their one-bar default.
+ */
+export const SUREPET_RSSI_LADDER: RssiLadder = [-36, -60, -75, -Infinity];
+
 export const SUREPET_API_BASE = 'https://app-api.production.surehub.io/api';
 export const SUREPET_LOGIN_URL = `${SUREPET_API_BASE}/auth/login`;
 export const SUREPET_ME_START_URL = `${SUREPET_API_BASE}/me/start`;

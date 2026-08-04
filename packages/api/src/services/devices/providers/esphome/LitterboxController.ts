@@ -1,6 +1,14 @@
 import { sql } from 'kysely';
-import { encodeLitterboxRawData } from 'shared';
+import {
+  DEVICE_SIGNAL_KEYS,
+  encodeLitterboxRawData,
+  type DeviceSignal,
+} from 'shared';
 import type { ProviderDeps, Device } from '../../types.ts';
+import {
+  daysRemainingSignal,
+  measureSignal,
+} from '../../signalBuilders.ts';
 import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
 import {
   BaseESPHomeController,
@@ -277,6 +285,70 @@ export class LitterboxController extends BaseESPHomeController {
     } catch (error) {
       console.error('Error processing session:', error);
     }
+  }
+
+  /**
+   * The box reports total waste but not how it accumulated. The pip display
+   * and the deposit count are attached later from the event log, by
+   * `getDepositsSinceScoop`.
+   */
+  getSignals(): DeviceSignal[] {
+    const signals: DeviceSignal[] = [];
+
+    const wasteWeight = this.sensorNumber(SENSORS.WASTE_WEIGHT);
+    if (wasteWeight !== null) {
+      const threshold = this.config.wasteThresholdG;
+      signals.push(
+        measureSignal(
+          { key: DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP, icon: 'waste' },
+          Math.round(wasteWeight),
+          {
+            unit: 'g',
+            severity: threshold
+              ? { kind: 'ratio', value: wasteWeight / threshold }
+              : undefined,
+          },
+        ),
+      );
+    }
+
+    const litterRemainingKg = this.sensorNumber(SENSORS.LITTER_REMAINING);
+    if (litterRemainingKg !== null) {
+      signals.push(
+        measureSignal(
+          { key: DEVICE_SIGNAL_KEYS.LITTER_REMAINING, icon: 'litter' },
+          litterRemainingKg,
+          {
+            unit: 'kg',
+            decimals: 1,
+            full: this.config.litterFullKg,
+            severity: { kind: 'absolute', value: litterRemainingKg },
+          },
+        ),
+      );
+    }
+
+    const deepCleanDays = this.sensorNumber(SENSORS.DEEP_CLEAN_TIMER);
+    if (deepCleanDays !== null) {
+      signals.push(
+        daysRemainingSignal(
+          { key: DEVICE_SIGNAL_KEYS.DEEP_CLEAN, icon: 'clean' },
+          deepCleanDays,
+        ),
+      );
+    }
+
+    const visits = this.sensorNumber(SENSORS.VISITS);
+    if (visits !== null) {
+      signals.push(
+        measureSignal(
+          { key: DEVICE_SIGNAL_KEYS.VISITS_SINCE_CLEAN, icon: 'scoop' },
+          visits,
+        ),
+      );
+    }
+
+    return [...signals, ...this.diagnosticSignals()];
   }
 
   private getContextData(): ContextData | null {
