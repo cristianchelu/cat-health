@@ -101,6 +101,29 @@ return (
 **ALWAYS use CSS variables** from `packages/ui/src/theme.css` instead of hardcoding values.
 **ALWAYS use CSS nesting** with one single top-level classname that contains everything else.
 
+#### Sizing & layout
+
+These are the rules that keep chrome from drifting between routes. Each one exists because a page, a control, or an element decided its own geometry and stopped agreeing with its neighbours.
+
+**Controls take their height from the scale, never from their padding.** `--control-height-sm|md|lg` is what `.button`, `.input`, `.select` and composed fields like `SearchInput` resolve to. The scale steps up below 768px so nothing tappable lands under 44px.
+
+- **NEVER** set `padding` on `.button` to resize it. Padding no longer decides the height, so it only breaks the box. Set `--button-padding-inline`, `--button-height` or `--button-font-size`.
+- A new control that shares a row with a button or a field **MUST** take its `min-height` from the scale. Buttons sized by padding and fields sized by different padding can never agree — that is how the default button ended up 13px taller than the input beside it.
+
+**Two page measures, and only two.** `#content` caps at `--page-measure-wide`; a single-column list or form opts down with `.page-shell-narrow`. `.page-shell-wide` / `.page-shell-bleed` opt out entirely.
+
+- **NEVER** give a page root its own `max-width` + `margin: 0 auto`. Each measure is centred inside the last, so a private width moves the app bar sideways on every navigation into and out of that route, and the offsets compound per level.
+- Shell classes live in `src/styles/page-shell.css`. A page's own stylesheet describes what is _inside_ the page, not how wide the page is.
+
+**Page rhythm is two tokens:** `--page-header-gap` (below `AppHeader`) and `--page-section-gap` (between a page's top-level sections). **NEVER** override `.app-header`'s margin from a page stylesheet. The one exception is a page laid out as a gapped flex column, which zeroes the margin and lets the column gap carry it.
+
+**Header actions anchor to the heading's first line.** `.app-header-bar` is `align-items: start` on desktop, and `.app-header-actions` carries `min-height: var(--app-header-title-line)` so a control shorter than the `<h1>` still centres on it. **NEVER** restore `align-items: center` there: a grid row is as tall as its tallest cell, so centring drops the primary button by half a subtitle on the pages that have one, and pushes the `<h1>` down on the pages whose action is tall.
+
+**Form controls do not inherit the document font.** `index.css` resets `button, input, select, textarea { font: inherit }`.
+
+- **NEVER** re-add a local `font-family: inherit` / `font: inherit` band-aid to a component.
+- A className worn by both an `<a>` and a `<button>` — `CardListItem`, `AppHeaderBar`'s back control, anything that renders a link for a route and a button for an action — **MUST** be checked at both. Only the `<button>` keeps the UA's `line-height: normal`, and a few pixels of difference there moves everything below it.
+
 ### Component Architecture
 
 #### TypeScript Component Pattern
@@ -408,10 +431,12 @@ The application uses a comprehensive design system defined in `theme.css` with:
 - **Consistent color palette** for primary, secondary, success, warning, error states
 - **Semantic spacing scale** from 2px to 64px
 - **Typography scale** from 12px to 48px
+- **Control height scale** (`--control-height-*`) shared by buttons and form fields, stepping up under 768px for touch
+- **Page measures** (`--page-measure-wide` / `--page-measure-narrow`) and **page rhythm** (`--page-header-gap`, `--page-section-gap`)
 - **Border radius** and **shadow** systems
 - **Z-index layering** for modals, dropdowns, tooltips
 
-Always reference these variables instead of hardcoding values to maintain design consistency and enable easy theming updates.
+Always reference these variables instead of hardcoding values to maintain design consistency and enable easy theming updates. See [Sizing & layout](#sizing--layout) for the rules that go with the last two scales.
 
 # General rules
 
