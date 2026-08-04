@@ -2,6 +2,7 @@ import { Type, type Static } from '@fastify/type-provider-typebox';
 import { DeviceTypeSchema } from "../../constants/devices.ts";
 import { ProviderCapabilitiesSchema } from './integrations.ts';
 import { EventCauseSchema } from './events.ts';
+import { DeviceSignalSchema } from './deviceSignals.ts';
 
 export const DeviceStatusSchema = Type.Union([
   Type.Literal("online"),
@@ -164,6 +165,11 @@ export const GetDeviceResponseSchema = Type.Object({
   last_seen: Type.Union([Type.String(), Type.Null()]),
   status: Type.Union([DeviceStatusSchema, Type.Null()]),
   state: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
+  /**
+   * Normalized device health, extracted by the provider. Vendor-neutral, so
+   * the devices grid ranks it without knowing the hardware.
+   */
+  signals: Type.Optional(Type.Array(DeviceSignalSchema)),
   reference_media: Type.Optional(Type.Record(
     Type.String(),
     Type.Array(Type.Object({ id: Type.Number(), file_path: Type.String() })),
@@ -186,7 +192,19 @@ export type PatchDeviceCameraRequestDTO = Static<
   typeof PatchDeviceCameraRequestSchema
 >;
 
-export const GetDevicesResponseSchema = Type.Array(GetDeviceResponseSchema);
+/**
+ * List items omit `state`.
+ *
+ * `state` is the controller's full payload, which for an ESPHome device is its
+ * entire entity table. The grid renders `signals` instead; `state` remains on
+ * the single-device response for the detail page.
+ */
+export const DeviceListItemSchema = Type.Omit(GetDeviceResponseSchema, [
+  'state',
+]);
+export type DeviceListItemDTO = Static<typeof DeviceListItemSchema>;
+
+export const GetDevicesResponseSchema = Type.Array(DeviceListItemSchema);
 export type GetDevicesResponseDTO = Static<typeof GetDevicesResponseSchema>;
 
 export const PostDeviceRequestSchema = Type.Object({

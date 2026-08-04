@@ -5,6 +5,8 @@ export * from "./binary/litterbox/index.ts";
 export * from "./binary/water/index.ts";
 export * from "./water/index.ts";
 export * from "./schemas/api/devices.ts";
+export * from "./schemas/api/deviceSignals.ts";
+export * from "./deviceSignals/scoring.ts";
 export * from "./schemas/api/feederFoodCompartments.ts";
 export * from "./schemas/api/events.ts";
 export * from "./schemas/api/foods.ts";
