@@ -64,7 +64,8 @@ describe('signalStrengthText', () => {
   it('keeps the raw figure for anyone who wants to check it', () => {
     const text = signalStrengthText(strengthSignal(2, 4, -72), t);
 
-    assert.ok(text?.startsWith('devices.signals.signal_strength_summary|'));
+    assert.ok(text);
+    assert.ok(text.startsWith('devices.signals.signal_strength_summary|'));
     assert.equal(JSON.parse(text.split('|')[1]).dbm, -72);
   });
 
