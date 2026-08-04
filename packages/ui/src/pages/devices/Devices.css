@@ -5,10 +5,32 @@
   /*
    * 235px is the narrowest a card reads at, and matches the width the card's
    * own container query switches layouts around.
+   *
+   * Capped at three columns. Filling a wide desktop with five or six of these
+   * turns a page whose question is "does anything need me" into a wall to be
+   * scanned, and the attention sort stops paying for itself once the eye has
+   * that many landing points per row. The floor does the capping: a track is
+   * never narrower than a third of the row, so a fourth can never fit, and on
+   * a narrow viewport the 235px minimum takes over and drops to two or one.
+   * No breakpoints — the two bounds cross wherever the container puts them.
    */
   .page-devices-grid {
+    --devices-grid-gap: var(--space-lg);
+    --devices-grid-min: 235px;
+    --devices-grid-columns: 3;
+
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
-    gap: var(--space-md);
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(
+        max(
+          var(--devices-grid-min),
+          (100% - (var(--devices-grid-columns) - 1) * var(--devices-grid-gap)) /
+            var(--devices-grid-columns)
+        ),
+        1fr
+      )
+    );
+    gap: var(--devices-grid-gap);
   }
 }
