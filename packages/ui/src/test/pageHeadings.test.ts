@@ -7,11 +7,16 @@ import { describe, it } from 'node:test';
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
- * The two components allowed to emit an `<h1>`: `PageHeader`, which is where a
- * page title belongs, and `FormCardHead`, whose `titleAs` lets a card carry the
- * heading on the form screens that have no page title of their own.
+ * The components allowed to emit an `<h1>`: `PageHeader` and its replacement
+ * `AppHeaderBar`, which is where a page title belongs, and `FormCardHead`,
+ * whose `titleAs` lets a card carry the heading on the form screens that have
+ * no page title of their own.
+ *
+ * Two title bars is a transitional state — `PageHeader` comes off this list
+ * with its last caller.
  */
 const HEADING_OWNERS = new Set([
+  path.join('components', 'ui', 'AppHeader.tsx'),
   path.join('components', 'ui', 'PageHeader.tsx'),
   path.join('components', 'ui', 'form', 'FormCard.tsx'),
 ]);
