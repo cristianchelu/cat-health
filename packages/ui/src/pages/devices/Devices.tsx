@@ -4,7 +4,7 @@ import type { DeviceListItemDTO, SignalTone } from 'shared';
 import { useDevices } from '@/hooks/queries/deviceQueries';
 import { useRegionalPreferences } from '@/contexts/RegionalPreferencesProvider';
 import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
-import { PageAddFab, PageAddLink } from '@/components/ui/PageAddAction';
+import { PageAddFab, PageAddAction } from '@/components/ui/PageAddAction';
 import { EmptyState, LoadingState } from '@/components/ui/PageState';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { rankDeviceSignals } from '@/lib/deviceSignalRanking';
@@ -82,7 +82,7 @@ const Devices: React.FC = () => {
             ) : null
           }
           actions={
-            <PageAddLink
+            <PageAddAction
               to={ADD_DEVICE_ROUTE}
               label={t('settings.add_device')}
             />

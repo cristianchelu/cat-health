@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { Clock, Plus } from 'lucide-react';
+import { Clock, Drumstick } from 'lucide-react';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetEvents } from '@/hooks/queries/petQueries';
 import { useDevices } from '@/hooks/queries/deviceQueries';
@@ -12,6 +12,7 @@ import {
   AppHeaderRow,
 } from '@/components/ui/AppHeader';
 import PetSelector from '@/components/navigation/PetSelector';
+import { PageAddAction, PageAddFab } from '@/components/ui/PageAddAction';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { Button } from '@/components/ui/Button';
@@ -82,22 +83,13 @@ const Overview: React.FC = () => {
     />
   );
 
-  const activityActions = (
-    <>
-      {selectedPet && (
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => setShowFoodModal(true)}
-        >
-          <Plus size={16} />
-          {t('overview.log_food')}
-        </Button>
-      )}
-      {dateNavigation}
-    </>
-  );
+  /*
+   * Logging food is what this page is for, so it belongs in the header rather
+   * than wedged into the Journal's own row, where it was elbowing the date
+   * steppers. `PageAddFab` picks it up on a phone, where the header bar is the
+   * pet strip and there is no actions slot to sit in.
+   */
+  const logFood = selectedPet ? () => setShowFoodModal(true) : undefined;
 
   return (
     <div className="page-overview">
@@ -108,7 +100,19 @@ const Overview: React.FC = () => {
         switching to the sidebar, where there is room for it.
       */}
       <AppHeader>
-        <AppHeaderBar desktopOnly title={t('navigation.overview')} />
+        <AppHeaderBar
+          desktopOnly
+          title={t('navigation.overview')}
+          actions={
+            logFood ? (
+              <PageAddAction
+                onClick={logFood}
+                icon={Drumstick}
+                label={t('overview.log_food')}
+              />
+            ) : null
+          }
+        />
         <AppHeaderRow>
           <PetSelector variant="mobile" />
         </AppHeaderRow>
@@ -146,7 +150,7 @@ const Overview: React.FC = () => {
       </section>
       {!showNoPetsEmpty && (
         <section>
-          <SectionHeader icon={<Clock />} actions={activityActions}>
+          <SectionHeader icon={<Clock />} actions={dateNavigation}>
             {t('overview.activity')}
           </SectionHeader>
           <div className="overview-timeline-container">
@@ -172,6 +176,13 @@ const Overview: React.FC = () => {
           </div>
         </section>
       )}
+      {logFood ? (
+        <PageAddFab
+          onClick={logFood}
+          icon={Drumstick}
+          label={t('overview.log_food')}
+        />
+      ) : null}
       {selectedEvent ? (
         <EventDetailsModal
           isOpen

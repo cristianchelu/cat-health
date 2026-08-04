@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { ProviderAccountDTO } from 'shared';
 import { useProviderAccounts, useDevices } from '@/hooks/queries/deviceQueries';
 import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
-import { PageAddFab, PageAddLink } from '@/components/ui/PageAddAction';
+import { PageAddFab, PageAddAction } from '@/components/ui/PageAddAction';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MetaLine } from '@/components/ui/MetaLine';
 import { EmptyState, LoadingState } from '@/components/ui/PageState';
@@ -92,7 +92,7 @@ const ProvidersPage: React.FC = () => {
           back={{ to: '/settings', label: t('navigation.settings') }}
           title={t('settings.providers')}
           actions={
-            <PageAddLink
+            <PageAddAction
               to="/settings/providers/new"
               label={t('settings.add_provider')}
             />

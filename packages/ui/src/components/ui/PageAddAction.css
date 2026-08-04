@@ -4,8 +4,18 @@
  * are kept in one stylesheet because the breakpoint that hides one must be the
  * same one that shows the other.
  */
+/*
+ * The FAB is a <button> when it opens something in place and an <a> when it
+ * navigates, so it carries the button reset unconditionally: a bare <button>
+ * arrives with the UA's two-tone `outset` border and its own padding, neither
+ * of which the anchor ever had. Sized by width/height and centred by flex, so
+ * there is nothing for padding to do.
+ */
 .page-add-fab {
   display: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
 }
 
 @media (max-width: 767px) {

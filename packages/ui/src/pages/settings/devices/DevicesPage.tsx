@@ -5,7 +5,7 @@ import type { DeviceType } from 'shared';
 import { useDevices } from '@/hooks/queries/deviceQueries';
 import { useRegionalPreferences } from '@/contexts/RegionalPreferencesProvider';
 import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
-import { PageAddFab, PageAddLink } from '@/components/ui/PageAddAction';
+import { PageAddFab, PageAddAction } from '@/components/ui/PageAddAction';
 import { ListToolbar } from '@/components/ui/ListToolbar';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { SortControl } from '@/components/ui/SortControl';
@@ -101,7 +101,7 @@ const DevicesPage: React.FC = () => {
           back={{ to: '/settings', label: t('navigation.settings') }}
           title={t('settings.devices')}
           actions={
-            <PageAddLink
+            <PageAddAction
               to="/settings/devices/new"
               label={t('settings.add_device')}
             />
