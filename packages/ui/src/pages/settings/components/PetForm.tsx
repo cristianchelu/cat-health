@@ -13,6 +13,7 @@ import {
   LabeledSwitchField,
 } from '@/components/ui/form';
 import { useAppForm, useUnsavedBlocker } from '@/hooks/form';
+import { useBackNavigation } from '@/hooks/useBackNavigation';
 import AvatarUpload from '@/components/pet/AvatarUpload';
 
 interface PetFormProps {
@@ -47,6 +48,10 @@ const PetForm: React.FC<PetFormProps> = ({
   title,
 }) => {
   const { t } = useTranslation();
+  const back = useBackNavigation({
+    to: '/settings',
+    label: t('navigation.settings'),
+  });
   const {
     control,
     handleSubmit,
@@ -89,7 +94,7 @@ const PetForm: React.FC<PetFormProps> = ({
     <SettingsFormPage
       className="pet-form"
       title={title || t('settings.add_pet_title')}
-      back={{ to: '/settings', label: t('navigation.settings') }}
+      back={{ to: back.to, label: back.label, onNavigate: onCancel }}
     >
       <FormShell
         onSubmit={handleSubmit(handleFormSubmit)}

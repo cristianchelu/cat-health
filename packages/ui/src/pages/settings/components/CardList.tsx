@@ -26,6 +26,8 @@ interface CardListItemProps {
   children: React.ReactNode;
   /** Navigate via React Router `Link` when set. Prefer over `onClick` for routes. */
   to?: string;
+  /** React Router location state (e.g. `backState(...)` for non-canonical entries). */
+  state?: unknown;
   /** Action handler; renders a `<button>` when `to` is not set. */
   onClick?: () => void;
   trailing?: React.ReactNode;
@@ -36,6 +38,7 @@ export const CardListItem: React.FC<CardListItemProps> = ({
   icon,
   children,
   to,
+  state,
   onClick,
   trailing,
   className,
@@ -64,7 +67,7 @@ export const CardListItem: React.FC<CardListItemProps> = ({
 
   if (to) {
     return (
-      <Link to={to} className={itemClassName} onClick={onClick}>
+      <Link to={to} state={state} className={itemClassName} onClick={onClick}>
         {content}
       </Link>
     );

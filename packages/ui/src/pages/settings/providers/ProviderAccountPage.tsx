@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { AlertTriangle, Info, Plus, Smartphone } from 'lucide-react';
 import type { ProviderPetLink } from 'shared';
 import {
@@ -9,6 +9,7 @@ import {
   useUpdateProviderAccount,
   useDevices,
 } from '@/hooks/queries/deviceQueries';
+import { backState } from '@/lib/navigationBack';
 import { isRecord } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import {
@@ -22,6 +23,7 @@ import { LoadingState } from '@/components/ui/PageState';
 import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm, useDraftForm, useUnsavedBlocker } from '@/hooks/form';
+import { useBackNavigation } from '@/hooks/useBackNavigation';
 import {
   CardList,
   CardListContent,
@@ -53,10 +55,13 @@ function isProviderPetLink(value: unknown): value is ProviderPetLink {
 
 const ProviderAccountPage: React.FC = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const parsedId = Number.parseInt(id ?? '', 10);
   const accountId = Number.isInteger(parsedId) && parsedId > 0 ? parsedId : 0;
+  const back = useBackNavigation({
+    to: '/settings/providers',
+    label: t('settings.providers'),
+  });
 
   const { data: providers = [], isLoading: providersLoading } = useProviders();
   const { data: devices = [] } = useDevices();
@@ -173,7 +178,7 @@ const ProviderAccountPage: React.FC = () => {
         ...(hasConfigModule || supportsPetLinking ? { config } : {}),
       });
       markSaved();
-      void navigate('/settings/providers');
+      back.go();
     } catch (err) {
       console.error(err);
       setServerError(t('settings.update_provider_error'));
@@ -188,7 +193,7 @@ const ProviderAccountPage: React.FC = () => {
   const header = (title: React.ReactNode) => (
     <AppHeader>
       <AppHeaderBar
-        back={{ to: '/settings/providers', label: t('settings.providers') }}
+        back={{ to: back.to, label: back.label, onNavigate: back.go }}
         title={title}
       />
     </AppHeader>
@@ -209,9 +214,7 @@ const ProviderAccountPage: React.FC = () => {
         {header(t('settings.edit_provider_title'))}
         <div className="provider-account-error">
           <p>{t('settings.error_loading_provider')}</p>
-          <Button onClick={() => void navigate('/settings/providers')}>
-            {t('settings.back')}
-          </Button>
+          <Button onClick={back.go}>{t('settings.back')}</Button>
         </div>
       </div>
     );
@@ -236,7 +239,7 @@ const ProviderAccountPage: React.FC = () => {
           onSubmit={handleSubmit(onSubmit)}
           error={serverError}
           actions={{
-            onCancel: () => void navigate('/settings/providers'),
+            onCancel: back.go,
             cancelLabel: t('settings.cancel'),
             submitLabel: updateAccount.isPending
               ? t('settings.saving')
@@ -291,6 +294,10 @@ const ProviderAccountPage: React.FC = () => {
               key={device.id}
               icon={<Smartphone size="1em" />}
               to={`/settings/devices/${device.id}`}
+              state={backState(
+                `/settings/providers/${accountId}`,
+                account.name,
+              )}
             >
               <CardListContent title={device.name} description={device.type} />
             </CardListItem>
@@ -306,6 +313,7 @@ const ProviderAccountPage: React.FC = () => {
               </div>
             }
             to={`/settings/devices/new?account=${accountId}`}
+            state={backState(`/settings/providers/${accountId}`, account.name)}
           >
             <CardListContent
               title={t('settings.add_device')}

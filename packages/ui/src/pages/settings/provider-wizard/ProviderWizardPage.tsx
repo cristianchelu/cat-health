@@ -18,6 +18,7 @@ import {
 } from '@/hooks/queries/deviceQueries';
 import { isRecord } from '@/lib/utils';
 import { useUnsavedBlocker } from '@/hooks/form';
+import { useBackNavigation } from '@/hooks/useBackNavigation';
 import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { LoadingState } from '@/components/ui/PageState';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
@@ -87,6 +88,12 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
 
   const seedAccountId =
     entry === 'add-device' ? readSeedAccountId(searchParams) : null;
+
+  const leaveFallback =
+    entry === 'connect'
+      ? { to: '/settings/providers', label: t('settings.providers') }
+      : { to: '/settings/devices', label: t('settings.devices') };
+  const leave = useBackNavigation(leaveFallback);
 
   const [state, setState] = React.useState<WizardState>({ step: 'pick' });
   /*
@@ -173,19 +180,22 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
    * `requestLeave` confirm has already run where one was warranted, and
    * `setStepDirty(false)` would land a render too late to be seen by a
    * `navigate()` in the same tick.
+   *
+   * Abandon uses history-aware leave (pop, else replace onto the fallback).
+   * Pushing the fallback left the wizard under that page, so its back control
+   * bounced straight back in.
    */
   const exit = React.useCallback(() => {
     markSaved();
-    void navigate(
-      entry === 'connect' ? '/settings/providers' : '/settings/devices',
-    );
-  }, [entry, markSaved, navigate]);
+    leave.go();
+  }, [markSaved, leave.go]);
 
   /** Where a connect flow lands once its remaining steps are exhausted. */
   const finishConnect = React.useCallback(
     (accountId: number) => {
       markSaved();
-      void navigate(`/settings/providers/${accountId}`);
+      // Replace so the wizard is not under the account page in history.
+      void navigate(`/settings/providers/${accountId}`, { replace: true });
     },
     [markSaved, navigate],
   );
@@ -243,8 +253,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
    * destination rather than "Back" keeps the two from reading as duplicates of
    * each other.
    */
-  const leaveLabel =
-    entry === 'connect' ? t('settings.providers') : t('navigation.settings');
+  const leaveLabel = leave.label;
 
   /** Advance past a step that has no work left for the current provider. */
   const afterDiscovery = (accountId: number) => {

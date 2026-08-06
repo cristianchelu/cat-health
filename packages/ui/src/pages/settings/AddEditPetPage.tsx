@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import PetForm from './components/PetForm';
 import {
   usePet,
@@ -10,14 +10,18 @@ import {
   useTogglePetPresence,
   useUploadPetAvatar,
 } from '@/hooks/queries/petQueries';
+import { useBackNavigation } from '@/hooks/useBackNavigation';
 import type { PostPetRequestDTO } from 'shared';
 import './AddEditPetPage.css';
 
 const AddEditPetPage: React.FC = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const isEditing = Boolean(id);
+  const back = useBackNavigation({
+    to: '/settings',
+    label: t('navigation.settings'),
+  });
 
   const petId = parseInt(id || '0');
   const { data: pet, isLoading } = usePet(petId, isEditing);
@@ -65,13 +69,13 @@ const AddEditPetPage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigate('/settings');
+    back.go();
   };
 
   const handleDelete = () => {
     if (!isEditing) return;
     deletePetMutation.mutate(undefined, {
-      onSuccess: () => navigate('/settings'),
+      onSuccess: () => back.go(),
     });
   };
 

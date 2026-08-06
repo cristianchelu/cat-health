@@ -153,13 +153,9 @@ const LitterboxDetails: React.FC = () => {
 
   return (
     <div className="page-litterbox-details">
-      {/*
-        Explicit route, not history: the only entry point is the overview card,
-        and a reload or bookmark leaves `navigate(-1)` with nowhere to go.
-      */}
       <AppHeader>
         <AppHeaderBar
-          back={{ to: '/overview', label: t('navigation.overview') }}
+          back={{ to: '/', label: t('navigation.overview') }}
           title={t('litterbox_details.title')}
           actions={rangeActions}
         />

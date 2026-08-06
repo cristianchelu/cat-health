@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import {
   useFood,
   useCreateFood,
@@ -16,6 +16,7 @@ import {
 import { SettingsFormPage } from '@/components/ui/SettingsFormPage';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm, useUnsavedBlocker } from '@/hooks/form';
+import { useBackNavigation } from '@/hooks/useBackNavigation';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import type { FoodTypeDTO, NutrientNameDTO, NutrientUnitDTO } from 'shared';
 import type { GetFoodDTO } from 'shared';
@@ -112,10 +113,13 @@ function foodToFormValues(food: GetFoodDTO): FoodFormValues {
 
 const AddEditFoodPage: React.FC = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isNew = id === 'new' || id === undefined;
   const foodId = isNew ? 0 : Number(id);
+  const back = useBackNavigation({
+    to: '/settings',
+    label: t('navigation.settings'),
+  });
 
   const { data: food, isLoading } = useFood(foodId, !isNew);
   const createFood = useCreateFood();
@@ -174,7 +178,7 @@ const AddEditFoodPage: React.FC = () => {
         await updateFoodMutation.mutateAsync(payload);
       }
       markSaved();
-      navigate('/settings');
+      back.go();
     } catch (err) {
       console.error(err);
       setError(
@@ -199,7 +203,7 @@ const AddEditFoodPage: React.FC = () => {
         title={
           isNew ? t('settings.add_food_title') : t('settings.edit_food_title')
         }
-        back={{ to: '/settings', label: t('navigation.settings') }}
+        back={{ to: back.to, label: back.label, onNavigate: back.go }}
         tabs={
           <TabsList>
             <TabsTrigger value="basic">
@@ -217,7 +221,7 @@ const AddEditFoodPage: React.FC = () => {
           onSubmit={handleSubmit(onFormSubmit)}
           error={error}
           actions={{
-            onCancel: () => navigate('/settings'),
+            onCancel: back.go,
             cancelLabel: t('settings.cancel'),
             submitLabel: isPending
               ? t('settings.saving')

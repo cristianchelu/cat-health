@@ -1,25 +1,26 @@
 import * as React from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppHeaderScroll } from '@/hooks/useAppHeaderScroll';
+import { useBackNavigation } from '@/hooks/useBackNavigation';
 import './AppHeader.css';
 
 interface AppHeaderBack {
   /**
-   * Destination. Prefer an explicit route over history: arriving at a detail
-   * page from a link, a reload, or a bookmark all leave `navigate(-1)` with
-   * nowhere sensible to go.
+   * Canonical parent when there is no `location.state.back` and no in-app
+   * history to pop — bookmark, new tab, or reload with an empty return path.
    */
   to?: string;
-  /** Go back through history instead. Implied when `to` and `onNavigate` are omitted. */
-  useHistory?: boolean;
   /**
    * Handle going back yourself — for a wizard step, or anywhere leaving needs
-   * to run a guard first. Takes precedence over `to` and `useHistory`.
+   * to run a guard first. Takes precedence over history-aware leave.
    */
   onNavigate?: () => void;
-  /** Where the control lands. Desktop link text, and the mobile button's name. */
+  /**
+   * Where the control lands when using the canonical `to` fallback. Overridden
+   * by `location.state.back.label` when a non-canonical entry passed one.
+   */
   label: string;
 }
 
@@ -165,37 +166,39 @@ const AppHeaderBar = React.forwardRef<HTMLDivElement, AppHeaderBarProps>(
     ref,
   ) => {
     const navigate = useNavigate();
-    const { to, useHistory, onNavigate, label } = back ?? {};
+    const { to, onNavigate, label: fallbackLabel } = back ?? {};
+    const resolved = useBackNavigation({
+      to: to ?? '/',
+      label: fallbackLabel ?? '',
+    });
+    const label = onNavigate ? (fallbackLabel ?? '') : resolved.label;
 
     const goBack = React.useCallback(() => {
       if (onNavigate) {
         onNavigate();
         return;
       }
+      if (to !== undefined) {
+        resolved.go();
+        return;
+      }
       void navigate(-1);
-    }, [navigate, onNavigate]);
-
-    const asLink = to !== undefined && !onNavigate && !useHistory;
+    }, [navigate, onNavigate, resolved, to]);
 
     const control = (
       controlClassName: string,
       children: React.ReactNode,
       ariaLabel?: string,
-    ) =>
-      asLink ? (
-        <Link to={to} className={controlClassName} aria-label={ariaLabel}>
-          {children}
-        </Link>
-      ) : (
-        <button
-          type="button"
-          className={controlClassName}
-          onClick={goBack}
-          aria-label={ariaLabel}
-        >
-          {children}
-        </button>
-      );
+    ) => (
+      <button
+        type="button"
+        className={controlClassName}
+        onClick={goBack}
+        aria-label={ariaLabel}
+      >
+        {children}
+      </button>
+    );
 
     return (
       <div

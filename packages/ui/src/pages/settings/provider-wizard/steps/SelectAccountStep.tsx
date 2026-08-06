@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import { Button } from '@/components/ui/Button';
 import type { ProviderAccountDTO } from 'shared';
 import { useProviders, useDevices } from '@/hooks/queries/deviceQueries';
+import { backState } from '@/lib/navigationBack';
 import { countDevicesByAccount } from '../../providers/providerListUtils.ts';
 import { getProviderBrand } from '../flows/providerBrandRegistry.ts';
 import {
@@ -120,7 +121,13 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
         <Info size={18} aria-hidden="true" />
         <span>
           {t('settings.provider_missing_hint')}{' '}
-          <Link to="/settings/providers">{t('settings.providers')}</Link>
+          <Link
+            to="/settings/providers"
+            replace
+            state={backState('/settings', t('navigation.settings'))}
+          >
+            {t('settings.providers')}
+          </Link>
         </span>
       </p>
 

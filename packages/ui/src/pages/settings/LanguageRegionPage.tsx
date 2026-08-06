@@ -1,6 +1,5 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
 import { SettingsFormPage } from '@/components/ui/SettingsFormPage';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { FormField, FormShell, Select } from '@/components/ui/form';
@@ -9,6 +8,7 @@ import {
   useUpdateSettings,
 } from '@/hooks/queries/settingsQueries';
 import { useDraftForm, useUnsavedBlocker } from '@/hooks/form';
+import { useBackNavigation } from '@/hooks/useBackNavigation';
 import {
   getTimezoneSelectOptions,
   timezoneApiValueToSelect,
@@ -35,7 +35,10 @@ interface LanguageRegionDraft {
 
 const LanguageRegionPage: React.FC = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const back = useBackNavigation({
+    to: '/settings',
+    label: t('navigation.settings'),
+  });
   const { data: settings } = useSettings();
   const updateSettings = useUpdateSettings();
 
@@ -96,7 +99,7 @@ const LanguageRegionPage: React.FC = () => {
       {
         onSuccess: () => {
           markSaved();
-          navigate('/settings');
+          back.go();
         },
       },
     );
@@ -106,7 +109,7 @@ const LanguageRegionPage: React.FC = () => {
     <SettingsFormPage
       className="language-region-page"
       title={t('settings.language_region')}
-      back={{ to: '/settings', label: t('navigation.settings') }}
+      back={{ to: back.to, label: back.label, onNavigate: back.go }}
       isLoading={!settings}
       loadingMessage={t('common.loading')}
     >
@@ -118,7 +121,7 @@ const LanguageRegionPage: React.FC = () => {
             : null
         }
         actions={{
-          onCancel: () => navigate('/settings'),
+          onCancel: back.go,
           cancelLabel: t('settings.cancel'),
           submitLabel: isSaving
             ? t('settings.saving')

@@ -19,6 +19,7 @@ import {
   useUnlinkDeviceCamera,
   useUpdateDeviceCameraConfig,
 } from '@/hooks/queries/deviceQueries';
+import { backState } from '@/lib/navigationBack';
 import type { DeviceCameraConfigDTO, GetDeviceResponseDTO } from 'shared';
 import './CameraLinkSection.css';
 
@@ -648,15 +649,16 @@ const CameraLinkSection: React.FC<CameraLinkSectionProps> = ({
               </div>
 
               {isThinginoCamera && linkedCameraDevice && (
-                <p className="edit-camera-hint">
-                  {t('camera_link.edit_camera_recording_hint')}{' '}
+                <div className="edit-camera-hint">
+                  <p>{t('camera_link.edit_camera_recording_hint')}</p>
                   <Link
                     to={`/settings/devices/${linkedCameraDevice.id}`}
+                    state={backState(`/devices/${device.id}`, device.name)}
                     className="edit-camera-link"
                   >
                     {t('camera_link.edit_camera_link')}
                   </Link>
-                </p>
+                </div>
               )}
             </div>
           </FormShell>

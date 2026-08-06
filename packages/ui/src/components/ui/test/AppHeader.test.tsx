@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router';
 
 import { AppHeader, AppHeaderBar, AppHeaderRow } from '../AppHeader.tsx';
+import { backState } from '@/lib/navigationBack.ts';
 import { renderWithProviders } from '@/test/render.tsx';
 
 afterEach(() => {
@@ -66,22 +67,22 @@ describe('AppHeaderBar', () => {
 
     // Both variants are in the DOM; only `display: none` (applied by CSS, not
     // available in jsdom) hides one. Assert on the shared accessible name so
-    // the count stays meaningful: exactly two controls, same name, same target.
-    const controls = screen.getAllByRole('link', { name: 'Settings' });
+    // the count stays meaningful: exactly two controls, same name.
+    const controls = screen.getAllByRole('button', { name: 'Settings' });
     assert.equal(controls.length, 2);
-    for (const control of controls) {
-      assert.equal(control.getAttribute('href'), '/settings');
-    }
-    assert.equal(screen.queryAllByRole('link', { name: 'Devices' }).length, 0);
+    assert.equal(
+      screen.queryAllByRole('button', { name: 'Devices' }).length,
+      0,
+    );
   });
 
-  it('navigates back through history when asked to', async () => {
+  it('pops history for an in-app stack, using the fallback label when state is absent', async () => {
     const user = userEvent.setup();
     await renderWithProviders(
       <>
         <AppHeader>
           <AppHeaderBar
-            back={{ useHistory: true, label: 'Back' }}
+            back={{ to: '/settings/devices', label: 'Devices' }}
             title="Kibble"
           />
         </AppHeader>
@@ -89,15 +90,79 @@ describe('AppHeaderBar', () => {
       </>,
       {
         router: {
-          initialEntries: ['/devices', '/devices/7'],
+          initialEntries: ['/settings/devices', '/settings/devices/7'],
           initialIndex: 1,
         },
       },
     );
 
-    assert.equal(screen.getByTestId('pathname').textContent, '/devices/7');
-    await user.click(screen.getAllByRole('button', { name: 'Back' })[0]);
-    assert.equal(screen.getByTestId('pathname').textContent, '/devices');
+    assert.equal(
+      screen.getByTestId('pathname').textContent,
+      '/settings/devices/7',
+    );
+    await user.click(screen.getAllByRole('button', { name: 'Devices' })[0]);
+    assert.equal(
+      screen.getByTestId('pathname').textContent,
+      '/settings/devices',
+    );
+  });
+
+  it('shows state.back label and returns there on a cold start', async () => {
+    const user = userEvent.setup();
+    await renderWithProviders(
+      <>
+        <AppHeader>
+          <AppHeaderBar
+            back={{ to: '/settings/devices', label: 'Devices' }}
+            title="Kibble"
+          />
+        </AppHeader>
+        <LocationProbe />
+      </>,
+      {
+        router: {
+          initialEntries: [
+            {
+              pathname: '/settings/devices/7',
+              state: backState('/settings/providers/3', 'SurePet'),
+            },
+          ],
+        },
+      },
+    );
+
+    assert.equal(screen.getAllByRole('button', { name: 'SurePet' }).length, 2);
+    assert.equal(
+      screen.queryAllByRole('button', { name: 'Devices' }).length,
+      0,
+    );
+    await user.click(screen.getAllByRole('button', { name: 'SurePet' })[0]);
+    assert.equal(
+      screen.getByTestId('pathname').textContent,
+      '/settings/providers/3',
+    );
+  });
+
+  it('falls back to the canonical parent on a cold start with no state', async () => {
+    const user = userEvent.setup();
+    await renderWithProviders(
+      <>
+        <AppHeader>
+          <AppHeaderBar
+            back={{ to: '/settings/devices', label: 'Devices' }}
+            title="Kibble"
+          />
+        </AppHeader>
+        <LocationProbe />
+      </>,
+      { router: { initialEntries: ['/settings/devices/7'] } },
+    );
+
+    await user.click(screen.getAllByRole('button', { name: 'Devices' })[0]);
+    assert.equal(
+      screen.getByTestId('pathname').textContent,
+      '/settings/devices',
+    );
   });
 
   it('runs its own guard instead of navigating, when given one', async () => {
@@ -120,8 +185,8 @@ describe('AppHeaderBar', () => {
       { router: { initialEntries: ['/settings/providers/new'] } },
     );
 
-    // `onNavigate` wins over `to`: a wizard has to ask before it discards a
-    // half-filled form, which a plain <Link> would never give it the chance to.
+    // `onNavigate` wins over history-aware leave: a wizard has to ask before
+    // it discards a half-filled form.
     await user.click(screen.getAllByRole('button', { name: 'Providers' })[0]);
     assert.equal(left, 1);
     assert.equal(

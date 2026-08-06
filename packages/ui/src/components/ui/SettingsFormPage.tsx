@@ -15,9 +15,8 @@ interface SettingsFormPageProps extends Omit<
 > {
   title?: React.ReactNode;
   /**
-   * Where leaving lands. These screens are reached from one place and edit one
-   * thing, so they are the pages most likely to be arrived at by deep link —
-   * name the destination rather than trusting history.
+   * Canonical parent for leave navigation. Resolved with `location.state.back`
+   * when a non-canonical entry passed one — see `useBackNavigation`.
    */
   back?: AppHeaderBack;
   headerActions?: React.ReactNode;

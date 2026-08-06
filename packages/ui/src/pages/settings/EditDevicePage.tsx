@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import {
   useDevice,
   useUpdateDevice,
@@ -21,6 +21,7 @@ import { LoadingState } from '@/components/ui/PageState';
 import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm, useUnsavedBlocker } from '@/hooks/form';
+import { useBackNavigation } from '@/hooks/useBackNavigation';
 import { DeviceSummary } from './components/DeviceSummary';
 import { DeviceTypeTile } from './components/DeviceTypeTile';
 import {
@@ -112,9 +113,12 @@ function deviceToFormValues(device: {
 
 const EditDevicePage: React.FC = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const deviceId = parseInt(id || '0', 10);
+  const back = useBackNavigation({
+    to: '/settings/devices',
+    label: t('settings.devices'),
+  });
 
   const {
     data: device,
@@ -183,7 +187,7 @@ const EditDevicePage: React.FC = () => {
         },
       });
       markSaved();
-      navigate('/settings/devices');
+      back.go();
     } catch (err) {
       console.error(err);
       setSubmitError(t('settings.edit_device_error'));
@@ -198,7 +202,7 @@ const EditDevicePage: React.FC = () => {
   const header = (title: React.ReactNode) => (
     <AppHeader>
       <AppHeaderBar
-        back={{ to: '/settings/devices', label: t('settings.devices') }}
+        back={{ to: back.to, label: back.label, onNavigate: back.go }}
         title={title}
       />
     </AppHeader>
@@ -219,9 +223,7 @@ const EditDevicePage: React.FC = () => {
         {header(t('settings.edit_device_title'))}
         <div className="error-state">
           <p>{t('devices.error_loading_device')}</p>
-          <Button onClick={() => navigate('/settings/devices')}>
-            {t('settings.back')}
-          </Button>
+          <Button onClick={back.go}>{t('settings.back')}</Button>
         </div>
       </div>
     );
@@ -252,7 +254,7 @@ const EditDevicePage: React.FC = () => {
           onSubmit={handleSubmit(onFormSubmit)}
           error={submitError}
           actions={{
-            onCancel: () => navigate('/settings/devices'),
+            onCancel: back.go,
             cancelLabel: t('settings.cancel'),
             submitLabel: updateDevice.isPending
               ? t('settings.saving')

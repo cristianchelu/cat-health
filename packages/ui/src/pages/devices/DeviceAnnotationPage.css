@@ -9,6 +9,10 @@
   height: 100svh;
   max-height: 100svh;
 
+  .app-header {
+    flex-shrink: 0;
+  }
+
   @media (max-width: 767px) {
     height: auto;
     max-height: none;

@@ -19,6 +19,7 @@ import {
   formatRelativeTimeAgo,
   isMeaningfulLastSeen,
 } from '@/lib/formatRelativeTime';
+import { backState } from '@/lib/navigationBack';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import { isVisitAnnotationEnabled } from '@/lib/deviceAnnotation';
 import './DeviceHeader.css';
@@ -106,6 +107,7 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
             {isVisitAnnotationEnabled(device) && (
               <Link
                 to={`/devices/${device.id}/annotate`}
+                state={backState(`/devices/${device.id}`, device.name)}
                 className="device-header-icon-action"
                 aria-label={t('devices.open_annotation_workspace')}
                 title={t('devices.open_annotation_workspace')}
@@ -116,7 +118,11 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate(`/settings/devices/${device.id}`)}
+              onClick={() =>
+                navigate(`/settings/devices/${device.id}`, {
+                  state: backState(`/devices/${device.id}`, device.name),
+                })
+              }
               className="edit-button"
               aria-label={t('settings.edit_device_title')}
             >

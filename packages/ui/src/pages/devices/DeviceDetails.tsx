@@ -1,11 +1,13 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams, useNavigate } from 'react-router';
+import { useParams } from 'react-router';
 import { Clock, LayoutGrid, Settings, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { useUnsavedBlocker } from '@/hooks/form';
+import { useBackNavigation } from '@/hooks/useBackNavigation';
 import { DeviceHeader } from './components/DeviceHeader';
 import { ProviderDeviceView } from './components/ProviderDeviceView';
 import { DeviceTimeline } from './components/DeviceTimeline';
@@ -14,12 +16,17 @@ import FeederFoodSection from './components/FeederFoodSection';
 import ReferenceImagesTab from './components/ReferenceImagesTab';
 import './DeviceDetails.css';
 import { useDevice } from '@/hooks/queries/deviceQueries';
+import { parseDeviceRouteId } from './parseDeviceRouteId.ts';
 
 const DeviceDetails: React.FC = () => {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const deviceId = id ? parseInt(id, 10) : null;
+  const deviceId = parseDeviceRouteId(id);
+  const invalidId = deviceId == null;
+  const back = useBackNavigation({
+    to: '/devices',
+    label: t('navigation.devices'),
+  });
   const [activeTab, setActiveTab] = React.useState('overview');
   const [pendingTab, setPendingTab] = React.useState<string | null>(null);
   const [cameraDirty, setCameraDirty] = React.useState(false);
@@ -28,7 +35,11 @@ const DeviceDetails: React.FC = () => {
   const { blockerOpen, onConfirmLeave, onCancelLeave } =
     useUnsavedBlocker(settingsDirty);
 
-  const { data: device, isLoading, error } = useDevice(deviceId!, !!deviceId);
+  const {
+    data: device,
+    isLoading,
+    error,
+  } = useDevice(deviceId ?? 0, !invalidId);
 
   const handleTabChange = (nextTab: string) => {
     if (activeTab === 'settings' && nextTab !== 'settings' && settingsDirty) {
@@ -39,16 +50,30 @@ const DeviceDetails: React.FC = () => {
   };
 
   if (isLoading) {
-    return <div>{t('devices.loading_device')}</div>;
+    return (
+      <div className="page-shell-narrow">
+        <AppHeader>
+          <AppHeaderBar
+            back={{ to: back.to, label: back.label, onNavigate: back.go }}
+            title={t('devices.loading_device')}
+          />
+        </AppHeader>
+        <p>{t('devices.loading_device')}</p>
+      </div>
+    );
   }
 
-  if (error || !device) {
+  if (invalidId || error || !device) {
     return (
-      <div>
-        <div>{t('devices.error_loading_device')}</div>
-        <Button onClick={() => navigate('/devices')}>
-          {t('devices.back_to_devices')}
-        </Button>
+      <div className="page-shell-narrow">
+        <AppHeader>
+          <AppHeaderBar
+            back={{ to: back.to, label: back.label, onNavigate: back.go }}
+            title={t('devices.error_loading_device')}
+          />
+        </AppHeader>
+        <p>{t('devices.error_loading_device')}</p>
+        <Button onClick={back.go}>{t('devices.back_to_devices')}</Button>
       </div>
     );
   }
