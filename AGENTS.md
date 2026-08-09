@@ -101,6 +101,12 @@ return (
 **ALWAYS use CSS variables** from `packages/ui/src/theme.css` instead of hardcoding values.
 **ALWAYS use CSS nesting** with one single top-level classname that contains everything else.
 
+**No raw spacing `px` in component CSS.** Padding, margin, gap, and inset must use `--space-*` (or a semantic token that resolves to one, e.g. `--card-padding`, `--page-section-gap`). Same for type: `--text-*` / `--font-*` / `--line-height-*`, not bare `13px` / `600`.
+
+- **NEVER** copy a design-file number into CSS because Figma said `15px`. Map it to the nearest existing token (`15` → `--space-md` / `16px` is fine; do not invent `15px`).
+- If the design needs a value that is **not** on the scale and snapping would materially change the layout, **stop and confirm with the user before adding a new token** in `theme.css`. Do not silently ship a one-off `px` or a local custom property that is just a magic number in disguise.
+- Hairlines, borders, and shadows may keep literal `px` where the theme already does (`1px` borders, shadow blur radii). That exception is not a license for layout spacing.
+
 #### Sizing & layout
 
 These are the rules that keep chrome from drifting between routes. Each one exists because a page, a control, or an element decided its own geometry and stopped agreeing with its neighbours.
