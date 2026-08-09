@@ -14,6 +14,8 @@ interface ReferenceImagePickerProps {
   onClose: () => void;
   petId: number;
   sourceDeviceId: number;
+  /** Media the pet already references; hidden so they cannot be re-added. */
+  excludeMediaIds?: readonly number[];
   onSelect: (mediaIds: number[]) => void;
 }
 
@@ -22,16 +24,22 @@ const ReferenceImagePicker: React.FC<ReferenceImagePickerProps> = ({
   onClose,
   petId,
   sourceDeviceId,
+  excludeMediaIds,
   onSelect,
 }) => {
   const { t } = useTranslation();
 
   const { data: pet } = usePet(petId, isOpen);
-  const { data: candidateMedia, isLoading } = useVerifiedEventMedia(
+  const { data: verifiedMedia, isLoading } = useVerifiedEventMedia(
     sourceDeviceId,
     petId,
     isOpen,
   );
+  const candidateMedia = React.useMemo(() => {
+    if (!verifiedMedia || !excludeMediaIds?.length) return verifiedMedia;
+    const excluded = new Set(excludeMediaIds);
+    return verifiedMedia.filter((media) => !excluded.has(media.id));
+  }, [verifiedMedia, excludeMediaIds]);
   const [selectedIds, setSelectedIds] = React.useState<Set<number>>(new Set());
   const [displayCount, setDisplayCount] = React.useState(50); // Show 50 at a time
 
@@ -78,10 +86,17 @@ const ReferenceImagePicker: React.FC<ReferenceImagePickerProps> = ({
         </DialogTitle>
 
         <p className="picker-description">
-          {pet?.name ? t('pet_recognizer.picker_description', { name: pet.name }) : ''}
+          {pet?.name
+            ? t('pet_recognizer.picker_description', { name: pet.name })
+            : ''}
           {candidateMedia && (
             <span className="total-count">
-              {' '}({t('pet_recognizer.images_available', { count: candidateMedia.length })})
+              {' '}
+              (
+              {t('pet_recognizer.images_available', {
+                count: candidateMedia.length,
+              })}
+              )
             </span>
           )}
         </p>
@@ -94,11 +109,11 @@ const ReferenceImagePicker: React.FC<ReferenceImagePickerProps> = ({
           {!isLoading && candidateMedia && candidateMedia.length === 0 && (
             <div className="empty-state">
               <p>
-                {t('pet_recognizer.picker_no_images', { name: pet?.name ?? '' })}
+                {t('pet_recognizer.picker_no_images', {
+                  name: pet?.name ?? '',
+                })}
               </p>
-              <p className="help-text">
-                {t('pet_recognizer.picker_help')}
-              </p>
+              <p className="help-text">{t('pet_recognizer.picker_help')}</p>
             </div>
           )}
 

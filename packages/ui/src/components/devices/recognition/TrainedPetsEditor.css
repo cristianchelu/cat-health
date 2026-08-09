@@ -1,0 +1,143 @@
+.trained-pets-editor {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  .trained-pet-row {
+    border-bottom: var(--border-thin);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &.is-ignored {
+      .trained-pet-row-name,
+      .avatar {
+        opacity: 0.5;
+      }
+
+      .trained-pet-row-status {
+        font-style: italic;
+      }
+    }
+  }
+
+  .trained-pets-empty {
+    padding: var(--space-lg) var(--space-md);
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
+    text-align: center;
+  }
+
+  .trained-pet-row-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    /* Match recognition-tab-card inset while borders stay full-bleed. */
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .trained-pet-row-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    min-width: 0;
+    flex: 1;
+  }
+
+  .trained-pet-row-name {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    line-height: var(--line-height-tight);
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .trained-pet-row-status {
+    font-size: var(--text-xs);
+    color: var(--color-text-light);
+  }
+
+  .trained-pet-row-detail {
+    /* Inline start = card inset + avatar.sm + row gap. */
+    padding: var(--space-2xs) var(--space-md) var(--space-sm)
+      calc(var(--space-md) + 2.25rem + var(--space-sm));
+  }
+
+  .trained-pet-thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .trained-pet-thumb {
+    position: relative;
+    width: 3.25rem;
+    height: 3.25rem;
+    flex-shrink: 0;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--color-surface-muted);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .trained-pet-thumb-remove {
+      position: absolute;
+      top: calc(-1 * var(--space-3xs));
+      right: calc(-1 * var(--space-3xs));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.125rem;
+      height: 1.125rem;
+      border: none;
+      border-radius: var(--radius-full);
+      background: var(--color-error);
+      color: var(--color-text-inverted, #fff);
+      cursor: pointer;
+
+      &:hover {
+        filter: brightness(0.9);
+      }
+
+      /* The visual stays 18px; on touch a centered pseudo-element carries
+         the 44px tap-target floor. */
+      @media (max-width: 767px) {
+        &::after {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: var(--control-height-md);
+          height: var(--control-height-md);
+          transform: translate(-50%, -50%);
+        }
+      }
+    }
+  }
+
+  .trained-pet-thumb-add {
+    width: 3.25rem;
+    height: 3.25rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text-light);
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--color-border-hover);
+      color: var(--color-text);
+    }
+  }
+}

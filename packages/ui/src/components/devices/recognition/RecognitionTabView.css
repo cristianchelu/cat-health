@@ -1,0 +1,67 @@
+.recognition-tab-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+
+  .recognition-tab-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .recognition-tab-card {
+    --card-padding: var(--space-md);
+  }
+
+  .recognition-model-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .recognition-model-row-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  .auto-identify-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .auto-identify-hint {
+    font-size: var(--text-xs);
+    color: var(--color-text-light);
+    margin: 0;
+  }
+
+  .recognition-tab-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-top: var(--space-sm);
+
+    .recognition-tab-actions-end {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: stretch;
+
+      .recognition-tab-actions-end {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+}
