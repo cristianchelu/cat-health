@@ -1,4 +1,5 @@
 import { type Entity as EspHomeEntity } from 'esphome-client';
+import { sql } from 'kysely';
 import sharp from 'sharp';
 import {
   analyzeDrinkingFromSamples,
@@ -101,6 +102,11 @@ export class FountainController
 
   constructor(device: Device, deps: ProviderDeps) {
     super(device, deps);
+    // Restore from a prior discovery so offline devices still advertise
+    // the integrated camera in state (picker + getLinkedCamera fallback).
+    if (this.config.hasCamera) {
+      this.state.hasCamera = true;
+    }
   }
 
   protected get deviceTypeName(): string {
@@ -122,12 +128,16 @@ export class FountainController
   }
 
   protected onEntitiesReceived(entities: EspHomeEntity[]): void {
-    // Detect camera entities
-    for (const entity of entities) {
-      if ('type' in entity && entity.type === 'camera') {
-        this.state.hasCamera = true;
-        console.log(`Detected camera in ${this.device.name}`);
-      }
+    // Detect camera entities. The state flag doubles as a run-once guard so
+    // multiple camera entities or a reconnect's entity dump cannot fire
+    // overlapping persists.
+    const hasCameraEntity = entities.some(
+      (entity) => 'type' in entity && entity.type === 'camera',
+    );
+    if (hasCameraEntity && !this.state.hasCamera) {
+      this.state.hasCamera = true;
+      console.log(`Detected camera in ${this.device.name}`);
+      void this.persistHasCameraFlag();
     }
 
     // Detect fountain-specific features and initialize state for sensors that exist
@@ -453,6 +463,36 @@ export class FountainController
     return Buffer.from(encoded);
   }
 
+  /**
+   * Remember that this fountain exposed a camera entity so the picker still
+   * offers Integrated Camera after reconnects / while offline. json_set
+   * patches the one key inside the stored JSON string, so a concurrent write
+   * that replaces the whole column (PATCH /devices/:id) is never reverted
+   * from a stale snapshot read here. Deliberately does not bump updated_at:
+   * this is a server-internal cache flag, not a user edit, and should not
+   * churn client caches.
+   */
+  private async persistHasCameraFlag(): Promise<void> {
+    if (this.config.hasCamera) return;
+
+    try {
+      await this.deps.db
+        .updateTable('device')
+        .set({
+          config: sql`json_set(coalesce(config, '{}'), '$.hasCamera', json('true'))`,
+        })
+        .where('id', '=', this.deviceId)
+        .where(sql<boolean>`json_extract(config, '$.hasCamera') is not 1`)
+        .execute();
+      this.config.hasCamera = true;
+    } catch (err) {
+      console.error(
+        `Failed to persist hasCamera flag for ${this.device.name}:`,
+        err,
+      );
+    }
+  }
+
   async getSnapshotBuffer(): Promise<Buffer | undefined> {
     if (!this.state.hasCamera) {
       return undefined;
@@ -598,7 +638,10 @@ export class FountainController
       const faulted = this.state.pumpStatus === 'error';
       signals.push(
         statusSignal(
-          { key: DEVICE_SIGNAL_KEYS.PUMP_FLOW, icon: faulted ? 'alert' : 'check' },
+          {
+            key: DEVICE_SIGNAL_KEYS.PUMP_FLOW,
+            icon: faulted ? 'alert' : 'check',
+          },
           `devices.signals.values.pump_${this.state.pumpStatus}`,
           faulted,
         ),

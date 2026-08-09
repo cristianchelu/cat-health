@@ -21,6 +21,11 @@ export const ESPHomeConfigSchema = Type.Object({
   encryptionKey: Type.Optional(Type.String()),
   clientId: Type.Optional(Type.String()),
   /**
+   * Set the first time ESPHome reports a camera entity. Survives offline
+   * periods so the Camera tab can still offer the integrated source.
+   */
+  hasCamera: Type.Optional(Type.Boolean()),
+  /**
    * Days a fresh filter lasts on this device, which is what a filter-life bar
    * is drawn against. The device reports days remaining but not the interval
    * they count down from, and assuming one would put an invented number on a
@@ -106,10 +111,11 @@ export abstract class BaseESPHomeController implements DeviceController {
       device.config,
       'ESPHome configuration',
     );
+    // Spread rather than copy field-by-field so a config key added to the
+    // schema cannot be silently dropped here.
     this.config = {
-      host: rawConfig.host,
+      ...rawConfig,
       port: rawConfig.port ?? 6053,
-      encryptionKey: rawConfig.encryptionKey,
       clientId: rawConfig.clientId ?? `cat-health-${device.id}`,
     };
 
