@@ -8,6 +8,7 @@ import { PageAddFab, PageAddAction } from '@/components/ui/PageAddAction';
 import { EmptyState, LoadingState } from '@/components/ui/PageState';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { rankDeviceSignals } from '@/lib/deviceSignalRanking';
+import { filterMonitoringDevices } from '@/lib/deviceMonitoring';
 import DeviceCard from './components/DeviceCard';
 import './Devices.css';
 
@@ -21,12 +22,13 @@ const ATTENTION_ORDER: Record<SignalTone, number> = {
 };
 
 /**
- * The monitoring dashboard.
+ * The monitoring dashboard for devices that need day-to-day attention.
  *
- * Ungrouped and sorted by attention: grouping by device type buries a single
- * red box under whichever heading it belongs to, and the question this page
- * answers is "does anything need me", not "what do I own". `/settings/devices`
- * is the list for the latter.
+ * Cameras and pet recognizers live under Settings; this roster is litterboxes,
+ * feeders, and fountains only. Ungrouped and sorted by attention: grouping by
+ * device type buries a single red box under whichever heading it belongs to,
+ * and the question this page answers is "does anything need me", not "what do I
+ * own". `/settings/devices` is the list for the latter.
  */
 const Devices: React.FC = () => {
   const { t } = useTranslation();
@@ -38,8 +40,10 @@ const Devices: React.FC = () => {
     [intlLanguageTag],
   );
 
-  const { sorted, needingAttention } = React.useMemo(() => {
-    const withAttention = (devices ?? []).map(
+  const { sorted, needingAttention, monitoringCount } = React.useMemo(() => {
+    const monitoringDevices = filterMonitoringDevices(devices ?? []);
+
+    const withAttention = monitoringDevices.map(
       (device): { device: DeviceListItemDTO; attention: SignalTone } => ({
         device,
         attention: rankDeviceSignals(device.signals).attention ?? 'calm',
@@ -59,6 +63,7 @@ const Devices: React.FC = () => {
       needingAttention: withAttention.filter(
         (entry) => entry.attention !== 'calm',
       ).length,
+      monitoringCount: monitoringDevices.length,
     };
   }, [devices, collator]);
 
@@ -68,9 +73,9 @@ const Devices: React.FC = () => {
         <AppHeaderBar
           title={t('navigation.devices')}
           subtitle={
-            devices && devices.length > 0 ? (
+            monitoringCount > 0 ? (
               <>
-                {t('settings.device_count', { count: devices.length })}
+                {t('settings.device_count', { count: monitoringCount })}
                 {needingAttention > 0 ? (
                   <StatusPill variant="warn">
                     {t('devices.needing_attention', {
