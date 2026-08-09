@@ -1,0 +1,93 @@
+.camera-picker-content {
+  max-width: var(--max-width-sm);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+
+  .camera-picker-empty {
+    color: var(--color-text-light);
+    font-size: var(--text-sm);
+    margin: var(--space-lg) 0;
+  }
+
+  .camera-picker-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xs);
+    margin-top: var(--space-sm);
+    overflow-y: auto;
+  }
+
+  .camera-picker-tile {
+    position: relative;
+    display: block;
+    padding: 0;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    color: var(--color-text);
+    overflow: hidden;
+
+    &.selected .camera-picker-thumb {
+      outline: 2px solid var(--color-primary);
+      outline-offset: -2px;
+    }
+  }
+
+  .camera-picker-thumb {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: linear-gradient(
+      135deg,
+      var(--media-surface-base),
+      var(--media-surface-raised)
+    );
+    color: var(--media-surface-icon);
+
+    .camera-picker-thumb-fallback {
+      color: inherit;
+    }
+  }
+
+  .camera-picker-selected-indicator {
+    position: absolute;
+    top: var(--space-2xs);
+    right: var(--space-2xs);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    color: var(--color-text-inverted);
+  }
+
+  .camera-picker-name {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: var(--space-md) var(--space-xs) var(--space-2xs);
+    font-size: var(--text-2xs);
+    font-weight: var(--font-semibold);
+    line-height: var(--line-height-tight);
+    color: var(--media-surface-text);
+    text-align: start;
+    background: linear-gradient(transparent, var(--media-surface-name-scrim));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 767px) {
+    padding: var(--space-sm) var(--space-sm) var(--space-xl);
+  }
+}

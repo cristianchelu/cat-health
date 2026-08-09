@@ -1,0 +1,100 @@
+.camera-tab-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+
+  .camera-tab-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .camera-tab-card {
+    --card-padding: var(--space-md);
+  }
+
+  .camera-card-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .camera-rotation-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .camera-rotation-field-label {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text);
+  }
+
+  .camera-rotation-options {
+    width: 100%;
+
+    > .button {
+      flex: 1;
+      /* Icon + degree on one row; Button already lays children out horizontally. */
+      --button-padding-inline: var(--space-xs);
+      gap: var(--space-2xs);
+    }
+
+    .camera-orientation-icon {
+      flex-shrink: 0;
+      transition: transform var(--transition-fast);
+    }
+  }
+
+  .camera-tab-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--space-md);
+    margin-top: var(--space-sm);
+
+    @media (max-width: 767px) {
+      flex-direction: column-reverse;
+      align-items: stretch;
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+
+  .camera-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    text-align: center;
+    padding: var(--space-lg) 0;
+
+    .camera-empty-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--control-height-lg);
+      height: var(--control-height-lg);
+      border-radius: var(--radius-full);
+      background: var(--color-surface-muted);
+      color: var(--color-text-muted);
+    }
+
+    .camera-empty-title {
+      font-size: var(--text-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-text);
+      margin: 0;
+    }
+
+    .camera-empty-description {
+      font-size: var(--text-xs);
+      color: var(--color-text-light);
+      margin: 0;
+      max-width: 20rem;
+    }
+  }
+}

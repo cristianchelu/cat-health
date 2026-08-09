@@ -1,0 +1,44 @@
+.camera-capture-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+
+  .camera-capture-option {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .camera-capture-option-toggle {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .camera-capture-option-hint {
+    font-size: var(--text-xs);
+    color: var(--color-text-light);
+    margin: 0;
+  }
+
+  .camera-capture-fields-foldout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .camera-capture-fields-pair {
+    display: flex;
+    gap: var(--space-sm);
+
+    .camera-capture-field {
+      flex: 1;
+      min-width: 0;
+    }
+
+    @media (max-width: 767px) {
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+  }
+}

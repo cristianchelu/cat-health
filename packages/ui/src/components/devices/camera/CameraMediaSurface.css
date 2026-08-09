@@ -1,0 +1,18 @@
+/*
+ * Fixed-dark palette for the camera preview surfaces (ROI frame, picker
+ * thumbnails). The surface stands in for absent video, so it stays dark in
+ * both color schemes instead of following the theme — which is why these
+ * are component-scoped custom properties rather than theme.css tokens.
+ */
+.camera-media-surface {
+  --media-surface-base: #233043;
+  --media-surface-raised: #3b4a63;
+  --media-surface-grid-line: rgba(255, 255, 255, 0.05);
+  --media-surface-veil: rgba(15, 23, 42, 0.45);
+  --media-surface-scrim: rgba(15, 23, 42, 0.62);
+  --media-surface-scrim-strong: rgba(15, 23, 42, 0.8);
+  --media-surface-name-scrim: rgba(15, 23, 42, 0.72);
+  --media-surface-text: #ffffff;
+  --media-surface-icon: rgba(255, 255, 255, 0.45);
+  --media-surface-icon-faint: rgba(255, 255, 255, 0.35);
+}
