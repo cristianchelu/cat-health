@@ -4,6 +4,7 @@ import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import {
   getStringValue as getSharedStringValue,
   getNumberValue as getSharedNumberValue,
+  getBooleanValue as getSharedBooleanValue,
   isRecord as sharedIsRecord,
 } from 'shared';
 
@@ -13,6 +14,7 @@ export const isRecord = sharedIsRecord;
 
 export const getStringValue = getSharedStringValue;
 export const getNumberValue = getSharedNumberValue;
+export const getBooleanValue = getSharedBooleanValue;
 
 export type TimeRangeType = 'day' | 'week' | 'month' | 'custom';
 

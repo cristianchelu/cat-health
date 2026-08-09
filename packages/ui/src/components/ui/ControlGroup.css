@@ -8,15 +8,19 @@
      * Segments overlap by exactly the border they share, so the seam reads as
      * one line rather than two. The focus ring is a box-shadow, which paints
      * outside the border and would otherwise be clipped by the next segment —
-     * hence the stacking context and the lift on focus.
+     * hence the stacking context and the lift on focus. Pressed/selected
+     * segments need the same lift: without it the next sibling's neutral
+     * border paints over the selected segment's trailing edge.
      */
     position: relative;
     border-radius: 0;
 
     &:focus,
     &:focus-visible,
-    &:focus-within {
-      z-index: 1;
+    &:focus-within,
+    &[aria-pressed='true'] {
+      /* Above the next segment's overlapping border (see margin below). */
+      z-index: 2;
     }
   }
 

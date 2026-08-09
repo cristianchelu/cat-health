@@ -26,6 +26,23 @@
   overflow: hidden;
 }
 
+/* Bottom-sheet placement: docked to the bottom edge on phone widths,
+   identical to the centered dialog on desktop. */
+.dialog-content-sheet {
+  @media (max-width: 767px) {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    max-height: 85vh;
+    max-height: 85dvh;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+    animation: none;
+  }
+}
+
 .dialog-close {
   position: absolute;
   right: var(--space-md);
