@@ -192,6 +192,13 @@ export type PatchDeviceCameraRequestDTO = Static<
   typeof PatchDeviceCameraRequestSchema
 >;
 
+export const PutDeviceRecognizerRequestSchema = Type.Object({
+  recognizer_id: Type.Number(),
+});
+export type PutDeviceRecognizerRequestDTO = Static<
+  typeof PutDeviceRecognizerRequestSchema
+>;
+
 /**
  * List items omit `state`.
  *

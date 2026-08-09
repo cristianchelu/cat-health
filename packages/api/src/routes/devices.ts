@@ -18,12 +18,13 @@ import {
   GetProvidersResponseSchema,
   PutDeviceCameraRequestSchema,
   PatchDeviceCameraRequestSchema,
+  PutDeviceRecognizerRequestSchema,
   PostDeviceTestIdentifyRequestSchema,
   PostDeviceTestIdentifyResponseSchema,
   ReidentifyLitterboxVisitsQuerySchema,
   ReidentifyLitterboxVisitsResponseSchema,
 } from 'shared';
-import { DEVICE_SIGNAL_KEYS, isRecord } from 'shared';
+import { DEVICE_SIGNAL_KEYS, getNumberValue, isRecord } from 'shared';
 import type { Device } from '../database/types/DeviceTable.ts';
 import type { ProviderAccount } from '../database/types/ProviderAccountTable.ts';
 import type {
@@ -950,6 +951,149 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .then((r) => JSON.parse(r.payload));
     },
   );
+
+  // --- Device Recognizer Link ---
+
+  /**
+   * Atomically point recognizer R at target device T. The recognizer that
+   * previously served T (if any) inherits R's old source so both keep a valid
+   * assignment — unless R's old source was T itself (two recognizers claiming
+   * the same target), in which case the other recognizer is left unassigned so
+   * exactly one recognizer ends up on T.
+   */
+  fastify.put(
+    '/:id/recognizer',
+    {
+      schema: {
+        params: GetDeviceParamsSchema,
+        body: PutDeviceRecognizerRequestSchema,
+        response: {
+          '200': GetDeviceResponseSchema,
+          '400': Http400ResponseSchema,
+          '404': Http404ResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { recognizer_id } = request.body;
+
+      const target = await db
+        .selectFrom('device')
+        .select('id')
+        .where('id', '=', id)
+        .executeTakeFirst();
+      if (!target) {
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: `Device ${id} not found`,
+        });
+      }
+
+      const recognizer = await db
+        .selectFrom('device')
+        .select(['id', 'type'])
+        .where('id', '=', recognizer_id)
+        .executeTakeFirst();
+      if (!recognizer) {
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: `Device ${recognizer_id} not found`,
+        });
+      }
+      if (recognizer.type !== 'pet_recognizer') {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: `Device ${recognizer_id} is not a pet recognizer`,
+        });
+      }
+
+      // Read-modify-write of every affected config happens inside one
+      // transaction (better-sqlite3 serializes it), so a failed write leaves
+      // no half-swapped pair.
+      const changedIds = await db.transaction().execute(async (trx) => {
+        const recognizers = await trx
+          .selectFrom('device')
+          .select(['id', 'config'])
+          .where('type', '=', 'pet_recognizer')
+          .execute();
+
+        const nextRow = recognizers.find((row) => row.id === recognizer_id);
+        if (!nextRow) throw new Error(`Device ${recognizer_id} not found`);
+
+        const nextConfig =
+          asConfigRecord(parseJsonValue(nextRow.config)) ?? {};
+        const previousSource = getNumberValue(nextConfig, 'source_device_id');
+
+        const incumbents = recognizers.filter((row) => {
+          if (row.id === recognizer_id) return false;
+          const config = asConfigRecord(parseJsonValue(row.config));
+          return (
+            config !== null && getNumberValue(config, 'source_device_id') === id
+          );
+        });
+
+        const updates: Array<{
+          id: number;
+          config: Record<string, unknown>;
+        }> = [];
+
+        incumbents.forEach((incumbent, index) => {
+          const config = asConfigRecord(parseJsonValue(incumbent.config)) ?? {};
+          // Only the first incumbent can inherit R's vacated source; handing
+          // it to several would recreate the duplicate one hop away. And when
+          // that vacated source is T itself (or nothing), the incumbent is
+          // unassigned instead of having T written back into it.
+          const inherits =
+            index === 0 &&
+            previousSource !== undefined &&
+            previousSource !== id;
+          if (inherits) {
+            updates.push({
+              id: incumbent.id,
+              config: { ...config, source_device_id: previousSource },
+            });
+          } else {
+            const unassigned = { ...config };
+            delete unassigned.source_device_id;
+            updates.push({ id: incumbent.id, config: unassigned });
+          }
+        });
+
+        if (previousSource !== id) {
+          updates.push({
+            id: recognizer_id,
+            config: { ...nextConfig, source_device_id: id },
+          });
+        }
+
+        const now = Date.now();
+        for (const update of updates) {
+          await trx
+            .updateTable('device')
+            .set({ config: update.config, updated_at: now })
+            .where('id', '=', update.id)
+            .execute();
+        }
+
+        return updates.map((update) => update.id);
+      });
+
+      await Promise.all(
+        changedIds.map((deviceId) =>
+          integrationManager.invalidateDeviceController(deviceId),
+        ),
+      );
+
+      return fastify
+        .inject({ method: 'GET', url: `/api/devices/${id}` })
+        .then((r) => JSON.parse(r.payload));
+    },
+  );
+
 };
 
 export default deviceRoutes;

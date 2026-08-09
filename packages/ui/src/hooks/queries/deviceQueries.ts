@@ -15,6 +15,7 @@ import {
   linkDeviceCamera,
   updateDeviceCameraConfig,
   unlinkDeviceCamera,
+  assignDeviceRecognizer,
 } from '@/api/devices';
 import { deleteEvent, updateEvent } from '@/api/pets';
 import {
@@ -226,6 +227,20 @@ export function useUpdateDeviceCameraConfig(deviceId: number) {
       updateDeviceCameraConfig(deviceId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+    },
+  });
+}
+
+export function useAssignDeviceRecognizer(deviceId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (recognizerId: number) =>
+      assignDeviceRecognizer(deviceId, recognizerId),
+    // A swap rewrites other recognizers' configs too, and a failed swap may
+    // still have changed nothing visible locally — refetch either way.
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['device'] });
       queryClient.invalidateQueries({ queryKey: ['devices'] });
     },
   });
