@@ -7,6 +7,7 @@ import {
   deviceHasIntegratedCamera,
   draftFromCameraLink,
   hasLinkableCameras,
+  listCameraCandidates,
   resolveCameraSaveAction,
   toggleAcquisitionType,
 } from '@/lib/cameraConfig';
@@ -50,11 +51,11 @@ const CameraTab: React.FC<CameraTabProps> = ({ device, onDirtyChange }) => {
   const hasIntegratedCamera = deviceHasIntegratedCamera(device);
   const otherCameras = React.useMemo(
     () =>
-      (allDevices ?? []).filter(
-        (candidate) =>
-          candidate.type === 'camera' && candidate.id !== device.id,
-      ),
-    [allDevices, device.id],
+      listCameraCandidates(allDevices ?? [], {
+        deviceId: device.id,
+        linkedCameraId: device.camera_link?.camera_id,
+      }),
+    [allDevices, device.id, device.camera_link?.camera_id],
   );
 
   const canLinkAnyCamera = hasLinkableCameras({

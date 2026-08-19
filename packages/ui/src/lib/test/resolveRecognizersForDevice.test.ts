@@ -12,6 +12,13 @@ interface Fixture {
   type: DeviceType;
   name?: string;
   config?: unknown;
+  enabled: boolean;
+  account_enabled: boolean;
+}
+
+/** A plain device row; switched fully on unless a test says otherwise. */
+function plain(id: number, type: DeviceType): Fixture {
+  return { id, type, enabled: true, account_enabled: true };
 }
 
 function recognizer(
@@ -20,8 +27,7 @@ function recognizer(
   extra: Partial<Fixture> = {},
 ): Fixture {
   return {
-    id,
-    type: 'pet_recognizer',
+    ...plain(id, 'pet_recognizer'),
     name: `Recognizer ${id}`,
     config: { source_device_id: sourceDeviceId, model: 'test' },
     ...extra,
@@ -48,9 +54,9 @@ describe('resolveRecognizersForDevice', () => {
 
   it('ignores non-recognizer devices', () => {
     const devices: Fixture[] = [
-      { id: 1, type: 'litterbox' },
-      { id: 2, type: 'camera' },
-      { id: 3, type: 'feeder' },
+      plain(1, 'litterbox'),
+      plain(2, 'camera'),
+      plain(3, 'feeder'),
       recognizer(10, 1),
     ];
 
@@ -77,7 +83,7 @@ describe('resolveRecognizersForDevice', () => {
   it('preserves input order', () => {
     const devices: Fixture[] = [
       recognizer(30, 5),
-      { id: 99, type: 'camera' },
+      plain(99, 'camera'),
       recognizer(10, 5),
       recognizer(20, 5),
     ];
@@ -90,10 +96,7 @@ describe('resolveRecognizersForDevice', () => {
   });
 
   it('returns empty when no recognizers match the source device', () => {
-    const devices: Fixture[] = [
-      recognizer(10, 2),
-      { id: 1, type: 'litterbox' },
-    ];
+    const devices: Fixture[] = [recognizer(10, 2), plain(1, 'litterbox')];
 
     assert.deepEqual(resolveRecognizersForDevice(1, devices), []);
   });
@@ -103,9 +106,9 @@ describe('listPetRecognizers', () => {
   it('returns every pet_recognizer regardless of source', () => {
     const devices: Fixture[] = [
       recognizer(10, 1),
-      { id: 2, type: 'camera' },
+      plain(2, 'camera'),
       recognizer(11, 99),
-      { id: 3, type: 'litterbox' },
+      plain(3, 'litterbox'),
     ];
 
     assert.deepEqual(listPetRecognizers(devices), [
@@ -115,6 +118,26 @@ describe('listPetRecognizers', () => {
   });
 
   it('returns empty when there are no recognizers', () => {
-    assert.deepEqual(listPetRecognizers([{ id: 1, type: 'litterbox' }]), []);
+    assert.deepEqual(listPetRecognizers([plain(1, 'litterbox')]), []);
+  });
+
+  // The picker is an offer list; the pair of tests below pins the asymmetry
+  // with `resolveRecognizersForDevice`, which reports what is linked.
+  it('drops recognizers that are switched off', () => {
+    const devices: Fixture[] = [
+      recognizer(10, 1),
+      recognizer(11, 1, { enabled: false }),
+      recognizer(12, 1, { account_enabled: false }),
+    ];
+
+    assert.deepEqual(listPetRecognizers(devices), [recognizer(10, 1)]);
+  });
+
+  it('still resolves a linked recognizer that is switched off', () => {
+    const devices: Fixture[] = [recognizer(11, 1, { enabled: false })];
+
+    assert.deepEqual(resolveRecognizersForDevice(1, devices), [
+      recognizer(11, 1, { enabled: false }),
+    ]);
   });
 });

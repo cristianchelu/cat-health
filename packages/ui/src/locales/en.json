@@ -536,6 +536,7 @@
     "loading": "Loading devices...",
     "error_loading": "Error loading devices",
     "no_devices_found": "No devices found. Add your first device to get started.",
+    "all_switched_off": "Every monitored device is switched off. Turn one back on in Settings → Devices.",
     "error_loading_events": "Error loading events",
     "loading_events": "Loading events...",
     "no_events_for_device": "No events found for this device",
@@ -556,7 +557,9 @@
       "online": "Online",
       "offline": "Offline",
       "error": "Error",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "disabled": "Disabled",
+      "account_disabled": "Account disabled"
     },
     "esphome": {
       "empty_entities": "No entities yet.",

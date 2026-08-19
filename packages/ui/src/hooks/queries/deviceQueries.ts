@@ -163,6 +163,9 @@ export function useUpdateProviderAccount(accountId: number) {
       queryClient.invalidateQueries({
         queryKey: ['providerAccount', accountId],
       });
+      // Device rows mirror `account_enabled`, which decides whether they appear
+      // on the roster, so they go stale the moment the account is patched.
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
     },
   });
 }

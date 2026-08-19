@@ -10,6 +10,8 @@ import { ListToolbar } from '@/components/ui/ListToolbar';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { SortControl } from '@/components/ui/SortControl';
 import { MetaLine } from '@/components/ui/MetaLine';
+import { StatusPill } from '@/components/ui/StatusPill';
+import { deviceInactiveReason } from '@/lib/deviceMonitoring';
 import { EmptyState, LoadingState } from '@/components/ui/PageState';
 import { getDeviceIcon } from '@/components/icons/deviceIcons';
 import {
@@ -155,6 +157,7 @@ const DevicesPage: React.FC = () => {
               {visibleDevices.map((device) => {
                 const type = labels.typeLabel(device.type);
                 const provider = labels.providerLabel(device.provider);
+                const inactiveReason = deviceInactiveReason(device);
 
                 return (
                   <CardListItem
@@ -164,6 +167,20 @@ const DevicesPage: React.FC = () => {
                       <SettingsIcon size="1em" />,
                     )}
                     to={`/settings/devices/${device.id}`}
+                    // Matches ProvidersPage. Disabled rows keep their place in
+                    // the sort, since this page is where you switch one back on
+                    // — and the pill names which switch to reach for.
+                    trailing={
+                      inactiveReason ? (
+                        <StatusPill variant="off">
+                          {t(
+                            inactiveReason === 'account'
+                              ? 'devices.status.account_disabled'
+                              : 'devices.status.disabled',
+                          )}
+                        </StatusPill>
+                      ) : null
+                    }
                   >
                     <CardListContent
                       title={device.name}

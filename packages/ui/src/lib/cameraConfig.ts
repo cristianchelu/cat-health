@@ -1,4 +1,5 @@
 import type { DeviceCameraConfigDTO } from 'shared';
+import { isDeviceActive, type DeviceEnablement } from '@/lib/deviceMonitoring';
 import { isRecord } from '@/lib/utils';
 
 export interface CameraConfigDraft {
@@ -151,6 +152,28 @@ export function resolveCameraSaveAction(
   }
 
   return { type: 'updateConfig', config: buildCameraConfig(draft) };
+}
+
+interface CameraCandidate extends DeviceEnablement {
+  id: number;
+  type: string;
+}
+
+/**
+ * The cameras this device may be pointed at. Switched-off ones are dropped,
+ * since linking one sets up a snapshot that can never arrive — except the
+ * already-linked camera, which stays so the tab can show and unlink it.
+ */
+export function listCameraCandidates<T extends CameraCandidate>(
+  devices: readonly T[],
+  { deviceId, linkedCameraId }: { deviceId: number; linkedCameraId?: number },
+): T[] {
+  return devices.filter(
+    (candidate) =>
+      candidate.type === 'camera' &&
+      candidate.id !== deviceId &&
+      (isDeviceActive(candidate) || candidate.id === linkedCameraId),
+  );
 }
 
 export function hasLinkableCameras(args: {

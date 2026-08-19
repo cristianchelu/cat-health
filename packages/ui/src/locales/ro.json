@@ -477,6 +477,7 @@
     "loading": "Se încarcă dispozitivele...",
     "error_loading": "Eroare la încărcarea dispozitivelor",
     "no_devices_found": "Nu s-au găsit dispozitive. Adaugă primul dispozitiv pentru a începe.",
+    "all_switched_off": "Toate dispozitivele monitorizate sunt dezactivate. Reactivează unul în Setări → Dispozitive.",
     "error_loading_events": "Eroare la încărcarea evenimentelor",
     "loading_events": "Se încarcă evenimentele...",
     "no_events_for_device": "Nu s-au găsit evenimente pentru acest dispozitiv",
@@ -497,7 +498,9 @@
       "online": "Online",
       "offline": "Offline",
       "error": "Eroare",
-      "unknown": "Necunoscut"
+      "unknown": "Necunoscut",
+      "disabled": "Dezactivat",
+      "account_disabled": "Cont dezactivat"
     },
     "water_fountain": {
       "water_level": "Nivel apă",

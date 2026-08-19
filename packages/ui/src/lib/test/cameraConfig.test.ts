@@ -10,6 +10,7 @@ import {
   draftFromCameraConfig,
   draftFromCameraLink,
   hasLinkableCameras,
+  listCameraCandidates,
   normalizeCrop,
   resolveCameraSaveAction,
   toggleAcquisitionType,
@@ -394,6 +395,54 @@ describe('resolveCameraSaveAction', () => {
         `dirty flag and save action disagree for ${JSON.stringify(edit)}`,
       );
     }
+  });
+});
+
+describe('listCameraCandidates', () => {
+  const camera = (
+    id: number,
+    overrides: Partial<{ enabled: boolean; account_enabled: boolean }> = {},
+  ) => ({
+    id,
+    type: 'camera' as const,
+    enabled: true,
+    account_enabled: true,
+    ...overrides,
+  });
+
+  it('keeps other enabled cameras and drops the device itself', () => {
+    const devices = [
+      camera(1),
+      camera(2),
+      { id: 3, type: 'litterbox' as const, enabled: true, account_enabled: true },
+    ];
+
+    assert.deepEqual(listCameraCandidates(devices, { deviceId: 1 }), [
+      camera(2),
+    ]);
+  });
+
+  it('drops cameras that are switched off', () => {
+    const devices = [
+      camera(2),
+      camera(3, { enabled: false }),
+      camera(4, { account_enabled: false }),
+    ];
+
+    assert.deepEqual(listCameraCandidates(devices, { deviceId: 1 }), [
+      camera(2),
+    ]);
+  });
+
+  // Dropping the already-linked one would render the tab as if nothing were
+  // selected, with no way to unlink it.
+  it('keeps a switched-off camera that is already linked', () => {
+    const devices = [camera(2), camera(3, { enabled: false })];
+
+    assert.deepEqual(
+      listCameraCandidates(devices, { deviceId: 1, linkedCameraId: 3 }),
+      [camera(2), camera(3, { enabled: false })],
+    );
   });
 });
 

@@ -22,6 +22,7 @@ import {
 import { backState } from '@/lib/navigationBack';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import { isVisitAnnotationEnabled } from '@/lib/deviceAnnotation';
+import { deviceInactiveReason } from '@/lib/deviceMonitoring';
 import './DeviceHeader.css';
 
 interface DeviceHeaderProps {
@@ -65,8 +66,18 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
   const lastSeenAbsolute =
     lastSeenDate != null ? formatDateTime(lastSeenDate) : undefined;
 
-  const statusLabel =
-    device.status === 'offline'
+  // Still reachable by deep link from settings, where the API's frozen `status`
+  // would report a connectivity nothing is standing behind.
+  const inactiveReason = deviceInactiveReason(device);
+  const disabled = inactiveReason !== null;
+
+  const statusLabel = disabled
+    ? t(
+        inactiveReason === 'account'
+          ? 'devices.status.account_disabled'
+          : 'devices.status.disabled',
+      )
+    : device.status === 'offline'
       ? lastSeenDate != null
         ? t('devices.last_seen', {
             time: lastSeenRelative ?? lastSeenAbsolute ?? '—',
@@ -90,10 +101,14 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
             {/* No separator before the pill — it is not a text item, and on a
                 phone the meta line wraps, which left a bullet dangling. */}
             <StatusPill
-              variant={STATUS_VARIANTS[device.status ?? ''] ?? 'neutral'}
+              variant={
+                disabled
+                  ? 'off'
+                  : (STATUS_VARIANTS[device.status ?? ''] ?? 'neutral')
+              }
               dot
               title={
-                device.status === 'offline' && lastSeenAbsolute
+                !disabled && device.status === 'offline' && lastSeenAbsolute
                   ? lastSeenAbsolute
                   : undefined
               }

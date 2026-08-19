@@ -1,3 +1,4 @@
+import { isDeviceActive, type DeviceEnablement } from '@/lib/deviceMonitoring';
 import { getNumberValue, isRecord } from '@/lib/utils';
 
 export interface RecognizerDeviceRef {
@@ -23,12 +24,15 @@ export function resolveRecognizersForDevice<T extends RecognizerDeviceRef>(
 }
 
 /**
- * Every pet_recognizer device, regardless of which source it points at.
- * Used by the Change picker so the user can switch which recognizer serves
- * this device.
+ * Every usable pet_recognizer, for the Change picker. An offer list, so
+ * switched-off recognizers are dropped; `resolveRecognizersForDevice` above
+ * answers what is linked right now and keeps returning a disabled one so the
+ * tab can still show and unlink it.
  */
-export function listPetRecognizers<T extends RecognizerDeviceRef>(
-  devices: readonly T[],
-): T[] {
-  return devices.filter((device) => device.type === 'pet_recognizer');
+export function listPetRecognizers<
+  T extends RecognizerDeviceRef & DeviceEnablement,
+>(devices: readonly T[]): T[] {
+  return devices.filter(
+    (device) => device.type === 'pet_recognizer' && isDeviceActive(device),
+  );
 }

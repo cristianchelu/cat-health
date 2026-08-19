@@ -8,7 +8,10 @@ import { PageAddFab, PageAddAction } from '@/components/ui/PageAddAction';
 import { EmptyState, LoadingState } from '@/components/ui/PageState';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { rankDeviceSignals } from '@/lib/deviceSignalRanking';
-import { filterMonitoringDevices } from '@/lib/deviceMonitoring';
+import {
+  partitionRoster,
+  type RosterEmptyReason,
+} from '@/lib/deviceMonitoring';
 import DeviceCard from './components/DeviceCard';
 import './Devices.css';
 
@@ -40,32 +43,34 @@ const Devices: React.FC = () => {
     [intlLanguageTag],
   );
 
-  const { sorted, needingAttention, monitoringCount } = React.useMemo(() => {
-    const monitoringDevices = filterMonitoringDevices(devices ?? []);
+  const { sorted, needingAttention, rosterCount, emptyReason } =
+    React.useMemo(() => {
+      const { roster, emptyReason } = partitionRoster(devices ?? []);
 
-    const withAttention = monitoringDevices.map(
-      (device): { device: DeviceListItemDTO; attention: SignalTone } => ({
-        device,
-        attention: rankDeviceSignals(device.signals).attention ?? 'calm',
-      }),
-    );
+      const withAttention = roster.map(
+        (device): { device: DeviceListItemDTO; attention: SignalTone } => ({
+          device,
+          attention: rankDeviceSignals(device.signals).attention ?? 'calm',
+        }),
+      );
 
-    withAttention.sort((a, b) => {
-      const byAttention =
-        ATTENTION_ORDER[a.attention] - ATTENTION_ORDER[b.attention];
-      return byAttention !== 0
-        ? byAttention
-        : collator.compare(a.device.name, b.device.name);
-    });
+      withAttention.sort((a, b) => {
+        const byAttention =
+          ATTENTION_ORDER[a.attention] - ATTENTION_ORDER[b.attention];
+        return byAttention !== 0
+          ? byAttention
+          : collator.compare(a.device.name, b.device.name);
+      });
 
-    return {
-      sorted: withAttention.map((entry) => entry.device),
-      needingAttention: withAttention.filter(
-        (entry) => entry.attention !== 'calm',
-      ).length,
-      monitoringCount: monitoringDevices.length,
-    };
-  }, [devices, collator]);
+      return {
+        sorted: withAttention.map((entry) => entry.device),
+        needingAttention: withAttention.filter(
+          (entry) => entry.attention !== 'calm',
+        ).length,
+        rosterCount: roster.length,
+        emptyReason,
+      };
+    }, [devices, collator]);
 
   return (
     <div className="page-devices">
@@ -73,9 +78,9 @@ const Devices: React.FC = () => {
         <AppHeaderBar
           title={t('navigation.devices')}
           subtitle={
-            monitoringCount > 0 ? (
+            rosterCount > 0 ? (
               <>
-                {t('settings.device_count', { count: monitoringCount })}
+                {t('settings.device_count', { count: rosterCount })}
                 {needingAttention > 0 ? (
                   <StatusPill variant="warn">
                     {t('devices.needing_attention', {
@@ -97,6 +102,7 @@ const Devices: React.FC = () => {
 
       <DeviceGrid
         devices={sorted}
+        emptyReason={emptyReason}
         isLoading={isLoading}
         hasError={Boolean(error)}
       />
@@ -108,9 +114,10 @@ const Devices: React.FC = () => {
 
 const DeviceGrid: React.FC<{
   devices: DeviceListItemDTO[];
+  emptyReason: RosterEmptyReason | null;
   isLoading: boolean;
   hasError: boolean;
-}> = ({ devices, isLoading, hasError }) => {
+}> = ({ devices, emptyReason, isLoading, hasError }) => {
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -122,7 +129,15 @@ const DeviceGrid: React.FC<{
   }
 
   if (devices.length === 0) {
-    return <EmptyState message={t('devices.no_devices_found')} />;
+    return (
+      <EmptyState
+        message={
+          emptyReason === 'all-switched-off'
+            ? t('devices.all_switched_off')
+            : t('devices.no_devices_found')
+        }
+      />
+    );
   }
 
   return (
