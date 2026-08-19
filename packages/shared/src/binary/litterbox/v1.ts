@@ -80,6 +80,7 @@ export function decodeLitterboxRawDataV1(
   };
 
   return {
+    version,
     startTime: Number.isFinite(startTimeMs) ? new Date(startTimeMs) : null,
     context,
     weights,

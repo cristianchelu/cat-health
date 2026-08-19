@@ -1,5 +1,9 @@
-import { LITTERBOX_RAW_DATA_VERSION_1 } from './constants.ts';
+import {
+  LITTERBOX_RAW_DATA_VERSION_1,
+  LITTERBOX_RAW_DATA_VERSION_2,
+} from './constants.ts';
 import { decodeLitterboxRawDataV1 } from './v1.ts';
+import { decodeLitterboxRawDataV2 } from './v2.ts';
 import type { DecodedLitterboxRawData } from './types.ts';
 
 /**
@@ -14,6 +18,9 @@ export function decodeLitterboxRawData(
   const version = raw[0];
   if (version === LITTERBOX_RAW_DATA_VERSION_1) {
     return decodeLitterboxRawDataV1(raw);
+  }
+  if (version === LITTERBOX_RAW_DATA_VERSION_2) {
+    return decodeLitterboxRawDataV2(raw);
   }
   return null;
 }
