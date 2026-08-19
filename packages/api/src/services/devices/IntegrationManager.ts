@@ -11,10 +11,12 @@ import type {
   DeviceDirectory,
   DeviceIntegrationContext,
   DeviceProvider,
+  LiveControllerResult,
   ProviderDeps,
   ProviderListing,
 } from './types.ts';
 import { isCamera } from './types.ts';
+import { isDeviceReachable } from './deviceEnablement.ts';
 import { DevicePresence } from './DevicePresence.ts';
 import { recordDeviceEvent } from '../events/recordDeviceEvent.ts';
 
@@ -157,10 +159,35 @@ export class IntegrationManager
       throw new Error(`Provider ${account.provider} not found`);
     }
 
-    // Shutdown existing manager if any
+    const devices = await this.deps.db
+      .selectFrom('device')
+      .select(['id', 'enabled'])
+      .where('provider_account_id', '=', accountId)
+      .execute();
+
+    // Teardown disconnects every controller, and a disconnect reports offline.
+    // That is our own doing, so it must not reach the timeline as an outage.
+    for (const device of devices) {
+      this.presence.forget(device.id);
+    }
+
     const existingManager = this.accountManagers.get(accountId);
     if (existingManager) {
       await existingManager.shutdown();
+    }
+
+    // Quiet rather than throwing: callers want the runtime to match the row,
+    // not to start this account. `initialize()` skips disabled accounts the
+    // same way at startup.
+    if (!account.enabled) {
+      this.accountManagers.delete(accountId);
+      return;
+    }
+
+    // Before the manager reconnects, so the `online` that follows is heard.
+    // Devices switched off individually stay suppressed.
+    for (const device of devices) {
+      if (device.enabled) this.presence.resume(device.id);
     }
 
     const manager = provider.createAccountManager(account, this.deps);
@@ -192,7 +219,59 @@ export class IntegrationManager
     }
   }
 
+  /**
+   * A device row carrying its account's switch, which is the only form in which
+   * reachability can be judged. Anything that asks `isDeviceReachable` loads a
+   * device through here, so no caller can accidentally judge on half the answer.
+   */
+  private async loadReachableDevice(
+    deviceId: number,
+  ): Promise<(Device & { account_enabled: number }) | undefined> {
+    return this.deps.db
+      .selectFrom('device')
+      .innerJoin(
+        'provider_account',
+        'device.provider_account_id',
+        'provider_account.id',
+      )
+      .selectAll('device')
+      .select('provider_account.enabled as account_enabled')
+      .where('device.id', '=', deviceId)
+      .executeTakeFirst();
+  }
+
+  /**
+   * Make the running process match what the device row now says, after a patch
+   * that may have moved either the config or the enable switch.
+   */
+  async reconcileDeviceController(deviceId: number): Promise<void> {
+    const device = await this.loadReachableDevice(deviceId);
+    if (!device) return;
+
+    // Unconditional: the config may have changed while the device stayed on.
+    await this.invalidateDeviceController(deviceId);
+
+    if (isDeviceReachable(device)) {
+      // Before instantiating: reconnecting reports online, and that transition
+      // is real news the user should see.
+      this.presence.resume(deviceId);
+      this.instantiateDeviceController(device);
+    } else {
+      this.presence.forget(deviceId);
+    }
+  }
+
+  /**
+   * The gate that makes "disabled" mean disabled: for a provider like ESPHome
+   * instantiating *is* connecting, and `mapDevice` instantiates for every row
+   * it maps, so evicting a controller is never enough. A disabled account
+   * needs no check here — it never reaches `accountManagers`.
+   */
   instantiateDeviceController(device: Device): DeviceController | undefined {
+    if (!device.enabled) {
+      return undefined;
+    }
+
     const manager = this.accountManagers.get(device.provider_account_id);
     if (!manager) {
       return undefined;
@@ -203,14 +282,24 @@ export class IntegrationManager
   async instantiateController(
     deviceId: number,
   ): Promise<DeviceController | undefined> {
-    const device = await this.deps.db
-      .selectFrom('device')
-      .selectAll()
-      .where('id', '=', deviceId)
-      .executeTakeFirst();
+    const resolved = await this.resolveLiveController(deviceId);
+    return resolved.ok ? resolved.controller : undefined;
+  }
 
-    if (!device) return undefined;
-    return this.instantiateDeviceController(device);
+  /**
+   * Like `instantiateController`, but says why it failed, so a route can tell
+   * "you switched this off" apart from "this is broken".
+   */
+  async resolveLiveController(deviceId: number): Promise<LiveControllerResult> {
+    const device = await this.loadReachableDevice(deviceId);
+
+    if (!device) return { ok: false, reason: 'missing' };
+    if (!isDeviceReachable(device)) return { ok: false, reason: 'disabled' };
+
+    const controller = this.instantiateDeviceController(device);
+    return controller
+      ? { ok: true, controller }
+      : { ok: false, reason: 'unavailable' };
   }
 
   async getLinkedCamera(deviceId: number): Promise<Camera | undefined> {

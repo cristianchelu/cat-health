@@ -2,6 +2,7 @@ import {
   type FastifyPluginAsyncTypebox,
   Type,
 } from '@fastify/type-provider-typebox';
+import type { FastifyReply } from 'fastify';
 import {
   GetDeviceParamsSchema,
   GetDeviceResponseSchema,
@@ -35,11 +36,16 @@ import type {
 import { reidentifyLitterboxVisits } from '../services/litterbox/reidentifyLitterboxVisits.ts';
 import { getDepositsSinceScoop } from '../services/litterbox/depositsSinceScoop.ts';
 import { presenceSignals } from '../services/devices/presenceSignals.ts';
+import type { LiveControllerFailure } from '../services/devices/types.ts';
+import { isDeviceReachable } from '../services/devices/deviceEnablement.ts';
 
 /** Deposit track length on a device card. */
 const DEPOSIT_PIP_SLOTS = 8;
 
-type DeviceWithProvider = Device & { provider: string };
+type DeviceWithProvider = Device & {
+  provider: string;
+  account_enabled: number;
+};
 
 function asConfigRecord(config: unknown): Record<string, unknown> | null {
   if (config == null) return null;
@@ -71,6 +77,33 @@ const Http400ResponseSchema = Type.Object({
   message: Type.String(),
 });
 
+/**
+ * One answer for every route that needs a working controller, so a device the
+ * user switched off never reads as a misconfiguration.
+ */
+function sendControllerFailure(
+  reply: FastifyReply,
+  deviceId: number,
+  reason: LiveControllerFailure,
+) {
+  if (reason === 'disabled') {
+    return reply.code(400).send({
+      statusCode: 400,
+      error: 'Bad Request',
+      message: `Device ${deviceId} is disabled`,
+    });
+  }
+
+  return reply.code(404).send({
+    statusCode: 404,
+    error: 'Not Found',
+    message:
+      reason === 'missing'
+        ? `Device ${deviceId} not found`
+        : `Device ${deviceId} has no controller available`,
+  });
+}
+
 const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   const { db, integrationManager } = fastify;
 
@@ -94,6 +127,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       type: device.type,
       config: parseJsonValue(device.config) ?? null,
       enabled: Boolean(device.enabled),
+      account_enabled: Boolean(device.account_enabled),
       created_at: new Date(device.created_at).toISOString(),
       updated_at: new Date(device.updated_at).toISOString(),
       last_seen: device.last_seen
@@ -110,6 +144,15 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       snapshot.lastSeenMs != null
         ? new Date(snapshot.lastSeenMs).toISOString()
         : null;
+
+    // A device nobody is dialling has no connectivity story: `status` and
+    // `last_seen` keep their last honest reading, but leaving `signals` to
+    // `presenceSignals` would dress that stale reading up as an OFFLINE alarm
+    // the user raised on themselves.
+    if (!isDeviceReachable(device)) {
+      mapped.signals = [];
+      return mapped;
+    }
 
     const providerSignals: DeviceSignal[] = [];
 
@@ -223,7 +266,11 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
    * the summed elimination weight standing in for the reading.
    */
   async function enrichLitterboxDeposits(devices: GetDeviceResponseDTO[]) {
-    const litterboxes = devices.filter((d) => d.type === 'litterbox');
+    // Runs after `mapDevice`, so it has to ask `isDeviceReachable` again: the
+    // signal list it appends to was emptied there for a reason.
+    const litterboxes = devices.filter(
+      (d) => d.type === 'litterbox' && isDeviceReachable(d),
+    );
     if (litterboxes.length === 0) return;
 
     const deposits = await getDepositsSinceScoop(
@@ -557,6 +604,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         )
         .selectAll('device')
         .select('provider_account.provider as provider')
+        .select('provider_account.enabled as account_enabled')
         .execute();
       const mapped = await Promise.all(
         devices.map((d) => mapDevice(d, { includeState: false })),
@@ -606,11 +654,15 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const account = await db
         .selectFrom('provider_account')
-        .select('provider')
+        .select(['provider', 'enabled'])
         .where('id', '=', provider_account_id)
         .executeTakeFirstOrThrow();
 
-      const mapped = await mapDevice({ ...result, provider: account.provider });
+      const mapped = await mapDevice({
+        ...result,
+        provider: account.provider,
+        account_enabled: account.enabled,
+      });
 
       if (manager?.onDeviceRegistered) {
         await manager.onDeviceRegistered({
@@ -645,6 +697,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .leftJoin('device_camera', 'device.id', 'device_camera.device_id')
         .selectAll('device')
         .select('provider_account.provider as provider')
+        .select('provider_account.enabled as account_enabled')
         .select([
           'device_camera.camera_id as camera_id',
           'device_camera.config as camera_config',
@@ -736,7 +789,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('id', '=', id)
         .execute();
 
-      await integrationManager.invalidateDeviceController(id);
+      await integrationManager.reconcileDeviceController(id);
 
       // Fetch updated device
       const device = await db
@@ -749,6 +802,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .leftJoin('device_camera', 'device.id', 'device_camera.device_id')
         .selectAll('device')
         .select('provider_account.provider as provider')
+        .select('provider_account.enabled as account_enabled')
         .select([
           'device_camera.camera_id as camera_id',
           'device_camera.config as camera_config',
@@ -782,23 +836,22 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PostDeviceTestIdentifyRequestSchema,
         response: {
           '200': PostDeviceTestIdentifyResponseSchema,
+          '400': Http400ResponseSchema,
+          '404': Http404ResponseSchema,
         },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const { id: deviceId } = request.params;
       const { media_id } = request.body;
 
-      const controller = integrationManager.instantiateDeviceController(
-        await db
-          .selectFrom('device')
-          .selectAll()
-          .where('id', '=', deviceId)
-          .executeTakeFirstOrThrow(),
-      );
+      const resolved = await integrationManager.resolveLiveController(deviceId);
+      if (!resolved.ok) {
+        return sendControllerFailure(reply, deviceId, resolved.reason);
+      }
 
+      const { controller } = resolved;
       if (
-        !controller ||
         !('identifyPetFromMedia' in controller) ||
         typeof controller.identifyPetFromMedia !== 'function'
       ) {
@@ -819,11 +872,12 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     },
     async (request, reply) => {
       const { id } = request.params;
-      const controller = await integrationManager.instantiateController(id);
 
-      if (!controller) {
-        throw new Error('Device controller not found');
+      const resolved = await integrationManager.resolveLiveController(id);
+      if (!resolved.ok) {
+        return sendControllerFailure(reply, id, resolved.reason);
       }
+      const { controller } = resolved;
 
       // Check if it's a camera with getSnapshotBuffer
       if (
@@ -1024,8 +1078,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         const nextRow = recognizers.find((row) => row.id === recognizer_id);
         if (!nextRow) throw new Error(`Device ${recognizer_id} not found`);
 
-        const nextConfig =
-          asConfigRecord(parseJsonValue(nextRow.config)) ?? {};
+        const nextConfig = asConfigRecord(parseJsonValue(nextRow.config)) ?? {};
         const previousSource = getNumberValue(nextConfig, 'source_device_id');
 
         const incumbents = recognizers.filter((row) => {
@@ -1093,7 +1146,6 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .then((r) => JSON.parse(r.payload));
     },
   );
-
 };
 
 export default deviceRoutes;

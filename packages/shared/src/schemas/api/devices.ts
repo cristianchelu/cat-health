@@ -161,7 +161,13 @@ export const GetDeviceResponseSchema = Type.Object({
   name: Type.String(),
   type: DeviceTypeSchema,
   config: Type.Unknown(),
+  /** The device's own switch — what the settings form writes. */
   enabled: Type.Boolean(),
+  /**
+   * Its account's switch, mirrored here so a client can tell which of the two
+   * is off without joining the account list.
+   */
+  account_enabled: Type.Boolean(),
   last_seen: Type.Union([Type.String(), Type.Null()]),
   status: Type.Union([DeviceStatusSchema, Type.Null()]),
   state: Type.Optional(Type.Record(Type.String(), Type.Unknown())),

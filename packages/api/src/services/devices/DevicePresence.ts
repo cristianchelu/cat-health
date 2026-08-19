@@ -31,8 +31,6 @@ interface PresenceEntry {
   lastSeenMs: number | null;
   /** Wall clock when we last wrote `last_seen` (or full row) for throttle; reset on transition persists. */
   lastActivityPersistedAt: number;
-  pendingOfflineTimer?: ReturnType<typeof setTimeout>;
-  pendingOfflinePreviousState?: DeviceConnectivityEventData['previous_state'];
 }
 
 function normalizeStatus(value: DeviceStatus | null | undefined): DeviceStatus {
@@ -56,6 +54,27 @@ export class DevicePresence {
   private readonly db: Kysely<Database>;
   private readonly recordDeviceEvent: RecordDeviceEventFn;
   private entries = new Map<number, PresenceEntry>();
+  /**
+   * Armed anti-flap timers, keyed by device rather than held on the entry:
+   * every report replaces the entry, so a timer stored there is orphaned by
+   * the next one and can no longer be cancelled.
+   */
+  private pendingOfflineTimers = new Map<
+    number,
+    ReturnType<typeof setTimeout>
+  >();
+  /**
+   * Devices we deliberately stopped watching, held until `resume` because a
+   * teardown reports offline more than once. Suppresses event emission only;
+   * status still persists, since "offline" is the honest answer for a device
+   * nobody is dialling.
+   *
+   * Empty after a restart, and safe to be: a switched-off device is refused a
+   * controller by `IntegrationManager.instantiateDeviceController`, so nothing
+   * exists to report it offline in the first place. That gate is what keeps
+   * this set an optimisation rather than a load-bearing record.
+   */
+  private suppressed = new Set<number>();
   private hydrateComplete = false;
 
   constructor(deps: DevicePresenceDeps) {
@@ -91,7 +110,7 @@ export class DevicePresence {
       lastActivityPersistedAt: prev?.lastActivityPersistedAt ?? 0,
     };
     this.entries.set(deviceId, entry);
-    this.clearPendingOfflineEvent(deviceId, entry);
+    this.clearPendingOfflineEvent(deviceId);
     void this.persistImmediate(deviceId, entry);
 
     if (previousStatus !== 'online') {
@@ -113,7 +132,7 @@ export class DevicePresence {
     this.entries.set(deviceId, entry);
 
     if (statusChanged) {
-      this.clearPendingOfflineEvent(deviceId, entry);
+      this.clearPendingOfflineEvent(deviceId);
       this.emitConnectivityTransition(deviceId, 'online', previousStatus, at);
       void this.persistImmediate(deviceId, entry);
     } else {
@@ -140,12 +159,7 @@ export class DevicePresence {
     void this.persistImmediate(deviceId, entry);
 
     if (previousStatus !== 'offline') {
-      this.scheduleOfflineConnectivityEvent(
-        deviceId,
-        entry,
-        previousStatus,
-        Date.now(),
-      );
+      this.scheduleOfflineConnectivityEvent(deviceId, previousStatus, Date.now());
     }
   }
 
@@ -158,12 +172,32 @@ export class DevicePresence {
       lastActivityPersistedAt: prev?.lastActivityPersistedAt ?? 0,
     };
     this.entries.set(deviceId, entry);
-    this.clearPendingOfflineEvent(deviceId, entry);
+    this.clearPendingOfflineEvent(deviceId);
     void this.persistImmediate(deviceId, entry);
 
     if (previousStatus !== 'error') {
       this.emitConnectivityTransition(deviceId, 'error', previousStatus, at);
     }
+  }
+
+  /**
+   * Stop tracking a device we are deliberately no longer talking to, so its
+   * teardown does not post "went offline" to the user's timeline a minute
+   * after they flipped their own switch. The persisted `status` / `last_seen`
+   * stay put as the last honest observation.
+   */
+  forget(deviceId: number): void {
+    this.clearPendingOfflineEvent(deviceId);
+    this.entries.delete(deviceId);
+    this.suppressed.add(deviceId);
+  }
+
+  /**
+   * Start listening again. Must run before the controller is rebuilt, or the
+   * `online` that follows reconnection is swallowed with the noise.
+   */
+  resume(deviceId: number): void {
+    this.suppressed.delete(deviceId);
   }
 
   async getSnapshot(deviceId: number): Promise<DevicePresenceSnapshot> {
@@ -194,44 +228,43 @@ export class DevicePresence {
     return snap;
   }
 
-  private clearPendingOfflineEvent(
-    deviceId: number,
-    entry?: PresenceEntry,
-  ): void {
-    const target = entry ?? this.entries.get(deviceId);
-    if (!target?.pendingOfflineTimer) {
+  private clearPendingOfflineEvent(deviceId: number): void {
+    const timer = this.pendingOfflineTimers.get(deviceId);
+    if (timer === undefined) {
       return;
     }
 
-    clearTimeout(target.pendingOfflineTimer);
-    target.pendingOfflineTimer = undefined;
-    target.pendingOfflinePreviousState = undefined;
+    clearTimeout(timer);
+    this.pendingOfflineTimers.delete(deviceId);
   }
 
   private scheduleOfflineConnectivityEvent(
     deviceId: number,
-    entry: PresenceEntry,
     previousStatus: DeviceStatus,
     at: number,
   ): void {
-    if (!this.hydrateComplete) {
+    if (!this.hydrateComplete || this.suppressed.has(deviceId)) {
       return;
     }
 
-    this.clearPendingOfflineEvent(deviceId, entry);
+    this.clearPendingOfflineEvent(deviceId);
 
     const previous_state = toConnectivityPreviousState(previousStatus);
-    entry.pendingOfflinePreviousState = previous_state;
 
-    entry.pendingOfflineTimer = setTimeout(() => {
-      entry.pendingOfflineTimer = undefined;
-      entry.pendingOfflinePreviousState = undefined;
-      void this.emitConnectivityEvent(deviceId, {
-        type: 'device_connectivity',
-        state: 'offline',
-        previous_state,
-      }, at);
-    }, OFFLINE_EVENT_DELAY_MS);
+    this.pendingOfflineTimers.set(
+      deviceId,
+      setTimeout(() => {
+        this.pendingOfflineTimers.delete(deviceId);
+        // Re-checked at fire time: a minute is long enough for the device to
+        // have been switched off since.
+        if (this.suppressed.has(deviceId)) return;
+        void this.emitConnectivityEvent(
+          deviceId,
+          { type: 'device_connectivity', state: 'offline', previous_state },
+          at,
+        );
+      }, OFFLINE_EVENT_DELAY_MS),
+    );
   }
 
   private emitConnectivityTransition(
@@ -240,7 +273,7 @@ export class DevicePresence {
     previousStatus: DeviceStatus,
     at: number,
   ): void {
-    if (!this.hydrateComplete) {
+    if (!this.hydrateComplete || this.suppressed.has(deviceId)) {
       return;
     }
 

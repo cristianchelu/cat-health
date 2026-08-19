@@ -197,7 +197,16 @@ export interface DeviceIntegrationContext {
   getAccountManager(accountId: number): AccountManager | undefined;
   instantiateDeviceController(device: Device): DeviceController | undefined;
   invalidateDeviceController(deviceId: number): Promise<void>;
+  reconcileDeviceController(deviceId: number): Promise<void>;
   instantiateController(
     deviceId: number,
   ): Promise<DeviceController | undefined>;
+  resolveLiveController(deviceId: number): Promise<LiveControllerResult>;
 }
+
+/** Why a route asking for a working controller cannot have one. */
+export type LiveControllerFailure = 'missing' | 'disabled' | 'unavailable';
+
+export type LiveControllerResult =
+  | { ok: true; controller: DeviceController }
+  | { ok: false; reason: LiveControllerFailure };
