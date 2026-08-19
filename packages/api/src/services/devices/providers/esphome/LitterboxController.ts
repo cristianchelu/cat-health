@@ -1,9 +1,12 @@
 import { sql } from 'kysely';
 import {
   DEVICE_SIGNAL_KEYS,
+  deriveLitterboxSampleRateHz,
   encodeLitterboxRawData,
   type DeviceSignal,
+  type LitterboxRawDataV2Context,
 } from 'shared';
+import { getDepositsSinceScoop } from '../../../litterbox/depositsSinceScoop.ts';
 import type { ProviderDeps, Device } from '../../types.ts';
 import {
   daysRemainingSignal,
@@ -39,15 +42,6 @@ interface EventSession {
   startTime: Date;
   endTime?: Date;
   measurements: RawMeasurement[];
-}
-
-interface ContextData {
-  wasteWeight: number;
-  litterRemaining: number;
-  deepCleanTimer: number;
-  totalVisits: number;
-  daysSinceLitterReplaced: number;
-  hoursSinceLastScoop: number;
 }
 
 export class LitterboxController extends BaseESPHomeController {
@@ -173,20 +167,29 @@ export class LitterboxController extends BaseESPHomeController {
       console.log(`[Litterbox] Final weight: ${eliminationWeight}g`);
 
       const measurements = session.measurements;
+      const startTimeMs = session.startTime.getTime();
+      const sampleOffsetsMs = measurements.map(
+        (m) => m.timestamp.getTime() - startTimeMs,
+      );
 
       // Get context data
-      const contextData = this.getContextData();
+      const contextData = await this.getContextData(session.startTime);
       console.log('[Litterbox] Context data:', contextData);
 
       // Encode raw data
       const rawData = Buffer.from(
         encodeLitterboxRawData({
-          version: 1,
-          startTimeMs: session.startTime.getTime(),
-          context: contextData || undefined,
+          version: 2,
+          startTimeMs,
+          context: contextData,
           weights: measurements.map((m) => m.weight),
+          sampleOffsetsMs,
         }),
       );
+      const sampleRateHz = deriveLitterboxSampleRateHz({
+        weights: measurements.map((m) => m.weight),
+        sampleOffsetsMs,
+      });
 
       if (eliminationWeight < MAINTENANCE_THRESHOLD) {
         console.log(
@@ -250,6 +253,7 @@ export class LitterboxController extends BaseESPHomeController {
             elimination_type: eliminationType,
             elimination_weight: Math.round(Math.max(0, eliminationWeight)),
             duration: Math.round(duration / 1000),
+            sample_rate_hz: sampleRateHz,
             straining,
             segments,
           },
@@ -351,47 +355,64 @@ export class LitterboxController extends BaseESPHomeController {
     return [...signals, ...this.diagnosticSignals()];
   }
 
-  private getContextData(): ContextData | null {
-    const wasteWeightKey = this.getEntityKey(SENSORS.WASTE_WEIGHT);
-    const litterRemainingKey = this.getEntityKey(SENSORS.LITTER_REMAINING);
-    const deepCleanTimerKey = this.getEntityKey(SENSORS.DEEP_CLEAN_TIMER);
-    const visitsKey = this.getEntityKey(SENSORS.VISITS);
+  /**
+   * Box state as the cat entered, snapshotted into the v2 blob. Sensor
+   * readings pass through at full precision; the event-log-derived fields
+   * are queried before the visit itself is inserted, so they describe the
+   * box at entry and stay immune to later event edits or re-analyses.
+   */
+  private async getContextData(
+    sessionStart: Date,
+  ): Promise<LitterboxRawDataV2Context> {
+    const wasteWeight = this.sensorNumber(SENSORS.WASTE_WEIGHT);
+    const litterRemainingKg = this.sensorNumber(SENSORS.LITTER_REMAINING);
+    const visitsSinceScoop = this.sensorNumber(SENSORS.VISITS);
 
-    const wasteWeight =
-      wasteWeightKey !== null
-        ? (this.sensorValues.get(wasteWeightKey) as number) || 0
-        : 0;
-    const litterRemaining =
-      litterRemainingKey !== null
-        ? ((this.sensorValues.get(litterRemainingKey) as number) || 0) * 1000 // kg to g
-        : 0;
-    const deepCleanTimer =
-      deepCleanTimerKey !== null
-        ? (this.sensorValues.get(deepCleanTimerKey) as number) || 0
-        : 0;
-    const totalVisits =
-      visitsKey !== null
-        ? (this.sensorValues.get(visitsKey) as number) || 0
-        : 0;
+    // The deep_clean_timer sensor is a countdown against an arbitrary,
+    // user-adjustable preset; litter age comes from the event log instead.
+    const lastDeepClean = await this.deps.db
+      .selectFrom('event')
+      .select(({ fn }) => [fn.max('timestamp').as('last_deep_clean_at')])
+      .where('device_id', '=', this.deviceId)
+      .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_maintenance')
+      .where(sql`json_extract(data, '$.maintenance_type')`, 'in', [
+        'deep_clean',
+        'litter_change',
+      ])
+      .executeTakeFirst();
 
-    // Derived metrics
-    const daysSinceLitterReplaced = Math.max(
-      0,
-      Math.round(30 - deepCleanTimer),
-    );
+    const daysSinceDeepClean = lastDeepClean?.last_deep_clean_at
+      ? Math.max(
+          0,
+          Math.floor(
+            (sessionStart.getTime() -
+              new Date(lastDeepClean.last_deep_clean_at).getTime()) /
+              (24 * 60 * 60 * 1000),
+          ),
+        )
+      : undefined;
 
-    // We don't have easy access to "last scoop time" without querying DB or keeping state.
-    // For now, we'll set hoursSinceLastScoop to 0 or try to estimate if we want.
-    // We can skip this for now or implement it later.
-    const hoursSinceLastScoop = 0;
+    // Mirrors the device-card pip counter (14-day lookback); an absent
+    // entry is that counter's "no deposits", so it is recorded as 0.
+    const deposits = (
+      await getDepositsSinceScoop(this.deps.db, [this.deviceId])
+    ).get(this.deviceId);
+    const pips = deposits?.pips ?? [];
+    const urinationsSinceScoop = pips.filter(
+      (pip) => pip === 'urination' || pip === 'both',
+    ).length;
+    const defecationsSinceScoop = pips.filter(
+      (pip) => pip === 'defecation' || pip === 'both',
+    ).length;
 
     return {
-      wasteWeight,
-      litterRemaining,
-      deepCleanTimer,
-      totalVisits,
-      daysSinceLitterReplaced,
-      hoursSinceLastScoop,
+      wasteWeight: wasteWeight ?? undefined,
+      litterRemaining:
+        litterRemainingKg !== null ? litterRemainingKg * 1000 : undefined,
+      daysSinceDeepClean,
+      visitsSinceScoop: visitsSinceScoop ?? undefined,
+      urinationsSinceScoop,
+      defecationsSinceScoop,
     };
   }
 

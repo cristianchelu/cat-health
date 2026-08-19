@@ -106,20 +106,24 @@ export function generateDemoVisit(
     scenario.straining,
   );
   const durationSeconds = Math.round(weights.length / SAMPLE_HZ);
+  const sampleOffsetsMs = weights.map((_, i) =>
+    Math.round((i * 1000) / SAMPLE_HZ),
+  );
 
   const rawData = Buffer.from(
     encodeLitterboxRawData({
-      version: 1,
+      version: 2,
       startTimeMs: timestamp.getTime(),
       context: {
         wasteWeight: 0,
         litterRemaining: 3200,
-        deepCleanTimer: 0,
-        totalVisits: 1,
-        daysSinceLitterReplaced: 3,
-        hoursSinceLastScoop: 8,
+        daysSinceDeepClean: 3,
+        visitsSinceScoop: 1,
+        urinationsSinceScoop: 1,
+        defecationsSinceScoop: 0,
       },
       weights,
+      sampleOffsetsMs,
     }),
   );
 
@@ -132,6 +136,7 @@ export function generateDemoVisit(
     elimination_type: scenario.eliminationType,
     elimination_weight: scenario.eliminationWeightGrams,
     duration: durationSeconds,
+    sample_rate_hz: SAMPLE_HZ,
     straining: scenario.straining,
     segments: null,
   };
