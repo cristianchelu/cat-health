@@ -424,7 +424,12 @@ const harnessEnabled = fixturesAvailable();
 
       for (const v of visits) {
         const weights = await loadStream(FIXTURE_DIR, v.stream_relpath);
-        const analyzer = new StateAnalyzer(v.knownGrams);
+        // HARNESS_TRUE_HZ=1 tunes the analyzer to each visit's measured rate
+        // instead of the legacy 10Hz assumption (Stage B evaluation mode).
+        const analyzer =
+          process.env.HARNESS_TRUE_HZ === '1'
+            ? new StateAnalyzer(v.knownGrams, v.sample_rate_hz)
+            : new StateAnalyzer(v.knownGrams);
         const r = analyzer.processEvent(weights);
         const predictedElim = determineEliminationType(r.periods);
         elimPairs.push({

@@ -93,22 +93,22 @@ export class StateAnalyzer {
     ENDED: 'ended',
   };
 
-  private hz = 10;
+  private hz: number;
   private varStable = Math.sqrt(250);
-  private stableMergeGap = 1.5 * this.hz;
+  private stableMergeGap: number;
   private entryDeltaMin = 1200;
   private entryDeltaFrac = 0.22;
   private presenceFrac = 0.28;
   private exitHold = 6;
-  private reentryWindow = 15 * this.hz;
-  private maxSession = 10 * 60 * this.hz;
+  private reentryWindow: number;
+  private maxSession: number;
   private knownPresenceTol = 0.1;
-  private windowSize = 10;
+  private windowSize: number;
 
   private currentState = this.states.EMPTY;
   private knownCatWeights: number[];
-  private window = new Ring(this.windowSize);
-  private weightHistory = new Ring(this.windowSize);
+  private window: Ring;
+  private weightHistory: Ring;
   private meanHistory = new Ring(3);
   private exitBelowCnt = 0;
   private gapCnt = 0;
@@ -125,7 +125,20 @@ export class StateAnalyzer {
   private catPresence: number[] = [];
   private transitions: StateTransition[] = [];
 
-  constructor(knownCatWeights?: number[]) {
+  /**
+   * `hz` sizes every time-based tuning window (smoothing ring, merge gaps,
+   * re-entry window, session cap, per-window RMS). The default of 10 predates
+   * measuring the real ~7.3Hz stream and is what the benchmark baseline was
+   * tuned against — pass the visit's true rate only alongside re-benchmarking.
+   */
+  constructor(knownCatWeights?: number[], hz = 10) {
+    this.hz = hz;
+    this.stableMergeGap = 1.5 * hz;
+    this.reentryWindow = 15 * hz;
+    this.maxSession = 10 * 60 * hz;
+    this.windowSize = Math.max(2, Math.round(hz));
+    this.window = new Ring(this.windowSize);
+    this.weightHistory = new Ring(this.windowSize);
     this.knownCatWeights =
       knownCatWeights && knownCatWeights.length
         ? knownCatWeights.slice().sort((a, b) => a - b)
@@ -446,8 +459,8 @@ export class StateAnalyzer {
   reset(): void {
     this.currentState = this.states.EMPTY;
     this.sessionActive = false;
-    this.window = new Ring(10);
-    this.weightHistory = new Ring(10);
+    this.window = new Ring(this.windowSize);
+    this.weightHistory = new Ring(this.windowSize);
     this.catWeight = 0;
     this.elimSum = 0;
     this.elimCount = 0;

@@ -131,6 +131,14 @@ describe('StateAnalyzer smoke', () => {
       assert.ok(p.end <= MAX_SESSION, `period end ${p.end} > ${MAX_SESSION}`);
     }
   });
+
+  it('explicit hz=10 is bit-identical to the default constructor', () => {
+    const known = [4200];
+    const weights = gramsPlateauAround(4200, 900);
+    const byDefault = new StateAnalyzer(known).processEvent(weights);
+    const explicit = new StateAnalyzer(known, 10).processEvent(weights);
+    assert.deepEqual(explicit, byDefault);
+  });
 });
 
 describe('determineEliminationType', () => {
