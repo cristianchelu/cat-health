@@ -153,7 +153,14 @@ export class StateAnalyzer {
     this.hz = hz;
     this.stableMergeGap = 1.5 * hz;
     this.reentryWindow = 15 * hz;
-    this.maxSession = 10 * 60 * hz;
+    // Runaway guard only — NOT a clinical judgment; this number has been
+    // teeter-tottered before, so the evidence is pinned here: a real cat sat
+    // 50+ minutes during a UTI bout (recorded 2026-08), and 10 minutes
+    // silently truncated analysis of exactly those visits (raw_data is never
+    // capped — only what processSample looks at). 60 min matches the longest
+    // sessions the activity sensor produces. Benchmark-gated on the n=1818
+    // fixture set before/after; see analyzerSmoke MAX_SESSION test.
+    this.maxSession = 60 * 60 * hz;
     this.windowSize = Math.max(2, Math.round(hz));
     this.minEliminationSamples = Math.round(
       (opts?.minEliminationSeconds ?? 8) * hz,

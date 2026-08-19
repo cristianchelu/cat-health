@@ -42,7 +42,10 @@ function gramsPlateauAround(targetGrams: number, sampleCount: number): number[] 
 }
 
 const REENTRY_WIN = 150;
-const MAX_SESSION = 6000;
+// 60 min at hz=10. Raised from 10 min (2026-08): a real UTI sit ran 50+
+// minutes and the old cap silently truncated its analysis. The guard only
+// bounds what processSample looks at — raw_data blobs are never capped.
+const MAX_SESSION = 36000;
 
 describe('StateAnalyzer smoke', () => {
   it('empty input: no session, zero weights, no_elimination', () => {
@@ -125,11 +128,24 @@ describe('StateAnalyzer smoke', () => {
 
   it('MAX_SESSION: period end indices do not exceed sessionStart + maxSession', () => {
     const known = [4200];
-    const weights = gramsPlateauAround(4200, 7000);
+    // Stream must overrun the cap for this test to exercise the guard.
+    const weights = gramsPlateauAround(4200, MAX_SESSION + 1000);
     const r = new StateAnalyzer(known).processEvent(weights);
     for (const p of r.periods) {
       assert.ok(p.end <= MAX_SESSION, `period end ${p.end} > ${MAX_SESSION}`);
     }
+  });
+
+  it('a 50-minute session is analyzed end to end, not truncated at 10 min', () => {
+    const known = [4200];
+    const fiftyMinutes = 50 * 60 * 10;
+    const weights = gramsPlateauAround(4200, fiftyMinutes);
+    const r = new StateAnalyzer(known).processEvent(weights);
+    const lastEnd = Math.max(...r.periods.map((p) => p.end));
+    assert.ok(
+      lastEnd > 10 * 60 * 10,
+      `analysis ended at sample ${lastEnd}; late-session activity was truncated`,
+    );
   });
 
   it('explicit hz=10 is bit-identical to the default constructor', () => {
