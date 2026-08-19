@@ -119,8 +119,9 @@ function hasDefecation(type: LitterboxUseEliminationType): boolean {
   return type === 'defecation' || type === 'both';
 }
 
-function getBoutDurations(
-  segments?: LitterboxAnalysisStatePeriod[] | null,
+export function getBoutDurations(
+  segments: LitterboxAnalysisStatePeriod[] | null | undefined,
+  sampleRateHz: number,
 ): { urination?: number; defecation?: number } | undefined {
   if (!segments || segments.length === 0) return undefined;
 
@@ -134,7 +135,7 @@ function getBoutDurations(
       continue;
     }
 
-    const seconds = Math.max(0, (segment.end - segment.start) / LITTERBOX_SAMPLE_HZ);
+    const seconds = Math.max(0, (segment.end - segment.start) / sampleRateHz);
     durations[segment.elimination_type] =
       (durations[segment.elimination_type] ?? 0) + seconds;
   }
@@ -296,7 +297,10 @@ export function buildLitterboxTrendResult(input: {
       event.elimination_weight = visit.data.elimination_weight;
       event.human_verified = visit.human_verified;
       event.device_id = visit.device_id;
-      event.bout_durations = getBoutDurations(visit.data.segments);
+      event.bout_durations = getBoutDurations(
+        visit.data.segments,
+        visit.data.sample_rate_hz ?? LITTERBOX_SAMPLE_HZ,
+      );
     }
 
     day.events.push(event);
