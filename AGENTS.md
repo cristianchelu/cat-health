@@ -53,15 +53,36 @@ Comments are documentation for whoever reads the file next. They are not a messa
 **NEVER**:
 
 - Address the reader or the requester (“you’ll notice”, “as discussed”, “your concern about…”).
-- Narrate the change or its history (“now we also…”, “this used to…”, “previously this shipped…”). That is what git is for.
+- Narrate the change or its history (“now we also…”, “this used to…”, “previously this shipped…”, “the regression was…”). That is what git is for.
 - Re-argue a decision that is already settled, or defend the code against an objection nobody reading it has.
 - Use markdown headings, bold, or bullet lists inside a comment.
 - Restate the signature or the line directly below.
+- Repeat a rule's rationale in a second file. See **one owner per rule** below.
 
 **ALWAYS**:
 
 - State what the code does, and why it is shaped that way, in plain declarative prose.
-- Keep it to a sentence or two. A decision that genuinely needs paragraphs goes in `{root}/docs/` or `{root}/summaries/`, and the comment points at it.
+- Keep it to a sentence or two — three at the absolute outside, and treat reaching for a third as a signal the reasoning belongs somewhere else. A decision that genuinely needs paragraphs goes in `{root}/docs/` or `{root}/summaries/`, and the comment points at it.
+
+#### One owner per rule
+
+A rule that shows up in more than one place gets **one** home: the function, predicate, or schema field that decides it. That is the only site that carries the _why_. Every other site names the owner and says nothing more.
+
+When the same non-obvious constraint applies in three or four places, that is a signal to **extract the predicate first and comment it once** — not to paste the reasoning at each call site. `isDeviceReachable` (API) and `isDeviceActive` (UI) exist for exactly this reason.
+
+- **NEVER** copy a rationale paragraph across files. Duplicated prose is duplicated code with no compiler to catch the drift: when the rule changes, N−1 copies quietly start lying.
+- **NEVER** restate a rule in a test that already lives on the code under test. `it('drops recognizers that are switched off')` is the whole explanation.
+- **ALWAYS** prefer naming the owner (“an offer list, so it drops what `isDeviceActive` rejects”) over re-deriving its argument.
+
+#### Comments in tests
+
+A test's `describe` / `it` names carry the behavior; a comment adds only what the assertions cannot show on their own:
+
+- The real-world sequence a fixture simulates (“`disconnect()` reports offline, then the socket closes and reports again”).
+- Why a fixture is shaped oddly (a device owned by one test so ordering cannot couple them).
+- A trap in the harness (mock timers, hydration required before events emit).
+
+Not: why the behavior is desirable, what the production code does instead, or what a reviewer might object to.
 
 ### CSS Architecture
 

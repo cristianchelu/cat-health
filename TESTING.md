@@ -108,8 +108,11 @@ after(async () => {
 
 1. **Identify the boundary** — pure logic? wire contract? route + DB?
 2. **Write one failing test** describing user-visible or API-consumer behavior.
-3. **Implement minimally** until green.
-4. **Refactor** without adding behavior.
+3. **Run it and watch it fail** — for the reason you expect. A test that passes before the fix is testing nothing; one that fails for an unrelated reason (missing fixture, unhydrated harness, an insert the FK rejects anyway) will pass later without proving the fix. Read the assertion diff, not just the red.
+4. **Implement minimally** until green.
+5. **Refactor** without adding behavior — the tests you just wrote are the net.
+
+**Pure refactors** (moving state, extracting a predicate, collapsing two passes into one) have no red step, because behavior must not change. Pin the contract most at risk with a characterization test, confirm it is **green before** you touch anything, then refactor under it. Do not manufacture a failing test to make the sequence look orthodox.
 
 ### Boundary decision tree
 
@@ -143,6 +146,8 @@ after(async () => {
 - Schema golden JSON fixtures
 - Real cloud calls in CI
 - Testing implementation details (internal call order, private helpers)
+- Rationale essays in test files — a paragraph arguing why the behavior is right, or restating a rule that already lives on the code under test. The `it(...)` name is the explanation; see [AGENTS.md → Code comments](AGENTS.md#code-comments)
+- Deleting a test alongside an unrelated change. Removing coverage is its own commit with its own reason, not a side effect
 - Parallel `Insert*Options` / fixture interfaces that duplicate Kysely `New*` or shared event types
 - `as unknown as IntegrationManager` test doubles — inject account managers on the real manager instead
 - `toISOString().split('T')[0]` in test fixtures (use `date-fns` `format` for local calendar dates)
