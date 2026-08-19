@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { after, before, beforeEach, describe, it } from 'node:test';
-import { encodeLitterboxRawData, LITTERBOX_RAW_DATA_VERSION_1 } from 'shared';
+import {
+  encodeLitterboxRawData,
+  LITTERBOX_RAW_DATA_VERSION_1,
+  LITTERBOX_RAW_DATA_VERSION_2,
+} from 'shared';
 import { sql } from 'kysely';
 import type { FastifyInstance } from 'fastify';
 
@@ -235,6 +239,44 @@ describe('devices API litterbox reidentify', () => {
     assert.equal(
       (skipped.data as { elimination_type: string }).elimination_type,
       'unknown',
+    );
+  });
+
+  it('persists the offsets-derived sample rate on v2 visits', async () => {
+    const visitAt = new Date('2026-08-01T12:00:00.000Z');
+    const weights = gramsPlateauAround(5200, 800);
+    const raw = Buffer.from(
+      encodeLitterboxRawData({
+        version: LITTERBOX_RAW_DATA_VERSION_2,
+        startTimeMs: visitAt.getTime(),
+        weights,
+        sampleOffsetsMs: weights.map((_, i) => i * 137),
+      }),
+    );
+
+    const visit = await insertLitterboxEvent(ctx.db, {
+      pet_id: heavyPetId,
+      device_id: deviceId,
+      timestamp: visitAt,
+      elimination_type: 'unknown',
+      raw_data: raw,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/devices/${deviceId}/litterbox-visits/reidentify`,
+    });
+    assert.equal(res.statusCode, 200);
+
+    const updated = await ctx.db
+      .selectFrom('event')
+      .selectAll()
+      .where('id', '=', visit.id)
+      .executeTakeFirstOrThrow();
+    // 137ms deltas -> 1000/137 ≈ 7.299Hz, from the v2 offsets.
+    assert.equal(
+      (updated.data as { sample_rate_hz?: number }).sample_rate_hz,
+      7.299,
     );
   });
 

@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { encodeLitterboxRawData, LITTERBOX_RAW_DATA_VERSION_1 } from 'shared';
+import {
+  encodeLitterboxRawData,
+  LITTERBOX_RAW_DATA_VERSION_1,
+  LITTERBOX_RAW_DATA_VERSION_2,
+} from 'shared';
 import type { FastifyInstance } from 'fastify';
 
 import {
@@ -66,6 +70,51 @@ describe('events API analyze', () => {
     assert.ok(Array.isArray(updated.data.segments));
     assert.ok(updated.data.segments.length > 0);
     assert.notEqual(updated.data.elimination_type, 'unknown');
+    // v1 blob carries no offsets: rate falls back to (samples-1)/duration.
+    assert.equal(
+      updated.data.sample_rate_hz,
+      Math.round(((weights.length - 1) / 60) * 1000) / 1000,
+    );
+  });
+
+  it('persists the offsets-derived sample rate for v2 raw_data', async () => {
+    const visitTime = new Date(Date.UTC(2026, 7, 19, 10, 0, 0));
+    const pet = await insertPet(ctx.db, { name: 'True Rate Cat' });
+    await insertWeightMeasurementEvent(ctx.db, {
+      pet_id: pet.id,
+      timestamp: new Date(visitTime.getTime() - 60_000),
+      weight: 4200,
+    });
+
+    const weights = gramsPlateauAround(4200, 800);
+    // ~7.3Hz: 137ms between samples.
+    const sampleOffsetsMs = weights.map((_, i) => i * 137);
+    const rawData = Buffer.from(
+      encodeLitterboxRawData({
+        version: LITTERBOX_RAW_DATA_VERSION_2,
+        startTimeMs: visitTime.getTime(),
+        weights,
+        sampleOffsetsMs,
+      }),
+    );
+
+    const event = await insertLitterboxEvent(ctx.db, {
+      pet_id: pet.id,
+      timestamp: visitTime,
+      elimination_type: 'unknown',
+      raw_data: rawData,
+    });
+
+    const analyze = await app.inject({
+      method: 'POST',
+      url: `/api/events/${event.id}/analyze`,
+    });
+
+    assert.equal(analyze.statusCode, 200);
+    const updated = analyze.json();
+    assert.ok(Array.isArray(updated.data.segments));
+    // 1000/137 ≈ 7.299Hz, from the offsets — not the 60s fixture duration.
+    assert.equal(updated.data.sample_rate_hz, 7.299);
   });
 
   it('rejects analyze when raw_data is missing', async () => {

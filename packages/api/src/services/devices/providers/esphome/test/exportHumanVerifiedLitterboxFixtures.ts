@@ -26,7 +26,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { sql, type Kysely } from 'kysely';
-import { decodeLitterboxRawData } from 'shared';
+import { decodeLitterboxRawData, deriveLitterboxSampleRateHz } from 'shared';
 
 import type { Database } from '../../../../../database/index.ts';
 import type { LitterboxUseEventData } from '../../../../../domain/events.ts';
@@ -238,10 +238,9 @@ async function exportFixtures(
         ? data.duration
         : Math.max(1, decoded.weights.length - 1) / SAMPLE_RATE_FALLBACK_HZ;
 
-    const sampleRateHz =
-      decoded.weights.length > 1 && durationS > 0
-        ? Math.round(((decoded.weights.length - 1) / durationS) * 1000) / 1000
-        : SAMPLE_RATE_FALLBACK_HZ;
+    // v2 blobs carry per-sample offsets — the true rate; v1 keeps the
+    // count/duration approximation.
+    const sampleRateHz = deriveLitterboxSampleRateHz(decoded, durationS);
 
     // One tenth-gram integer per line; line index i → time i / sample_rate_hz (Hz from visits.csv).
     const body = decoded.weights
