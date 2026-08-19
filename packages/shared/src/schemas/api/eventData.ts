@@ -87,6 +87,7 @@ export const LitterboxUseEventDataSchema = Type.Object({
   elimination_type: LitterboxUseEliminationTypeSchema,
   elimination_weight: Type.Number(),
   duration: Type.Number(),
+  sample_rate_hz: Type.Optional(Type.Number()),
   straining: Type.Optional(Type.Boolean()),
   annotation: Type.Optional(LitterboxAnnotationSchema),
   segments: Type.Optional(

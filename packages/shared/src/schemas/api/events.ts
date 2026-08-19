@@ -6,12 +6,17 @@ import {
   type LitterboxAnalysisStatePeriodDTO,
 } from "./eventData.ts";
 
-/** Sample rate (Hz); must match `StateAnalyzer` on the device path. */
+/**
+ * Legacy fallback rate (Hz) only — real hardware pushes ~7.3Hz. Prefer the
+ * visit's persisted `data.sample_rate_hz`, or `deriveLitterboxSampleRateHz`
+ * over decoded raw_data; reach for this constant only when both are absent.
+ */
 export const LITTERBOX_SAMPLE_HZ = 10;
 
 /**
  * One row from server `StateAnalyzer` periods, persisted on the event as `data.segments`.
- * Sample indices `start` / `end` align with the weight array; use `LITTERBOX_SAMPLE_HZ` (or derived Hz from duration/length) for seconds in the UI.
+ * Sample indices `start` / `end` align with the weight array; convert to seconds with the
+ * visit's `data.sample_rate_hz` (falling back to `LITTERBOX_SAMPLE_HZ`).
  * Per-interval stats (variance, mean) are not persisted — UIs that need them recompute from `raw_data` weights.
  */
 export type LitterboxAnalysisStatePeriod = LitterboxAnalysisStatePeriodDTO;

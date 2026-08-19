@@ -87,6 +87,7 @@ const StoredLitterboxUseSchema = Type.Object({
   ]),
   elimination_weight: Type.Number(),
   duration: Type.Number(),
+  sample_rate_hz: Type.Optional(Type.Number()),
   straining: Type.Optional(Type.Boolean()),
   annotation: Type.Optional(StoredLitterboxAnnotationSchema),
   segments: Type.Optional(

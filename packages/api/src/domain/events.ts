@@ -45,6 +45,12 @@ export interface LitterboxUseEventData {
   elimination_type: LitterboxUseEliminationType;
   elimination_weight: number;
   duration: number;
+  /**
+   * True samples-per-second of this visit's raw_data weight trace; converts
+   * `segments` sample indices to seconds. Derived from v2 per-sample offsets
+   * (or count/duration for v1); absent on rows predating the backfill.
+   */
+  sample_rate_hz?: number;
   straining?: boolean;
   annotation?: LitterboxAnnotation;
   /**
