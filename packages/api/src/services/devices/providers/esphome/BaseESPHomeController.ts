@@ -51,6 +51,19 @@ export interface ReconnectConfig {
   connectHandshakeTimeout: number;
 }
 
+/**
+ * ESPHome's own object_id derivation (`sanitize(snake_case(name))`):
+ * lowercase, spaces to underscores, any char outside [a-z0-9-_] to
+ * underscore. Firmware ≥2025.10 omits object_id from ListEntities when it
+ * equals this derivation, so the client must reproduce it exactly.
+ */
+export function objectIdFromName(name: unknown): string | null {
+  if (typeof name !== 'string' || name.length === 0) {
+    return null;
+  }
+  return name.toLowerCase().replace(/ /g, '_').replace(/[^a-z0-9-_]/g, '_');
+}
+
 function mapEspHomeEntityCategory(
   entity: EspHomeEntity,
 ): 'primary' | 'config' | 'diagnostic' {
@@ -179,8 +192,14 @@ export abstract class BaseESPHomeController implements DeviceController {
 
       for (const entity of data) {
         this.entityDefinitions.set(entity.key, entity);
-        if (entity.objectId) {
-          this.objectIdToKeyMap.set(entity.objectId, entity.key);
+        // ESPHome ≥2025.10 omits object_id from ListEntities when it is
+        // derivable from the name (API frame-size optimization) and expects
+        // clients to derive it, as aioesphomeapi does. Failing to derive
+        // silently killed every objectId lookup after a firmware update —
+        // no litterbox sessions, no fountain water level.
+        const objectId = entity.objectId || objectIdFromName(entity.name);
+        if (objectId) {
+          this.objectIdToKeyMap.set(objectId, entity.key);
         }
       }
 
