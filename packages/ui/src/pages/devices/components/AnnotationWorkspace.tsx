@@ -43,6 +43,7 @@ import type {
   LitterboxUseEventDataDTO,
 } from 'shared';
 import {
+  deriveLitterboxSampleRateHz,
   parseLitterboxUseEliminationType,
 } from 'shared';
 import type { LitterboxBoutAnnotation } from '@/types/litterbox';
@@ -184,12 +185,10 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
     return { periods: segmentsFromServer };
   }, [segmentsFromServer]);
 
-  const sampleRate = React.useMemo(() => {
-    if (!weights.length || !litterboxData.duration) return 10;
-    return (
-      Math.round(((weights.length - 1) / litterboxData.duration) * 1000) / 1000
-    );
-  }, [weights.length, litterboxData.duration]);
+  const sampleRate = React.useMemo(
+    () => deriveLitterboxSampleRateHz(decodedRaw, litterboxData.duration),
+    [decodedRaw, litterboxData.duration],
+  );
 
   const detectorBouts = React.useMemo(() => {
     if (!analysisResult) return [];

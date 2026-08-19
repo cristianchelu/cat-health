@@ -24,6 +24,24 @@ describe('eliminationBadgeRowsFromSegments', () => {
     ]);
   });
 
+  it('converts with the true sample rate when the visit carries one', () => {
+    const rows = eliminationBadgeRowsFromSegments(
+      [
+        {
+          state: 'eliminating',
+          start: 0,
+          end: 73,
+          elimination_type: 'defecation',
+        },
+      ],
+      7.3,
+    );
+
+    assert.deepEqual(rows, [
+      { elimination_type: 'defecation', start_s: 0, end_s: 10 },
+    ]);
+  });
+
   it('returns an empty list for missing or non-eliminating periods', () => {
     assert.deepEqual(eliminationBadgeRowsFromSegments(null, 10), []);
     assert.deepEqual(

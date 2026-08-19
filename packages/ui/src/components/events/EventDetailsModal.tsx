@@ -35,6 +35,7 @@ import {
   causeLabelKey,
 } from '@/lib/eventAttribution';
 import {
+  deriveLitterboxSampleRateHz,
   parseLitterboxUseEliminationType,
   type EventDataDTO,
   type GetEventDTO,
@@ -467,6 +468,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 <div className="event-details-litterbox-analysis">
                   <WeightSignalChart
                     weights={decodedRawData.weights}
+                    sampleRate={deriveLitterboxSampleRateHz(
+                      decodedRawData,
+                      litterboxData?.duration,
+                    )}
                     periods={segmentPeriods ?? EMPTY_LITTERBOX_SEGMENT_PERIODS}
                   />
                 </div>

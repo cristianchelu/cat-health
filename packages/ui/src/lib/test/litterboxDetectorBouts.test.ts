@@ -28,6 +28,24 @@ describe('deriveDetectorBouts', () => {
     ]);
   });
 
+  it('converts with the true sample rate when the visit carries one', () => {
+    const bouts = deriveDetectorBouts(
+      [
+        {
+          state: 'eliminating',
+          start: 0,
+          end: 73,
+          elimination_type: 'urination',
+        },
+      ],
+      7.3,
+    );
+
+    assert.deepEqual(bouts, [
+      { bout_index: 0, t_start_s: 0, t_end_s: 10, bout_type: 'urination' },
+    ]);
+  });
+
   it('skips sub-50ms eliminating periods and unknown elimination types', () => {
     const bouts = deriveDetectorBouts(
       [

@@ -42,10 +42,10 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
   const { formatTime } = useFormatters();
   const litterboxData = event.data.type === 'litterbox_use' ? event.data : null;
   const persistedSegments = litterboxData?.segments;
+  const sampleRateHz = litterboxData?.sample_rate_hz ?? LITTERBOX_SAMPLE_HZ;
   const badgeSegments = React.useMemo(
-    () =>
-      eliminationBadgeRowsFromSegments(persistedSegments, LITTERBOX_SAMPLE_HZ),
-    [persistedSegments],
+    () => eliminationBadgeRowsFromSegments(persistedSegments, sampleRateHz),
+    [persistedSegments, sampleRateHz],
   );
 
   const eliminationType = litterboxData?.elimination_type ?? 'unknown';
