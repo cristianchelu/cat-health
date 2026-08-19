@@ -114,11 +114,17 @@ export class FountainController
   }
 
   protected get reconnectConfig(): ReconnectConfig {
+    // Heartbeat tolerance matches the litterbox (30s/15s). The old 3s/1s
+    // killed every connection seconds after the entity list — before the
+    // post-subscribe state dump could land — because an idle bowl publishes
+    // nothing between drinks, so keepalive rides on ping/pong alone and one
+    // slow pong was fatal. Symptom: perpetual reconnect churn (~1800 flaps
+    // in two days) and water_level stuck at 0% after every server restart.
     return {
       baseDelay: 1000,
-      maxDelay: 5000,
-      heartbeatTimeout: 3000,
-      pingInterval: 1000,
+      maxDelay: 30000,
+      heartbeatTimeout: 30000,
+      pingInterval: 15000,
       connectHandshakeTimeout: 12000,
     };
   }
@@ -147,8 +153,10 @@ export class FountainController
       console.log(`Detected pump_status sensor in ${this.device.name}`);
     }
 
+    // Seed only on first discovery: a reconnect's entity dump must not stomp
+    // a known value back to 0 (flapping devices reconnect every ~20s).
     const waterDaysKey = this.getEntityKey(SENSORS.WATER_CHANGE_DAYS_REMAINING);
-    if (waterDaysKey !== null) {
+    if (waterDaysKey !== null && this.state.waterDaysRemaining === undefined) {
       this.state.waterDaysRemaining = 0;
       console.log(
         `Detected water_change_days_remaining sensor in ${this.device.name}`,
@@ -158,7 +166,10 @@ export class FountainController
     const filterDaysKey = this.getEntityKey(
       SENSORS.FILTER_CHANGE_DAYS_REMAINING,
     );
-    if (filterDaysKey !== null) {
+    if (
+      filterDaysKey !== null &&
+      this.state.filterDaysRemaining === undefined
+    ) {
       this.state.filterDaysRemaining = 0;
       console.log(
         `Detected filter_change_days_remaining sensor in ${this.device.name}`,
@@ -608,28 +619,43 @@ export class FountainController
   }
 
   getSignals(): DeviceSignal[] {
+    // Prefer sensorValues over the `state` copies: the initial state dump on
+    // connect can race ahead of the entity list, in which case
+    // handleSensorUpdate cannot match keys and `state` keeps its default —
+    // 0% water after every restart until the (rare) next water_level publish.
+    // sensorValues is populated regardless of ordering and survives
+    // reconnects, so it holds the last honest reading.
+    // Rounded like handleSensorUpdate always did — the raw sensor floats
+    // (58.61366653442383%) are not display values.
+    const waterLevel = this.sensorNumber(SENSORS.WATER_LEVEL);
     const signals: DeviceSignal[] = [
       percentSignal(
         { key: DEVICE_SIGNAL_KEYS.WATER_LEVEL, icon: 'water' },
-        this.state.waterLevel,
+        waterLevel !== null ? Math.round(waterLevel) : this.state.waterLevel,
       ),
     ];
 
     if (this.state.filterDaysRemaining !== undefined) {
+      const filterDays = this.sensorNumber(SENSORS.FILTER_CHANGE_DAYS_REMAINING);
       signals.push(
         daysRemainingSignal(
           { key: DEVICE_SIGNAL_KEYS.FILTER_LIFE, icon: 'filter' },
-          this.state.filterDaysRemaining,
+          filterDays !== null
+            ? Math.round(filterDays)
+            : this.state.filterDaysRemaining,
           this.config.filterIntervalDays,
         ),
       );
     }
 
     if (this.state.waterDaysRemaining !== undefined) {
+      const waterDays = this.sensorNumber(SENSORS.WATER_CHANGE_DAYS_REMAINING);
       signals.push(
         daysRemainingSignal(
           { key: DEVICE_SIGNAL_KEYS.WATER_FRESHNESS, icon: 'drop' },
-          this.state.waterDaysRemaining,
+          waterDays !== null
+            ? Math.round(waterDays)
+            : this.state.waterDaysRemaining,
         ),
       );
     }
