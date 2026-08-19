@@ -117,13 +117,12 @@ export async function computeLitterboxAnalysisData(
   const knownWeights = Array.from(
     (await getLatestPetWeightsGrams(db, params.timestamp)).values(),
   );
-  const analyzer = new StateAnalyzer(knownWeights);
-  const analysis = analyzer.processEvent(weights);
-
   const sampleRateHz = deriveLitterboxSampleRateHz(
     decoded,
     params.existing.duration,
   );
+  const analyzer = new StateAnalyzer(knownWeights, sampleRateHz);
+  const analysis = analyzer.processEvent(weights);
 
   return {
     ok: true,

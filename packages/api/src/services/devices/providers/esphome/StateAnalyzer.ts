@@ -104,6 +104,8 @@ export class StateAnalyzer {
   private maxSession: number;
   private knownPresenceTol = 0.1;
   private windowSize: number;
+  private minEliminationSamples: number;
+  private rmsWindowSamples: number;
 
   private currentState = this.states.EMPTY;
   private knownCatWeights: number[];
@@ -127,16 +129,36 @@ export class StateAnalyzer {
 
   /**
    * `hz` sizes every time-based tuning window (smoothing ring, merge gaps,
-   * re-entry window, session cap, per-window RMS). The default of 10 predates
-   * measuring the real ~7.3Hz stream and is what the benchmark baseline was
-   * tuned against — pass the visit's true rate only alongside re-benchmarking.
+   * re-entry window, session cap, per-window RMS). Production passes each
+   * visit's true measured rate (~6.6–7.3Hz, from `deriveLitterboxSampleRateHz`);
+   * the default of 10 is the legacy assumption kept for synthetic 10Hz streams.
+   *
+   * `opts` exposes the classification-adjacent windows for tuning studies:
+   * `minEliminationSeconds` demotes shorter eliminating periods to occupied;
+   * `rmsWindowSamples` (default `round(hz)`) sizes the windows whose median
+   * RMS becomes `period.variance` — the value the urination / defecation
+   * threshold is compared against.
+   *
+   * Defaults re-tuned 2026-08-19 for true-hz operation (n=1818 fixture
+   * sweep, `test/tuneTrueHzThresholds.ts`): demotion 8s (was an effective
+   * ~6.85s: 50 samples believed to be 5s at 10Hz), threshold unchanged at
+   * 4g. True-hz metrics vs the old hz=10 baseline: elim accuracy 0.9208
+   * (tie), bout P/R/F1 0.930/0.992/0.960 vs 0.925/0.990/0.956.
    */
-  constructor(knownCatWeights?: number[], hz = 10) {
+  constructor(
+    knownCatWeights?: number[],
+    hz = 10,
+    opts?: { minEliminationSeconds?: number; rmsWindowSamples?: number },
+  ) {
     this.hz = hz;
     this.stableMergeGap = 1.5 * hz;
     this.reentryWindow = 15 * hz;
     this.maxSession = 10 * 60 * hz;
     this.windowSize = Math.max(2, Math.round(hz));
+    this.minEliminationSamples = Math.round(
+      (opts?.minEliminationSeconds ?? 8) * hz,
+    );
+    this.rmsWindowSamples = opts?.rmsWindowSamples ?? Math.max(1, Math.round(hz));
     this.window = new Ring(this.windowSize);
     this.weightHistory = new Ring(this.windowSize);
     this.knownCatWeights =
@@ -324,7 +346,7 @@ export class StateAnalyzer {
       }
     }
 
-    const minEliminationDuration = 5 * this.hz;
+    const minEliminationDuration = this.minEliminationSamples;
     initialPeriods.forEach((p) => {
       if (
         p.state === this.states.ELIMINATING &&
@@ -388,7 +410,10 @@ export class StateAnalyzer {
         period.start + buffer,
         period.end + 1 - buffer,
       );
-      period.variance = eliminatingPeriodMotionMetric(periodWeights, this.hz);
+      period.variance = eliminatingPeriodMotionMetric(
+        periodWeights,
+        this.rmsWindowSamples,
+      );
     });
     return result;
   }
@@ -524,6 +549,7 @@ export function eliminatingPeriodMotionMetric(
 
 export function determineEliminationType(
   periods: StatePeriod[],
+  urinationVarianceThresholdG: number = URINATION_VARIANCE_THRESHOLD_G,
 ): LitterboxUseEliminationType {
   const eliminatingPeriods = periods.filter(
     (p) => p.state === 'eliminating' && p.variance !== undefined,
@@ -533,15 +559,15 @@ export function determineEliminationType(
   }
 
   if (eliminatingPeriods.length === 1) {
-    return (eliminatingPeriods[0].variance ?? 0) < URINATION_VARIANCE_THRESHOLD_G
+    return (eliminatingPeriods[0].variance ?? 0) < urinationVarianceThresholdG
       ? 'urination'
       : 'defecation';
   }
 
   if (eliminatingPeriods.length === 2) {
     const [a, b] = eliminatingPeriods;
-    const aIsUrination = (a.variance ?? 0) < URINATION_VARIANCE_THRESHOLD_G;
-    const bIsUrination = (b.variance ?? 0) < URINATION_VARIANCE_THRESHOLD_G;
+    const aIsUrination = (a.variance ?? 0) < urinationVarianceThresholdG;
+    const bIsUrination = (b.variance ?? 0) < urinationVarianceThresholdG;
     if (aIsUrination !== bIsUrination) {
       return 'both';
     }

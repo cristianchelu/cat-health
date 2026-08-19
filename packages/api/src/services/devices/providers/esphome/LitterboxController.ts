@@ -219,7 +219,7 @@ export class LitterboxController extends BaseESPHomeController {
           petIdsByWeight.set(w, pid);
         }
 
-        const analyzer = new StateAnalyzer(knownWeights);
+        const analyzer = new StateAnalyzer(knownWeights, sampleRateHz);
         const analysis = analyzer.processEvent(weights);
 
         let petId: number | null = null;

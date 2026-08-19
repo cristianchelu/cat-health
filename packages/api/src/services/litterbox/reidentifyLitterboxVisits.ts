@@ -71,7 +71,8 @@ async function reidentifyOneVisit(
     petIdsByWeight.set(w, pid);
   }
 
-  const analyzer = new StateAnalyzer(knownWeights);
+  const sampleRateHz = deriveLitterboxSampleRateHz(decoded, existing.duration);
+  const analyzer = new StateAnalyzer(knownWeights, sampleRateHz);
   const analysis = analyzer.processEvent(weights);
 
   // A visit already attributed to something other than a pet — the vacuum
@@ -94,11 +95,7 @@ async function reidentifyOneVisit(
 
   const newData = row.human_verified
     ? existing
-    : mergeAnalyzerIntoLitterboxData(
-        existing,
-        analysis,
-        deriveLitterboxSampleRateHz(decoded, existing.duration),
-      );
+    : mergeAnalyzerIntoLitterboxData(existing, analysis, sampleRateHz);
   const analysisChanged =
     !row.human_verified && litterboxDataAnalysisChanged(existing, newData);
 
