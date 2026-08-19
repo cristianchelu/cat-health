@@ -4,7 +4,7 @@ import type { Database } from '../../../../database/index.ts';
 import type { LitterboxUseEventData } from '../../../../domain/events.ts';
 import type { Kysely } from 'kysely';
 
-import { decodeLitterboxRawData } from 'shared';
+import { decodeLitterboxRawData, deriveLitterboxSampleRateHz } from 'shared';
 import { persistedLitterboxSegments } from './persistedLitterboxSegments.ts';
 import {
   StateAnalyzer,
@@ -18,6 +18,7 @@ const NO_ELIMINATION_THRESHOLD = 10;
 export function mergeAnalyzerIntoLitterboxData(
   existing: LitterboxUseEventData,
   analysis: StateResult,
+  sampleRateHz?: number,
 ): LitterboxUseEventData {
   const eliminationType = determineEliminationType(analysis.periods);
   const ew = existing.elimination_weight;
@@ -30,6 +31,7 @@ export function mergeAnalyzerIntoLitterboxData(
     elimination_type: eliminationType,
     straining,
     segments,
+    ...(sampleRateHz !== undefined ? { sample_rate_hz: sampleRateHz } : {}),
   };
 }
 
@@ -118,8 +120,13 @@ export async function computeLitterboxAnalysisData(
   const analyzer = new StateAnalyzer(knownWeights);
   const analysis = analyzer.processEvent(weights);
 
+  const sampleRateHz = deriveLitterboxSampleRateHz(
+    decoded,
+    params.existing.duration,
+  );
+
   return {
     ok: true,
-    data: mergeAnalyzerIntoLitterboxData(params.existing, analysis),
+    data: mergeAnalyzerIntoLitterboxData(params.existing, analysis, sampleRateHz),
   };
 }

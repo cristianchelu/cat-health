@@ -1,7 +1,7 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 
-import { decodeLitterboxRawData } from 'shared';
+import { decodeLitterboxRawData, deriveLitterboxSampleRateHz } from 'shared';
 
 import type { Database } from '../../database/index.ts';
 import type { EventTable } from '../../database/types/EventTable.ts';
@@ -32,6 +32,7 @@ function litterboxDataAnalysisChanged(
   return (
     before.elimination_type !== after.elimination_type ||
     (before.straining ?? false) !== (after.straining ?? false) ||
+    before.sample_rate_hz !== after.sample_rate_hz ||
     JSON.stringify(before.segments ?? null) !== JSON.stringify(after.segments ?? null)
   );
 }
@@ -93,7 +94,11 @@ async function reidentifyOneVisit(
 
   const newData = row.human_verified
     ? existing
-    : mergeAnalyzerIntoLitterboxData(existing, analysis);
+    : mergeAnalyzerIntoLitterboxData(
+        existing,
+        analysis,
+        deriveLitterboxSampleRateHz(decoded, existing.duration),
+      );
   const analysisChanged =
     !row.human_verified && litterboxDataAnalysisChanged(existing, newData);
 
