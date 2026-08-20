@@ -52,6 +52,28 @@ export interface ReconnectConfig {
 }
 
 /**
+ * Undo proto3 default-elision on state fields.
+ *
+ * A state at its protobuf default — 0.0 for a sensor, false for a binary
+ * sensor — is omitted from the wire entirely, and `esphome-client` decodes
+ * an absent field to `undefined`, which reads exactly like "never
+ * published". The explicit unknown marker is `missing_state`; without it,
+ * an absent state field IS the default value. Losing that distinction
+ * swallows every zero: "0 days until deep clean" never arrives, a scoop
+ * reset to 0 g never arrives, while vendor tooling (aioesphomeapi) applies
+ * the default and shows them fine.
+ */
+export const coerceNumericState = (
+  state: unknown,
+  missingState: unknown,
+): unknown => (missingState === true ? Number.NaN : (state ?? 0));
+
+export const coerceBooleanState = (
+  state: unknown,
+  missingState: unknown,
+): unknown => (missingState === true ? undefined : (state ?? false));
+
+/**
  * ESPHome's own object_id derivation (`sanitize(snake_case(name))`):
  * lowercase, spaces to underscores, any char outside [a-z0-9-_] to
  * underscore. Firmware ≥2025.10 omits object_id from ListEntities when it
@@ -209,26 +231,35 @@ export abstract class BaseESPHomeController implements DeviceController {
 
     this.client.on('telemetry', this.markTelemetry.bind(this));
 
-    this.client.on('sensor', ({ key, state }) => {
-      this.sensorValues.set(key, state);
+    this.client.on('sensor', (data) => {
+      const state = coerceNumericState(data.state, data.missingState);
+      this.sensorValues.set(data.key, state);
       this.recordDeviceActivity();
-      this.handleSensorUpdate(key, state);
+      this.handleSensorUpdate(data.key, state);
     });
 
-    this.client.on('number', ({ key, state }) => {
-      this.sensorValues.set(key, state);
+    this.client.on('number', (data) => {
+      this.sensorValues.set(
+        data.key,
+        coerceNumericState(data.state, data.missingState),
+      );
       this.recordDeviceActivity();
     });
 
-    this.client.on('switch', ({ key, state }) => {
-      this.sensorValues.set(key, state);
+    /* A switch has no missing_state on the wire — off is always knowable. */
+    this.client.on('switch', (data) => {
+      this.sensorValues.set(
+        data.key,
+        coerceBooleanState(data.state, undefined),
+      );
       this.recordDeviceActivity();
     });
 
-    this.client.on('binary_sensor', ({ key, state }) => {
-      this.sensorValues.set(key, state);
+    this.client.on('binary_sensor', (data) => {
+      const state = coerceBooleanState(data.state, data.missingState);
+      this.sensorValues.set(data.key, state);
       this.recordDeviceActivity();
-      this.handleSensorUpdate(key, state);
+      this.handleSensorUpdate(data.key, state);
     });
   }
 
@@ -501,12 +532,14 @@ export abstract class BaseESPHomeController implements DeviceController {
    */
   private sensorByDeviceClass(deviceClass: string): number | null {
     for (const entity of this.entityDefinitions.values()) {
-      if (
-        'deviceClass' in entity &&
-        entity.deviceClass === deviceClass &&
-        typeof this.sensorValues.get(entity.key) === 'number'
-      ) {
-        return this.sensorValues.get(entity.key) as number;
+      if ('deviceClass' in entity && entity.deviceClass === deviceClass) {
+        const value = this.sensorValues.get(entity.key);
+        /* NaN is how ESPHome says "unknown", and it is a number. Reject it
+         * here as `sensorNumber` does: a NaN that reaches a signal value
+         * fails response serialization for the whole devices list. */
+        if (typeof value === 'number' && Number.isFinite(value)) {
+          return value;
+        }
       }
     }
     return null;
