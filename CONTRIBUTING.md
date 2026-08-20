@@ -57,6 +57,22 @@ The ESPHome fixture harness is skipped unless you export local fixtures (`visits
 
 See [AGENTS.md](AGENTS.md) for architecture, CSS, API patterns, and provider integration boundaries.
 
+### Formatting
+
+Prettier owns formatting, from one `.prettierrc` at the repo root — no per-package configs, so every workspace gets the same answer. Four things keep it that way, and you should not have to think about any of them:
+
+```bash
+npm run format         # rewrite everything
+npm run format:check   # what CI runs
+```
+
+- **On save**, if you use the recommended Prettier extension (see `.vscode/extensions.json`).
+- **On commit**, via `.githooks/pre-commit`, which `npm install` wires up through `core.hooksPath`. A file that is staged _and_ has further unstaged edits is checked rather than rewritten, so the hook can never sweep unstaged work into your commit — it fails and tells you. Bypass with `--no-verify`.
+- **After an agent edit**, via the `PostToolUse` hook in `.claude/settings.json`.
+- **In CI**, which fails on any drift the three above missed.
+
+`.prettierignore` exists because Prettier reads `.gitignore` but not `.git/info/exclude`, where the vendored design-system bundle lives. Without it `npm run format` rewrites hundreds of files nobody here owns.
+
 ## License
 
 Pet Assistant is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0). You may use, modify, and distribute the software under those terms. If you run a modified version as a network service, you must offer corresponding source to users who interact with it over the network.

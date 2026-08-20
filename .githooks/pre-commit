@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#
+# Format staged files with Prettier before they land.
+#
+# Installed by the root `prepare` script, which points core.hooksPath here on
+# every `npm install`. Bypass with `git commit --no-verify`.
+#
+# A file that is staged *and* has further unstaged edits is checked rather than
+# rewritten: formatting the worktree copy and re-adding it would sweep those
+# unstaged edits into the commit, which is not what anyone asked for.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+prettier="$root/node_modules/.bin/prettier"
+
+if [ ! -x "$prettier" ]; then
+  echo "pre-commit: prettier not installed, skipping format" >&2
+  exit 0
+fi
+
+mapfile -t staged < <(git diff --cached --name-only --diff-filter=ACMR)
+[ "${#staged[@]}" -gt 0 ] || exit 0
+
+mapfile -t unstaged < <(git diff --name-only --diff-filter=ACMR)
+
+rewrite=()
+check=()
+for file in "${staged[@]}"; do
+  if [ "${#unstaged[@]}" -gt 0 ] &&
+    printf '%s\n' "${unstaged[@]}" | grep -qxF -- "$file"; then
+    check+=("$file")
+  else
+    rewrite+=("$file")
+  fi
+done
+
+if [ "${#rewrite[@]}" -gt 0 ]; then
+  "$prettier" --ignore-unknown --write "${rewrite[@]}" >/dev/null
+  git add -- "${rewrite[@]}"
+fi
+
+if [ "${#check[@]}" -gt 0 ] &&
+  ! "$prettier" --ignore-unknown --check "${check[@]}" >/dev/null 2>&1; then
+  echo "pre-commit: staged with unstaged changes, and not formatted:" >&2
+  "$prettier" --ignore-unknown --list-different "${check[@]}" | sed 's/^/  /' >&2
+  echo "Run 'npm run format', then stage and commit again." >&2
+  exit 1
+fi

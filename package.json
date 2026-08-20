@@ -7,6 +7,8 @@
     "test:unit": "npm run test:unit -w shared && npm run test:unit -w api && npm run test:unit -w ui",
     "test:integration": "npm run test:integration -w api",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "git config core.hooksPath .githooks && git config blame.ignoreRevsFile .git-blame-ignore-revs || true",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "concurrently -c blue,magenta -n api,ui \"npm run start -w api\" \"npm run start -w ui\"",
     "dev:api": "npm run start -w api",

@@ -1,0 +1,12 @@
+# Prettier reads .gitignore, but not .git/info/exclude — where the vendored
+# design-system bundle and the agent scratch directories are kept. Without these
+# lines `npm run format` rewrites ~870 files nobody here owns, which is why it
+# was never safe to run.
+ds-bundle/
+.design-sync/
+.ds-sync/
+.claude/worktrees/
+
+# Machine-written: npm owns the lockfile's formatting, not us.
+package-lock.json
+*.tsbuildinfo
