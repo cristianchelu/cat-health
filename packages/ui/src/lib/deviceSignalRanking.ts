@@ -62,8 +62,8 @@ function compareRanked(a: RankedSignal, b: RankedSignal): number {
   const byTone = TONE_RANK[b.tone] - TONE_RANK[a.tone];
   if (byTone !== 0) return byTone;
 
-  const byMeasurement = Number(Boolean(b.signal.severity)) -
-    Number(Boolean(a.signal.severity));
+  const byMeasurement =
+    Number(Boolean(b.signal.severity)) - Number(Boolean(a.signal.severity));
   if (byMeasurement !== 0) return byMeasurement;
 
   return b.urgency - a.urgency;
@@ -167,8 +167,6 @@ export function projectDeviceSlots(
     ...slots,
     gauge: slots.gauge ? refresh(slots.gauge) : null,
     meta: slots.meta.map(refresh),
-    drawer: slots.drawer.map(
-      (signal) => current.get(signal.key) ?? signal,
-    ),
+    drawer: slots.drawer.map((signal) => current.get(signal.key) ?? signal),
   };
 }

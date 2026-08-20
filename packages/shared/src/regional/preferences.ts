@@ -5,7 +5,7 @@ import type {
   NumberFormatDTO,
   SupportedLanguageDTO,
   TimeFormatDTO,
-} from "../schemas/api/settings.ts";
+} from '../schemas/api/settings.ts';
 
 export type SupportedLanguage = SupportedLanguageDTO;
 export type TimeFormat = TimeFormatDTO;
@@ -28,8 +28,8 @@ export interface ResolvedRegionalPreferences {
 }
 
 const INTL_LANGUAGE_TAGS: Record<SupportedLanguage, string> = {
-  en: "en-US",
-  ro: "ro-RO",
+  en: 'en-US',
+  ro: 'ro-RO',
 };
 
 const WEEK_START_FALLBACK: Record<SupportedLanguage, WeekStartsOn> = {
@@ -45,16 +45,16 @@ export function resolveUse12HourClock(
   timeFormat: TimeFormat,
   intlLanguageTag: string,
 ): boolean {
-  if (timeFormat === "h12") {
+  if (timeFormat === 'h12') {
     return true;
   }
-  if (timeFormat === "h24") {
+  if (timeFormat === 'h24') {
     return false;
   }
 
-  const tag = timeFormat === "language" ? intlLanguageTag : undefined;
-  const probe = new Date("2023-01-01T22:00:00").toLocaleString(tag);
-  return probe.includes("10");
+  const tag = timeFormat === 'language' ? intlLanguageTag : undefined;
+  const probe = new Date('2023-01-01T22:00:00').toLocaleString(tag);
+  return probe.includes('10');
 }
 
 export function resolveWeekStartsOn(
@@ -62,17 +62,17 @@ export function resolveWeekStartsOn(
   language: SupportedLanguage,
   intlLanguageTag: string,
 ): WeekStartsOn {
-  if (firstWeekday === "monday") {
+  if (firstWeekday === 'monday') {
     return 1;
   }
-  if (firstWeekday === "sunday") {
+  if (firstWeekday === 'sunday') {
     return 0;
   }
 
   if (
-    typeof Intl !== "undefined" &&
-    "Locale" in Intl &&
-    "weekInfo" in Intl.Locale.prototype
+    typeof Intl !== 'undefined' &&
+    'Locale' in Intl &&
+    'weekInfo' in Intl.Locale.prototype
   ) {
     try {
       const locale = new Intl.Locale(intlLanguageTag) as Intl.Locale & {

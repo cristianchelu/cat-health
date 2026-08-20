@@ -62,9 +62,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
     if (file) handleFile(file);
   };
 
-  const previewUrl = value
-    ? URL.createObjectURL(value)
-    : (existingUrl ?? null);
+  const previewUrl = value ? URL.createObjectURL(value) : (existingUrl ?? null);
 
   return (
     <div className={cn('avatar-upload', className)} {...props}>

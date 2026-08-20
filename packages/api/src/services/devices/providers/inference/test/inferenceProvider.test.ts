@@ -24,7 +24,10 @@ describe('InferenceProvider', () => {
 
   it('rejects empty or partial account config', () => {
     assert.equal(provider.validateAccountConfig(null), false);
-    assert.equal(provider.validateAccountConfig({ api_key: 'only-key' }), false);
+    assert.equal(
+      provider.validateAccountConfig({ api_key: 'only-key' }),
+      false,
+    );
     assert.equal(
       provider.validateAccountConfig({ base_url: 'http://inference.local' }),
       false,

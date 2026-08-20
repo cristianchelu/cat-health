@@ -113,5 +113,4 @@ describe('css custom properties', () => {
       `Undeclared custom properties referenced from TS/TSX (inline styles and colour registries — these render transparent or black):\n${offenders.join('\n')}`,
     );
   });
-
 });

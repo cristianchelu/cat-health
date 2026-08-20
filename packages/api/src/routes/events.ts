@@ -555,7 +555,10 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      if (nutrients?.moisture_ml != null && result.data.type === 'food_intake') {
+      if (
+        nutrients?.moisture_ml != null &&
+        result.data.type === 'food_intake'
+      ) {
         await db
           .insertInto('event')
           .values(

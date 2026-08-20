@@ -7,7 +7,12 @@
  * "due now" rather than counting nothing.
  */
 export interface DaysValueParts {
-  key: 'days_left' | 'days_overdue' | 'hours_left' | 'hours_overdue' | 'due_now';
+  key:
+    | 'days_left'
+    | 'days_overdue'
+    | 'hours_left'
+    | 'hours_overdue'
+    | 'due_now';
   count: number;
 }
 

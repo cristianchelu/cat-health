@@ -126,6 +126,10 @@ export async function computeLitterboxAnalysisData(
 
   return {
     ok: true,
-    data: mergeAnalyzerIntoLitterboxData(params.existing, analysis, sampleRateHz),
+    data: mergeAnalyzerIntoLitterboxData(
+      params.existing,
+      analysis,
+      sampleRateHz,
+    ),
   };
 }

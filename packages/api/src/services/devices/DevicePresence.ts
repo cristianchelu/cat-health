@@ -149,7 +149,7 @@ export class DevicePresence {
     const lastSeenMs =
       opts?.lastActivityMs !== undefined && opts.lastActivityMs !== null
         ? opts.lastActivityMs
-        : prev?.lastSeenMs ?? null;
+        : (prev?.lastSeenMs ?? null);
     const entry: PresenceEntry = {
       status: 'offline',
       lastSeenMs,
@@ -159,7 +159,11 @@ export class DevicePresence {
     void this.persistImmediate(deviceId, entry);
 
     if (previousStatus !== 'offline') {
-      this.scheduleOfflineConnectivityEvent(deviceId, previousStatus, Date.now());
+      this.scheduleOfflineConnectivityEvent(
+        deviceId,
+        previousStatus,
+        Date.now(),
+      );
     }
   }
 
@@ -277,11 +281,15 @@ export class DevicePresence {
       return;
     }
 
-    void this.emitConnectivityEvent(deviceId, {
-      type: 'device_connectivity',
-      state,
-      previous_state: toConnectivityPreviousState(previousStatus),
-    }, at);
+    void this.emitConnectivityEvent(
+      deviceId,
+      {
+        type: 'device_connectivity',
+        state,
+        previous_state: toConnectivityPreviousState(previousStatus),
+      },
+      at,
+    );
   }
 
   private async emitConnectivityEvent(
@@ -321,7 +329,10 @@ export class DevicePresence {
         .execute();
       entry.lastActivityPersistedAt = Date.now();
     } catch (err) {
-      console.error(`DevicePresence: persist failed for device ${deviceId}`, err);
+      console.error(
+        `DevicePresence: persist failed for device ${deviceId}`,
+        err,
+      );
     }
   }
 

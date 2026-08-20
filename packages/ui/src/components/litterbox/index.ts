@@ -1,7 +1,5 @@
 export { default as LitterboxDotGrid } from './LitterboxDotGrid';
-export {
-  default as LitterboxTrendGrid,
-} from './LitterboxTrendGrid';
+export { default as LitterboxTrendGrid } from './LitterboxTrendGrid';
 export { default as LitterboxMetricChart } from './LitterboxMetricChart';
 export type {
   LitterboxDotGridColumn,

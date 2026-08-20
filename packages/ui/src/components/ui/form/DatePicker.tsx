@@ -4,8 +4,10 @@ import { cn } from '@/lib/utils';
 import { Input } from './Input';
 import './DatePicker.css';
 
-interface DatePickerProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+interface DatePickerProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  'type'
+> {
   variant?: 'default' | 'error';
   inputSize?: 'sm' | 'md' | 'lg';
   label?: string;

@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, describe, it, mock } from 'node:test';
 
-import {
-  SurePetClient,
-  SurePetClientError,
-} from '../SurePetClient.ts';
+import { SurePetClient, SurePetClientError } from '../SurePetClient.ts';
 import { SUREPET_LOGIN_URL } from '../constants.ts';
 
 describe('SurePetClient', () => {
@@ -18,10 +15,13 @@ describe('SurePetClient', () => {
       'fetch',
       async (url: string | URL | Request) => {
         assert.equal(String(url), SUREPET_LOGIN_URL);
-        return new Response(JSON.stringify({ data: { token: 'cloud-token-123' } }), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ data: { token: 'cloud-token-123' } }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          },
+        );
       },
     );
 

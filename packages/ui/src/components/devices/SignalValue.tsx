@@ -54,16 +54,16 @@ export const SignalValue: React.FC<SignalValueProps> = ({ value, stale }) => {
       /* Overdue reads as a count past due, not a negative number; sub-day
        * values read in hours. See daysValueParts. */
       const parts = daysValueParts(value.value);
-      return <>{t(`devices.signals.units.${parts.key}`, { count: parts.count })}</>;
+      return (
+        <>{t(`devices.signals.units.${parts.key}`, { count: parts.count })}</>
+      );
     }
 
     case 'timestamp': {
       const date = coerceEpochDate(value.value);
       return (
         <>
-          {date
-            ? formatRelativeTimeAgo(date, { locale: dateFnsLocale })
-            : '—'}
+          {date ? formatRelativeTimeAgo(date, { locale: dateFnsLocale }) : '—'}
         </>
       );
     }

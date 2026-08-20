@@ -1,8 +1,6 @@
 {
   "name": "Cat Health Dev",
-  "dockerComposeFile": [
-    "../docker-compose.dev.yml"
-  ],
+  "dockerComposeFile": ["../docker-compose.dev.yml"],
   "service": "cat-health-dev",
   "workspaceFolder": "/app",
   "shutdownAction": "none",
@@ -20,11 +18,7 @@
       ]
     }
   },
-  "forwardPorts": [
-    3000,
-    5173,
-    9229
-  ],
+  "forwardPorts": [3000, 5173, 9229],
   "portsAttributes": {
     "3000": {
       "label": "API"

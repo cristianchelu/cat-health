@@ -1,4 +1,4 @@
-import type { DecodedLitterboxRawData } from "./types.ts";
+import type { DecodedLitterboxRawData } from './types.ts';
 
 /** Legacy assumed rate; real hardware pushes ~7.3Hz. Prefer derived rates. */
 const LEGACY_SAMPLE_HZ = 10;
@@ -15,7 +15,10 @@ function round3(value: number): number {
  * wall-clock) duration in seconds. Failing both, the legacy 10Hz assumption.
  */
 export function deriveLitterboxSampleRateHz(
-  decoded: Pick<DecodedLitterboxRawData, "weights" | "sampleOffsetsMs"> | null | undefined,
+  decoded:
+    | Pick<DecodedLitterboxRawData, 'weights' | 'sampleOffsetsMs'>
+    | null
+    | undefined,
   fallbackDurationS?: number,
 ): number {
   const offsets = decoded?.sampleOffsetsMs;
@@ -29,7 +32,7 @@ export function deriveLitterboxSampleRateHz(
   const sampleCount = decoded?.weights.length ?? 0;
   if (
     sampleCount >= 2 &&
-    typeof fallbackDurationS === "number" &&
+    typeof fallbackDurationS === 'number' &&
     fallbackDurationS > 0
   ) {
     return round3((sampleCount - 1) / fallbackDurationS);

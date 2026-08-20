@@ -1,9 +1,11 @@
-import type { Static, TSchema } from "@fastify/type-provider-typebox";
-import Compile from "typebox/compile";
+import type { Static, TSchema } from '@fastify/type-provider-typebox';
+import Compile from 'typebox/compile';
 
 const validators = new WeakMap<TSchema, ReturnType<typeof Compile>>();
 
-function getValidator<S extends TSchema>(schema: S): ReturnType<typeof Compile> {
+function getValidator<S extends TSchema>(
+  schema: S,
+): ReturnType<typeof Compile> {
   const cached = validators.get(schema);
   if (cached) return cached;
 
@@ -16,9 +18,7 @@ export function parseWithSchema<S extends TSchema>(
   schema: S,
   value: unknown,
 ): Static<S> | undefined {
-  return getValidator(schema).Check(value)
-    ? (value as Static<S>)
-    : undefined;
+  return getValidator(schema).Check(value) ? (value as Static<S>) : undefined;
 }
 
 export function requireWithSchema<S extends TSchema>(

@@ -13,8 +13,12 @@ function periodToBoutType(
   return 'unknown';
 }
 
-export function deriveDetectorBouts(periods: StatePeriod[], sampleRateHz: number): LitterboxBoutAnnotation[] {
-  const hz = Number.isFinite(sampleRateHz) && sampleRateHz > 0 ? sampleRateHz : 10;
+export function deriveDetectorBouts(
+  periods: StatePeriod[],
+  sampleRateHz: number,
+): LitterboxBoutAnnotation[] {
+  const hz =
+    Number.isFinite(sampleRateHz) && sampleRateHz > 0 ? sampleRateHz : 10;
 
   const eliminating: StatePeriod[] = [];
   for (const period of periods) {

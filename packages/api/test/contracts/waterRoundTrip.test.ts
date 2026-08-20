@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import {
-  encodeWaterRawData,
-  WATER_RAW_DATA_VERSION_1,
-} from 'shared';
+import { encodeWaterRawData, WATER_RAW_DATA_VERSION_1 } from 'shared';
 
 import { decodeWaterRawData } from '../../../ui/src/components/events/decodeWaterRawData.ts';
 

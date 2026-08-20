@@ -145,7 +145,11 @@ export function getBoutDurations(
     : undefined;
 }
 
-function createDateKeys(startTime: Date, endTime: Date, timezone: string): string[] {
+function createDateKeys(
+  startTime: Date,
+  endTime: Date,
+  timezone: string,
+): string[] {
   const keys: string[] = [];
   const seen = new Set<string>();
   let cursor = startOfDay(startTime);
@@ -180,11 +184,15 @@ function summarizeEvents(events: LitterboxTrendEvent[]): LitterboxDailySummary {
     if (event.type === 'no_elimination') summary.noEliminationCount += 1;
     if (event.type === 'unknown') summary.unknownCount += 1;
     if (event.straining) summary.strainingCount += 1;
-    if (event.elimination_weight !== undefined) weights.push(event.elimination_weight);
+    if (event.elimination_weight !== undefined)
+      weights.push(event.elimination_weight);
     if (event.duration !== undefined) durations.push(event.duration);
   }
 
-  summary.totalEliminationWeight = weights.reduce((sum, value) => sum + value, 0);
+  summary.totalEliminationWeight = weights.reduce(
+    (sum, value) => sum + value,
+    0,
+  );
   summary.avgEliminationWeight = average(weights);
   summary.medianEliminationWeight = median(weights);
   summary.avgDuration = average(durations);
@@ -206,7 +214,10 @@ function createAnalytics(days: LitterboxTrendDay[]): LitterboxTrendAnalytics {
   for (const day of days) {
     const summary = day.summary ?? summarizeEvents(day.events);
     dailyUrinationCount.push({ date: day.date, value: summary.urinationCount });
-    dailyDefecationCount.push({ date: day.date, value: summary.defecationCount });
+    dailyDefecationCount.push({
+      date: day.date,
+      value: summary.defecationCount,
+    });
 
     for (const event of day.events) {
       const basePoint = {
@@ -217,12 +228,18 @@ function createAnalytics(days: LitterboxTrendDay[]): LitterboxTrendAnalytics {
 
       const urinationDuration = event.bout_durations?.urination;
       if (urinationDuration !== undefined) {
-        urinationDurationPoints.push({ ...basePoint, value: urinationDuration });
+        urinationDurationPoints.push({
+          ...basePoint,
+          value: urinationDuration,
+        });
       }
 
       const defecationDuration = event.bout_durations?.defecation;
       if (defecationDuration !== undefined) {
-        defecationDurationPoints.push({ ...basePoint, value: defecationDuration });
+        defecationDurationPoints.push({
+          ...basePoint,
+          value: defecationDuration,
+        });
       }
 
       if (event.elimination_weight !== undefined) {
@@ -243,7 +260,6 @@ function createAnalytics(days: LitterboxTrendDay[]): LitterboxTrendAnalytics {
           });
         }
       }
-
     }
   }
 
@@ -268,7 +284,11 @@ export function buildLitterboxTrendResult(input: {
 }): LitterboxTrendResult {
   const dayMap = new Map<string, LitterboxTrendDay>();
 
-  for (const date of createDateKeys(input.startTime, input.endTime, input.timezone)) {
+  for (const date of createDateKeys(
+    input.startTime,
+    input.endTime,
+    input.timezone,
+  )) {
     dayMap.set(date, {
       date,
       tracked: isBucketTracked(date, input.untrackedDayBuckets ?? new Set()),
@@ -280,7 +300,11 @@ export function buildLitterboxTrendResult(input: {
   let lastPoop: Date | null = null;
 
   for (const visit of input.visits) {
-    const date = formatInTimeZone(visit.timestamp, input.timezone, 'yyyy-MM-dd');
+    const date = formatInTimeZone(
+      visit.timestamp,
+      input.timezone,
+      'yyyy-MM-dd',
+    );
     const day = dayMap.get(date);
     if (!day) continue;
 
@@ -305,10 +329,16 @@ export function buildLitterboxTrendResult(input: {
 
     day.events.push(event);
 
-    if (hasUrination(eliminationType) && (!lastPee || visit.timestamp > lastPee)) {
+    if (
+      hasUrination(eliminationType) &&
+      (!lastPee || visit.timestamp > lastPee)
+    ) {
       lastPee = visit.timestamp;
     }
-    if (hasDefecation(eliminationType) && (!lastPoop || visit.timestamp > lastPoop)) {
+    if (
+      hasDefecation(eliminationType) &&
+      (!lastPoop || visit.timestamp > lastPoop)
+    ) {
       lastPoop = visit.timestamp;
     }
   }

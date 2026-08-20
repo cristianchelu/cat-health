@@ -191,7 +191,10 @@ export async function testDeviceIdentification(
   return data;
 }
 
-export async function reidentifyLitterboxVisits(deviceId: number, after: string) {
+export async function reidentifyLitterboxVisits(
+  deviceId: number,
+  after: string,
+) {
   const { data } = await apiClient.post<ReidentifyLitterboxVisitsResponseDTO>(
     `/devices/${deviceId}/litterbox-visits/reidentify`,
     {},

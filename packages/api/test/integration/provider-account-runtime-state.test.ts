@@ -396,6 +396,9 @@ describe('provider account config / runtime_state split', () => {
     });
     assert.equal(create.statusCode, 200);
 
-    assert.deepEqual((await readRow(create.json().id as number)).runtime_state, {});
+    assert.deepEqual(
+      (await readRow(create.json().id as number)).runtime_state,
+      {},
+    );
   });
 });

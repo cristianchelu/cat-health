@@ -2,8 +2,10 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import './Input.css';
 
-interface InputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+interface InputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  'size'
+> {
   variant?: 'default' | 'error';
   inputSize?: 'sm' | 'md' | 'lg';
 }

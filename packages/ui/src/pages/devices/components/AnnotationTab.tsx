@@ -727,9 +727,9 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
                   event.caused_by === 'unknown'
                     ? undefined
                     : event.caused_by === 'pet'
-                      ? (event.pet_id
-                          ? petMap.get(event.pet_id)
-                          : t(causeLabelKey('pet')))
+                      ? event.pet_id
+                        ? petMap.get(event.pet_id)
+                        : t(causeLabelKey('pet'))
                       : t(causeLabelKey(event.caused_by));
                 const isSelected = event.id === selectedEventId;
 

@@ -1,9 +1,10 @@
 import { isRecord } from 'shared';
 import { BowlType } from './constants.ts';
 
-
 function getNumber(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : undefined;
 }
 
 function getBowlType(control: unknown): number | undefined {
@@ -27,6 +28,8 @@ export function resolveSurePetFoodCompartmentId(
   return 'default';
 }
 
-export function shouldIncludeBowlIndexOnProviderData(control: unknown): boolean {
+export function shouldIncludeBowlIndexOnProviderData(
+  control: unknown,
+): boolean {
   return getBowlType(control) === BowlType.TWO_SMALL;
 }

@@ -20,7 +20,9 @@ function decoded(
 describe('deriveLitterboxSampleRateHz', () => {
   it('derives the true rate from v2 sample offsets', () => {
     // 4 samples spanning 411ms -> 3 intervals / 0.411s ≈ 7.299Hz
-    const rate = deriveLitterboxSampleRateHz(decoded([1, 2, 3, 4], [0, 137, 274, 411]));
+    const rate = deriveLitterboxSampleRateHz(
+      decoded([1, 2, 3, 4], [0, 137, 274, 411]),
+    );
     assert.equal(rate, 7.299);
   });
 
@@ -48,7 +50,10 @@ describe('deriveLitterboxSampleRateHz', () => {
     assert.equal(deriveLitterboxSampleRateHz(decoded([1, 2]), -5), 10);
     // Zero-span offsets are degenerate; fall through to duration, then legacy.
     assert.equal(deriveLitterboxSampleRateHz(decoded([1, 2], [50, 50])), 10);
-    assert.equal(deriveLitterboxSampleRateHz(decoded([1, 2], [50, 50]), 4), 0.25);
+    assert.equal(
+      deriveLitterboxSampleRateHz(decoded([1, 2], [50, 50]), 4),
+      0.25,
+    );
     // A single offset can't span; duration fallback still applies.
     assert.equal(deriveLitterboxSampleRateHz(decoded([1, 2], [0]), 4), 0.25);
   });

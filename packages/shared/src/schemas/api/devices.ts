@@ -1,21 +1,21 @@
 import { Type, type Static } from '@fastify/type-provider-typebox';
-import { DeviceTypeSchema } from "../../constants/devices.ts";
+import { DeviceTypeSchema } from '../../constants/devices.ts';
 import { ProviderCapabilitiesSchema } from './integrations.ts';
 import { EventCauseSchema } from './events.ts';
 import { DeviceSignalSchema } from './deviceSignals.ts';
 
 export const DeviceStatusSchema = Type.Union([
-  Type.Literal("online"),
-  Type.Literal("offline"),
-  Type.Literal("error"),
-  Type.Literal("unknown"),
+  Type.Literal('online'),
+  Type.Literal('offline'),
+  Type.Literal('error'),
+  Type.Literal('unknown'),
 ]);
 export type DeviceStatus = Static<typeof DeviceStatusSchema>;
 
 export const EntityDisplayCategorySchema = Type.Union([
-  Type.Literal("primary"),
-  Type.Literal("config"),
-  Type.Literal("diagnostic"),
+  Type.Literal('primary'),
+  Type.Literal('config'),
+  Type.Literal('diagnostic'),
 ]);
 export type EntityDisplayCategory = Static<typeof EntityDisplayCategorySchema>;
 
@@ -24,13 +24,13 @@ export const EntitySchema = Type.Object({
   id: Type.String(),
   name: Type.String(),
   type: Type.Union([
-    Type.Literal("sensor"),
-    Type.Literal("binary_sensor"),
-    Type.Literal("switch"),
-    Type.Literal("number"),
-    Type.Literal("select"),
-    Type.Literal("text_sensor"),
-    Type.Literal("button"),
+    Type.Literal('sensor'),
+    Type.Literal('binary_sensor'),
+    Type.Literal('switch'),
+    Type.Literal('number'),
+    Type.Literal('select'),
+    Type.Literal('text_sensor'),
+    Type.Literal('button'),
     Type.String(),
   ]),
   value: Type.Unknown(),
@@ -77,27 +77,37 @@ export const ProviderAccountSchema = Type.Object({
 });
 export type ProviderAccountDTO = Static<typeof ProviderAccountSchema>;
 
-export const GetProviderAccountsResponseSchema = Type.Array(ProviderAccountSchema);
-export type GetProviderAccountsResponseDTO = Static<typeof GetProviderAccountsResponseSchema>;
+export const GetProviderAccountsResponseSchema = Type.Array(
+  ProviderAccountSchema,
+);
+export type GetProviderAccountsResponseDTO = Static<
+  typeof GetProviderAccountsResponseSchema
+>;
 
 export const PostProviderAccountRequestSchema = Type.Object({
   provider: Type.String(),
   name: Type.String(),
   config: Type.Record(Type.String(), Type.Unknown()),
 });
-export type PostProviderAccountRequestDTO = Static<typeof PostProviderAccountRequestSchema>;
+export type PostProviderAccountRequestDTO = Static<
+  typeof PostProviderAccountRequestSchema
+>;
 
 export const PatchProviderAccountRequestSchema = Type.Object({
   name: Type.Optional(Type.String()),
   config: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
   enabled: Type.Optional(Type.Boolean()),
 });
-export type PatchProviderAccountRequestDTO = Static<typeof PatchProviderAccountRequestSchema>;
+export type PatchProviderAccountRequestDTO = Static<
+  typeof PatchProviderAccountRequestSchema
+>;
 
 export const GetProviderAccountParamsSchema = Type.Object({
   id: Type.Number(),
 });
-export type GetProviderAccountParamsDTO = Static<typeof GetProviderAccountParamsSchema>;
+export type GetProviderAccountParamsDTO = Static<
+  typeof GetProviderAccountParamsSchema
+>;
 
 // --- Discovery ---
 
@@ -109,8 +119,12 @@ export const DiscoveredDeviceSchema = Type.Object({
 });
 export type DiscoveredDeviceDTO = Static<typeof DiscoveredDeviceSchema>;
 
-export const GetDiscoveredDevicesResponseSchema = Type.Array(DiscoveredDeviceSchema);
-export type GetDiscoveredDevicesResponseDTO = Static<typeof GetDiscoveredDevicesResponseSchema>;
+export const GetDiscoveredDevicesResponseSchema = Type.Array(
+  DiscoveredDeviceSchema,
+);
+export type GetDiscoveredDevicesResponseDTO = Static<
+  typeof GetDiscoveredDevicesResponseSchema
+>;
 
 // --- Devices ---
 
@@ -176,10 +190,12 @@ export const GetDeviceResponseSchema = Type.Object({
    * the devices grid ranks it without knowing the hardware.
    */
   signals: Type.Optional(Type.Array(DeviceSignalSchema)),
-  reference_media: Type.Optional(Type.Record(
-    Type.String(),
-    Type.Array(Type.Object({ id: Type.Number(), file_path: Type.String() })),
-  )),
+  reference_media: Type.Optional(
+    Type.Record(
+      Type.String(),
+      Type.Array(Type.Object({ id: Type.Number(), file_path: Type.String() })),
+    ),
+  ),
   camera_link: Type.Optional(DeviceCameraLinkSchema),
   created_at: Type.String(),
   updated_at: Type.String(),
@@ -249,7 +265,9 @@ export type WaterFountainState = Static<typeof WaterFountainStateSchema>;
 export const PostDeviceTestIdentifyRequestSchema = Type.Object({
   media_id: Type.Number(),
 });
-export type PostDeviceTestIdentifyRequestDTO = Static<typeof PostDeviceTestIdentifyRequestSchema>;
+export type PostDeviceTestIdentifyRequestDTO = Static<
+  typeof PostDeviceTestIdentifyRequestSchema
+>;
 
 export const PostDeviceTestIdentifyResponseSchema = Type.Object({
   pet_id: Type.Union([Type.Number(), Type.Null()]),
@@ -258,7 +276,9 @@ export const PostDeviceTestIdentifyResponseSchema = Type.Object({
   caused_by: EventCauseSchema,
   raw_response: Type.String(),
 });
-export type PostDeviceTestIdentifyResponseDTO = Static<typeof PostDeviceTestIdentifyResponseSchema>;
+export type PostDeviceTestIdentifyResponseDTO = Static<
+  typeof PostDeviceTestIdentifyResponseSchema
+>;
 
 // --- Litterbox visit re-identification ---
 

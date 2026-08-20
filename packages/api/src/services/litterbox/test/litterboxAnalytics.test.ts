@@ -8,7 +8,12 @@ const segments: LitterboxAnalysisStatePeriod[] = [
   { state: 'occupied', start: 0, end: 100 },
   { state: 'eliminating', start: 100, end: 173, elimination_type: 'urination' },
   { state: 'occupied', start: 173, end: 200 },
-  { state: 'eliminating', start: 200, end: 273, elimination_type: 'defecation' },
+  {
+    state: 'eliminating',
+    start: 200,
+    end: 273,
+    elimination_type: 'defecation',
+  },
 ];
 
 describe('getBoutDurations', () => {

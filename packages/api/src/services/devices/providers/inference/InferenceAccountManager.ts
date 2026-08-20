@@ -37,10 +37,7 @@ export class InferenceAccountManager implements AccountManager {
         await controller.connect();
         console.log(`Initialized pet recognizer: ${device.name}`);
       } catch (error) {
-        console.error(
-          `Failed to initialize recognizer ${device.name}:`,
-          error,
-        );
+        console.error(`Failed to initialize recognizer ${device.name}:`, error);
       }
     }
   }

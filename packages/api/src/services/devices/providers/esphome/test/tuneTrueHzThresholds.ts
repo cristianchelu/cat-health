@@ -77,20 +77,86 @@ async function main(): Promise<void> {
 
   const configs: Config[] = [
     // Reference: what production runs today.
-    { label: 'hz10 (baseline)', trueHz: false, minEliminationSeconds: 5, rmsWindow: 'nominal', thresholds: [4] },
+    {
+      label: 'hz10 (baseline)',
+      trueHz: false,
+      minEliminationSeconds: 5,
+      rmsWindow: 'nominal',
+      thresholds: [4],
+    },
     // Naive true-hz (the Stage B regression).
-    { label: 'truehz naive', trueHz: true, minEliminationSeconds: 5, rmsWindow: 'nominal', thresholds: [3, 3.5, 4, 4.5, 5, 5.5, 6] },
+    {
+      label: 'truehz naive',
+      trueHz: true,
+      minEliminationSeconds: 5,
+      rmsWindow: 'nominal',
+      thresholds: [3, 3.5, 4, 4.5, 5, 5.5, 6],
+    },
     // Keep the baseline's sample-domain windows, let hz drive only wall-time.
-    { label: 'truehz rms10', trueHz: true, minEliminationSeconds: 5, rmsWindow: 10, thresholds: [3.5, 4, 4.5, 5] },
+    {
+      label: 'truehz rms10',
+      trueHz: true,
+      minEliminationSeconds: 5,
+      rmsWindow: 10,
+      thresholds: [3.5, 4, 4.5, 5],
+    },
     // Longer demotion window (50 samples ≈ 6.85s at 7.3Hz).
-    { label: 'truehz demote6.85', trueHz: true, minEliminationSeconds: 6.85, rmsWindow: 'nominal', thresholds: [3, 3.5, 4, 4.5, 5, 5.5] },
-    { label: 'truehz demote6.85 rms10', trueHz: true, minEliminationSeconds: 6.85, rmsWindow: 10, thresholds: [3.5, 4, 4.5, 5] },
-    { label: 'truehz demote6', trueHz: true, minEliminationSeconds: 6, rmsWindow: 'nominal', thresholds: [4, 4.5, 5] },
-    { label: 'truehz demote7', trueHz: true, minEliminationSeconds: 7, rmsWindow: 'nominal', thresholds: [3.5, 3.75, 4, 4.25, 4.5] },
-    { label: 'truehz demote7.5', trueHz: true, minEliminationSeconds: 7.5, rmsWindow: 'nominal', thresholds: [3.5, 3.75, 4, 4.25, 4.5] },
-    { label: 'truehz demote8', trueHz: true, minEliminationSeconds: 8, rmsWindow: 'nominal', thresholds: [3.5, 3.75, 4, 4.25, 4.5, 5] },
-    { label: 'truehz demote8 rms10', trueHz: true, minEliminationSeconds: 8, rmsWindow: 10, thresholds: [3.5, 3.75, 4, 4.25, 4.5] },
-    { label: 'truehz demote9', trueHz: true, minEliminationSeconds: 9, rmsWindow: 'nominal', thresholds: [3.5, 3.75, 4, 4.25, 4.5] },
+    {
+      label: 'truehz demote6.85',
+      trueHz: true,
+      minEliminationSeconds: 6.85,
+      rmsWindow: 'nominal',
+      thresholds: [3, 3.5, 4, 4.5, 5, 5.5],
+    },
+    {
+      label: 'truehz demote6.85 rms10',
+      trueHz: true,
+      minEliminationSeconds: 6.85,
+      rmsWindow: 10,
+      thresholds: [3.5, 4, 4.5, 5],
+    },
+    {
+      label: 'truehz demote6',
+      trueHz: true,
+      minEliminationSeconds: 6,
+      rmsWindow: 'nominal',
+      thresholds: [4, 4.5, 5],
+    },
+    {
+      label: 'truehz demote7',
+      trueHz: true,
+      minEliminationSeconds: 7,
+      rmsWindow: 'nominal',
+      thresholds: [3.5, 3.75, 4, 4.25, 4.5],
+    },
+    {
+      label: 'truehz demote7.5',
+      trueHz: true,
+      minEliminationSeconds: 7.5,
+      rmsWindow: 'nominal',
+      thresholds: [3.5, 3.75, 4, 4.25, 4.5],
+    },
+    {
+      label: 'truehz demote8',
+      trueHz: true,
+      minEliminationSeconds: 8,
+      rmsWindow: 'nominal',
+      thresholds: [3.5, 3.75, 4, 4.25, 4.5, 5],
+    },
+    {
+      label: 'truehz demote8 rms10',
+      trueHz: true,
+      minEliminationSeconds: 8,
+      rmsWindow: 10,
+      thresholds: [3.5, 3.75, 4, 4.25, 4.5],
+    },
+    {
+      label: 'truehz demote9',
+      trueHz: true,
+      minEliminationSeconds: 9,
+      rmsWindow: 'nominal',
+      thresholds: [3.5, 3.75, 4, 4.25, 4.5],
+    },
   ];
 
   console.log(

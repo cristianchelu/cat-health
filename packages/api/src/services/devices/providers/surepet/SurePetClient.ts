@@ -104,10 +104,9 @@ export class SurePetClient {
   }
 
   async meStart(): Promise<SurePetMeStartData> {
-    const response = await this.request<SurePetApiObjectResponse<SurePetMeStartData>>(
-      'GET',
-      SUREPET_ME_START_URL,
-    );
+    const response = await this.request<
+      SurePetApiObjectResponse<SurePetMeStartData>
+    >('GET', SUREPET_ME_START_URL);
     return response.data ?? {};
   }
 
@@ -118,10 +117,9 @@ export class SurePetClient {
       params.set('HouseholdId', String(householdId));
     }
 
-    const response = await this.request<SurePetApiListResponse<SurePetCloudPet>>(
-      'GET',
-      `${SUREPET_API_BASE}/pet?${params.toString()}`,
-    );
+    const response = await this.request<
+      SurePetApiListResponse<SurePetCloudPet>
+    >('GET', `${SUREPET_API_BASE}/pet?${params.toString()}`);
     return response.data ?? [];
   }
 
@@ -133,10 +131,9 @@ export class SurePetClient {
       params.set('HouseholdId', String(householdId));
     }
 
-    const response = await this.request<SurePetApiListResponse<SurePetCloudDevice>>(
-      'GET',
-      `${SUREPET_API_BASE}/device?${params.toString()}`,
-    );
+    const response = await this.request<
+      SurePetApiListResponse<SurePetCloudDevice>
+    >('GET', `${SUREPET_API_BASE}/device?${params.toString()}`);
     return response.data ?? [];
   }
 
@@ -167,10 +164,9 @@ export class SurePetClient {
 
     const query = params.toString();
     const url = `${SUREPET_API_BASE}/timeline/household/${householdId}${query ? `?${query}` : ''}`;
-    const response = await this.request<SurePetApiListResponse<SurePetTimelineEntry>>(
-      'GET',
-      url,
-    );
+    const response = await this.request<
+      SurePetApiListResponse<SurePetTimelineEntry>
+    >('GET', url);
     const entries = response.data ?? [];
     return entries;
   }

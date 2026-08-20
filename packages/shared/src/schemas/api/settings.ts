@@ -1,62 +1,62 @@
-import { Type, type Static } from "@fastify/type-provider-typebox";
+import { Type, type Static } from '@fastify/type-provider-typebox';
 
 export const TRACKING_GAP_THRESHOLD_MINUTES_KEY =
-  "tracking_gap_threshold_minutes" as const;
+  'tracking_gap_threshold_minutes' as const;
 
 export const DEFAULT_TRACKING_GAP_THRESHOLD_MINUTES = 360;
 
-export const LANGUAGE_KEY = "language" as const;
-export const DEFAULT_LANGUAGE = "en" as const;
+export const LANGUAGE_KEY = 'language' as const;
+export const DEFAULT_LANGUAGE = 'en' as const;
 
-export const TIMEZONE_KEY = "timezone" as const;
+export const TIMEZONE_KEY = 'timezone' as const;
 
-export const TIME_FORMAT_KEY = "time_format" as const;
-export const DEFAULT_TIME_FORMAT = "language" as const;
+export const TIME_FORMAT_KEY = 'time_format' as const;
+export const DEFAULT_TIME_FORMAT = 'language' as const;
 
-export const DATE_FORMAT_KEY = "date_format" as const;
-export const DEFAULT_DATE_FORMAT = "language" as const;
+export const DATE_FORMAT_KEY = 'date_format' as const;
+export const DEFAULT_DATE_FORMAT = 'language' as const;
 
-export const FIRST_WEEKDAY_KEY = "first_weekday" as const;
-export const DEFAULT_FIRST_WEEKDAY = "language" as const;
+export const FIRST_WEEKDAY_KEY = 'first_weekday' as const;
+export const DEFAULT_FIRST_WEEKDAY = 'language' as const;
 
-export const NUMBER_FORMAT_KEY = "number_format" as const;
-export const DEFAULT_NUMBER_FORMAT = "language" as const;
+export const NUMBER_FORMAT_KEY = 'number_format' as const;
+export const DEFAULT_NUMBER_FORMAT = 'language' as const;
 
 export const SupportedLanguageSchema = Type.Union([
-  Type.Literal("en"),
-  Type.Literal("ro"),
+  Type.Literal('en'),
+  Type.Literal('ro'),
 ]);
 export type SupportedLanguageDTO = Static<typeof SupportedLanguageSchema>;
 
 export const TimeFormatSchema = Type.Union([
-  Type.Literal("language"),
-  Type.Literal("system"),
-  Type.Literal("h12"),
-  Type.Literal("h24"),
+  Type.Literal('language'),
+  Type.Literal('system'),
+  Type.Literal('h12'),
+  Type.Literal('h24'),
 ]);
 export type TimeFormatDTO = Static<typeof TimeFormatSchema>;
 
 export const DateFormatSchema = Type.Union([
-  Type.Literal("language"),
-  Type.Literal("system"),
-  Type.Literal("DMY"),
-  Type.Literal("MDY"),
-  Type.Literal("YMD"),
+  Type.Literal('language'),
+  Type.Literal('system'),
+  Type.Literal('DMY'),
+  Type.Literal('MDY'),
+  Type.Literal('YMD'),
 ]);
 export type DateFormatDTO = Static<typeof DateFormatSchema>;
 
 export const FirstWeekdaySchema = Type.Union([
-  Type.Literal("language"),
-  Type.Literal("monday"),
-  Type.Literal("sunday"),
+  Type.Literal('language'),
+  Type.Literal('monday'),
+  Type.Literal('sunday'),
 ]);
 export type FirstWeekdayDTO = Static<typeof FirstWeekdaySchema>;
 
 export const NumberFormatSchema = Type.Union([
-  Type.Literal("language"),
-  Type.Literal("system"),
-  Type.Literal("comma_decimal"),
-  Type.Literal("decimal_comma"),
+  Type.Literal('language'),
+  Type.Literal('system'),
+  Type.Literal('comma_decimal'),
+  Type.Literal('decimal_comma'),
 ]);
 export type NumberFormatDTO = Static<typeof NumberFormatSchema>;
 

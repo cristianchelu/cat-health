@@ -89,7 +89,10 @@ export function objectIdFromName(name: unknown): string | null {
   if (typeof name !== 'string' || name.length === 0) {
     return null;
   }
-  return name.toLowerCase().replace(/ /g, '_').replace(/[^a-z0-9-_]/g, '_');
+  return name
+    .toLowerCase()
+    .replace(/ /g, '_')
+    .replace(/[^a-z0-9-_]/g, '_');
 }
 
 function mapEspHomeEntityCategory(

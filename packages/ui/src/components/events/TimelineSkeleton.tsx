@@ -39,12 +39,20 @@ const TimelineSkeleton: React.FC = () => {
               <Timeline.Timestamp className="timeline-placeholder">
                 --:--
               </Timeline.Timestamp>
-              <Timeline.Value className="timeline-placeholder">{value}</Timeline.Value>
-              <Timeline.Title className="timeline-placeholder">· · ·</Timeline.Title>
+              <Timeline.Value className="timeline-placeholder">
+                {value}
+              </Timeline.Value>
+              <Timeline.Title className="timeline-placeholder">
+                · · ·
+              </Timeline.Title>
             </Timeline.Header>
             <Timeline.Meta>
-              <Timeline.MetaItem className="timeline-placeholder">--</Timeline.MetaItem>
-              <Timeline.MetaItem className="timeline-placeholder">· · ·</Timeline.MetaItem>
+              <Timeline.MetaItem className="timeline-placeholder">
+                --
+              </Timeline.MetaItem>
+              <Timeline.MetaItem className="timeline-placeholder">
+                · · ·
+              </Timeline.MetaItem>
             </Timeline.Meta>
           </Timeline.Content>
         </Timeline.Item>

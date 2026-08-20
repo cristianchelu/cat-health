@@ -175,9 +175,7 @@ export async function recordIdentification(
 
   const update = await db
     .updateTable('event')
-    .set(
-      attributionColumns(result.caused_by, result.pet_id, 'recognizer'),
-    )
+    .set(attributionColumns(result.caused_by, result.pet_id, 'recognizer'))
     .where('id', '=', eventId)
     .where('caused_by', '=', 'unknown')
     .executeTakeFirst();
@@ -492,11 +490,7 @@ export class PetRecognizerController implements DeviceController {
       const mediaId = snapshotMedia?.id ?? eventMedia[0].id;
       const result = await this.identifyPetFromMedia(mediaId);
 
-      const outcome = await recordIdentification(
-        this.deps.db,
-        eventId,
-        result,
-      );
+      const outcome = await recordIdentification(this.deps.db, eventId, result);
 
       if (outcome === 'unresolved') {
         console.log(

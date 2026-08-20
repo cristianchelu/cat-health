@@ -21,10 +21,7 @@
 
   section.widget-grid {
     display: grid;
-    grid-template-columns: repeat(
-      auto-fit,
-      minmax(min(100%, 200px), 1fr)
-    );
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
     gap: var(--space-lg);
     align-items: stretch;
     width: 100%;

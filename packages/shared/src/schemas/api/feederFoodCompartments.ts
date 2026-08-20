@@ -1,5 +1,5 @@
-import { Type, type Static } from "@fastify/type-provider-typebox";
-import { isRecord } from "../../typeGuards.ts";
+import { Type, type Static } from '@fastify/type-provider-typebox';
+import { isRecord } from '../../typeGuards.ts';
 
 /** One food catalog link for a feeder compartment (opaque compartment id). */
 export const FeederFoodCompartmentSchema = Type.Object({
@@ -31,8 +31,8 @@ export function parseFeederFoodCompartments(
     if (!isRecord(entry)) continue;
     const compartment = entry.compartment;
     const foodId = entry.food_id;
-    if (typeof compartment !== "string" || compartment.length === 0) continue;
-    if (typeof foodId !== "number" || !Number.isFinite(foodId)) continue;
+    if (typeof compartment !== 'string' || compartment.length === 0) continue;
+    if (typeof foodId !== 'number' || !Number.isFinite(foodId)) continue;
     result.set(compartment, foodId);
   }
 

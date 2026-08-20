@@ -1,7 +1,10 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import type { Database } from '../../database/index.ts';
-import type { PetPresenceEventData, PetPresenceState } from '../../domain/events.ts';
+import type {
+  PetPresenceEventData,
+  PetPresenceState,
+} from '../../domain/events.ts';
 
 export type PetPresencePreviousState = PetPresenceState | 'unknown';
 

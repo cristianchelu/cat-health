@@ -1,4 +1,4 @@
-import type { WaterPeriod, WaterSegmentState } from "./types.ts";
+import type { WaterPeriod, WaterSegmentState } from './types.ts';
 
 const DRINKING_RATE_MIN_ML_PER_MIN = 10;
 const DRINKING_RATE_MAX_ML_PER_MIN = 90;
@@ -34,10 +34,10 @@ function classify(rate: number): WaterSegmentState {
     rate >= DRINKING_RATE_MIN_ML_PER_MIN &&
     rate <= DRINKING_RATE_MAX_ML_PER_MIN
   ) {
-    return "drinking";
+    return 'drinking';
   }
-  if (rate > DRINKING_RATE_MAX_ML_PER_MIN) return "spill";
-  return "noise";
+  if (rate > DRINKING_RATE_MAX_ML_PER_MIN) return 'spill';
+  return 'noise';
 }
 
 /** Classify fountain weight samples for chart colouring (fixed 10 Hz assumption). */
@@ -62,9 +62,9 @@ export function analyzeWaterSegments(weights: number[]): WaterPeriod[] {
   raw.push({ state: currentState, start: periodStart, end: weights.length });
 
   const demoted = raw.map((period) =>
-    period.state === "drinking" &&
+    period.state === 'drinking' &&
     period.end - period.start < MIN_DRINKING_DURATION_SAMPLES
-      ? { ...period, state: "noise" as WaterSegmentState }
+      ? { ...period, state: 'noise' as WaterSegmentState }
       : period,
   );
 

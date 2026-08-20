@@ -75,8 +75,8 @@ const TimelineEventShell = React.forwardRef<
           </Timeline.Header>
           <Timeline.Meta>
             {showPet && (
-            <EventPet petId={event.pet_id} causedBy={event.caused_by} />
-          )}
+              <EventPet petId={event.pet_id} causedBy={event.caused_by} />
+            )}
             {showDevice && event.device_id && (
               <EventDevice deviceId={event.device_id} />
             )}

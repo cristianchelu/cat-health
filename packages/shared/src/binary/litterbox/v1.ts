@@ -2,12 +2,12 @@ import {
   LITTERBOX_NULL_U16,
   LITTERBOX_NULL_U8,
   LITTERBOX_RAW_DATA_VERSION_1,
-} from "./constants.ts";
+} from './constants.ts';
 import type {
   DecodedLitterboxContext,
   DecodedLitterboxRawData,
   EncodeLitterboxRawDataV1Input,
-} from "./types.ts";
+} from './types.ts';
 
 const HEADER_MIN = 1 + 8 + 10 + 4;
 

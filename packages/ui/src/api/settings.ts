@@ -1,7 +1,4 @@
-import type {
-  GetSettingsResponseDTO,
-  PatchSettingsRequestDTO,
-} from 'shared';
+import type { GetSettingsResponseDTO, PatchSettingsRequestDTO } from 'shared';
 import apiClient from './apiClient';
 
 export async function getSettings() {

@@ -94,7 +94,7 @@ Every component MUST have a corresponding CSS file:
 
 ```tsx
 // MyComponent.tsx
-import "./MyComponent.css";
+import './MyComponent.css';
 return (
   <div className="my-component">
     <a className="some-class" />
@@ -156,13 +156,13 @@ These are the rules that keep chrome from drifting between routes. Each one exis
 #### TypeScript Component Pattern
 
 ```tsx
-import * as React from "react";
-import { cn } from "@/lib/utils";
-import "./ComponentName.css";
+import * as React from 'react';
+import { cn } from '@/lib/utils';
+import './ComponentName.css';
 
-interface ComponentNameProps extends React.ComponentProps<"div"> {
-  variant?: "default" | "primary" | "secondary";
-  size?: "sm" | "md" | "lg";
+interface ComponentNameProps extends React.ComponentProps<'div'> {
+  variant?: 'default' | 'primary' | 'secondary';
+  size?: 'sm' | 'md' | 'lg';
   customProp?: string;
 }
 
@@ -170,8 +170,8 @@ const ComponentName = React.forwardRef<HTMLDivElement, ComponentNameProps>(
   (
     {
       className,
-      variant = "default",
-      size = "md",
+      variant = 'default',
+      size = 'md',
       customProp,
       children,
       ...props
@@ -180,7 +180,7 @@ const ComponentName = React.forwardRef<HTMLDivElement, ComponentNameProps>(
   ) => {
     return (
       <div
-        className={cn("component-name", variant, size, className)}
+        className={cn('component-name', variant, size, className)}
         ref={ref}
         {...props}
       >
@@ -190,7 +190,7 @@ const ComponentName = React.forwardRef<HTMLDivElement, ComponentNameProps>(
   },
 );
 
-ComponentName.displayName = "ComponentName";
+ComponentName.displayName = 'ComponentName';
 
 export { type ComponentNameProps };
 export default ComponentName;
@@ -405,26 +405,26 @@ npm run preview                 # Preview production build
 
 ```typescript
 // External libraries first
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 // Internal imports with @ alias
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/Button";
-import { PetCard } from "@/components/pet/PetCard";
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/Button';
+import { PetCard } from '@/components/pet/PetCard';
 
 // CSS import last
-import "./ComponentName.css";
+import './ComponentName.css';
 ```
 
 ### Backend
 
 ```typescript
 // External libraries first
-import { Type } from "@fastify/type-provider-typebox";
+import { Type } from '@fastify/type-provider-typebox';
 
 // Internal imports with relative paths
-import { db } from "../database/index.ts";
+import { db } from '../database/index.ts';
 ```
 
 ## Dependencies Overview

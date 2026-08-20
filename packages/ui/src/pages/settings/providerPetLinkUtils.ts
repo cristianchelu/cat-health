@@ -9,10 +9,14 @@ export function normalizePetName(name: string): string {
   return name.trim().toLowerCase();
 }
 
-export function getTagIdFromRemotePet(pet: ProviderRemotePet): number | undefined {
+export function getTagIdFromRemotePet(
+  pet: ProviderRemotePet,
+): number | undefined {
   if (!isRecord(pet.metadata)) return undefined;
   const tagId = pet.metadata.tag_id;
-  return typeof tagId === 'number' && Number.isFinite(tagId) ? tagId : undefined;
+  return typeof tagId === 'number' && Number.isFinite(tagId)
+    ? tagId
+    : undefined;
 }
 
 export function buildPetLinksFromCloud(
@@ -33,7 +37,12 @@ export function buildPetLinksFromCloud(
         ...prior,
         remote_name: cloudPet.name ?? prior.remote_name,
         ...(tagId != null
-          ? { metadata: { ...(isRecord(prior.metadata) ? prior.metadata : {}), tag_id: tagId } }
+          ? {
+              metadata: {
+                ...(isRecord(prior.metadata) ? prior.metadata : {}),
+                tag_id: tagId,
+              },
+            }
           : {}),
       };
     }
@@ -66,5 +75,8 @@ export function petLinksForSave(links: ProviderPetLink[]): ProviderPetLink[] {
 }
 
 export function getTagIdFromLink(link: ProviderPetLink): number | undefined {
-  return getTagIdFromRemotePet({ external_id: link.external_pet_id, metadata: link.metadata });
+  return getTagIdFromRemotePet({
+    external_id: link.external_pet_id,
+    metadata: link.metadata,
+  });
 }

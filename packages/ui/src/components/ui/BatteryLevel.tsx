@@ -4,8 +4,10 @@ import { cn } from '@/lib/utils';
 import type { MeterTone } from './Meter';
 import './BatteryLevel.css';
 
-interface BatteryLevelProps
-  extends Omit<React.ComponentProps<'span'>, 'children'> {
+interface BatteryLevelProps extends Omit<
+  React.ComponentProps<'span'>,
+  'children'
+> {
   /** Charge remaining, 0 to 100. */
   percent: number;
   tone?: MeterTone;

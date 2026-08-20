@@ -71,5 +71,4 @@ describe('ConfirmDialog', () => {
     assert.equal(cancelled, false);
     assert.ok(screen.getByText('Delete pet?'));
   });
-
 });

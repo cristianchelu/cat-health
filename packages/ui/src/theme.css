@@ -210,12 +210,16 @@
   --breakpoint-2xl: 1536px;
 
   /* Gradients */
-  --gradient-primary: linear-gradient(to right,
-      var(--color-primary),
-      var(--color-primary-dark));
-  --gradient-secondary: linear-gradient(to right,
-      var(--color-secondary),
-      var(--color-secondary-dark));
+  --gradient-primary: linear-gradient(
+    to right,
+    var(--color-primary),
+    var(--color-primary-dark)
+  );
+  --gradient-secondary: linear-gradient(
+    to right,
+    var(--color-secondary),
+    var(--color-secondary-dark)
+  );
   --gradient-pet: linear-gradient(90deg, #9b8cf2, #6366f1);
 
   /* Charts (light) - bright and airy */

@@ -39,11 +39,12 @@ const BOUT_FILL_COLORS: Record<LitterboxBoutAnnotation['bout_type'], string> = {
   unknown: 'rgba(156, 163, 175, 0.3)',
 };
 
-const BOUT_STROKE_COLORS: Record<LitterboxBoutAnnotation['bout_type'], string> = {
-  urination: 'rgba(180, 120, 20, 0.9)',
-  defecation: 'rgba(139, 69, 19, 0.9)',
-  unknown: 'rgba(100, 110, 130, 0.8)',
-};
+const BOUT_STROKE_COLORS: Record<LitterboxBoutAnnotation['bout_type'], string> =
+  {
+    urination: 'rgba(180, 120, 20, 0.9)',
+    defecation: 'rgba(139, 69, 19, 0.9)',
+    unknown: 'rgba(100, 110, 130, 0.8)',
+  };
 
 // LTTB (Largest Triangle Three Buckets) downsampling
 function downsample(data: number[], maxPoints: number): number[] {
@@ -62,8 +63,13 @@ function downsample(data: number[], maxPoints: number): number[] {
     const nextBucketEnd = Math.floor((i + 2) * bucketSize) + 1;
 
     let nextAvg = 0;
-    const nextBucketLen = Math.min(nextBucketEnd, data.length) - nextBucketStart;
-    for (let j = nextBucketStart; j < Math.min(nextBucketEnd, data.length); j++) {
+    const nextBucketLen =
+      Math.min(nextBucketEnd, data.length) - nextBucketStart;
+    for (
+      let j = nextBucketStart;
+      j < Math.min(nextBucketEnd, data.length);
+      j++
+    ) {
       nextAvg += data[j];
     }
     nextAvg /= nextBucketLen || 1;
@@ -79,7 +85,7 @@ function downsample(data: number[], maxPoints: number): number[] {
     for (let j = bucketStart; j < Math.min(bucketEnd, data.length); j++) {
       const area = Math.abs(
         (prevX - nextX) * (data[j] - prevY) -
-        (prevX - (j - bucketStart + i + 1)) * (nextY - prevY),
+          (prevX - (j - bucketStart + i + 1)) * (nextY - prevY),
       );
       if (area > maxArea) {
         maxArea = area;
@@ -174,7 +180,12 @@ function arrayMinMax(arr: number[]): { min: number; max: number } {
 type DragMode =
   | { type: 'none' }
   | { type: 'create'; startX: number; currentX: number }
-  | { type: 'resize'; boutIndex: number; handle: 'left' | 'right'; currentX: number }
+  | {
+      type: 'resize';
+      boutIndex: number;
+      handle: 'left' | 'right';
+      currentX: number;
+    }
   | { type: 'select'; boutIndex: number };
 
 const SVG_WIDTH = 400;
@@ -198,10 +209,16 @@ function areWeightSignalChartPropsEqual(
   const nm = next.mediaSync;
   if (pm === nm) return true;
   if (!pm || !nm) return false;
-  return pm.playheadChartSec === nm.playheadChartSec && pm.onAxisSeek === nm.onAxisSeek;
+  return (
+    pm.playheadChartSec === nm.playheadChartSec &&
+    pm.onAxisSeek === nm.onAxisSeek
+  );
 }
 
-const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChartProps>(
+const WeightSignalChartInner = React.forwardRef<
+  HTMLDivElement,
+  WeightSignalChartProps
+>(
   (
     {
       className,
@@ -221,7 +238,10 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
     const isInteractive = !!onBoutsChange;
 
     const maxPoints = 800;
-    const displayWeights = React.useMemo(() => downsample(weights, maxPoints), [weights]);
+    const displayWeights = React.useMemo(
+      () => downsample(weights, maxPoints),
+      [weights],
+    );
     const scaleFactor = weights.length / displayWeights.length;
 
     const { paddedMin, paddedMax } = React.useMemo(() => {
@@ -238,7 +258,14 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
     const svgHeight = isInteractive ? SVG_HEIGHT + AXIS_HEIGHT : SVG_HEIGHT;
 
     const linePath = React.useMemo(
-      () => createPath(displayWeights, SVG_WIDTH, chartHeight, paddedMin, paddedMax),
+      () =>
+        createPath(
+          displayWeights,
+          SVG_WIDTH,
+          chartHeight,
+          paddedMin,
+          paddedMax,
+        ),
       [chartHeight, displayWeights, paddedMax, paddedMin],
     );
 
@@ -324,12 +351,14 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
     );
 
     const getSvgX = React.useCallback(
-      (e: React.PointerEvent<SVGSVGElement>) => pointerClientToSvgX(e.clientX, e.clientY),
+      (e: React.PointerEvent<SVGSVGElement>) =>
+        pointerClientToSvgX(e.clientX, e.clientY),
       [pointerClientToSvgX],
     );
 
     const getSvgXFromPointerLike = React.useCallback(
-      (e: { clientX: number; clientY: number }) => pointerClientToSvgX(e.clientX, e.clientY),
+      (e: { clientX: number; clientY: number }) =>
+        pointerClientToSvgX(e.clientX, e.clientY),
       [pointerClientToSvgX],
     );
 
@@ -346,7 +375,14 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
         const x = getSvgXFromPointerLike(e);
         mediaSync.onAxisSeek(xToSec(x));
       },
-      [duration, getSvgXFromPointerLike, isInteractive, mediaSync, refreshSvgScreenToUserInverse, xToSec],
+      [
+        duration,
+        getSvgXFromPointerLike,
+        isInteractive,
+        mediaSync,
+        refreshSvgScreenToUserInverse,
+        xToSec,
+      ],
     );
 
     const handleAxisPointerMove = React.useCallback(
@@ -358,16 +394,19 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
       [duration, getSvgXFromPointerLike, mediaSync, xToSec],
     );
 
-    const handleAxisPointerUp = React.useCallback((e: React.PointerEvent<SVGRectElement>) => {
-      if (!axisDragRef.current) return;
-      axisDragRef.current = false;
-      clearSvgScreenToUserInverse();
-      try {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      } catch {
-        /* already released */
-      }
-    }, [clearSvgScreenToUserInverse]);
+    const handleAxisPointerUp = React.useCallback(
+      (e: React.PointerEvent<SVGRectElement>) => {
+        if (!axisDragRef.current) return;
+        axisDragRef.current = false;
+        clearSvgScreenToUserInverse();
+        try {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        } catch {
+          /* already released */
+        }
+      },
+      [clearSvgScreenToUserInverse],
+    );
 
     const handlePointerDown = React.useCallback(
       (e: React.PointerEvent<SVGSVGElement>) => {
@@ -386,9 +425,9 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
         if (!isInteractive || drag.type === 'none') return;
         const x = getSvgX(e);
         if (drag.type === 'create') {
-          setDrag((d) => d.type === 'create' ? { ...d, currentX: x } : d);
+          setDrag((d) => (d.type === 'create' ? { ...d, currentX: x } : d));
         } else if (drag.type === 'resize') {
-          setDrag((d) => d.type === 'resize' ? { ...d, currentX: x } : d);
+          setDrag((d) => (d.type === 'resize' ? { ...d, currentX: x } : d));
         }
       },
       [isInteractive, drag.type, getSvgX, setDrag],
@@ -418,7 +457,10 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
                 t_end_s,
                 bout_type: 'unknown',
               };
-              const next = [...bouts, newBout].map((b, i) => ({ ...b, bout_index: i }));
+              const next = [...bouts, newBout].map((b, i) => ({
+                ...b,
+                bout_index: i,
+              }));
               onBoutsChange?.(next);
               onSelectBout?.(next.length - 1);
             }
@@ -475,7 +517,12 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
     const occupiedMeanOverlays = React.useMemo(() => {
       if (!isInteractive || weights.length === 0) return [];
       const wlen = weights.length;
-      const items: { key: string; cx: number; meanLabel: string; sigmaLabel: string }[] = [];
+      const items: {
+        key: string;
+        cx: number;
+        meanLabel: string;
+        sigmaLabel: string;
+      }[] = [];
       for (let i = 0; i < periods.length; i++) {
         const p = periods[i];
         if (p.state !== 'occupied') continue;
@@ -487,8 +534,12 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
         items.push({
           key: `occ-${i}-${p.start}-${p.end}`,
           cx,
-          meanLabel: t('annotation.chart_occ_mean', { value: formatMeanG(stats.mean) }),
-          sigmaLabel: t('annotation.chart_bout_sigma', { value: formatSigmaG(stats.sigma) }),
+          meanLabel: t('annotation.chart_occ_mean', {
+            value: formatMeanG(stats.mean),
+          }),
+          sigmaLabel: t('annotation.chart_bout_sigma', {
+            value: formatSigmaG(stats.sigma),
+          }),
         });
       }
       return items;
@@ -511,15 +562,35 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
         return {
           key: `bout-${idx}`,
           cx,
-          meanLabel: t('annotation.chart_occ_mean', { value: formatMeanG(stats.mean) }),
-          sigmaLabel: t('annotation.chart_bout_sigma', { value: formatSigmaG(stats.sigma) }),
+          meanLabel: t('annotation.chart_occ_mean', {
+            value: formatMeanG(stats.mean),
+          }),
+          sigmaLabel: t('annotation.chart_bout_sigma', {
+            value: formatSigmaG(stats.sigma),
+          }),
           isSelected: selectedBoutIndex === idx,
         };
       });
-    }, [isInteractive, bouts, weights, sampleRate, secToX, selectedBoutIndex, t]);
+    }, [
+      isInteractive,
+      bouts,
+      weights,
+      sampleRate,
+      secToX,
+      selectedBoutIndex,
+      t,
+    ]);
 
     return (
-      <div className={cn('weight-signal-chart', isInteractive && 'interactive', className)} ref={ref} {...props}>
+      <div
+        className={cn(
+          'weight-signal-chart',
+          isInteractive && 'interactive',
+          className,
+        )}
+        ref={ref}
+        {...props}
+      >
         <svg
           ref={svgRef}
           viewBox={`0 0 ${SVG_WIDTH} ${svgHeight}`}
@@ -532,7 +603,8 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
           {/* Analyzer period backgrounds (read-only reference) */}
           {scaledPeriods.map((period, i) => {
             const x = (period.start / displayWeights.length) * SVG_WIDTH;
-            const periodWidth = ((period.end - period.start) / displayWeights.length) * SVG_WIDTH;
+            const periodWidth =
+              ((period.end - period.start) / displayWeights.length) * SVG_WIDTH;
             const color = STATE_COLORS[period.state] || 'transparent';
             return (
               <rect
@@ -556,93 +628,116 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
           />
 
           {/* Human bout overlays */}
-          {isInteractive && bouts?.map((bout, idx) => {
-            const x1 = secToX(bout.t_start_s);
-            const x2 = secToX(bout.t_end_s);
-            const w = Math.max(x2 - x1, 2);
-            const isSelected = selectedBoutIndex === idx;
-            const fill = BOUT_FILL_COLORS[bout.bout_type];
-            const stroke = BOUT_STROKE_COLORS[bout.bout_type];
+          {isInteractive &&
+            bouts?.map((bout, idx) => {
+              const x1 = secToX(bout.t_start_s);
+              const x2 = secToX(bout.t_end_s);
+              const w = Math.max(x2 - x1, 2);
+              const isSelected = selectedBoutIndex === idx;
+              const fill = BOUT_FILL_COLORS[bout.bout_type];
+              const stroke = BOUT_STROKE_COLORS[bout.bout_type];
 
-            return (
-              <g
-                key={idx}
-                onClick={(e) => { e.stopPropagation(); onSelectBout?.(isSelected ? null : idx); }}
-                style={{ cursor: 'pointer' }}
-              >
-                {/* Bout body */}
+              return (
+                <g
+                  key={idx}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectBout?.(isSelected ? null : idx);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {/* Bout body */}
+                  <rect
+                    x={x1}
+                    y={0}
+                    width={w}
+                    height={chartHeight}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={isSelected ? 2 : 1}
+                    strokeDasharray={isSelected ? undefined : '4 3'}
+                    vectorEffect="non-scaling-stroke"
+                  />
+
+                  {/* Left resize handle */}
+                  <rect
+                    x={x1 - HANDLE_W / 2}
+                    y={chartHeight * 0.25}
+                    width={HANDLE_W}
+                    height={chartHeight * 0.5}
+                    fill={stroke}
+                    rx={2}
+                    style={{ cursor: 'ew-resize' }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      if (!svgRef.current) return;
+                      refreshSvgScreenToUserInverse();
+                      (svgRef.current as SVGSVGElement).setPointerCapture(
+                        e.pointerId,
+                      );
+                      setDrag({
+                        type: 'resize',
+                        boutIndex: idx,
+                        handle: 'left',
+                        currentX: getSvgX(
+                          e as unknown as React.PointerEvent<SVGSVGElement>,
+                        ),
+                      });
+                    }}
+                    vectorEffect="non-scaling-stroke"
+                  />
+
+                  {/* Right resize handle */}
+                  <rect
+                    x={x2 - HANDLE_W / 2}
+                    y={chartHeight * 0.25}
+                    width={HANDLE_W}
+                    height={chartHeight * 0.5}
+                    fill={stroke}
+                    rx={2}
+                    style={{ cursor: 'ew-resize' }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      if (!svgRef.current) return;
+                      refreshSvgScreenToUserInverse();
+                      (svgRef.current as SVGSVGElement).setPointerCapture(
+                        e.pointerId,
+                      );
+                      setDrag({
+                        type: 'resize',
+                        boutIndex: idx,
+                        handle: 'right',
+                        currentX: getSvgX(
+                          e as unknown as React.PointerEvent<SVGSVGElement>,
+                        ),
+                      });
+                    }}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </g>
+              );
+            })}
+
+          {/* Drag-create preview */}
+          {drag.type === 'create' &&
+            (() => {
+              const x1 = Math.min(drag.startX, drag.currentX);
+              const x2 = Math.max(drag.startX, drag.currentX);
+              return (
                 <rect
                   x={x1}
                   y={0}
-                  width={w}
+                  width={Math.max(x2 - x1, 1)}
                   height={chartHeight}
-                  fill={fill}
-                  stroke={stroke}
-                  strokeWidth={isSelected ? 2 : 1}
-                  strokeDasharray={isSelected ? undefined : '4 3'}
+                  fill="rgba(156,163,175,0.25)"
+                  stroke="rgba(156,163,175,0.8)"
+                  strokeWidth={1}
+                  strokeDasharray="4 3"
                   vectorEffect="non-scaling-stroke"
+                  pointerEvents="none"
                 />
-
-                {/* Left resize handle */}
-                <rect
-                  x={x1 - HANDLE_W / 2}
-                  y={chartHeight * 0.25}
-                  width={HANDLE_W}
-                  height={chartHeight * 0.5}
-                  fill={stroke}
-                  rx={2}
-                  style={{ cursor: 'ew-resize' }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    if (!svgRef.current) return;
-                    refreshSvgScreenToUserInverse();
-                    (svgRef.current as SVGSVGElement).setPointerCapture(e.pointerId);
-                    setDrag({ type: 'resize', boutIndex: idx, handle: 'left', currentX: getSvgX(e as unknown as React.PointerEvent<SVGSVGElement>) });
-                  }}
-                  vectorEffect="non-scaling-stroke"
-                />
-
-                {/* Right resize handle */}
-                <rect
-                  x={x2 - HANDLE_W / 2}
-                  y={chartHeight * 0.25}
-                  width={HANDLE_W}
-                  height={chartHeight * 0.5}
-                  fill={stroke}
-                  rx={2}
-                  style={{ cursor: 'ew-resize' }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    if (!svgRef.current) return;
-                    refreshSvgScreenToUserInverse();
-                    (svgRef.current as SVGSVGElement).setPointerCapture(e.pointerId);
-                    setDrag({ type: 'resize', boutIndex: idx, handle: 'right', currentX: getSvgX(e as unknown as React.PointerEvent<SVGSVGElement>) });
-                  }}
-                  vectorEffect="non-scaling-stroke"
-                />
-              </g>
-            );
-          })}
-
-          {/* Drag-create preview */}
-          {drag.type === 'create' && (() => {
-            const x1 = Math.min(drag.startX, drag.currentX);
-            const x2 = Math.max(drag.startX, drag.currentX);
-            return (
-              <rect
-                x={x1}
-                y={0}
-                width={Math.max(x2 - x1, 1)}
-                height={chartHeight}
-                fill="rgba(156,163,175,0.25)"
-                stroke="rgba(156,163,175,0.8)"
-                strokeWidth={1}
-                strokeDasharray="4 3"
-                vectorEffect="non-scaling-stroke"
-                pointerEvents="none"
-              />
-            );
-          })()}
+              );
+            })()}
 
           {/* Drag-resize preview line */}
           {drag.type === 'resize' && (
@@ -797,11 +892,17 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
           {isInteractive && (
             <>
               <div className="legend-item">
-                <span className="legend-swatch chart-stat-legend-swatch--mean" aria-hidden />
+                <span
+                  className="legend-swatch chart-stat-legend-swatch--mean"
+                  aria-hidden
+                />
                 <span>{t('annotation.chart_legend_mean')}</span>
               </div>
               <div className="legend-item">
-                <span className="legend-swatch chart-stat-legend-swatch--sigma" aria-hidden />
+                <span
+                  className="legend-swatch chart-stat-legend-swatch--sigma"
+                  aria-hidden
+                />
                 <span>{t('annotation.chart_legend_sigma_rms')}</span>
               </div>
               <div className="legend-item">
@@ -839,7 +940,10 @@ const WeightSignalChartInner = React.forwardRef<HTMLDivElement, WeightSignalChar
 
 WeightSignalChartInner.displayName = 'WeightSignalChart';
 
-const WeightSignalChart = React.memo(WeightSignalChartInner, areWeightSignalChartPropsEqual);
+const WeightSignalChart = React.memo(
+  WeightSignalChartInner,
+  areWeightSignalChartPropsEqual,
+);
 WeightSignalChart.displayName = 'WeightSignalChart';
 
 export { type WeightSignalChartProps };

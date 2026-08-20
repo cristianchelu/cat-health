@@ -1,10 +1,7 @@
 import { isRecord } from 'shared';
 import { createHash } from 'node:crypto';
 import type { ProviderPetLink, SurePetAccountConfig } from 'shared';
-import {
-  getLinkRemotePetId,
-  getLinkTagId,
-} from './petLinkResolvers.ts';
+import { getLinkRemotePetId, getLinkTagId } from './petLinkResolvers.ts';
 import type { NormalizedFeedingDatapoint } from './types.ts';
 import { SubstanceType, TimelineEventType } from './constants.ts';
 import type {
@@ -15,9 +12,10 @@ import type {
   SurePetTimelineWeightRecord,
 } from './types.ts';
 
-
 function getNumber(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : undefined;
 }
 
 function getString(value: unknown): string | undefined {
@@ -47,7 +45,9 @@ function resolvePetIdFromTimelineEntry(
   tagId: number | undefined,
 ): number | undefined {
   if (tagId == null || !Array.isArray(entry.pets)) return undefined;
-  const pet = entry.pets.find((candidate) => getNumber(candidate.tag_id) === tagId);
+  const pet = entry.pets.find(
+    (candidate) => getNumber(candidate.tag_id) === tagId,
+  );
   return getNumber(pet?.id);
 }
 
@@ -56,8 +56,7 @@ export function expandTimelineWeightRecordToDatapoints(
   entry: SurePetTimelineEntry,
   timelineEntryId?: number,
 ): NormalizedFeedingDatapoint[] {
-  const from =
-    parseDate(record.created_at) ?? parseDate(entry.created_at);
+  const from = parseDate(record.created_at) ?? parseDate(entry.created_at);
   if (!from) return [];
 
   const tag_id = getNumber(record.tag_id);
@@ -149,9 +148,7 @@ function expandReportDatapointToDatapoints(
     if (results.length > 0) return results;
   }
 
-  const amount =
-    getNumber(datapoint.actual_weight) ??
-    undefined;
+  const amount = getNumber(datapoint.actual_weight) ?? undefined;
   if (amount == null || amount <= 0) return [];
 
   const source_id = `${options.sourcePrefix}:${datapoint.from}:${device_id ?? ''}:${tag_id ?? ''}:${amount}`;
@@ -304,9 +301,7 @@ export function resolveLocalPetId(
   }
 
   if (datapoint.tag_id != null) {
-    const byTag = links.find(
-      (link) => getLinkTagId(link) === datapoint.tag_id,
-    );
+    const byTag = links.find((link) => getLinkTagId(link) === datapoint.tag_id);
     if (byTag) return byTag.pet_id;
   }
 
@@ -339,7 +334,11 @@ export function inferFoodTypeFromDeviceControl(
 
 export function refreshPetLinkTagIds(
   links: ProviderPetLink[],
-  pets: Array<{ id: number; tag_id?: number | null; tag?: { id: number } | null }>,
+  pets: Array<{
+    id: number;
+    tag_id?: number | null;
+    tag?: { id: number } | null;
+  }>,
 ): ProviderPetLink[] {
   if (!links.length) return links;
 
@@ -356,7 +355,10 @@ export function refreshPetLinkTagIds(
     if (tagId == null) return link;
     return {
       ...link,
-      metadata: { ...(isRecord(link.metadata) ? link.metadata : {}), tag_id: tagId },
+      metadata: {
+        ...(isRecord(link.metadata) ? link.metadata : {}),
+        tag_id: tagId,
+      },
     };
   });
 }

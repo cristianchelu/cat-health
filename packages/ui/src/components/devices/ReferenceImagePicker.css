@@ -84,7 +84,7 @@
 
         &.selected {
           border-color: var(--color-primary);
-          
+
           .selected-indicator {
             display: flex;
           }

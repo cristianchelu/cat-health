@@ -26,22 +26,18 @@ const CONNECTIVITY_VARIANT: Record<
   error: 'danger',
 };
 
-const MAINTENANCE_LABEL_KEY: Record<
-  LitterboxMaintenanceEventTypeDTO,
-  string
-> = {
-  scoop: 'events.litterbox_maintenance_scoop',
-  deep_clean: 'events.litterbox_maintenance_deep_clean',
-  litter_change: 'events.litterbox_maintenance_litter_change',
-  litter_addition: 'events.litterbox_maintenance_litter_addition',
-};
+const MAINTENANCE_LABEL_KEY: Record<LitterboxMaintenanceEventTypeDTO, string> =
+  {
+    scoop: 'events.litterbox_maintenance_scoop',
+    deep_clean: 'events.litterbox_maintenance_deep_clean',
+    litter_change: 'events.litterbox_maintenance_litter_change',
+    litter_addition: 'events.litterbox_maintenance_litter_addition',
+  };
 
 const DeviceConnectivityEventRow: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
   const connectivity =
-    props.event.data.type === 'device_connectivity'
-      ? props.event.data
-      : null;
+    props.event.data.type === 'device_connectivity' ? props.event.data : null;
   if (!connectivity) {
     return null;
   }
@@ -69,9 +65,7 @@ const DeviceConnectivityEventRow: React.FC<EventComponentProps> = (props) => {
 const LitterboxMaintenanceEventRow: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
   const maintenance =
-    props.event.data.type === 'litterbox_maintenance'
-      ? props.event.data
-      : null;
+    props.event.data.type === 'litterbox_maintenance' ? props.event.data : null;
   const maintenanceType = maintenance?.maintenance_type ?? null;
   const litterAmount = maintenance?.litter_amount;
 

@@ -414,7 +414,12 @@ describe('listCameraCandidates', () => {
     const devices = [
       camera(1),
       camera(2),
-      { id: 3, type: 'litterbox' as const, enabled: true, account_enabled: true },
+      {
+        id: 3,
+        type: 'litterbox' as const,
+        enabled: true,
+        account_enabled: true,
+      },
     ];
 
     assert.deepEqual(listCameraCandidates(devices, { deviceId: 1 }), [

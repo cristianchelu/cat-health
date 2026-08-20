@@ -165,7 +165,8 @@ export class StateAnalyzer {
     this.minEliminationSamples = Math.round(
       (opts?.minEliminationSeconds ?? 8) * hz,
     );
-    this.rmsWindowSamples = opts?.rmsWindowSamples ?? Math.max(1, Math.round(hz));
+    this.rmsWindowSamples =
+      opts?.rmsWindowSamples ?? Math.max(1, Math.round(hz));
     this.window = new Ring(this.windowSize);
     this.weightHistory = new Ring(this.windowSize);
     this.knownCatWeights =
@@ -231,10 +232,7 @@ export class StateAnalyzer {
           this.exitBelowCnt = 0;
           break;
         }
-        if (
-          this.catWeight > 0 &&
-          this.catWeight - mean1s > presenceThreshold
-        ) {
+        if (this.catWeight > 0 && this.catWeight - mean1s > presenceThreshold) {
           this.exitBelowCnt++;
           if (this.exitBelowCnt >= this.exitHold) {
             this.exitBelowCnt = 0;
@@ -264,10 +262,7 @@ export class StateAnalyzer {
           this.stableCnt = 0;
           this.transitionTo(this.states.OCCUPIED);
         }
-        if (
-          this.catWeight > 0 &&
-          this.catWeight - mean1s > presenceThreshold
-        ) {
+        if (this.catWeight > 0 && this.catWeight - mean1s > presenceThreshold) {
           this.exitBelowCnt++;
           if (this.exitBelowCnt >= this.exitHold) {
             this.exitBelowCnt = 0;
@@ -301,7 +296,10 @@ export class StateAnalyzer {
     }
   }
 
-  private closestKnownCat(val: number, tolFrac = this.knownPresenceTol): number {
+  private closestKnownCat(
+    val: number,
+    tolFrac = this.knownPresenceTol,
+  ): number {
     let best = -1;
     let minDiff = 1e9;
     for (let i = 0; i < this.knownCatWeights.length; i++) {
@@ -323,8 +321,7 @@ export class StateAnalyzer {
     let initialPeriods: StatePeriod[] = [];
     for (let i = 0; i < this.transitions.length; i++) {
       const currentTransition = this.transitions[i];
-      const start =
-        i === 0 ? this.sessionStartSample : currentTransition.index;
+      const start = i === 0 ? this.sessionStartSample : currentTransition.index;
       const end = this.transitions[i + 1]
         ? this.transitions[i + 1].index
         : this.currentSample;
@@ -426,9 +423,7 @@ export class StateAnalyzer {
   }
 
   private entryThreshold(): number {
-    const minKnown = this.knownCatWeights.length
-      ? this.knownCatWeights[0]
-      : 0;
+    const minKnown = this.knownCatWeights.length ? this.knownCatWeights[0] : 0;
     const frac = minKnown
       ? Math.max(this.entryDeltaMin, minKnown * this.entryDeltaFrac)
       : this.entryDeltaMin;

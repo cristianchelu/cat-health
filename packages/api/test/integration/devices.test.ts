@@ -34,16 +34,27 @@ describe('devices API', () => {
     });
 
     it('lists registered providers with capability flags', async () => {
-      const res = await app.inject({ method: 'GET', url: '/api/devices/providers' });
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/devices/providers',
+      });
       assert.equal(res.statusCode, 200);
 
       const providers = res.json<GetProvidersResponseDTO>();
-      const byName = new Map(providers.map((provider) => [provider.name, provider]));
+      const byName = new Map(
+        providers.map((provider) => [provider.name, provider]),
+      );
 
       assert.ok(byName.has('esphome'));
-      assert.equal(byName.get('esphome')?.capabilities.supports_discovery, true);
+      assert.equal(
+        byName.get('esphome')?.capabilities.supports_discovery,
+        true,
+      );
       assert.ok(byName.has('surepet'));
-      assert.equal(byName.get('surepet')?.capabilities.supports_pet_linking, true);
+      assert.equal(
+        byName.get('surepet')?.capabilities.supports_pet_linking,
+        true,
+      );
       assert.ok(byName.has('inference'));
       assert.equal(byName.get('inference')?.capabilities.skip_discovery, true);
     });
@@ -110,7 +121,9 @@ describe('devices API', () => {
     });
 
     it('fails when remote pet listing is not supported', async () => {
-      const account = await insertProviderAccount(ctx.db, { provider: 'esphome' });
+      const account = await insertProviderAccount(ctx.db, {
+        provider: 'esphome',
+      });
       const manager = createStubAccountManager({ accountId: account.id });
       const app = await createTestApp(ctx, {
         integrationManager: createTestIntegrationManager(ctx.db, {

@@ -87,7 +87,9 @@ export async function getPetEvents(
 }
 
 export async function getEventById(eventId: number) {
-  const { data } = await apiClient.get<GetEventWithChildrenDTO>(`/events/${eventId}`);
+  const { data } = await apiClient.get<GetEventWithChildrenDTO>(
+    `/events/${eventId}`,
+  );
   return data;
 }
 
@@ -168,10 +170,7 @@ export async function getPetLitterboxTrends(
   return data;
 }
 
-export async function getVerifiedEventMedia(
-  deviceId: number,
-  petId: number,
-) {
+export async function getVerifiedEventMedia(deviceId: number, petId: number) {
   // Fetch events filtered by device, pet, and human_verified
   const { data: eventsResponse } = await apiClient.get<GetEventsResponseDTO>(
     '/events',
@@ -199,7 +198,8 @@ export async function getVerifiedEventMedia(
         images.find((m) => m.relation === 'snapshot') ??
         images.reduce((earliest, item) => {
           const earliestIndex = earliest.metadata?.frameIndex ?? 0;
-          const itemIndex = item.metadata?.frameIndex ?? Number.MAX_SAFE_INTEGER;
+          const itemIndex =
+            item.metadata?.frameIndex ?? Number.MAX_SAFE_INTEGER;
           return itemIndex < earliestIndex ? item : earliest;
         });
 

@@ -37,8 +37,14 @@ describe('pairTransitionEvents', () => {
     );
 
     assert.equal(intervals.length, 1);
-    assert.equal(intervals[0].start.toISOString(), at('2026-06-01T14:58:00+03:00').toISOString());
-    assert.equal(intervals[0].end.toISOString(), at('2026-06-02T10:00:00+03:00').toISOString());
+    assert.equal(
+      intervals[0].start.toISOString(),
+      at('2026-06-01T14:58:00+03:00').toISOString(),
+    );
+    assert.equal(
+      intervals[0].end.toISOString(),
+      at('2026-06-02T10:00:00+03:00').toISOString(),
+    );
   });
 
   it('keeps short device outages below threshold out of untracked intervals', () => {
@@ -73,8 +79,14 @@ describe('pairTransitionEvents', () => {
     );
 
     assert.equal(intervals.length, 1);
-    assert.equal(intervals[0].start.toISOString(), at('2026-06-01T08:00:00Z').toISOString());
-    assert.equal(intervals[0].end.toISOString(), at('2026-06-01T15:00:00Z').toISOString());
+    assert.equal(
+      intervals[0].start.toISOString(),
+      at('2026-06-01T08:00:00Z').toISOString(),
+    );
+    assert.equal(
+      intervals[0].end.toISOString(),
+      at('2026-06-01T15:00:00Z').toISOString(),
+    );
   });
 
   it('closes open-ended away/outage intervals at range end', () => {
@@ -88,7 +100,10 @@ describe('pairTransitionEvents', () => {
     );
 
     assert.equal(awayIntervals.length, 1);
-    assert.equal(awayIntervals[0].end.toISOString(), at('2026-06-02T00:00:00Z').toISOString());
+    assert.equal(
+      awayIntervals[0].end.toISOString(),
+      at('2026-06-02T00:00:00Z').toISOString(),
+    );
 
     const outageIntervals = pairTransitionEvents(
       [{ timestamp: at('2026-06-01T12:00:00Z'), state: 'offline' }],
@@ -101,7 +116,10 @@ describe('pairTransitionEvents', () => {
     );
 
     assert.equal(outageIntervals.length, 1);
-    assert.equal(outageIntervals[0].end.toISOString(), at('2026-06-02T00:00:00Z').toISOString());
+    assert.equal(
+      outageIntervals[0].end.toISOString(),
+      at('2026-06-02T00:00:00Z').toISOString(),
+    );
   });
 });
 
@@ -122,8 +140,14 @@ describe('mergeUntrackedIntervals', () => {
 
     const merged = mergeUntrackedIntervals(pet, device);
     assert.equal(merged.length, 1);
-    assert.equal(merged[0].start.toISOString(), at('2026-06-01T08:00:00Z').toISOString());
-    assert.equal(merged[0].end.toISOString(), at('2026-06-01T18:00:00Z').toISOString());
+    assert.equal(
+      merged[0].start.toISOString(),
+      at('2026-06-01T08:00:00Z').toISOString(),
+    );
+    assert.equal(
+      merged[0].end.toISOString(),
+      at('2026-06-01T18:00:00Z').toISOString(),
+    );
   });
 });
 
@@ -141,10 +165,10 @@ describe('snapIntervalsToBuckets', () => {
 
     const hourly = snapIntervalsToBuckets(intervals, 'hour', TZ);
     const hourlyKeys = [...hourly].sort();
-    assert.ok(hourlyKeys.includes("2026-06-01T14:00:00"));
-    assert.ok(hourlyKeys.includes("2026-06-01T23:00:00"));
-    assert.ok(hourlyKeys.includes("2026-06-02T09:00:00"));
-    assert.ok(!hourlyKeys.includes("2026-06-02T10:00:00"));
+    assert.ok(hourlyKeys.includes('2026-06-01T14:00:00'));
+    assert.ok(hourlyKeys.includes('2026-06-01T23:00:00'));
+    assert.ok(hourlyKeys.includes('2026-06-02T09:00:00'));
+    assert.ok(!hourlyKeys.includes('2026-06-02T10:00:00'));
   });
 
   it('floors and ceils bucket boundaries consistently', () => {
@@ -152,8 +176,11 @@ describe('snapIntervalsToBuckets', () => {
     const floored = floorToBucket(date, 'hour', TZ);
     const ceiled = ceilToBucket(at('2026-06-02T10:00:00+03:00'), 'hour', TZ);
 
-    assert.equal(formatBucketKey(floored, 'hour', TZ), "2026-06-01T14:00:00");
-    assert.equal(ceiled.toISOString(), at('2026-06-02T10:00:00+03:00').toISOString());
+    assert.equal(formatBucketKey(floored, 'hour', TZ), '2026-06-01T14:00:00');
+    assert.equal(
+      ceiled.toISOString(),
+      at('2026-06-02T10:00:00+03:00').toISOString(),
+    );
   });
 
   it('reports tracked vs untracked buckets via isBucketTracked', () => {

@@ -37,7 +37,10 @@ function ensureMatrixCell(
 }
 
 export function buildConfusionAndRates(
-  pairs: Array<{ actual: LitterboxUseEliminationType; predicted: LitterboxUseEliminationType }>,
+  pairs: Array<{
+    actual: LitterboxUseEliminationType;
+    predicted: LitterboxUseEliminationType;
+  }>,
 ): ConfusionAgg {
   const matrix: Record<string, Record<string, number>> = {};
   for (const a of ELIMINATION_CLASSES) {
@@ -129,9 +132,7 @@ export function greedyBoutPairing(
   const usedP = new Set<number>();
   let tp = 0;
 
-  const gSorted = gInf
-    .map((g, i) => ({ g, i }))
-    .sort((a, b) => a.g.s - b.g.s);
+  const gSorted = gInf.map((g, i) => ({ g, i })).sort((a, b) => a.g.s - b.g.s);
 
   for (const { g } of gSorted) {
     let bestJ = -1;
@@ -155,7 +156,11 @@ export function greedyBoutPairing(
   return { tp, fp, fn };
 }
 
-export function prf1(tp: number, fp: number, fn: number): {
+export function prf1(
+  tp: number,
+  fp: number,
+  fn: number,
+): {
   precision: number;
   recall: number;
   f1: number;

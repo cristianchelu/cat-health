@@ -40,11 +40,7 @@ const ProviderPetLinksEditor: React.FC<ProviderPetLinksEditorProps> = ({
 }) => {
   const { t } = useTranslation();
   const { data: localPets = [] } = usePets();
-  const {
-    data: cloudPets,
-    isLoading,
-    error,
-  } = useRemotePets(accountId, true);
+  const { data: cloudPets, isLoading, error } = useRemotePets(accountId, true);
 
   const [petIdOverrides, setPetIdOverrides] = useState<Record<string, number>>(
     {},
@@ -122,7 +118,9 @@ const ProviderPetLinksEditor: React.FC<ProviderPetLinksEditorProps> = ({
     return (
       <div className="provider-pet-links-editor">
         <h3 className="section-title">{t('settings.pet_linking_title')}</h3>
-        <p className="section-desc">{t('settings.pet_linking_no_remote_pets')}</p>
+        <p className="section-desc">
+          {t('settings.pet_linking_no_remote_pets')}
+        </p>
       </div>
     );
   }
@@ -138,9 +136,7 @@ const ProviderPetLinksEditor: React.FC<ProviderPetLinksEditorProps> = ({
             (p) => p.external_id === link.external_pet_id,
           );
           const displayName =
-            link.remote_name ??
-            cloudPet?.name ??
-            `#${link.external_pet_id}`;
+            link.remote_name ?? cloudPet?.name ?? `#${link.external_pet_id}`;
           const tagId = getTagIdFromLink(link);
 
           return (

@@ -26,7 +26,10 @@ function detectedCatIndex(
  * &gt; 0 so `stableNow` can become true (perfectly constant streams never
  * enter `eliminating` in the current implementation).
  */
-function gramsPlateauAround(targetGrams: number, sampleCount: number): number[] {
+function gramsPlateauAround(
+  targetGrams: number,
+  sampleCount: number,
+): number[] {
   const burstLen = Math.min(40, Math.max(10, Math.floor(sampleCount / 20)));
   const tailA = Math.floor((sampleCount - burstLen) / 2);
   const tailB = sampleCount - burstLen - tailA;
@@ -91,7 +94,9 @@ describe('StateAnalyzer smoke', () => {
     const full = [...rep(300, 4200), ...rep(160, 0), ...rep(300, 4200)];
     assert.ok(160 > REENTRY_WIN);
 
-    const afterFirstExit = new StateAnalyzer(known).processEvent(full.slice(0, 456));
+    const afterFirstExit = new StateAnalyzer(known).processEvent(
+      full.slice(0, 456),
+    );
     assert.ok(Math.abs(afterFirstExit.wasteWeight) < 50);
 
     const r = new StateAnalyzer(known).processEvent(full);
@@ -191,9 +196,7 @@ describe('determineEliminationType', () => {
       'no_elimination',
     );
     assert.equal(
-      determineEliminationType([
-        { state: 'eliminating', start: 0, end: 10 },
-      ]),
+      determineEliminationType([{ state: 'eliminating', start: 0, end: 10 }]),
       'no_elimination',
     );
   });

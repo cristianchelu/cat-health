@@ -7,7 +7,6 @@ import './Timeline.css';
 
 type TimelineVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger';
 
-
 interface TimelineItemProps extends React.ComponentProps<'li'> {
   variant?: 'default' | 'warning' | 'danger';
 }
@@ -24,17 +23,18 @@ interface TimelineBadgeProps extends React.ComponentProps<'span'> {
   variant?: Exclude<TimelineVariant, 'default'> | 'neutral';
 }
 
-const TimelineRoot = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof Card>>(
-  ({ className, children, ...props }, ref) => {
-    return (
-      <Card className={cn('timeline', className)} ref={ref} {...props}>
-        <CardContent className="timeline-body">
-          <ul className="timeline-list">{children}</ul>
-        </CardContent>
-      </Card>
-    );
-  },
-);
+const TimelineRoot = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<typeof Card>
+>(({ className, children, ...props }, ref) => {
+  return (
+    <Card className={cn('timeline', className)} ref={ref} {...props}>
+      <CardContent className="timeline-body">
+        <ul className="timeline-list">{children}</ul>
+      </CardContent>
+    </Card>
+  );
+});
 
 const TimelineItem = React.forwardRef<HTMLLIElement, TimelineItemProps>(
   ({ className, variant = 'default', children, ...props }, ref) => {

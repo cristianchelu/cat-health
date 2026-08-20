@@ -1,41 +1,41 @@
-import { Type, type Static } from "@fastify/type-provider-typebox";
-import { parseWithSchema } from "../runtimeSchema.ts";
+import { Type, type Static } from '@fastify/type-provider-typebox';
+import { parseWithSchema } from '../runtimeSchema.ts';
 
 export const FoodTypeSchema = Type.Union([
-  Type.Literal("drink"),
-  Type.Literal("complete_wet"),
-  Type.Literal("complementary_wet"),
-  Type.Literal("treat"),
-  Type.Literal("complete_dry"),
-  Type.Literal("complementary_dry"),
+  Type.Literal('drink'),
+  Type.Literal('complete_wet'),
+  Type.Literal('complementary_wet'),
+  Type.Literal('treat'),
+  Type.Literal('complete_dry'),
+  Type.Literal('complementary_dry'),
 ]);
 export type FoodTypeDTO = Static<typeof FoodTypeSchema>;
 
 export const BarcodeEan13Schema = Type.Union([
   Type.Null(),
-  Type.String({ minLength: 13, maxLength: 13, pattern: "^[0-9]{13}$" }),
+  Type.String({ minLength: 13, maxLength: 13, pattern: '^[0-9]{13}$' }),
 ]);
 export type BarcodeEan13DTO = Static<typeof BarcodeEan13Schema>;
 
 export const NutrientNameSchema = Type.Union([
-  Type.Literal("protein"),
-  Type.Literal("fat"),
-  Type.Literal("fiber"),
-  Type.Literal("ash"),
-  Type.Literal("carbs"),
-  Type.Literal("calcium"),
-  Type.Literal("phosphorus"),
-  Type.Literal("taurine"),
-  Type.Literal("sodium"),
-  Type.Literal("omega3"),
-  Type.Literal("omega6"),
+  Type.Literal('protein'),
+  Type.Literal('fat'),
+  Type.Literal('fiber'),
+  Type.Literal('ash'),
+  Type.Literal('carbs'),
+  Type.Literal('calcium'),
+  Type.Literal('phosphorus'),
+  Type.Literal('taurine'),
+  Type.Literal('sodium'),
+  Type.Literal('omega3'),
+  Type.Literal('omega6'),
 ]);
 export type NutrientNameDTO = Static<typeof NutrientNameSchema>;
 
 export const NutrientUnitSchema = Type.Union([
-  Type.Literal("percent"),
-  Type.Literal("g"),
-  Type.Literal("mg"),
+  Type.Literal('percent'),
+  Type.Literal('g'),
+  Type.Literal('mg'),
 ]);
 export type NutrientUnitDTO = Static<typeof NutrientUnitSchema>;
 
@@ -69,7 +69,7 @@ export type GetFoodParamsDTO = Static<typeof GetFoodParamsSchema>;
  * docs use for this case).
  */
 const NullableNumberSchema = Type.Unsafe<number | null>({
-  type: ["number", "null"],
+  type: ['number', 'null'],
 });
 
 export const GetFoodSchema = Type.Object({
@@ -98,7 +98,7 @@ export const PostFoodRequestSchema = Type.Object({
   barcode_ean13: Type.Optional(
     Type.Union([
       Type.Null(),
-      Type.String({ minLength: 13, maxLength: 13, pattern: "^[0-9]{13}$" }),
+      Type.String({ minLength: 13, maxLength: 13, pattern: '^[0-9]{13}$' }),
     ]),
   ),
   moisture_percent: Type.Optional(NullableNumberSchema),

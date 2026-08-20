@@ -1,11 +1,12 @@
 import { isRecord } from 'shared';
 import type { ProviderPetLink } from 'shared';
 
-
 function getTagIdFromMetadata(metadata: unknown): number | undefined {
   if (!isRecord(metadata)) return undefined;
   const tagId = metadata.tag_id;
-  return typeof tagId === 'number' && Number.isFinite(tagId) ? tagId : undefined;
+  return typeof tagId === 'number' && Number.isFinite(tagId)
+    ? tagId
+    : undefined;
 }
 
 export function getLinkTagId(link: ProviderPetLink): number | undefined {

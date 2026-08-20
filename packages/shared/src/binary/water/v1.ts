@@ -1,9 +1,9 @@
-import { WATER_NULL_U8, WATER_RAW_DATA_VERSION_1 } from "./constants.ts";
+import { WATER_NULL_U8, WATER_RAW_DATA_VERSION_1 } from './constants.ts';
 import type {
   DecodedWaterContext,
   DecodedWaterRawData,
   EncodeWaterRawDataV1Input,
-} from "./types.ts";
+} from './types.ts';
 
 const HEADER_BYTES = 1 + 8 + 4 + 4;
 

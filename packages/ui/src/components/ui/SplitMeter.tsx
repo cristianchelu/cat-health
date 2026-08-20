@@ -11,8 +11,10 @@ interface SplitMeterCell {
   tone?: MeterTone;
 }
 
-interface SplitMeterProps
-  extends Omit<React.ComponentProps<'div'>, 'children'> {
+interface SplitMeterProps extends Omit<
+  React.ComponentProps<'div'>,
+  'children'
+> {
   cells: readonly [SplitMeterCell, SplitMeterCell];
 }
 

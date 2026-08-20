@@ -1,11 +1,6 @@
 import type { EntityDTO, EntityDisplayCategory } from 'shared';
 
-const CONTROL_TYPES = new Set([
-  'switch',
-  'number',
-  'select',
-  'button',
-]);
+const CONTROL_TYPES = new Set(['switch', 'number', 'select', 'button']);
 
 const SENSOR_TYPES = new Set(['sensor', 'binary_sensor', 'text_sensor']);
 

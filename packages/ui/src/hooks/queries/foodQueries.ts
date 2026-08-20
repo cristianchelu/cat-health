@@ -5,15 +5,8 @@ import {
   updateFood,
   deleteFood,
 } from '@/api/foods';
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
-import type {
-  PostFoodRequestDTO,
-  PatchFoodRequestDTO,
-} from 'shared';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { PostFoodRequestDTO, PatchFoodRequestDTO } from 'shared';
 
 export function useFoods() {
   return useQuery({

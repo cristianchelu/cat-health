@@ -257,8 +257,14 @@ const WeightTrendCardView: React.FC<WeightTrendCardViewProps> = ({
     );
   }
 
-  const { points, rangeEnd, untrackedIntervals, trend, headerWeightLabel, timeLabel } =
-    state;
+  const {
+    points,
+    rangeEnd,
+    untrackedIntervals,
+    trend,
+    headerWeightLabel,
+    timeLabel,
+  } = state;
 
   const dailyPoints = aggregateDailyMedian(points);
   // Anchor the left edge to the first available reading rather than the fixed

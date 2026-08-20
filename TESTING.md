@@ -65,14 +65,14 @@ tsx --tsconfig ./tsconfig.app.json --import ./src/test/register.ts --test src/ho
 Phase 0 DI enables injecting a temp database. Use helpers in `packages/api/test/helpers/`:
 
 ```ts
-import { after, before } from "node:test";
+import { after, before } from 'node:test';
 import {
   createTestApp,
   createTestDb,
   destroyTestDb,
   type TestDbContext,
-} from "../helpers/testDb.ts";
-import { insertPet } from "../helpers/fixtures.ts";
+} from '../helpers/testDb.ts';
+import { insertPet } from '../helpers/fixtures.ts';
 
 let ctx: TestDbContext;
 

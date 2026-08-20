@@ -40,7 +40,8 @@ export const LinkPetsStep: React.FC<LinkPetsStepProps> = ({
    * empty list we started with.
    */
   const [links, setLinks] = React.useState<ProviderPetLink[]>(initialLinks);
-  const [baseline, setBaseline] = React.useState<ProviderPetLink[]>(initialLinks);
+  const [baseline, setBaseline] =
+    React.useState<ProviderPetLink[]>(initialLinks);
 
   const rebase = React.useCallback((resolved: ProviderPetLink[]) => {
     setBaseline(resolved);

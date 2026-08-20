@@ -35,7 +35,10 @@ async function insertMaintenanceEvent(
       parent_event_id: null,
       pet_id: null,
       timestamp,
-      data: { type: 'litterbox_maintenance', maintenance_type: maintenanceType },
+      data: {
+        type: 'litterbox_maintenance',
+        maintenance_type: maintenanceType,
+      },
       raw_data: null,
       human_verified: false,
     })
@@ -93,7 +96,12 @@ describe('device signals', () => {
       timestamp: new Date(now - 5 * HOUR),
     });
 
-    await insertMaintenanceEvent(ctx, litterboxId, 'scoop', new Date(now - 4 * HOUR));
+    await insertMaintenanceEvent(
+      ctx,
+      litterboxId,
+      'scoop',
+      new Date(now - 4 * HOUR),
+    );
 
     await insertLitterboxEvent(ctx.db, {
       device_id: litterboxId,

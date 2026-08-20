@@ -43,7 +43,7 @@ export interface DepositsSinceScoop {
  * Two bounded scans, grouped in memory.
  *
  * Deliberately not one query with a correlated subquery for the last scoop:
-  * SQLite re-runs a correlated subquery per candidate row, so that shape scans
+ * SQLite re-runs a correlated subquery per candidate row, so that shape scans
  * the event table once per visit and blocks the process — better-sqlite3 is
  * synchronous, so a slow query here stalls every route. Both statements below
  * are range scans over `idx_event_device_timestamp`.
@@ -70,11 +70,9 @@ export async function getDepositsSinceScoop(
       .where('device_id', 'in', ids)
       .where('timestamp', '>=', floor)
       .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_maintenance')
-      .where(
-        sql`json_extract(data, '$.maintenance_type')`,
-        'in',
-        [...RESETTING_MAINTENANCE],
-      )
+      .where(sql`json_extract(data, '$.maintenance_type')`, 'in', [
+        ...RESETTING_MAINTENANCE,
+      ])
       .groupBy('device_id')
       .execute(),
 

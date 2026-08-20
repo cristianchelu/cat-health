@@ -22,7 +22,11 @@ function signal(
   };
 }
 
-const percent = (key: string, value: number, overrides: Partial<DeviceSignal> = {}) =>
+const percent = (
+  key: string,
+  value: number,
+  overrides: Partial<DeviceSignal> = {},
+) =>
   signal(key, {
     value: { kind: 'percent', value },
     display: { kind: 'bar', fill: value / 100 },
@@ -62,9 +66,7 @@ describe('rankDeviceSignals', () => {
 
     assert.equal(slots.gauge?.signal.key, DEVICE_SIGNAL_KEYS.WATER_LEVEL);
     assert.ok(
-      slots.meta.every(
-        (entry) => entry.signal.key !== slots.gauge?.signal.key,
-      ),
+      slots.meta.every((entry) => entry.signal.key !== slots.gauge?.signal.key),
     );
   });
 
@@ -94,8 +96,12 @@ describe('rankDeviceSignals', () => {
   });
 
   it('orders two signals in the same band by how deep they sit', () => {
-    const shallow = rankDeviceSignals([percent(DEVICE_SIGNAL_KEYS.WATER_LEVEL, 9)]);
-    const deep = rankDeviceSignals([percent(DEVICE_SIGNAL_KEYS.WATER_LEVEL, 1)]);
+    const shallow = rankDeviceSignals([
+      percent(DEVICE_SIGNAL_KEYS.WATER_LEVEL, 9),
+    ]);
+    const deep = rankDeviceSignals([
+      percent(DEVICE_SIGNAL_KEYS.WATER_LEVEL, 1),
+    ]);
 
     assert.ok((deep.gauge?.urgency ?? 0) > (shallow.gauge?.urgency ?? 0));
   });

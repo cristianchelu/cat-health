@@ -252,7 +252,7 @@
     transition: var(--transition-fast);
 
     &::after {
-      content: "";
+      content: '';
       width: 0.35rem;
       height: 0.6rem;
       border: solid var(--color-text-inverted);

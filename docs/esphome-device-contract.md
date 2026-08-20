@@ -7,7 +7,7 @@ contract is really a naming convention: name the entity `Water Level` and the
 id `water_level` follows.
 
 Firmware that cannot conform (stock third-party devices) is described by a
-*profile*: a data entry in the provider mapping its ids onto the contract's
+_profile_: a data entry in the provider mapping its ids onto the contract's
 shapes. See `PROFILES` in
 [`scheduleBindings.ts`](../packages/api/src/services/devices/providers/esphome/scheduleBindings.ts).
 Profiles match on the `project_name` the firmware reports (`Vendor.Product`).
@@ -22,15 +22,15 @@ seconds (ESPHome `device_class: timestamp`).
 
 ## Water sources (fountains, bowls)
 
-| Object id | Type | Required | Meaning |
-| --- | --- | --- | --- |
-| `water_level` | sensor, % | yes | Fill level, 0–100. The card's gauge. Publish `NaN` (ESPHome's "unknown") rather than a made-up number when the scale has nothing to weigh; the card shows a dash. |
-| `unfiltered_weight` | sensor, g | for drink tracking | Raw scale stream (10 Hz) during activity. |
-| `activity` | binary_sensor | for drink tracking | High while a session is in progress. |
-| `last_drink_amount` | sensor, g | for drink tracking | Device-computed session total. |
-| `last_drink_duration` | sensor, s | for drink tracking | Device-computed session length. |
-| `pump_fault` | binary_sensor | no | On when the pump is faulted. Omit if the firmware can't detect faults. |
-| `bowl_missing` | binary_sensor | no | On when the bowl is off its scale. Shown only while on, as the reason the level reads a dash. Omit on a device whose vessel is fixed. |
+| Object id             | Type          | Required           | Meaning                                                                                                                                                           |
+| --------------------- | ------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `water_level`         | sensor, %     | yes                | Fill level, 0–100. The card's gauge. Publish `NaN` (ESPHome's "unknown") rather than a made-up number when the scale has nothing to weigh; the card shows a dash. |
+| `unfiltered_weight`   | sensor, g     | for drink tracking | Raw scale stream (10 Hz) during activity.                                                                                                                         |
+| `activity`            | binary_sensor | for drink tracking | High while a session is in progress.                                                                                                                              |
+| `last_drink_amount`   | sensor, g     | for drink tracking | Device-computed session total.                                                                                                                                    |
+| `last_drink_duration` | sensor, s     | for drink tracking | Device-computed session length.                                                                                                                                   |
+| `pump_fault`          | binary_sensor | no                 | On when the pump is faulted. Omit if the firmware can't detect faults.                                                                                            |
+| `bowl_missing`        | binary_sensor | no                 | On when the bowl is off its scale. Shown only while on, as the reason the level reads a dash. Omit on a device whose vessel is fixed.                             |
 
 ### Maintenance schedules (water change, filter change)
 
@@ -48,20 +48,20 @@ from a better one.
    variant can be added to the contract when a device needs it.)
 
 The interval sensor is optional in shapes 1–2 but strongly recommended: the
-urgency band is scored as *fraction of the interval remaining* (so a 12-hour
+urgency band is scored as _fraction of the interval remaining_ (so a 12-hour
 bowl and a 5-day fountain share one curve), and without an interval the
 countdown shows with no urgency and no bar. The server falls back to the
 device config's `filterIntervalDays` for the filter bar.
 
 ## Litterboxes
 
-| Object id | Type | Required | Meaning |
-| --- | --- | --- | --- |
-| `waste_weight` | sensor, g | yes | Accumulated waste since last scoop. |
-| `unfiltered_weight` | sensor, g | for visit tracking | Raw scale stream during activity. |
-| `activity` | binary_sensor | for visit tracking | High while a visit is in progress. |
-| `litter_remaining` | sensor, kg | no | Litter left in the box. |
-| `visits_since_clean` | sensor | no | Visit count since last scoop. |
+| Object id            | Type          | Required           | Meaning                             |
+| -------------------- | ------------- | ------------------ | ----------------------------------- |
+| `waste_weight`       | sensor, g     | yes                | Accumulated waste since last scoop. |
+| `unfiltered_weight`  | sensor, g     | for visit tracking | Raw scale stream during activity.   |
+| `activity`           | binary_sensor | for visit tracking | High while a visit is in progress.  |
+| `litter_remaining`   | sensor, kg    | no                 | Litter left in the box.             |
+| `visits_since_clean` | sensor        | no                 | Visit count since last scoop.       |
 
 ### Maintenance schedule (deep clean / full litter change)
 

@@ -8,7 +8,6 @@ import type {
 } from '../../types.ts';
 import { SurePetAccountManager } from './SurePetAccountManager.ts';
 
-
 export class SurePetProvider implements DeviceProvider {
   readonly name = 'surepet';
   readonly internal = false;

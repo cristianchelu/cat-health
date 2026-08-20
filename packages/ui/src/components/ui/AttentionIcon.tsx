@@ -2,8 +2,10 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import './AttentionIcon.css';
 
-interface AttentionIconProps
-  extends Omit<React.ComponentProps<'svg'>, 'children'> {
+interface AttentionIconProps extends Omit<
+  React.ComponentProps<'svg'>,
+  'children'
+> {
   /** `soon` is amber and means act before long; `now` is red and means act. */
   tone: 'soon' | 'now';
   label: string;

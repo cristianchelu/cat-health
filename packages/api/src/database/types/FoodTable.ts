@@ -2,11 +2,11 @@ import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
 import { NutrientNameDTO, NutrientUnitDTO } from 'shared';
 
 export type FoodType =
-  | 'drink'           // Flavoured water (complementary)
-  | 'complete_wet'    // Complete wet food
+  | 'drink' // Flavoured water (complementary)
+  | 'complete_wet' // Complete wet food
   | 'complementary_wet' // Complementary wet food
-  | 'treat'           // Treats (e.g. sticks)
-  | 'complete_dry'    // Complete dry food
+  | 'treat' // Treats (e.g. sticks)
+  | 'complete_dry' // Complete dry food
   | 'complementary_dry'; // Complementary dry food
 
 export interface FoodTable {
@@ -17,7 +17,11 @@ export interface FoodTable {
   barcode_ean13: string | null;
   moisture_percent: number | null;
   calories_per_100g: number | null;
-  nutrients: Array<{ nutrient: NutrientNameDTO; unit: NutrientUnitDTO; value: number }> | null;
+  nutrients: Array<{
+    nutrient: NutrientNameDTO;
+    unit: NutrientUnitDTO;
+    value: number;
+  }> | null;
   serving_size_g: number | null;
   notes: string | null;
   created_at: number;

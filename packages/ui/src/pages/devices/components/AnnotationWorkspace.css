@@ -301,7 +301,11 @@
       }
 
       &.selected-bout {
-        background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+        background: color-mix(
+          in srgb,
+          var(--color-primary) 10%,
+          var(--color-surface)
+        );
       }
     }
 

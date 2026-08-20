@@ -12,13 +12,15 @@ interface EventPetProps {
   causedBy: EventCauseDTO;
 }
 
-const CAUSE_ICONS: Record<Exclude<EventCauseDTO, 'unknown' | 'pet'>, LucideIcon> =
-  {
-    robot_vacuum: Bot,
-    human: User,
-    other_animal: PawPrint,
-    environment: CloudDrizzle,
-  };
+const CAUSE_ICONS: Record<
+  Exclude<EventCauseDTO, 'unknown' | 'pet'>,
+  LucideIcon
+> = {
+  robot_vacuum: Bot,
+  human: User,
+  other_animal: PawPrint,
+  environment: CloudDrizzle,
+};
 
 /**
  * The attribution chip.
@@ -44,7 +46,8 @@ const EventPet: React.FC<EventPetProps> = ({ petId, causedBy }) => {
     );
   }
 
-  const pet = petId != null ? pets.data?.find((p) => p.id === petId) : undefined;
+  const pet =
+    petId != null ? pets.data?.find((p) => p.id === petId) : undefined;
 
   return (
     <Timeline.MetaItem>

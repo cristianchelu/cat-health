@@ -3,8 +3,10 @@ import type { SignalPipTone } from 'shared';
 import { cn } from '@/lib/utils';
 import './DepositPips.css';
 
-interface DepositPipsProps
-  extends Omit<React.ComponentProps<'div'>, 'children'> {
+interface DepositPipsProps extends Omit<
+  React.ComponentProps<'div'>,
+  'children'
+> {
   /** Deposits in the order they happened, oldest first. */
   pips: readonly SignalPipTone[];
   /** Track length. Slots past the end of `pips` render empty. */

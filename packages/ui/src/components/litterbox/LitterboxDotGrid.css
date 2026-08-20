@@ -41,7 +41,6 @@
     &:disabled {
       pointer-events: none;
     }
-
   }
 
   .litterbox-dot-grid-plot {
@@ -87,7 +86,8 @@
   }
 
   .litterbox-dot-grid-dot--straining {
-    box-shadow: 0 0 0 var(--litterbox-dot-grid-straining-ring) var(--color-error);
+    box-shadow: 0 0 0 var(--litterbox-dot-grid-straining-ring)
+      var(--color-error);
   }
 
   .litterbox-dot-grid-overflow {

@@ -14,22 +14,11 @@ export interface DetailMetricRowProps extends React.ComponentProps<'div'> {
 
 const DetailMetricRow = React.forwardRef<HTMLDivElement, DetailMetricRowProps>(
   (
-    {
-      className,
-      label,
-      summary,
-      badge,
-      meta,
-      rawPayload,
-      rawLabel,
-      ...props
-    },
+    { className, label, summary, badge, meta, rawPayload, rawLabel, ...props },
     ref,
   ) => {
     const showRaw =
-      rawPayload !== undefined &&
-      rawPayload !== '' &&
-      rawPayload !== summary;
+      rawPayload !== undefined && rawPayload !== '' && rawPayload !== summary;
 
     const trimmedSummary = summary.trim();
     const isPlaceholderSummary =
@@ -40,11 +29,7 @@ const DetailMetricRow = React.forwardRef<HTMLDivElement, DetailMetricRowProps>(
       trimmedSummary === '…';
 
     return (
-      <div
-        ref={ref}
-        className={cn('detail-metric-row', className)}
-        {...props}
-      >
+      <div ref={ref} className={cn('detail-metric-row', className)} {...props}>
         <div className="detail-metric-row-header">
           <div className="detail-metric-row-main">
             <div className="detail-metric-row-title-line">

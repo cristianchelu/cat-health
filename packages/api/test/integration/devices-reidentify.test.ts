@@ -395,6 +395,5 @@ describe('devices API litterbox reidentify', () => {
 
     assert.equal(earlyRow.pet_id, lightPetId);
     assert.equal(lateRow.pet_id, heavyPetId);
-
   });
 });

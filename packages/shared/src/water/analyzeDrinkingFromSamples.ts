@@ -1,4 +1,4 @@
-import type { DrinkingAnalysis, WeightSample } from "./types.ts";
+import type { DrinkingAnalysis, WeightSample } from './types.ts';
 
 const DRINKING_RATE_MIN_ML_PER_MIN = 10;
 const DRINKING_RATE_MAX_ML_PER_MIN = 90;
@@ -36,21 +36,21 @@ export function analyzeDrinkingFromSamples(
     return ((smoothed[lo] - smoothed[hi]) / dtMs) * 60_000;
   });
 
-  type IntervalClass = "drinking" | "other";
+  type IntervalClass = 'drinking' | 'other';
   const intervalClass = new Array<IntervalClass>(n - 1);
   for (let i = 0; i < n - 1; i++) {
     const intervalRate = (rates[i] + rates[i + 1]) / 2;
     intervalClass[i] =
       intervalRate >= DRINKING_RATE_MIN_ML_PER_MIN &&
       intervalRate <= DRINKING_RATE_MAX_ML_PER_MIN
-        ? "drinking"
-        : "other";
+        ? 'drinking'
+        : 'other';
   }
 
   const validIntervals = new Uint8Array(n - 1);
   let runStart = -1;
   for (let i = 0; i <= n - 1; i++) {
-    const inBand = i < n - 1 && intervalClass[i] === "drinking";
+    const inBand = i < n - 1 && intervalClass[i] === 'drinking';
     if (inBand && runStart === -1) {
       runStart = i;
     } else if (!inBand && runStart !== -1) {

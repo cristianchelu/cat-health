@@ -108,7 +108,11 @@
     }
 
     &.selected {
-      background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+      background: color-mix(
+        in srgb,
+        var(--color-primary) 12%,
+        var(--color-surface)
+      );
       border-left: 3px solid var(--color-primary);
       padding-left: calc(var(--space-md) - 3px);
     }

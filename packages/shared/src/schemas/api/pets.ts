@@ -1,5 +1,5 @@
-import { type Static, Type } from "@fastify/type-provider-typebox";
-import { GetEventSchema } from "./events.ts";
+import { type Static, Type } from '@fastify/type-provider-typebox';
+import { GetEventSchema } from './events.ts';
 
 export const GetPetParamsSchema = Type.Object({ id: Type.Number() });
 export const GetPetResponseSchema = Type.Object({
@@ -7,7 +7,7 @@ export const GetPetResponseSchema = Type.Object({
   name: Type.String(),
   breed: Type.String(),
   avatar_url: Type.Optional(Type.String()),
-  birth_date: Type.Union([Type.String({ format: "date" }), Type.Null()]),
+  birth_date: Type.Union([Type.String({ format: 'date' }), Type.Null()]),
   is_away: Type.Boolean(),
 });
 export type GetPetResponseDTO = Static<typeof GetPetResponseSchema>;
@@ -32,7 +32,7 @@ export const PostPetRequestSchema = Type.Object({
   name: Type.String(),
   breed: Type.String(),
   birth_date: Type.Optional(
-    Type.Union([Type.String({ format: "date" }), Type.Null()]),
+    Type.Union([Type.String({ format: 'date' }), Type.Null()]),
   ),
 });
 export type PostPetRequestDTO = Static<typeof PostPetRequestSchema>;
@@ -41,7 +41,7 @@ export const PatchPetRequestSchema = Type.Partial(
   Type.Object({
     name: Type.String(),
     breed: Type.String(),
-    birth_date: Type.Union([Type.String({ format: "date" }), Type.Null()]),
+    birth_date: Type.Union([Type.String({ format: 'date' }), Type.Null()]),
   }),
 );
 export type PatchPetRequestDTO = Static<typeof PatchPetRequestSchema>;

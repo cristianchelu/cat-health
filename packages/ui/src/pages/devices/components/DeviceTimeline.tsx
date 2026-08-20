@@ -64,7 +64,9 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
 
       <div className="device-timeline-content">
         {error && (
-          <div className="device-timeline-error">{t('devices.error_loading_events')}</div>
+          <div className="device-timeline-error">
+            {t('devices.error_loading_events')}
+          </div>
         )}
 
         {!error && (

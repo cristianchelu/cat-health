@@ -5,7 +5,10 @@ import { decodeLitterboxRawData, deriveLitterboxSampleRateHz } from 'shared';
 
 import type { Database } from '../../database/index.ts';
 import type { EventTable } from '../../database/types/EventTable.ts';
-import type { LitterboxUseEventData, WeightMeasurementEventData } from '../../domain/events.ts';
+import type {
+  LitterboxUseEventData,
+  WeightMeasurementEventData,
+} from '../../domain/events.ts';
 import {
   getLatestPetWeightsGrams,
   mergeAnalyzerIntoLitterboxData,
@@ -33,7 +36,8 @@ function litterboxDataAnalysisChanged(
     before.elimination_type !== after.elimination_type ||
     (before.straining ?? false) !== (after.straining ?? false) ||
     before.sample_rate_hz !== after.sample_rate_hz ||
-    JSON.stringify(before.segments ?? null) !== JSON.stringify(after.segments ?? null)
+    JSON.stringify(before.segments ?? null) !==
+      JSON.stringify(after.segments ?? null)
   );
 }
 
@@ -41,7 +45,8 @@ async function reidentifyOneVisit(
   db: Kysely<Database>,
   row: Selectable<EventTable>,
 ): Promise<
-  'skipped' | { petChanged: boolean; weightChanged: boolean; analysisChanged: boolean }
+  | 'skipped'
+  | { petChanged: boolean; weightChanged: boolean; analysisChanged: boolean }
 > {
   const existing = row.data as LitterboxUseEventData;
   if (existing.type !== 'litterbox_use') {
@@ -143,7 +148,10 @@ async function reidentifyOneVisit(
     const weightAttribution = attributionColumns('pet', newPetId, 'weight');
     if (weightChild) {
       const oldData = weightChild.data as WeightMeasurementEventData;
-      if (oldData.weight !== newWeightGrams || weightChild.pet_id !== newPetId) {
+      if (
+        oldData.weight !== newWeightGrams ||
+        weightChild.pet_id !== newPetId
+      ) {
         await db
           .updateTable('event')
           .set({ ...weightAttribution, data: weightData })

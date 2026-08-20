@@ -3,12 +3,12 @@ import {
   LITTERBOX_NULL_I32,
   LITTERBOX_NULL_U16,
   LITTERBOX_RAW_DATA_VERSION_2,
-} from "./constants.ts";
+} from './constants.ts';
 import type {
   DecodedLitterboxContext,
   DecodedLitterboxRawData,
   EncodeLitterboxRawDataV2Input,
-} from "./types.ts";
+} from './types.ts';
 
 // Layout doc lives on EncodeLitterboxRawDataV2Input in types.ts.
 const HEADER_BYTES = 1 + 8 + 4 + 4 + 2 + 2 + 2 + 2 + 2 + 4;
@@ -20,7 +20,10 @@ function centigrams(grams: number | undefined): number {
     return LITTERBOX_NULL_I32;
   }
   // LITTERBOX_NULL_I32 is reserved as the null sentinel.
-  return Math.max(LITTERBOX_NULL_I32 + 1, Math.min(INT32_MAX, Math.round(grams * 100)));
+  return Math.max(
+    LITTERBOX_NULL_I32 + 1,
+    Math.min(INT32_MAX, Math.round(grams * 100)),
+  );
 }
 
 function nullableU16(value: number | undefined): number {
@@ -35,9 +38,7 @@ export function encodeLitterboxRawDataV2(
 ): Uint8Array {
   const count = input.weights.length;
   if (input.sampleOffsetsMs.length !== count) {
-    throw new Error(
-      "sampleOffsetsMs must have the same length as weights",
-    );
+    throw new Error('sampleOffsetsMs must have the same length as weights');
   }
 
   // Deltas from the previous sample (first = offset from startTimeMs),
@@ -46,7 +47,10 @@ export function encodeLitterboxRawDataV2(
   let previous = 0;
   for (let i = 0; i < count; i++) {
     const offset = input.sampleOffsetsMs[i];
-    const delta = Math.max(0, Math.min(4294967295, Math.round(offset - previous)));
+    const delta = Math.max(
+      0,
+      Math.min(4294967295, Math.round(offset - previous)),
+    );
     deltas[i] = delta;
     previous += delta;
   }

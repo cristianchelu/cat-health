@@ -75,7 +75,10 @@ export const SureFeederStateSchema = Type.Object({
   fill_percentages: Type.Optional(
     Type.Object({
       total: Type.Union([Type.Number(), Type.Null()]),
-      per_bowl: Type.Record(Type.String(), Type.Union([Type.Number(), Type.Null()])),
+      per_bowl: Type.Record(
+        Type.String(),
+        Type.Union([Type.Number(), Type.Null()]),
+      ),
     }),
   ),
   lid_close_delay: Type.Optional(Type.Number()),

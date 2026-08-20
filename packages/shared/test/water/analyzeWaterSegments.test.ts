@@ -1,14 +1,14 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 
 import {
   analyzeWaterSegments,
   analyzeDrinkingFromSamples,
   weightSamplesAtFixedHz,
-} from "../../src/water/index.ts";
+} from '../../src/water/index.ts';
 
-describe("analyzeWaterSegments", () => {
-  it("labels a sustained in-band drop as drinking", () => {
+describe('analyzeWaterSegments', () => {
+  it('labels a sustained in-band drop as drinking', () => {
     const weights: number[] = [];
     let level = 1000;
     for (let i = 0; i < 40; i++) {
@@ -17,7 +17,7 @@ describe("analyzeWaterSegments", () => {
     }
 
     const periods = analyzeWaterSegments(weights);
-    const drinking = periods.filter((period) => period.state === "drinking");
+    const drinking = periods.filter((period) => period.state === 'drinking');
 
     assert.ok(drinking.length > 0);
     const longest = drinking.reduce((max, period) =>
@@ -26,15 +26,15 @@ describe("analyzeWaterSegments", () => {
     assert.ok(longest.end - longest.start >= 10);
   });
 
-  it("returns a single noise period for a flat signal", () => {
+  it('returns a single noise period for a flat signal', () => {
     const weights = Array.from({ length: 20 }, () => 1000);
     const periods = analyzeWaterSegments(weights);
-    assert.deepEqual(periods, [{ state: "noise", start: 0, end: 20 }]);
+    assert.deepEqual(periods, [{ state: 'noise', start: 0, end: 20 }]);
   });
 });
 
-describe("analyzeDrinkingFromSamples", () => {
-  it("returns zero metrics for fewer than two samples", () => {
+describe('analyzeDrinkingFromSamples', () => {
+  it('returns zero metrics for fewer than two samples', () => {
     assert.deepEqual(analyzeDrinkingFromSamples([]), {
       amount: 0,
       duration: 0,
@@ -45,8 +45,8 @@ describe("analyzeDrinkingFromSamples", () => {
   });
 });
 
-describe("water analysis parity at 10 Hz", () => {
-  it("chart segments and ingestion analysis agree on sustained drinking", () => {
+describe('water analysis parity at 10 Hz', () => {
+  it('chart segments and ingestion analysis agree on sustained drinking', () => {
     const weights: number[] = [];
     let level = 1000;
     for (let i = 0; i < 40; i++) {
@@ -55,7 +55,7 @@ describe("water analysis parity at 10 Hz", () => {
     }
 
     const periods = analyzeWaterSegments(weights);
-    const drinking = periods.some((period) => period.state === "drinking");
+    const drinking = periods.some((period) => period.state === 'drinking');
 
     const analysis = analyzeDrinkingFromSamples(
       weightSamplesAtFixedHz(weights),

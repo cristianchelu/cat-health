@@ -9,9 +9,9 @@ services:
       target: dev
       network: host
     ports:
-      - "3001:3000"  # API - different port to avoid conflict with prod
-      - "5173:5173"  # Vite dev server (proxies /api to localhost:3000)
-      - "9229:9229"  # Node.js debugger
+      - '3001:3000' # API - different port to avoid conflict with prod
+      - '5173:5173' # Vite dev server (proxies /api to localhost:3000)
+      - '9229:9229' # Node.js debugger
     volumes:
       - ./:/app:Z
       - /app/node_modules
@@ -33,4 +33,3 @@ services:
       sh -c "node --watch --inspect=0.0.0.0:9229 --experimental-strip-types packages/api/src/main.ts &
              npm run start -w ui &
              wait"
-

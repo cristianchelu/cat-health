@@ -43,7 +43,9 @@ export function attributionFromSelectValue(value: string): EventAttribution {
   const cause = ([...NON_PET_CAUSES, 'pet', 'unknown'] as const).find(
     (c) => c === value,
   );
-  return cause ? { petId: null, causedBy: cause } : { petId: null, causedBy: 'unknown' };
+  return cause
+    ? { petId: null, causedBy: cause }
+    : { petId: null, causedBy: 'unknown' };
 }
 
 /** Both fields together — the server rejects a pet_id under a non-pet cause. */

@@ -1,6 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { HeartPulse, Settings, TabletSmartphone, Stethoscope } from 'lucide-react';
+import {
+  HeartPulse,
+  Settings,
+  TabletSmartphone,
+  Stethoscope,
+} from 'lucide-react';
 import { Link, useLocation } from 'react-router';
 
 import { cn } from '@/lib/utils';

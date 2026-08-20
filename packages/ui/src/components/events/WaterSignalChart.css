@@ -1,6 +1,6 @@
 .water-signal-chart {
-  --water-color-drinking: rgba(34, 197, 94, 0.20);
-  --water-color-spill: rgba(239, 68, 68, 0.20);
+  --water-color-drinking: rgba(34, 197, 94, 0.2);
+  --water-color-spill: rgba(239, 68, 68, 0.2);
   --water-color-noise: rgba(148, 163, 184, 0.12);
   --color-signal-line: var(--color-primary);
   --color-chart-bg: var(--color-surface-muted);
@@ -43,17 +43,24 @@
 
     &.drinking {
       background: var(--water-color-drinking);
-      border: 1px solid color-mix(in srgb, var(--water-color-drinking) 60%, var(--color-text) 40%);
+      border: 1px solid
+        color-mix(
+          in srgb,
+          var(--water-color-drinking) 60%,
+          var(--color-text) 40%
+        );
     }
 
     &.spill {
       background: var(--water-color-spill);
-      border: 1px solid color-mix(in srgb, var(--water-color-spill) 60%, var(--color-text) 40%);
+      border: 1px solid
+        color-mix(in srgb, var(--water-color-spill) 60%, var(--color-text) 40%);
     }
 
     &.noise {
       background: var(--water-color-noise);
-      border: 1px solid color-mix(in srgb, var(--water-color-noise) 60%, var(--color-text) 40%);
+      border: 1px solid
+        color-mix(in srgb, var(--water-color-noise) 60%, var(--color-text) 40%);
     }
   }
 

@@ -202,7 +202,8 @@ describe('i18n keys', () => {
       const allowed = locale === 'ro' ? UNTRANSLATED_RO : new Set<string>();
       const keys = loadLocale(locale);
       for (const key of [...base].sort()) {
-        if (!keys.has(key) && !allowed.has(key)) drift.push(`${locale}: ${key}`);
+        if (!keys.has(key) && !allowed.has(key))
+          drift.push(`${locale}: ${key}`);
       }
     }
 
@@ -246,7 +247,8 @@ describe('i18n keys', () => {
     for (const [locale, keys] of Object.entries(EXTRA_KEYS)) {
       const actual = loadLocale(locale);
       for (const key of [...keys].sort()) {
-        if (!actual.has(key)) stale.push(`EXTRA_KEYS.${locale}: ${key} is gone`);
+        if (!actual.has(key))
+          stale.push(`EXTRA_KEYS.${locale}: ${key} is gone`);
         else if (base.has(key)) {
           stale.push(`EXTRA_KEYS.${locale}: ${key} now exists in en`);
         }

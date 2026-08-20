@@ -2,8 +2,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import './Textarea.css';
 
-interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   variant?: 'default' | 'error';
   inputSize?: 'sm' | 'md' | 'lg';
 }

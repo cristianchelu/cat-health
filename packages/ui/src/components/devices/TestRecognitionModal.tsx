@@ -38,8 +38,12 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
   sourceDeviceId,
 }) => {
   const { t } = useTranslation();
-  const [testResults, setTestResults] = React.useState<Map<number, TestResult>>(new Map());
-  const [pendingTestIds, setPendingTestIds] = React.useState<Set<number>>(new Set());
+  const [testResults, setTestResults] = React.useState<Map<number, TestResult>>(
+    new Map(),
+  );
+  const [pendingTestIds, setPendingTestIds] = React.useState<Set<number>>(
+    new Set(),
+  );
 
   const testMutation = useMutation({
     mutationFn: async ({
@@ -49,7 +53,9 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
       mediaId: number;
       actualPetId: number | null;
     }) => {
-      const response = await testDeviceIdentification(deviceId, { media_id: mediaId });
+      const response = await testDeviceIdentification(deviceId, {
+        media_id: mediaId,
+      });
       return { mediaId, actualPetId, response };
     },
     onSuccess: ({ mediaId, actualPetId, response }) => {
@@ -69,7 +75,10 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
           mediaId,
           petName: 'error',
           causedBy: 'error',
-          rawResponse: error instanceof Error ? error.message : t('pet_recognizer.unknown_error'),
+          rawResponse:
+            error instanceof Error
+              ? error.message
+              : t('pet_recognizer.unknown_error'),
           isCorrect: false,
         }),
       );
@@ -92,26 +101,33 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
   const { data: allMedia, isLoading } = useQuery({
     queryKey: ['testRecognitionMedia', sourceDeviceId],
     queryFn: async () => {
-      const { data: eventsResponse } = await apiClient.get<GetEventsResponseDTO>(
-        '/events',
-        {
+      const { data: eventsResponse } =
+        await apiClient.get<GetEventsResponseDTO>('/events', {
           params: {
             device_id: sourceDeviceId,
             human_verified: true,
             limit: 100,
           },
-        },
-      );
+        });
 
-      const allMedia: Array<GetEventMediaResponseDTO[number] & { actualPetId: number | null; actualPetName: string }> = [];
+      const allMedia: Array<
+        GetEventMediaResponseDTO[number] & {
+          actualPetId: number | null;
+          actualPetName: string;
+        }
+      > = [];
       for (const event of eventsResponse.data) {
         try {
-          const { data: media } = await apiClient.get<GetEventMediaResponseDTO>(`/events/${event.id}/media`);
+          const { data: media } = await apiClient.get<GetEventMediaResponseDTO>(
+            `/events/${event.id}/media`,
+          );
           for (const m of media) {
             allMedia.push({
               ...m,
               actualPetId: event.pet_id,
-              actualPetName: event.pet_id ? i18n.t('pet_recognizer.known') : i18n.t('pet_recognizer.unknown'),
+              actualPetName: event.pet_id
+                ? i18n.t('pet_recognizer.known')
+                : i18n.t('pet_recognizer.unknown'),
             });
           }
         } catch (error) {
@@ -139,7 +155,10 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
           {t('pet_recognizer.test_modal_description')}
           {allMedia && (
             <span className="total-count">
-              {' '}({t('pet_recognizer.images_available', { count: allMedia.length })})
+              {' '}
+              (
+              {t('pet_recognizer.images_available', { count: allMedia.length })}
+              )
             </span>
           )}
         </p>
@@ -168,7 +187,9 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
                   <div
                     key={media.id}
                     className={`media-item ${result ? 'tested' : ''} ${isTesting ? 'testing' : ''}`}
-                    onClick={() => !isTesting && handleTest(media.id, media.actualPetId)}
+                    onClick={() =>
+                      !isTesting && handleTest(media.id, media.actualPetId)
+                    }
                   >
                     <img
                       src={`api/media/${media.file_path}`}
@@ -180,7 +201,9 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
                       </div>
                     )}
                     {result && (
-                      <div className={`result-indicator ${result.isCorrect ? 'correct' : 'incorrect'}`}>
+                      <div
+                        className={`result-indicator ${result.isCorrect ? 'correct' : 'incorrect'}`}
+                      >
                         {result.isCorrect ? (
                           <CheckCircle size={20} />
                         ) : (

@@ -1,10 +1,10 @@
-import { Type, type Static } from "@fastify/type-provider-typebox";
-import { getPaginatedResponseSchema } from "./common.ts";
+import { Type, type Static } from '@fastify/type-provider-typebox';
+import { getPaginatedResponseSchema } from './common.ts';
 import {
   EventDataSchema,
   LitterboxUseEliminationTypeSchema,
   type LitterboxAnalysisStatePeriodDTO,
-} from "./eventData.ts";
+} from './eventData.ts';
 
 /**
  * Legacy fallback rate (Hz) only — real hardware pushes ~7.3Hz. Prefer the
@@ -35,21 +35,21 @@ export type LitterboxAnalysisStatePeriod = LitterboxAnalysisStatePeriodDTO;
  * that and nothing else, so this list can grow without a migration.
  */
 export const EventCauseSchema = Type.Union([
-  Type.Literal("unknown"),
-  Type.Literal("pet"),
-  Type.Literal("robot_vacuum"),
-  Type.Literal("human"),
-  Type.Literal("other_animal"),
-  Type.Literal("environment"),
+  Type.Literal('unknown'),
+  Type.Literal('pet'),
+  Type.Literal('robot_vacuum'),
+  Type.Literal('human'),
+  Type.Literal('other_animal'),
+  Type.Literal('environment'),
 ]);
 export type EventCauseDTO = Static<typeof EventCauseSchema>;
 
 /** Causes that mean no pet of ours was involved — everything but `pet`/`unknown`. */
 export const NON_PET_CAUSES = [
-  "robot_vacuum",
-  "human",
-  "other_animal",
-  "environment",
+  'robot_vacuum',
+  'human',
+  'other_animal',
+  'environment',
 ] as const satisfies readonly EventCauseDTO[];
 
 /**
@@ -61,10 +61,10 @@ export const NON_PET_CAUSES = [
  * other field on this event".
  */
 export const EventAttributionSourceSchema = Type.Union([
-  Type.Literal("microchip"),
-  Type.Literal("recognizer"),
-  Type.Literal("weight"),
-  Type.Literal("manual"),
+  Type.Literal('microchip'),
+  Type.Literal('recognizer'),
+  Type.Literal('weight'),
+  Type.Literal('manual'),
 ]);
 export type EventAttributionSourceDTO = Static<
   typeof EventAttributionSourceSchema
@@ -77,7 +77,7 @@ const GetEventFieldsSchema = Type.Object({
   caused_by: EventCauseSchema,
   attributed_by: Type.Union([EventAttributionSourceSchema, Type.Null()]),
   device_id: Type.Union([Type.Null(), Type.Number()]),
-  timestamp: Type.String({ format: "date-time" }),
+  timestamp: Type.String({ format: 'date-time' }),
   data: EventDataSchema,
   raw_data: Type.Union([Type.Null(), Type.Array(Type.Number())]),
   human_verified: Type.Boolean(),
@@ -92,7 +92,7 @@ export type GetEventDTO = Static<typeof GetEventSchema>;
  * payloads; views that decode the signal fetch the single event by id instead.
  */
 export const GetEventListItemSchema = Type.Omit(GetEventFieldsSchema, [
-  "raw_data",
+  'raw_data',
 ]);
 export type GetEventListItemDTO = Static<typeof GetEventListItemSchema>;
 
@@ -113,14 +113,14 @@ export type GetEventsDTO = Static<typeof GetEventsSchema>;
 
 export const PostEventRequestSchema = Type.Intersect([
   Type.Omit(GetEventSchema, [
-    "id",
-    "timestamp",
-    "raw_data",
-    "caused_by",
-    "attributed_by",
+    'id',
+    'timestamp',
+    'raw_data',
+    'caused_by',
+    'attributed_by',
   ]),
   Type.Object({
-    timestamp: Type.Optional(Type.String({ format: "date-time" })),
+    timestamp: Type.Optional(Type.String({ format: 'date-time' })),
     /** Omit to let `pet_id` speak: a pet if present, otherwise unresolved. */
     caused_by: Type.Optional(EventCauseSchema),
     attributed_by: Type.Optional(EventAttributionSourceSchema),
@@ -147,8 +147,8 @@ export const GetEventsQuerySchema = Type.Object({
   caused_by: Type.Optional(EventCauseSchema),
   attributed_by: Type.Optional(EventAttributionSourceSchema),
   device_id: Type.Optional(Type.Number()),
-  startTime: Type.Optional(Type.String({ format: "date-time" })), // ISO 8601 format
-  endTime: Type.Optional(Type.String({ format: "date-time" })),
+  startTime: Type.Optional(Type.String({ format: 'date-time' })), // ISO 8601 format
+  endTime: Type.Optional(Type.String({ format: 'date-time' })),
   limit: Type.Optional(Type.Number({ minimum: 1, maximum: 5000 })),
   offset: Type.Optional(Type.Number({ minimum: 0 })),
   includeChildren: Type.Optional(Type.Boolean()),
@@ -179,8 +179,8 @@ export const WeightTrendQuerySchema = Type.Object({
 export type WeightTrendQueryDTO = Static<typeof WeightTrendQuerySchema>;
 
 export const UntrackedIntervalSchema = Type.Object({
-  start: Type.String({ format: "date-time" }),
-  end: Type.String({ format: "date-time" }),
+  start: Type.String({ format: 'date-time' }),
+  end: Type.String({ format: 'date-time' }),
 });
 export type UntrackedIntervalDTO = Static<typeof UntrackedIntervalSchema>;
 
@@ -196,15 +196,15 @@ export const WeightTrendsResponseSchema = Type.Object({
   points: Type.Array(WeightTrendPointSchema),
   untrackedIntervals: Type.Array(UntrackedIntervalSchema),
   untrackedDayIntervals: Type.Array(UntrackedIntervalSchema),
-  rangeStart: Type.String({ format: "date-time" }),
-  rangeEnd: Type.String({ format: "date-time" }),
+  rangeStart: Type.String({ format: 'date-time' }),
+  rangeEnd: Type.String({ format: 'date-time' }),
   todayTracked: Type.Boolean(),
 });
 export type WeightTrendsResponseDTO = Static<typeof WeightTrendsResponseSchema>;
 
 /** Timeline badge row: seconds from sample indices; `elimination_type` comes from persisted segments. */
 export interface LitterboxEliminationBadgeSegment {
-  elimination_type: "urination" | "defecation";
+  elimination_type: 'urination' | 'defecation';
   start_s: number;
   end_s: number;
 }
@@ -249,8 +249,8 @@ export const LitterboxTrendParamsSchema = Type.Object({ petId: Type.Number() });
 export type LitterboxTrendParamsDTO = Static<typeof LitterboxTrendParamsSchema>;
 
 export const LitterboxTrendQuerySchema = Type.Object({
-  startTime: Type.String({ format: "date-time" }),
-  endTime: Type.String({ format: "date-time" }),
+  startTime: Type.String({ format: 'date-time' }),
+  endTime: Type.String({ format: 'date-time' }),
   timezone: Type.Optional(Type.String()),
   detail: Type.Optional(Type.Boolean()),
 });

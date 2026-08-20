@@ -4,7 +4,10 @@ import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import type { DeviceType } from 'shared';
 import type { Database } from '../../database/index.ts';
-import type { DeviceConnectivityEventData, PetPresenceEventData } from '../../domain/events.ts';
+import type {
+  DeviceConnectivityEventData,
+  PetPresenceEventData,
+} from '../../domain/events.ts';
 
 export type MonitorDeviceClass = Extract<
   DeviceType,
@@ -62,10 +65,7 @@ export function pairTransitionEvents(
     }
 
     const durationMs = end.getTime() - openStart.getTime();
-    if (
-      minDurationMs == null ||
-      durationMs >= minDurationMs
-    ) {
+    if (minDurationMs == null || durationMs >= minDurationMs) {
       intervals.push({ start: openStart, end });
     }
 
@@ -99,8 +99,7 @@ function clipIntervalsToRange(
   const clipped: TimeInterval[] = [];
 
   for (const interval of intervals) {
-    const start =
-      interval.start < range.start ? range.start : interval.start;
+    const start = interval.start < range.start ? range.start : interval.start;
     const end = interval.end > range.end ? range.end : interval.end;
 
     if (start < end) {
@@ -193,8 +192,7 @@ export function snapIntervalsToBuckets(
 
     while (cursor < endBucket) {
       buckets.add(formatBucketKey(cursor, resolution, timezone));
-      cursor =
-        resolution === 'day' ? addDays(cursor, 1) : addHours(cursor, 1);
+      cursor = resolution === 'day' ? addDays(cursor, 1) : addHours(cursor, 1);
     }
   }
 

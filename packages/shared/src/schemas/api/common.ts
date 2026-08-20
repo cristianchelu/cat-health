@@ -1,8 +1,10 @@
-import { type Static, type TSchema, Type } from "@fastify/type-provider-typebox";
+import {
+  type Static,
+  type TSchema,
+  Type,
+} from '@fastify/type-provider-typebox';
 
-export const getPaginatedResponseSchema = <T extends TSchema>(
-  dataSchema: T,
-) =>
+export const getPaginatedResponseSchema = <T extends TSchema>(dataSchema: T) =>
   Type.Object({
     data: dataSchema,
     total: Type.Number(),

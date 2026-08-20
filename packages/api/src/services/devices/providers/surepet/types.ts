@@ -51,7 +51,10 @@ export interface SurePetDeviceControlPayload {
   training_mode?: number | null;
   bowls?: {
     type?: number | null;
-    settings?: Array<{ food_type?: number | null; target?: number | null } | null> | null;
+    settings?: Array<{
+      food_type?: number | null;
+      target?: number | null;
+    } | null> | null;
   } | null;
 }
 

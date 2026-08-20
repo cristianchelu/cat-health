@@ -1,4 +1,4 @@
-export type WaterSegmentState = "drinking" | "spill" | "noise";
+export type WaterSegmentState = 'drinking' | 'spill' | 'noise';
 
 export interface WaterPeriod {
   state: WaterSegmentState;

@@ -85,13 +85,21 @@
     &.entering {
       background: var(--color-state-entering);
       border: 1px solid
-        color-mix(in srgb, var(--color-state-entering) 60%, var(--color-text) 40%);
+        color-mix(
+          in srgb,
+          var(--color-state-entering) 60%,
+          var(--color-text) 40%
+        );
     }
 
     &.occupied {
       background: var(--color-state-occupied);
       border: 1px solid
-        color-mix(in srgb, var(--color-state-occupied) 60%, var(--color-text) 40%);
+        color-mix(
+          in srgb,
+          var(--color-state-occupied) 60%,
+          var(--color-text) 40%
+        );
     }
 
     &.eliminating {

@@ -1,4 +1,4 @@
-import { type Static, Type } from "@fastify/type-provider-typebox";
+import { type Static, Type } from '@fastify/type-provider-typebox';
 
 // TODO: Remove from here; use real schema
 export const MediaMetadataSchema = Type.Object({

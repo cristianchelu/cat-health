@@ -1,4 +1,8 @@
-import { DEVICE_SIGNAL_KEYS, type DeviceSignal, type DeviceStatus } from 'shared';
+import {
+  DEVICE_SIGNAL_KEYS,
+  type DeviceSignal,
+  type DeviceStatus,
+} from 'shared';
 import { timestampSignal } from './signalBuilders.ts';
 
 /**

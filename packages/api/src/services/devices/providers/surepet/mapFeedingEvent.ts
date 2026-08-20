@@ -83,8 +83,7 @@ export function computeFillPercentages(
     }
   }
 
-  const total =
-    totalTarget > 0 ? (totalWeight / totalTarget) * 100 : null;
+  const total = totalTarget > 0 ? (totalWeight / totalTarget) * 100 : null;
 
   return { total, per_bowl };
 }

@@ -34,10 +34,7 @@ const WeightTrendCard: React.FC<WeightTrendCardProps> = ({
   const isLoading = isQueryLoading || isPending;
 
   let state: WeightTrendCardState;
-  if (
-    !isLoading &&
-    (error || !weightData || weightData.points.length === 0)
-  ) {
+  if (!isLoading && (error || !weightData || weightData.points.length === 0)) {
     state = { status: 'empty' };
   } else if (isLoading || !weightData) {
     state = { status: 'loading' };

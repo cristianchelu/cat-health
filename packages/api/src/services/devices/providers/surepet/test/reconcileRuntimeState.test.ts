@@ -148,7 +148,10 @@ describe('SurePetProvider.validateAccountConfig', () => {
       }),
       true,
     );
-    assert.equal(provider.validateAccountConfig({ email: 'you@example.com' }), false);
+    assert.equal(
+      provider.validateAccountConfig({ email: 'you@example.com' }),
+      false,
+    );
     assert.equal(
       provider.validateAccountConfig({ email: '', password: 'pw' }),
       false,

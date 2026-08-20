@@ -46,7 +46,11 @@ function downsample(data: number[], maxPoints: number): number[] {
 
     let nextAvg = 0;
     const nextLen = Math.min(nextBucketEnd, data.length) - nextBucketStart;
-    for (let j = nextBucketStart; j < Math.min(nextBucketEnd, data.length); j++) {
+    for (
+      let j = nextBucketStart;
+      j < Math.min(nextBucketEnd, data.length);
+      j++
+    ) {
       nextAvg += data[j];
     }
     nextAvg /= nextLen || 1;
@@ -61,9 +65,12 @@ function downsample(data: number[], maxPoints: number): number[] {
     for (let j = bucketStart; j < Math.min(bucketEnd, data.length); j++) {
       const area = Math.abs(
         (prevX - nextX) * (data[j] - prevY) -
-        (prevX - (j - bucketStart + i + 1)) * (nextY - prevY),
+          (prevX - (j - bucketStart + i + 1)) * (nextY - prevY),
       );
-      if (area > maxArea) { maxArea = area; maxIdx = j; }
+      if (area > maxArea) {
+        maxArea = area;
+        maxIdx = j;
+      }
     }
     sampled.push(data[maxIdx]);
   }
@@ -91,88 +98,94 @@ function createPath(
   return path;
 }
 
-const WaterSignalChart = React.forwardRef<HTMLDivElement, WaterSignalChartProps>(
-  ({ className, weights, periods, sampleRate = 10, ...props }, ref) => {
-    const { t } = useTranslation();
+const WaterSignalChart = React.forwardRef<
+  HTMLDivElement,
+  WaterSignalChartProps
+>(({ className, weights, periods, sampleRate = 10, ...props }, ref) => {
+  const { t } = useTranslation();
 
-    const maxPoints = 800;
-    const smoothedWeights = React.useMemo(() => emaSmooth(weights), [weights]);
-    const displayWeights = React.useMemo(
-      () => downsample(smoothedWeights, maxPoints),
-      [smoothedWeights],
-    );
+  const maxPoints = 800;
+  const smoothedWeights = React.useMemo(() => emaSmooth(weights), [weights]);
+  const displayWeights = React.useMemo(
+    () => downsample(smoothedWeights, maxPoints),
+    [smoothedWeights],
+  );
 
-    const scaleFactor = weights.length / displayWeights.length;
+  const scaleFactor = weights.length / displayWeights.length;
 
-    const minWeight = Math.min(...smoothedWeights);
-    const maxWeight = Math.max(...smoothedWeights);
-    const range = maxWeight - minWeight || 1;
-    const padding = range * 0.1;
-    const paddedMin = minWeight - padding;
-    const paddedMax = maxWeight + padding;
+  const minWeight = Math.min(...smoothedWeights);
+  const maxWeight = Math.max(...smoothedWeights);
+  const range = maxWeight - minWeight || 1;
+  const padding = range * 0.1;
+  const paddedMin = minWeight - padding;
+  const paddedMax = maxWeight + padding;
 
-    const svgWidth = 400;
-    const svgHeight = 150;
+  const svgWidth = 400;
+  const svgHeight = 150;
 
-    const linePath = createPath(displayWeights, svgWidth, svgHeight, paddedMin, paddedMax);
+  const linePath = createPath(
+    displayWeights,
+    svgWidth,
+    svgHeight,
+    paddedMin,
+    paddedMax,
+  );
 
-    const scaledPeriods = periods.map((p) => ({
-      ...p,
-      start: p.start / scaleFactor,
-      end: p.end / scaleFactor,
-    }));
+  const scaledPeriods = periods.map((p) => ({
+    ...p,
+    start: p.start / scaleFactor,
+    end: p.end / scaleFactor,
+  }));
 
-    const duration = weights.length / sampleRate;
+  const duration = weights.length / sampleRate;
 
-    return (
-      <div className={cn('water-signal-chart', className)} ref={ref} {...props}>
-        <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none">
-          {scaledPeriods.map((period, i) => {
-            const x = (period.start / displayWeights.length) * svgWidth;
-            const w = ((period.end - period.start) / displayWeights.length) * svgWidth;
-            const color = STATE_COLORS[period.state] ?? 'transparent';
-            return (
-              <rect
-                key={i}
-                x={x}
-                y={0}
-                width={Math.max(w, 1)}
-                height={svgHeight}
-                fill={color}
-              />
-            );
-          })}
-          <path
-            d={linePath}
-            fill="none"
-            stroke="var(--color-signal-line)"
-            strokeWidth="2.5"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
+  return (
+    <div className={cn('water-signal-chart', className)} ref={ref} {...props}>
+      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none">
+        {scaledPeriods.map((period, i) => {
+          const x = (period.start / displayWeights.length) * svgWidth;
+          const w =
+            ((period.end - period.start) / displayWeights.length) * svgWidth;
+          const color = STATE_COLORS[period.state] ?? 'transparent';
+          return (
+            <rect
+              key={i}
+              x={x}
+              y={0}
+              width={Math.max(w, 1)}
+              height={svgHeight}
+              fill={color}
+            />
+          );
+        })}
+        <path
+          d={linePath}
+          fill="none"
+          stroke="var(--color-signal-line)"
+          strokeWidth="2.5"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
 
-        <div className="chart-legend">
-          <div className="legend-item">
-            <span className="legend-color drinking" />
-            <span>{t('event_details.legend_drinking')}</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-color spill" />
-            <span>{t('event_details.legend_spill')}</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-color noise" />
-            <span>{t('event_details.legend_noise')}</span>
-          </div>
+      <div className="chart-legend">
+        <div className="legend-item">
+          <span className="legend-color drinking" />
+          <span>{t('event_details.legend_drinking')}</span>
         </div>
-
-        <div className="chart-duration">
-          {duration.toFixed(1)}s
+        <div className="legend-item">
+          <span className="legend-color spill" />
+          <span>{t('event_details.legend_spill')}</span>
+        </div>
+        <div className="legend-item">
+          <span className="legend-color noise" />
+          <span>{t('event_details.legend_noise')}</span>
         </div>
       </div>
-    );
-  },
-);
+
+      <div className="chart-duration">{duration.toFixed(1)}s</div>
+    </div>
+  );
+});
 
 WaterSignalChart.displayName = 'WaterSignalChart';
 

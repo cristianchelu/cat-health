@@ -57,7 +57,9 @@ export function useDevice(
     queryFn: () => getDevice(deviceId),
     enabled,
     refetchInterval:
-      options?.refetchInterval === false ? false : (options?.refetchInterval ?? 1000),
+      options?.refetchInterval === false
+        ? false
+        : (options?.refetchInterval ?? 1000),
   });
 }
 

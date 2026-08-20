@@ -95,7 +95,8 @@ export function attributionColumnsFromRequest(input: {
 
   const cause: EventCauseDTO =
     caused_by ?? (namedPet !== null ? 'pet' : 'unknown');
-  const source = attributed_by ?? (isResolvedCause(cause) ? defaultSource : undefined);
+  const source =
+    attributed_by ?? (isResolvedCause(cause) ? defaultSource : undefined);
 
   return attributionColumns(cause, namedPet, source ?? null);
 }

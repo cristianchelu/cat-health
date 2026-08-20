@@ -39,17 +39,12 @@ const DOT_COLORS: Record<LitterboxDotType, string> = {
   unknown: 'var(--color-border)',
 };
 
-const LitterboxDotGrid = React.forwardRef<HTMLDivElement, LitterboxDotGridProps>(
+const LitterboxDotGrid = React.forwardRef<
+  HTMLDivElement,
+  LitterboxDotGridProps
+>(
   (
-    {
-      className,
-      columns,
-      maxDots,
-      maxHeight,
-      onColumnClick,
-      style,
-      ...props
-    },
+    { className, columns, maxDots, maxHeight, onColumnClick, style, ...props },
     ref,
   ) => {
     const rootStyle = {
@@ -93,24 +88,27 @@ const LitterboxDotGrid = React.forwardRef<HTMLDivElement, LitterboxDotGridProps>
                   <span className="litterbox-dot-grid-untracked-fill untracked-pattern" />
                 )}
                 <span className="litterbox-dot-grid-stack">
-                {visibleDots.map((dot, dotIndex) => {
-                  const isTopDot = dotIndex === visibleDots.length - 1;
-                  return (
-                    <span key={dotIndex} className="litterbox-dot-grid-dot-wrap">
+                  {visibleDots.map((dot, dotIndex) => {
+                    const isTopDot = dotIndex === visibleDots.length - 1;
+                    return (
                       <span
-                        className={cn('litterbox-dot-grid-dot', {
-                          'litterbox-dot-grid-dot--straining': dot.straining,
-                        })}
-                        style={{ backgroundColor: DOT_COLORS[dot.type] }}
-                      />
-                      {isTopDot && hiddenCount > 0 && (
-                        <span className="litterbox-dot-grid-overflow">
-                          +{hiddenCount}
-                        </span>
-                      )}
-                    </span>
-                  );
-                })}
+                        key={dotIndex}
+                        className="litterbox-dot-grid-dot-wrap"
+                      >
+                        <span
+                          className={cn('litterbox-dot-grid-dot', {
+                            'litterbox-dot-grid-dot--straining': dot.straining,
+                          })}
+                          style={{ backgroundColor: DOT_COLORS[dot.type] }}
+                        />
+                        {isTopDot && hiddenCount > 0 && (
+                          <span className="litterbox-dot-grid-overflow">
+                            +{hiddenCount}
+                          </span>
+                        )}
+                      </span>
+                    );
+                  })}
                 </span>
               </span>
               {column.footer && (

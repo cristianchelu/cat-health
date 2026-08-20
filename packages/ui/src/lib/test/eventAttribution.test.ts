@@ -57,10 +57,10 @@ describe('attribution select encoding', () => {
   });
 
   it('carries the served attribution through unchanged', () => {
-    assert.deepEqual(
-      attributionFromEvent({ pet_id: 9, caused_by: 'pet' }),
-      { petId: 9, causedBy: 'pet' },
-    );
+    assert.deepEqual(attributionFromEvent({ pet_id: 9, caused_by: 'pet' }), {
+      petId: 9,
+      causedBy: 'pet',
+    });
     assert.deepEqual(
       attributionFromEvent({ pet_id: null, caused_by: 'robot_vacuum' }),
       { petId: null, causedBy: 'robot_vacuum' },
@@ -68,10 +68,10 @@ describe('attribution select encoding', () => {
   });
 
   it('patches both fields together so they cannot contradict', () => {
-    assert.deepEqual(
-      attributionToPatch({ petId: null, causedBy: 'human' }),
-      { pet_id: null, caused_by: 'human' },
-    );
+    assert.deepEqual(attributionToPatch({ petId: null, causedBy: 'human' }), {
+      pet_id: null,
+      caused_by: 'human',
+    });
     assert.deepEqual(attributionToPatch({ petId: 2, causedBy: 'pet' }), {
       pet_id: 2,
       caused_by: 'pet',
@@ -103,7 +103,10 @@ describe('attributionSelectOptions', () => {
 
 describe('causeLabelKey', () => {
   it('namespaces every cause under event_attribution', () => {
-    assert.equal(causeLabelKey('robot_vacuum'), 'event_attribution.cause_robot_vacuum');
+    assert.equal(
+      causeLabelKey('robot_vacuum'),
+      'event_attribution.cause_robot_vacuum',
+    );
     assert.equal(causeLabelKey('pet'), 'event_attribution.cause_pet');
   });
 });

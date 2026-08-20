@@ -3,8 +3,10 @@ import { cn } from '@/lib/utils';
 import type { MeterTone } from './Meter';
 import './SegmentMeter.css';
 
-interface SegmentMeterProps
-  extends Omit<React.ComponentProps<'div'>, 'children'> {
+interface SegmentMeterProps extends Omit<
+  React.ComponentProps<'div'>,
+  'children'
+> {
   lit: number;
   of: number;
   /**

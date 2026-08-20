@@ -4,7 +4,10 @@ import { FormActions, type FormActionsProps } from './FormActions';
 import { FormError } from './FormError';
 import './FormShell.css';
 
-interface FormShellProps extends Omit<React.ComponentProps<'form'>, 'onSubmit'> {
+interface FormShellProps extends Omit<
+  React.ComponentProps<'form'>,
+  'onSubmit'
+> {
   onSubmit?: React.FormEventHandler<HTMLFormElement>;
   error?: string | null;
   actions?: FormActionsProps;
@@ -13,15 +16,7 @@ interface FormShellProps extends Omit<React.ComponentProps<'form'>, 'onSubmit'> 
 
 const FormShell = React.forwardRef<HTMLFormElement, FormShellProps>(
   (
-    {
-      className,
-      onSubmit,
-      error,
-      actions,
-      actionsSlot,
-      children,
-      ...props
-    },
+    { className, onSubmit, error, actions, actionsSlot, children, ...props },
     ref,
   ) => {
     return (

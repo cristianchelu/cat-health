@@ -8,10 +8,7 @@ import {
 } from 'shared';
 import { getDepositsSinceScoop } from '../../../litterbox/depositsSinceScoop.ts';
 import type { ProviderDeps, Device } from '../../types.ts';
-import {
-  daysRemainingSignal,
-  measureSignal,
-} from '../../signalBuilders.ts';
+import { daysRemainingSignal, measureSignal } from '../../signalBuilders.ts';
 import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
 import {
   BaseESPHomeController,
