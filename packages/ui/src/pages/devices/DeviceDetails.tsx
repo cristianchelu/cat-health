@@ -24,7 +24,7 @@ import { DeviceHeader } from './components/DeviceHeader';
 import { ProviderDeviceView } from './components/ProviderDeviceView';
 import { DeviceTimeline } from './components/DeviceTimeline';
 import CameraTab from './components/CameraTab';
-import FeederFoodSection from './components/FeederFoodSection';
+import FeederSettingsTab from './components/FeederSettingsTab';
 import ReferenceImagesTab from './components/ReferenceImagesTab';
 import RecognitionTab from './components/RecognitionTab';
 import './DeviceDetails.css';
@@ -199,7 +199,7 @@ const DeviceDetails: React.FC = () => {
         {visibleTabs.includes('settings') && (
           <TabsContent value="settings">
             <div className="device-content device-settings-content">
-              <FeederFoodSection
+              <FeederSettingsTab
                 device={device}
                 onDirtyChange={setFeederDirty}
               />
