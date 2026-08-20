@@ -38,7 +38,7 @@ import {
   deriveLitterboxSampleRateHz,
   parseLitterboxUseEliminationType,
   type EventDataDTO,
-  type GetEventDTO,
+  type GetEventListItemDTO,
   type LitterboxAnalysisStatePeriod,
   type LitterboxUseEliminationType,
 } from 'shared';
@@ -81,12 +81,15 @@ function getEventDurationSeconds(data: EventDataDTO): number | undefined {
 }
 
 interface EventDetailsModalProps {
-  event: GetEventDTO | null;
+  /** Usually a list row — no `raw_data`; the modal fetches the full event by id for signal decoding. */
+  event: GetEventListItemDTO | null;
   isOpen: boolean;
   onClose: () => void;
 }
 
-const WaterIntakeDetails: React.FC<{ event: GetEventDTO }> = ({ event }) => {
+const WaterIntakeDetails: React.FC<{ event: GetEventListItemDTO }> = ({
+  event,
+}) => {
   const { t } = useTranslation();
   if (event.data.type !== 'water_intake') return null;
   const data = event.data;
@@ -132,7 +135,9 @@ const WaterIntakeDetails: React.FC<{ event: GetEventDTO }> = ({ event }) => {
   );
 };
 
-const EventDetailsRenderer: React.FC<{ event: GetEventDTO }> = ({ event }) => {
+const EventDetailsRenderer: React.FC<{ event: GetEventListItemDTO }> = ({
+  event,
+}) => {
   const { t } = useTranslation();
   switch (event.data.type) {
     case 'water_intake':
@@ -144,7 +149,10 @@ const EventDetailsRenderer: React.FC<{ event: GetEventDTO }> = ({ event }) => {
   }
 };
 
-function getEventTitle(event: GetEventDTO, t: (key: string) => string): string {
+function getEventTitle(
+  event: GetEventListItemDTO,
+  t: (key: string) => string,
+): string {
   switch (event.data?.type) {
     case 'water_intake':
       return t('event_details.water_intake');
@@ -230,15 +238,16 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const { draft, patchDraft, isDirty, requestDiscard, discardConfirm } =
     useDraftForm(draftBaseline, { baselineKey: draftBaselineKey });
 
+  /** `event` is a list row without `raw_data`; only the detail fetch carries the signal. */
   const decodedRawData = React.useMemo(() => {
     if (displayEvent?.data?.type !== 'litterbox_use') return null;
-    return decodeLitterboxRawData(displayEvent.raw_data);
-  }, [displayEvent]);
+    return decodeLitterboxRawData(eventFromServer?.raw_data);
+  }, [displayEvent, eventFromServer]);
 
   const decodedWaterData = React.useMemo(() => {
     if (displayEvent?.data?.type !== 'water_intake') return null;
-    return decodeWaterRawData(displayEvent.raw_data);
-  }, [displayEvent]);
+    return decodeWaterRawData(eventFromServer?.raw_data);
+  }, [displayEvent, eventFromServer]);
 
   // Check if event has analysis data
   const hasAnalysisData =
@@ -248,9 +257,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       (decodedWaterData?.weights?.length ?? 0) > 0);
 
   const litterboxData =
-    displayEvent?.data?.type === 'litterbox_use'
-      ? displayEvent.data
-      : null;
+    displayEvent?.data?.type === 'litterbox_use' ? displayEvent.data : null;
 
   const segmentPeriods: LitterboxAnalysisStatePeriod[] | null | undefined =
     litterboxData?.segments;

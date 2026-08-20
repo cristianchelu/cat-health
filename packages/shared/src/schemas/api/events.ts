@@ -86,6 +86,16 @@ const GetEventFieldsSchema = Type.Object({
 export const GetEventSchema = GetEventFieldsSchema;
 export type GetEventDTO = Static<typeof GetEventSchema>;
 
+/**
+ * List row on GET /events — everything but `raw_data`. Sensor blobs (litterbox
+ * v2 is ~6 bytes/sample, serialized as a JSON number[]) would dominate list
+ * payloads; views that decode the signal fetch the single event by id instead.
+ */
+export const GetEventListItemSchema = Type.Omit(GetEventFieldsSchema, [
+  "raw_data",
+]);
+export type GetEventListItemDTO = Static<typeof GetEventListItemSchema>;
+
 /** Child row on GET /events/:id — same shape as parent, no nested children. */
 export const GetEventChildSchema = GetEventFieldsSchema;
 export type GetEventChildDTO = Static<typeof GetEventChildSchema>;
@@ -98,7 +108,7 @@ export const GetEventWithChildrenSchema = Type.Intersect([
 ]);
 export type GetEventWithChildrenDTO = Static<typeof GetEventWithChildrenSchema>;
 
-export const GetEventsSchema = Type.Array(GetEventSchema);
+export const GetEventsSchema = Type.Array(GetEventListItemSchema);
 export type GetEventsDTO = Static<typeof GetEventsSchema>;
 
 export const PostEventRequestSchema = Type.Intersect([

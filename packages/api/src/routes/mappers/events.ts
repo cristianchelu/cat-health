@@ -3,6 +3,7 @@ import type {
   EventCauseDTO,
   EventDataDTO,
   GetEventDTO,
+  GetEventListItemDTO,
 } from 'shared';
 
 import type { EventData } from '../../domain/events.ts';
@@ -39,8 +40,15 @@ interface EventRow {
   human_verified: boolean;
 }
 
-/** DB row → wire DTO; `null` when the stored `data` blob fails the storage contract. */
-export function serializeEventRow(row: EventRow): GetEventDTO | null {
+/**
+ * DB row → list-item wire DTO; `null` when the stored `data` blob fails the
+ * storage contract. Deliberately never touches `raw_data` — list payloads
+ * exclude the sensor blob (and skip the Array.from byte expansion); detail
+ * views fetch GET /events/:id for it.
+ */
+export function serializeEventListRow(
+  row: EventRow,
+): GetEventListItemDTO | null {
   const data = parseStoredEventData(row.data);
   if (!data) return null;
 
@@ -53,8 +61,18 @@ export function serializeEventRow(row: EventRow): GetEventDTO | null {
     device_id: row.device_id,
     timestamp: row.timestamp.toISOString(),
     data: eventDataToDto(data),
-    raw_data: row.raw_data ? Array.from(row.raw_data) : null,
     human_verified: row.human_verified,
+  };
+}
+
+/** DB row → full wire DTO (detail/mutation responses); `null` when the stored `data` blob fails the storage contract. */
+export function serializeEventRow(row: EventRow): GetEventDTO | null {
+  const base = serializeEventListRow(row);
+  if (!base) return null;
+
+  return {
+    ...base,
+    raw_data: row.raw_data ? Array.from(row.raw_data) : null,
   };
 }
 

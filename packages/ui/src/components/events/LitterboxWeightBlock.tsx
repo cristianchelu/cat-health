@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
 import {
   type GetEventChildDTO,
-  type GetEventDTO,
+  type GetEventListItemDTO,
   type GetEventWithChildrenDTO,
 } from 'shared';
 import { Button } from '@/components/ui/Button';
@@ -23,7 +23,7 @@ const MAX_WEIGHT_G = 20_000;
 
 type ParentEvent =
   | GetEventWithChildrenDTO
-  | (GetEventDTO & { children?: GetEventChildDTO[] });
+  | (GetEventListItemDTO & { children?: GetEventChildDTO[] });
 
 function findWeightChild(parent: ParentEvent): GetEventChildDTO | undefined {
   return parent.children?.find(
