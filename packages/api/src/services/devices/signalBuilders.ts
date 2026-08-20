@@ -67,6 +67,63 @@ export function daysRemainingSignal(
   };
 }
 
+/**
+ * A maintenance countdown scored against its own cycle length.
+ *
+ * Severity is the fraction of the interval still remaining rather than a day
+ * count, so a 12-hour bowl cycle and a 5-day fountain cycle share one urgency
+ * curve. Without a known interval the countdown still shows, but carries no
+ * severity: an urgency band against an invented interval would alarm on a
+ * guess.
+ */
+export function intervalCountdownSignal(
+  { key, icon, labelKey, category = 'primary' }: SignalBase,
+  daysRemaining: number,
+  intervalDays?: number,
+): DeviceSignal {
+  const fraction =
+    intervalDays !== undefined && intervalDays > 0
+      ? daysRemaining / intervalDays
+      : undefined;
+  return {
+    key,
+    label_key: labelKeyFor(key, labelKey),
+    value: { kind: 'days', value: daysRemaining },
+    display:
+      fraction !== undefined
+        ? { kind: 'bar', fill: clampFill(fraction) }
+        : { kind: 'none' },
+    icon,
+    category,
+    severity:
+      fraction !== undefined ? { kind: 'ratio', value: fraction } : undefined,
+  };
+}
+
+/**
+ * A metric the device owns but cannot currently read — an em dash on the card.
+ *
+ * The slot is kept rather than dropped: a bowl lifted off its scale still has
+ * a water level, and a card that silently loses the row reads as a device that
+ * never had one. Carries no severity, because an unknown is not an alarm — the
+ * signal that explains the gap (a missing bowl, a fault) is what scores.
+ */
+export function unknownSignal({
+  key,
+  icon,
+  labelKey,
+  category = 'primary',
+}: SignalBase): DeviceSignal {
+  return {
+    key,
+    label_key: labelKeyFor(key, labelKey),
+    value: { kind: 'none' },
+    display: { kind: 'none' },
+    icon,
+    category,
+  };
+}
+
 /** A reading in its own units, such as grams of waste or kilograms of litter. */
 export function measureSignal(
   { key, icon, labelKey, category = 'primary' }: SignalBase,

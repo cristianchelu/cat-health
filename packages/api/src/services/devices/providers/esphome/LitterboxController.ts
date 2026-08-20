@@ -18,6 +18,7 @@ import {
   type ReconnectConfig,
 } from './BaseESPHomeController.ts';
 import { StateAnalyzer, determineEliminationType } from './StateAnalyzer.ts';
+import { DEEP_CLEAN_BINDINGS, readSchedule } from './scheduleBindings.ts';
 import { persistedLitterboxSegments } from './persistedLitterboxSegments.ts';
 import { attributionColumns } from '../../../../domain/eventAttribution.ts';
 
@@ -29,7 +30,6 @@ const SENSORS = {
   UNFILTERED_WEIGHT: 'unfiltered_weight',
   WASTE_WEIGHT: 'waste_weight',
   LITTER_REMAINING: 'litter_remaining',
-  DEEP_CLEAN_TIMER: 'deep_clean_timer',
   VISITS: 'visits_since_clean',
 } as const;
 
@@ -332,12 +332,19 @@ export class LitterboxController extends BaseESPHomeController {
       );
     }
 
-    const deepCleanDays = this.sensorNumber(SENSORS.DEEP_CLEAN_TIMER);
-    if (deepCleanDays !== null) {
+    /* Whichever shape this firmware states the schedule in; the interval
+     * gives the countdown a bar to be drawn against. */
+    const deepClean = readSchedule(
+      DEEP_CLEAN_BINDINGS,
+      this.scheduleReader(),
+      Date.now(),
+    );
+    if (deepClean) {
       signals.push(
         daysRemainingSignal(
           { key: DEVICE_SIGNAL_KEYS.DEEP_CLEAN, icon: 'clean' },
-          deepCleanDays,
+          deepClean.daysRemaining,
+          deepClean.intervalDays,
         ),
       );
     }

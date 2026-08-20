@@ -14,12 +14,18 @@ import {
 import type { DeviceController, ProviderDeps, Device } from '../../types.ts';
 import { batterySignal, signalStrengthSignal } from '../../signalBuilders.ts';
 import { WIFI_RSSI_LADDER } from '../../signalStrength.ts';
+import type { ScheduleSensorReader } from './scheduleBindings.ts';
 
 export const ESPHomeConfigSchema = Type.Object({
   host: Type.String({ minLength: 1 }),
   port: Type.Optional(Type.Number()),
   encryptionKey: Type.Optional(Type.String()),
   clientId: Type.Optional(Type.String()),
+  /**
+   * `Vendor.Product` as the firmware reports it on connect. Selects a
+   * firmware profile when a device's entity ids differ from the contract.
+   */
+  projectName: Type.Optional(Type.String()),
   /**
    * Set the first time ESPHome reports a camera entity. Survives offline
    * periods so the Camera tab can still offer the integrated source.
@@ -523,6 +529,35 @@ export abstract class BaseESPHomeController implements DeviceController {
     if (key === null) return null;
     const value = this.sensorValues.get(key);
     return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  }
+
+  /** Latest boolean reading for an object id, or null when absent or unread. */
+  protected sensorBoolean(objectId: string): boolean | null {
+    const key = this.getEntityKey(objectId);
+    if (key === null) return null;
+    const value = this.sensorValues.get(key);
+    return typeof value === 'boolean' ? value : null;
+  }
+
+  /** The unit an entity declared, when it declared one. */
+  protected sensorUnit(objectId: string): string | undefined {
+    const key = this.getEntityKey(objectId);
+    if (key === null) return undefined;
+    const entity = this.entityDefinitions.get(key);
+    return entity !== undefined &&
+      'unitOfMeasurement' in entity &&
+      typeof entity.unitOfMeasurement === 'string'
+      ? entity.unitOfMeasurement
+      : undefined;
+  }
+
+  /** The entity table as `readSchedule` wants to see it. */
+  protected scheduleReader(): ScheduleSensorReader {
+    return {
+      has: (objectId) => this.getEntityKey(objectId) !== null,
+      number: (objectId) => this.sensorNumber(objectId),
+      unit: (objectId) => this.sensorUnit(objectId),
+    };
   }
 
   /**

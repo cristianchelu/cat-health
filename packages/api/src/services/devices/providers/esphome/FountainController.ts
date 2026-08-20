@@ -13,8 +13,10 @@ import {
 import type { Camera, ProviderDeps, Device } from '../../types.ts';
 import {
   daysRemainingSignal,
+  intervalCountdownSignal,
   percentSignal,
   statusSignal,
+  unknownSignal,
 } from '../../signalBuilders.ts';
 import type { PendingMedia } from '../../../media/MediaManager.ts';
 import type { NewEvent } from '../../../../database/types/EventTable.ts';
@@ -22,19 +24,21 @@ import type { WaterIntakeEventData } from '../../../../domain/events.ts';
 import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
 import {
   BaseESPHomeController,
+  coerceBooleanState,
   type ReconnectConfig,
 } from './BaseESPHomeController.ts';
+import { readSchedule, waterScheduleContract } from './scheduleBindings.ts';
 
 const SENSORS = {
   ACTIVITY: 'activity',
-  PUMP_STATUS: 'pump_status',
   WATER_LEVEL: 'water_level',
   LAST_DRINK_AMOUNT: 'last_drink_amount',
   LAST_DRINK_DURATION: 'last_drink_duration',
   UNFILTERED_WEIGHT: 'unfiltered_weight',
-  // Optional sensors for fountain-specific features
-  WATER_CHANGE_DAYS_REMAINING: 'water_change_days_remaining',
-  FILTER_CHANGE_DAYS_REMAINING: 'filter_change_days_remaining',
+  /** Optional fault flag; a firmware that can't detect faults omits it. */
+  PUMP_FAULT: 'pump_fault',
+  /** Optional: on when the bowl is off its scale, which voids every reading. */
+  BOWL_MISSING: 'bowl_missing',
 } as const;
 
 interface RawMeasurement {
@@ -145,65 +149,18 @@ export class FountainController
       console.log(`Detected camera in ${this.device.name}`);
       void this.persistHasCameraFlag();
     }
-
-    // Detect fountain-specific features and initialize state for sensors that exist
-    const pumpStatusKey = this.getEntityKey(SENSORS.PUMP_STATUS);
-    if (pumpStatusKey !== null) {
-      this.state.pumpStatus = 'ok';
-      console.log(`Detected pump_status sensor in ${this.device.name}`);
-    }
-
-    // Seed only on first discovery: a reconnect's entity dump must not stomp
-    // a known value back to 0 (flapping devices reconnect every ~20s).
-    const waterDaysKey = this.getEntityKey(SENSORS.WATER_CHANGE_DAYS_REMAINING);
-    if (waterDaysKey !== null && this.state.waterDaysRemaining === undefined) {
-      this.state.waterDaysRemaining = 0;
-      console.log(
-        `Detected water_change_days_remaining sensor in ${this.device.name}`,
-      );
-    }
-
-    const filterDaysKey = this.getEntityKey(
-      SENSORS.FILTER_CHANGE_DAYS_REMAINING,
-    );
-    if (
-      filterDaysKey !== null &&
-      this.state.filterDaysRemaining === undefined
-    ) {
-      this.state.filterDaysRemaining = 0;
-      console.log(
-        `Detected filter_change_days_remaining sensor in ${this.device.name}`,
-      );
-    }
   }
 
   protected handleSensorUpdate(key: number, state: unknown): void {
     const waterLevelKey = this.getEntityKey(SENSORS.WATER_LEVEL);
     if (waterLevelKey !== null && key === waterLevelKey) {
-      this.state.waterLevel = Math.round(state as number);
-      return;
-    }
-
-    // Handle pump status (optional entity - some fountains don't have it)
-    const pumpStatusKey = this.getEntityKey(SENSORS.PUMP_STATUS);
-    if (pumpStatusKey !== null && key === pumpStatusKey) {
-      this.state.pumpStatus = state ? 'error' : 'ok';
-      return;
-    }
-
-    // Handle water change days remaining (optional)
-    const waterDaysKey = this.getEntityKey(SENSORS.WATER_CHANGE_DAYS_REMAINING);
-    if (waterDaysKey !== null && key === waterDaysKey) {
-      this.state.waterDaysRemaining = Math.round(state as number);
-      return;
-    }
-
-    // Handle filter change days remaining (optional)
-    const filterDaysKey = this.getEntityKey(
-      SENSORS.FILTER_CHANGE_DAYS_REMAINING,
-    );
-    if (filterDaysKey !== null && key === filterDaysKey) {
-      this.state.filterDaysRemaining = Math.round(state as number);
+      /* A bowl lifted off the scale publishes NaN — ESPHome's "unknown" —
+       * and NaN survives Math.round. Keep the last known level instead:
+       * the mirror is read when the live reading is missing, so writing an
+       * unknown into it is worse than being stale. */
+      if (typeof state === 'number' && Number.isFinite(state)) {
+        this.state.waterLevel = Math.round(state);
+      }
       return;
     }
 
@@ -241,9 +198,12 @@ export class FountainController
   protected setupListeners() {
     super.setupListeners();
 
-    // Override binary_sensor handler to add activity tracking
+    // Override binary_sensor handler to add activity tracking. Must coerce
+    // like the base listener, or this second set() would clobber the
+    // coerced value with the raw wire one.
     this.client.on('binary_sensor', async (data) => {
-      const { key, state } = data;
+      const { key } = data;
+      const state = coerceBooleanState(data.state, data.missingState);
       this.sensorValues.set(key, state);
       this.handleSensorUpdate(key, state);
 
@@ -619,57 +579,82 @@ export class FountainController
   }
 
   getSignals(): DeviceSignal[] {
-    // Prefer sensorValues over the `state` copies: the initial state dump on
-    // connect can race ahead of the entity list, in which case
-    // handleSensorUpdate cannot match keys and `state` keeps its default —
-    // 0% water after every restart until the (rare) next water_level publish.
+    // Read from sensorValues, not the `state` copies: the initial state dump
+    // on connect can race ahead of the entity list, in which case
+    // handleSensorUpdate cannot match keys and `state` keeps its default.
     // sensorValues is populated regardless of ordering and survives
     // reconnects, so it holds the last honest reading.
     // Rounded like handleSensorUpdate always did — the raw sensor floats
     // (58.61366653442383%) are not display values.
+    //
+    // No reading means unknown, never 0%: the level is NaN whenever the bowl
+    // is off its scale, and drawing that as an empty bowl invents an alarm
+    // out of a bowl in the sink. The dash is the honest answer, and
+    // `bowl_missing` below says why.
     const waterLevel = this.sensorNumber(SENSORS.WATER_LEVEL);
     const signals: DeviceSignal[] = [
-      percentSignal(
-        { key: DEVICE_SIGNAL_KEYS.WATER_LEVEL, icon: 'water' },
-        waterLevel !== null ? Math.round(waterLevel) : this.state.waterLevel,
-      ),
+      waterLevel !== null
+        ? percentSignal(
+            { key: DEVICE_SIGNAL_KEYS.WATER_LEVEL, icon: 'water' },
+            Math.round(waterLevel),
+          )
+        : unknownSignal({ key: DEVICE_SIGNAL_KEYS.WATER_LEVEL, icon: 'water' }),
     ];
 
-    if (this.state.filterDaysRemaining !== undefined) {
-      const filterDays = this.sensorNumber(SENSORS.FILTER_CHANGE_DAYS_REMAINING);
+    /* Only worth a line when it is true — a bowl sitting where it belongs is
+     * not news, and the firmware that can't tell omits the entity. */
+    if (this.sensorBoolean(SENSORS.BOWL_MISSING) === true) {
+      signals.push(
+        statusSignal(
+          { key: DEVICE_SIGNAL_KEYS.BOWL_MISSING, icon: 'alert' },
+          'devices.signals.values.bowl_removed',
+          true,
+        ),
+      );
+    }
+
+    /*
+     * Schedules resolve from the entity list on every read, in whichever
+     * shape this firmware speaks (see scheduleBindings.ts). Nothing is
+     * seeded or cached in `state`, so a restart on either end costs at most
+     * one publish — the same reasoning as `sensorValues` above.
+     */
+    const contract = waterScheduleContract(this.config.projectName);
+    const reader = this.scheduleReader();
+    const nowMs = Date.now();
+
+    const freshness = readSchedule(contract.waterFreshness, reader, nowMs);
+    if (freshness) {
+      signals.push(
+        intervalCountdownSignal(
+          { key: DEVICE_SIGNAL_KEYS.WATER_FRESHNESS, icon: 'drop' },
+          freshness.daysRemaining,
+          freshness.intervalDays,
+        ),
+      );
+    }
+
+    const filter = readSchedule(contract.filterLife, reader, nowMs);
+    if (filter) {
       signals.push(
         daysRemainingSignal(
           { key: DEVICE_SIGNAL_KEYS.FILTER_LIFE, icon: 'filter' },
-          filterDays !== null
-            ? Math.round(filterDays)
-            : this.state.filterDaysRemaining,
-          this.config.filterIntervalDays,
+          Math.round(filter.daysRemaining),
+          filter.intervalDays ?? this.config.filterIntervalDays,
         ),
       );
     }
 
-    if (this.state.waterDaysRemaining !== undefined) {
-      const waterDays = this.sensorNumber(SENSORS.WATER_CHANGE_DAYS_REMAINING);
-      signals.push(
-        daysRemainingSignal(
-          { key: DEVICE_SIGNAL_KEYS.WATER_FRESHNESS, icon: 'drop' },
-          waterDays !== null
-            ? Math.round(waterDays)
-            : this.state.waterDaysRemaining,
-        ),
-      );
-    }
-
-    if (this.state.pumpStatus !== undefined) {
-      const faulted = this.state.pumpStatus === 'error';
+    const pumpFault = this.sensorBoolean(SENSORS.PUMP_FAULT);
+    if (pumpFault !== null) {
       signals.push(
         statusSignal(
           {
             key: DEVICE_SIGNAL_KEYS.PUMP_FLOW,
-            icon: faulted ? 'alert' : 'check',
+            icon: pumpFault ? 'alert' : 'check',
           },
-          `devices.signals.values.pump_${this.state.pumpStatus}`,
-          faulted,
+          `devices.signals.values.pump_${pumpFault ? 'error' : 'ok'}`,
+          pumpFault,
         ),
       );
     }
