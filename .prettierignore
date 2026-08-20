@@ -10,3 +10,11 @@ ds-bundle/
 # Machine-written: npm owns the lockfile's formatting, not us.
 package-lock.json
 *.tsbuildinfo
+
+# Prettier reads only the *root* .gitignore, never the nested ones, so anything
+# a nested .gitignore hides has to be repeated here or prettier will happily
+# reformat it. These are generated: the ESPHome fixtures may hold household
+# telemetry, and the rest is build output.
+packages/api/src/services/devices/providers/esphome/test/metrics_*.json
+packages/ui/dev-dist/
+packages/ui/public/icons/
