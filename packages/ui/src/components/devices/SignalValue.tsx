@@ -6,6 +6,7 @@ import {
   coerceEpochDate,
   formatRelativeTimeAgo,
 } from '@/lib/formatRelativeTime';
+import { daysValueParts } from '@/lib/daysValueParts';
 
 interface SignalValueProps {
   value: SignalValueData;
@@ -49,13 +50,12 @@ export const SignalValue: React.FC<SignalValueProps> = ({ value, stale }) => {
       );
     }
 
-    case 'days':
-      /* Overdue reads as a count of days past, not a negative number. */
-      return value.value < 0 ? (
-        <>{t('devices.signals.units.days_overdue', { count: -value.value })}</>
-      ) : (
-        <>{t('devices.signals.units.days_left', { count: value.value })}</>
-      );
+    case 'days': {
+      /* Overdue reads as a count past due, not a negative number; sub-day
+       * values read in hours. See daysValueParts. */
+      const parts = daysValueParts(value.value);
+      return <>{t(`devices.signals.units.${parts.key}`, { count: parts.count })}</>;
+    }
 
     case 'timestamp': {
       const date = coerceEpochDate(value.value);

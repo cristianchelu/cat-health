@@ -570,6 +570,7 @@
       "offline": "Deconectat",
       "last_seen": "Văzut ultima dată",
       "pump_flow": "Debit pompă",
+      "bowl_missing": "Bol",
       "water_level": "Apă",
       "water_freshness": "Prospețime apă",
       "filter_life": "Durată filtru",
@@ -585,6 +586,7 @@
       "values": {
         "pump_ok": "Normal",
         "pump_error": "Defecțiune",
+        "bowl_removed": "Scos",
         "never_seen": "Niciodată văzut",
         "food_wet": "Umedă",
         "food_dry": "Uscată",
@@ -597,6 +599,11 @@
         "days_left_other": "{{count}} zile rămase",
         "days_overdue_one": "{{count}} zi întârziere",
         "days_overdue_other": "{{count}} zile întârziere",
+        "hours_left_one": "{{count}} oră rămasă",
+        "hours_left_other": "{{count}} ore rămase",
+        "hours_overdue_one": "{{count}} oră întârziere",
+        "hours_overdue_other": "{{count}} ore întârziere",
+        "due_now": "De făcut acum",
         "deposits_one": "{{count}} depunere",
         "deposits_other": "{{count}} depuneri",
         "battery": "Baterie {{value}}%"

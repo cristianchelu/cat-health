@@ -647,6 +647,7 @@
       "offline": "Offline",
       "last_seen": "Last seen",
       "pump_flow": "Pump flow",
+      "bowl_missing": "Bowl",
       "water_level": "Water",
       "water_freshness": "Water freshness",
       "filter_life": "Filter life",
@@ -662,6 +663,7 @@
       "values": {
         "pump_ok": "Normal",
         "pump_error": "Fault",
+        "bowl_removed": "Removed",
         "never_seen": "Never seen",
         "food_wet": "Wet",
         "food_dry": "Dry",
@@ -674,6 +676,11 @@
         "days_left_other": "{{count}} days left",
         "days_overdue_one": "{{count}} day overdue",
         "days_overdue_other": "{{count}} days overdue",
+        "hours_left_one": "{{count}} hour left",
+        "hours_left_other": "{{count}} hours left",
+        "hours_overdue_one": "{{count}} hour overdue",
+        "hours_overdue_other": "{{count}} hours overdue",
+        "due_now": "Due now",
         "deposits_one": "{{count}} deposit",
         "deposits_other": "{{count}} deposits",
         "battery": "Battery {{value}}%"
