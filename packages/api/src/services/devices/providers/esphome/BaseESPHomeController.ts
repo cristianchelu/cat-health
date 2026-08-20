@@ -482,7 +482,11 @@ export abstract class BaseESPHomeController implements DeviceController {
   }
 
   protected mapToEntityDTO(entity: EspHomeEntity): EntityDTO {
-    const objectId = entity.objectId;
+    // Same derivation the objectId → key map does on `entities`: firmware
+    // ≥2025.10 sends an empty object_id when it matches the name. Without it
+    // every entity's `id` came back as `''`, which broke `sensors` lookups in
+    // the UI and collapsed all dashboard tiles onto one React key.
+    const objectId = entity.objectId || objectIdFromName(entity.name);
     const category = mapEspHomeEntityCategory(entity);
     const deviceClass =
       'deviceClass' in entity && typeof entity.deviceClass === 'string'

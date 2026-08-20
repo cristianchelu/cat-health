@@ -25,6 +25,16 @@ interface ESPHomeViewProps {
   sensors?: Record<string, unknown>;
 }
 
+/**
+ * Stable per-tile identity. `entity.id` is the ESPHome object_id, which is
+ * empty on state captured before the API learned to derive object_id for
+ * firmware that omits it — an empty id collapses every sibling onto the same
+ * React key. Type plus name is unique within a device and just as stable.
+ */
+function entityTileKey(entity: EntityDTO): string {
+  return entity.id || `${entity.type}:${entity.name}`;
+}
+
 function mergeEntityValue(
   entity: EntityDTO,
   sensors: ESPHomeViewProps['sensors'],
@@ -170,7 +180,9 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
 
   const renderEntityTile = React.useCallback(
     (entity: EntityDTO) => (
-      <DashboardTile key={entity.id}>{renderEntityBody(entity)}</DashboardTile>
+      <DashboardTile key={entityTileKey(entity)}>
+        {renderEntityBody(entity)}
+      </DashboardTile>
     ),
     [renderEntityBody],
   );
