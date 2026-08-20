@@ -1,5 +1,7 @@
 import * as React from 'react';
 
+import { MOBILE_QUERY } from '@/lib/breakpoints';
+
 /**
  * The app bar's scroll behaviour, phone-only.
  *
@@ -14,8 +16,6 @@ import * as React from 'react';
  * the header is worth, and the value is never read back by React.
  */
 
-/** The `max-width: 767px` breakpoint every mobile rule in the app is written against. */
-const MOBILE_QUERY = '(max-width: 767px)';
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 /** Long enough to tell "the scroll ended" from "the finger paused". */

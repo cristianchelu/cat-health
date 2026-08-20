@@ -18,34 +18,78 @@
   cursor: pointer;
 }
 
+/* Desktop uses the header button, so the layer has nothing to hold. */
+#page-add-fab-slot {
+  display: none;
+}
+
 @media (max-width: 767px) {
   /* The header button is replaced by a thumb-reachable floating action. */
   .page-add-link {
     display: none;
   }
 
+  /*
+   * A zero-height flex item at the seam between the scrolling `main` and the
+   * nav: `main` is `flex: 1` and the nav is `flex-shrink: 0`, so this layer's
+   * box sits exactly on the bottom edge of the visible content area whatever
+   * height the nav ends up. Positioning off it needs no nav-sized offset and no
+   * viewport units, and costs the page no flow space — nothing here is in the
+   * scroll at all.
+   */
+  #page-add-fab-slot {
+    position: relative;
+    display: block;
+    height: 0;
+    z-index: var(--z-index-fixed);
+  }
+
   .page-add-fab {
     /*
-     * Sticky, not fixed. The app shell is a flex column with MobileNav as a
-     * sibling, so the nav can never overlap content and the FAB needs no
-     * nav-sized offset — `bottom: 0` sits it directly above the nav.
+     * Anchored to the layer's bottom-right, so the button clears the nav and
+     * sits a gutter in from the content edge — `--space-md` is `main`'s inline
+     * padding on mobile, which is where the page's own right edge is.
      */
-    position: sticky;
-    bottom: 0;
-    float: right;
+    position: absolute;
+    right: var(--space-md);
+    bottom: var(--space-md);
     display: flex;
     align-items: center;
     justify-content: center;
     width: 3.5rem;
     height: 3.5rem;
-    margin-top: var(--space-lg);
     border-radius: var(--radius-full);
     background: var(--color-primary);
     color: var(--color-text-inverted);
     box-shadow: var(--shadow-lg);
+    transition:
+      transform var(--transition-fast),
+      opacity var(--transition-fast);
 
     &:hover {
       background: var(--color-primary-dark);
     }
+  }
+
+  /*
+   * Reading down the page is when the FAB is least wanted and most in the way,
+   * so it leaves (see `useFabScrollAway`). It shrinks out rather than sliding
+   * down: the layer sits above the nav in the stack, so anything that moved far
+   * enough to be gone would cross over the nav on its way there.
+   *
+   * Untouchable while it is away, but still focusable — the layer pulls it back
+   * on `focusin`, which is the only way a keyboard or screen reader would find
+   * it mid-page.
+   */
+  #page-add-fab-slot[data-scrolled-away] .page-add-fab {
+    transform: scale(0.4);
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-add-fab {
+    transition: none;
   }
 }
