@@ -1,0 +1,8 @@
+# Commits to skip when running `git blame`. GitHub honours this file
+# automatically; locally it is wired up by the root `prepare` script
+# (blame.ignoreRevsFile), which runs on `npm install`.
+#
+# Only ever add commits that changed formatting and nothing else.
+
+# style: format the repo with prettier
+8db3b7b31054969b12e5c7c76c4360800cefcc4f
