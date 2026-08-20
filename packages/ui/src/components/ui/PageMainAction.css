@@ -11,7 +11,7 @@
  * of which the anchor ever had. Sized by width/height and centred by flex, so
  * there is nothing for padding to do.
  */
-.page-add-fab {
+.page-main-action-fab {
   display: none;
   border: 0;
   padding: 0;
@@ -19,13 +19,13 @@
 }
 
 /* Desktop uses the header button, so the layer has nothing to hold. */
-#page-add-fab-slot {
+#page-main-action-fab-slot {
   display: none;
 }
 
 @media (max-width: 767px) {
   /* The header button is replaced by a thumb-reachable floating action. */
-  .page-add-link {
+  .page-main-action-link {
     display: none;
   }
 
@@ -37,14 +37,14 @@
    * viewport units, and costs the page no flow space — nothing here is in the
    * scroll at all.
    */
-  #page-add-fab-slot {
+  #page-main-action-fab-slot {
     position: relative;
     display: block;
     height: 0;
     z-index: var(--z-index-fixed);
   }
 
-  .page-add-fab {
+  .page-main-action-fab {
     /*
      * Anchored to the layer's bottom-right, so the button clears the nav and
      * sits a gutter in from the content edge — `--space-md` is `main`'s inline
@@ -81,7 +81,7 @@
    * on `focusin`, which is the only way a keyboard or screen reader would find
    * it mid-page.
    */
-  #page-add-fab-slot[data-scrolled-away] .page-add-fab {
+  #page-main-action-fab-slot[data-scrolled-away] .page-main-action-fab {
     transform: scale(0.4);
     opacity: 0;
     pointer-events: none;
@@ -89,7 +89,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-add-fab {
+  .page-main-action-fab {
     transition: none;
   }
 }

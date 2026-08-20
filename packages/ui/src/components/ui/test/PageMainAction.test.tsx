@@ -4,7 +4,10 @@ import { afterEach, describe, it } from 'node:test';
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { Link } from 'react-router';
 
-import { PageAddFab, PageAddFabSlot } from '../PageAddAction.tsx';
+import {
+  PageMainActionFab,
+  PageMainActionFabSlot,
+} from '../PageMainAction.tsx';
 import { renderWithProviders } from '@/test/render.tsx';
 
 let restoreMatchMedia: (() => void) | null = null;
@@ -43,7 +46,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <main data-testid="scroller">
         <div id="content">{children}</div>
       </main>
-      <PageAddFabSlot />
+      <PageMainActionFabSlot />
     </div>
   );
 }
@@ -54,14 +57,14 @@ function scrollTo(top: number) {
   fireEvent.scroll(scroller);
 }
 
-const layer = () => document.getElementById('page-add-fab-slot');
+const layer = () => document.getElementById('page-main-action-fab-slot');
 const isAway = () => layer()?.hasAttribute('data-scrolled-away') === true;
 
 async function renderShellWithFab() {
   await renderWithProviders(
     <Shell>
       <div className="page">
-        <PageAddFab to="/devices/new" label="Add device" />
+        <PageMainActionFab to="/devices/new" label="Add device" />
       </div>
     </Shell>,
     { router: { initialEntries: ['/devices'] } },
@@ -69,7 +72,7 @@ async function renderShellWithFab() {
   return screen.getByRole('link', { name: 'Add device' });
 }
 
-describe('PageAddFab', () => {
+describe('PageMainActionFab', () => {
   it('mounts in the shell layer rather than in the page', async () => {
     // The regression it exists for: as the last element of the page it added
     // its own height to the scroll, and on a page too short to scroll there was
@@ -77,7 +80,7 @@ describe('PageAddFab', () => {
     pretendWidth(true);
     const fab = await renderShellWithFab();
 
-    assert.equal(fab.closest('#page-add-fab-slot'), layer());
+    assert.equal(fab.closest('#page-main-action-fab-slot'), layer());
     assert.equal(fab.closest('#content'), null);
   });
 
@@ -132,7 +135,7 @@ describe('PageAddFab', () => {
       <Shell>
         <div className="page">
           <Link to="/health">Health</Link>
-          <PageAddFab to="/devices/new" label="Add device" />
+          <PageMainActionFab to="/devices/new" label="Add device" />
         </div>
       </Shell>,
       { router: { initialEntries: ['/devices'] } },
@@ -159,7 +162,7 @@ describe('PageAddFab', () => {
     pretendWidth(true);
     await renderWithProviders(
       <div className="page">
-        <PageAddFab to="/devices/new" label="Add device" />
+        <PageMainActionFab to="/devices/new" label="Add device" />
       </div>,
       { router: { initialEntries: ['/devices'] } },
     );

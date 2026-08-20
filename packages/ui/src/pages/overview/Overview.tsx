@@ -12,7 +12,10 @@ import {
   AppHeaderRow,
 } from '@/components/ui/AppHeader';
 import PetSelector from '@/components/navigation/PetSelector';
-import { PageAddAction, PageAddFab } from '@/components/ui/PageAddAction';
+import {
+  PageMainAction,
+  PageMainActionFab,
+} from '@/components/ui/PageMainAction';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { Button } from '@/components/ui/Button';
@@ -85,8 +88,8 @@ const Overview: React.FC = () => {
   /*
    * Logging food is what this page is for, so it belongs in the header rather
    * than wedged into the Journal's own row, where it was elbowing the date
-   * steppers. `PageAddFab` picks it up on a phone, where the header bar is the
-   * pet strip and there is no actions slot to sit in.
+   * steppers. `PageMainActionFab` picks it up on a phone, where the header bar
+   * is the pet strip and there is no actions slot to sit in.
    */
   const logFood = selectedPet ? () => setShowFoodModal(true) : undefined;
 
@@ -104,7 +107,7 @@ const Overview: React.FC = () => {
           title={t('navigation.overview')}
           actions={
             logFood ? (
-              <PageAddAction
+              <PageMainAction
                 onClick={logFood}
                 icon={Drumstick}
                 label={t('overview.log_food')}
@@ -176,7 +179,7 @@ const Overview: React.FC = () => {
         </section>
       )}
       {logFood ? (
-        <PageAddFab
+        <PageMainActionFab
           onClick={logFood}
           icon={Drumstick}
           label={t('overview.log_food')}

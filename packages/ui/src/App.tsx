@@ -6,7 +6,7 @@ import MobileNav from './components/navigation/MobileNav';
 import { PetProvider } from './contexts/PetProvider';
 import RegionalPreferencesProvider from './contexts/RegionalPreferencesProvider';
 import { TooltipProvider } from './components/ui/Tooltip';
-import { PageAddFabSlot } from './components/ui/PageAddAction';
+import { PageMainActionFabSlot } from './components/ui/PageMainAction';
 import { matchShowsPetSelector } from './router/routeHandle';
 
 import './App.css';
@@ -39,7 +39,7 @@ function App() {
               </main>
               {/* Sits between the scroll area and the nav on purpose — that
                   seam is what the mobile FAB anchors to. */}
-              <PageAddFabSlot />
+              <PageMainActionFabSlot />
               <MobileNav />
             </div>
           </TooltipProvider>

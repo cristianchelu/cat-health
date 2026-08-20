@@ -4,7 +4,10 @@ import type { DeviceListItemDTO, SignalTone } from 'shared';
 import { useDevices } from '@/hooks/queries/deviceQueries';
 import { useRegionalPreferences } from '@/contexts/RegionalPreferencesProvider';
 import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
-import { PageAddFab, PageAddAction } from '@/components/ui/PageAddAction';
+import {
+  PageMainActionFab,
+  PageMainAction,
+} from '@/components/ui/PageMainAction';
 import { EmptyState, LoadingState } from '@/components/ui/PageState';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { rankDeviceSignals } from '@/lib/deviceSignalRanking';
@@ -92,7 +95,7 @@ const Devices: React.FC = () => {
             ) : null
           }
           actions={
-            <PageAddAction
+            <PageMainAction
               to={ADD_DEVICE_ROUTE}
               label={t('settings.add_device')}
             />
@@ -107,7 +110,10 @@ const Devices: React.FC = () => {
         hasError={Boolean(error)}
       />
 
-      <PageAddFab to={ADD_DEVICE_ROUTE} label={t('settings.add_device')} />
+      <PageMainActionFab
+        to={ADD_DEVICE_ROUTE}
+        label={t('settings.add_device')}
+      />
     </div>
   );
 };
