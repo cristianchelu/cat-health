@@ -24,6 +24,7 @@ export const DEVICE_SIGNAL_KEYS = {
   OFFLINE: 'offline',
   LAST_SEEN: 'last_seen',
   PUMP_FLOW: 'pump_flow',
+  BOWL_MISSING: 'bowl_missing',
   WATER_LEVEL: 'water_level',
   WATER_FRESHNESS: 'water_freshness',
   FILTER_LIFE: 'filter_life',
@@ -76,6 +77,15 @@ const SCORE_TABLE: Record<string, ScoreRule> = {
     now: 1,
     nowScore: 95,
     soonScore: 95,
+    calm: { base: 5, slope: 0 },
+  },
+  /* Ranks above the level it explains: a bowl off the scale reports no level
+   * at all, so this is the line that says why the gauge reads nothing. */
+  [DEVICE_SIGNAL_KEYS.BOWL_MISSING]: {
+    direction: 'higher',
+    now: 1,
+    nowScore: 92,
+    soonScore: 92,
     calm: { base: 5, slope: 0 },
   },
   [DEVICE_SIGNAL_KEYS.WATER_LEVEL]: {
@@ -136,13 +146,18 @@ const SCORE_TABLE: Record<string, ScoreRule> = {
     soonScore: 46,
     calm: { base: 26, slope: -1 },
   },
+  /*
+   * Severity is the fraction of the change interval still remaining, not a
+   * day count: a 12-hour bowl cycle and a 5-day fountain cycle share one
+   * urgency curve, and `soon` means the last fifth of whichever cycle.
+   */
   [DEVICE_SIGNAL_KEYS.WATER_FRESHNESS]: {
     direction: 'lower',
     now: 0,
-    soon: 1,
+    soon: 0.2,
     nowScore: 75,
     soonScore: 55,
-    calm: { base: 20, slope: -1 },
+    calm: { base: 30, slope: -25 },
   },
 };
 

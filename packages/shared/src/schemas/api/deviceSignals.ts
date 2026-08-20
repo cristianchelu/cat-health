@@ -141,7 +141,10 @@ export const SignalSeveritySchema = Type.Object({
     Type.Literal('days'),
     /** Hours elapsed. */
     Type.Literal('hours'),
-    /** 0..1+ of a threshold; 1 means "at the threshold". */
+    /**
+     * 0..1+ of a threshold or interval; the key's score rule says which end
+     * is bad. Waste accumulates toward 1, freshness drains toward 0.
+     */
     Type.Literal('ratio'),
     /** The signal's own units, with the score table's thresholds in the same. */
     Type.Literal('absolute'),

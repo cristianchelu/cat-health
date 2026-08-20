@@ -239,15 +239,6 @@ export type PatchDeviceRequestDTO = Static<typeof PatchDeviceRequestSchema>;
 export const WaterFountainStateSchema = Type.Object({
   /** Water Level Percentage */
   waterLevel: Type.Number(),
-  /** Days remaining until water needs to be replaced (optional - not all devices track this) */
-  waterDaysRemaining: Type.Optional(Type.Number()),
-  /** Days remaining until water filter needs to be replaced (optional - not all devices have filters) */
-  filterDaysRemaining: Type.Optional(Type.Number()),
-  /** Pump Status (optional - not all devices have pumps) */
-  pumpStatus: Type.Optional(Type.Union([
-    Type.Literal('ok'),
-    Type.Literal('error'),
-  ])),
   /** Whether the device has an integrated camera */
   hasCamera: Type.Optional(Type.Boolean()),
 });
