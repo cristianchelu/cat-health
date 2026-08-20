@@ -7,8 +7,10 @@ export { FormShell, type FormShellProps } from './FormShell';
 export {
   FormCard,
   FormCardHead,
+  FormCardBody,
   type FormCardProps,
   type FormCardHeadProps,
+  type FormCardBodyProps,
 } from './FormCard';
 export { FormActions, type FormActionsProps } from './FormActions';
 export {

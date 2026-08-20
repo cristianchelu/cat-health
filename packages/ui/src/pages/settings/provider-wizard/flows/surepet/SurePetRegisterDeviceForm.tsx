@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormField, FormShell, Input } from '@/components/ui/form';
-import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm } from '@/hooks/form';
 import { DeviceSummary } from '../../../components/DeviceSummary';
 import { RegisterDeviceCard } from '../shared/RegisterDeviceCard';
@@ -17,7 +16,7 @@ export const SurePetRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
   isSubmitting,
   serverError,
   onSubmitDevice,
-  onBack,
+  onCancel,
   onDirtyChange,
 }) => {
   const { t } = useTranslation();
@@ -25,8 +24,6 @@ export const SurePetRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
     register,
     handleSubmit,
     formState: { isDirty },
-    requestDiscard,
-    discardConfirm,
   } = useAppForm<SurePetFormValues>({
     defaultValues: {
       name: prefill?.name ?? '',
@@ -58,31 +55,30 @@ export const SurePetRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
         {t('settings.surepet_confirm_device_details')}
       </p>
 
-      <RegisterDeviceCard
-        account={account}
-        prefill={prefill}
-        type={prefill.type}
+      <FormShell
+        onSubmit={onSubmit}
+        error={serverError}
+        actions={{
+          onCancel,
+          cancelLabel: t('settings.cancel'),
+          submitLabel: isSubmitting
+            ? t('settings.registering')
+            : t('settings.register_device'),
+          isSubmitting,
+        }}
       >
-        <FormShell
-          onSubmit={onSubmit}
-          error={serverError}
-          actions={{
-            onCancel: () => requestDiscard(onBack),
-            cancelLabel: t('settings.back'),
-            submitLabel: isSubmitting
-              ? t('settings.registering')
-              : t('settings.register_device'),
-            isSubmitting,
-          }}
+        <RegisterDeviceCard
+          account={account}
+          prefill={prefill}
+          type={prefill.type}
         >
           <FormField label={t('settings.device_name_label')}>
             <Input {...register('name', { required: true })} />
           </FormField>
 
           <DeviceSummary externalId={prefill.externalId} />
-        </FormShell>
-      </RegisterDeviceCard>
-      <DiscardUnsavedDialog {...discardConfirm} />
+        </RegisterDeviceCard>
+      </FormShell>
     </>
   );
 };

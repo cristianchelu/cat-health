@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Info } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
 import {
   FormCard,
+  FormCardBody,
   FormCardHead,
   FormInput,
   FormShell,
@@ -26,8 +26,8 @@ interface ConnectProviderStepProps {
     name: string;
     config: Record<string, unknown>;
   }) => Promise<void> | void;
-  /** Returns to the provider picker. The header control abandons the wizard. */
-  onBack: () => void;
+  /** Abandons the wizard. Step-back is the header control. */
+  onCancel: () => void;
   onDirtyChange?: (dirty: boolean) => void;
 }
 
@@ -44,7 +44,7 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
   serverError,
   submitLabel,
   onSubmit,
-  onBack,
+  onCancel,
   onDirtyChange,
 }) => {
   const { t } = useTranslation();
@@ -72,61 +72,54 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
 
   return (
     <div className="connect-provider-step">
-      <FormCard>
-        <FormCardHead
-          titleAs="h2"
-          tile={<ProviderBrandTile provider={provider} size="lg" />}
-          title={t('settings.connect_provider_title', { provider: label })}
-          subtitle={t('settings.connect_provider_subtitle')}
-        />
-
-        <FormShell
-          onSubmit={handleSubmit((values) =>
-            onSubmit({
-              name: values.name,
-              config: configModule.toConfig(values.config),
-            }),
-          )}
-          error={serverError}
-          actionsSlot={
-            <div className="form-actions">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={onBack}
-                disabled={isSubmitting}
-              >
-                {t('settings.back')}
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {submitLabel}
-              </Button>
-            </div>
-          }
-        >
-          <Fields control={control} mode="connect" />
-
-          {configModule.note && (
-            <p className={`provider-note ${configModule.note.variant}`}>
-              {configModule.note.variant === 'warn' ? (
-                <AlertTriangle size={18} aria-hidden="true" />
-              ) : (
-                <Info size={18} aria-hidden="true" />
-              )}
-              <span>{t(configModule.note.i18nKey)}</span>
-            </p>
-          )}
-
-          <FormInput
-            name="name"
-            control={control}
-            label={t('settings.account_name_label')}
-            description={t('settings.account_name_hint')}
-            placeholder={t('settings.account_name_placeholder')}
-            rules={{ required: true }}
+      <FormShell
+        onSubmit={handleSubmit((values) =>
+          onSubmit({
+            name: values.name,
+            config: configModule.toConfig(values.config),
+          }),
+        )}
+        error={serverError}
+        actions={{
+          onCancel,
+          cancelLabel: t('settings.cancel'),
+          submitLabel,
+          isSubmitting,
+        }}
+      >
+        <FormCard>
+          <FormCardHead
+            titleAs="h2"
+            tile={<ProviderBrandTile provider={provider} size="lg" />}
+            title={t('settings.connect_provider_title', { provider: label })}
+            subtitle={t('settings.connect_provider_subtitle')}
           />
-        </FormShell>
-      </FormCard>
+
+          <FormCardBody>
+            <Fields control={control} mode="connect" />
+
+            {configModule.note && (
+              <p className={`provider-note ${configModule.note.variant}`}>
+                {configModule.note.variant === 'warn' ? (
+                  <AlertTriangle size={18} aria-hidden="true" />
+                ) : (
+                  <Info size={18} aria-hidden="true" />
+                )}
+                <span>{t(configModule.note.i18nKey)}</span>
+              </p>
+            )}
+
+            <FormInput
+              name="name"
+              control={control}
+              label={t('settings.account_name_label')}
+              description={t('settings.account_name_hint')}
+              placeholder={t('settings.account_name_placeholder')}
+              rules={{ required: true }}
+            />
+          </FormCardBody>
+        </FormCard>
+      </FormShell>
     </div>
   );
 };

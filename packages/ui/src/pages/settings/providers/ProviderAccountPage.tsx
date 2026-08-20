@@ -14,6 +14,7 @@ import { isRecord } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import {
   FormCard,
+  FormCardBody,
   FormCardHead,
   FormInput,
   FormShell,
@@ -227,55 +228,57 @@ const ProviderAccountPage: React.FC = () => {
     <div className="page-shell-narrow provider-account-page">
       {header(account.name)}
 
-      <FormCard>
-        <FormCardHead
-          tile={<ProviderBrandTile provider={provider} size="lg" />}
-          title={providerBrandLabel(brand, t)}
-          titleAs="h2"
-          subtitle={identity}
-        />
-
-        <FormShell
-          onSubmit={handleSubmit(onSubmit)}
-          error={serverError}
-          actions={{
-            onCancel: back.go,
-            cancelLabel: t('settings.cancel'),
-            submitLabel: updateAccount.isPending
-              ? t('settings.saving')
-              : t('settings.save_changes'),
-            isSubmitting: updateAccount.isPending,
-            submitDisabled: !dirty,
-          }}
-        >
-          <FormInput
-            name="name"
-            control={control}
-            label={t('settings.account_name_label')}
-            placeholder={t('settings.account_name_placeholder')}
-            rules={{ required: true }}
+      <FormShell
+        onSubmit={handleSubmit(onSubmit)}
+        error={serverError}
+        actions={{
+          onCancel: back.go,
+          cancelLabel: t('settings.cancel'),
+          submitLabel: updateAccount.isPending
+            ? t('settings.saving')
+            : t('settings.save_changes'),
+          isSubmitting: updateAccount.isPending,
+          submitDisabled: !dirty,
+        }}
+      >
+        <FormCard>
+          <FormCardHead
+            tile={<ProviderBrandTile provider={provider} size="lg" />}
+            title={providerBrandLabel(brand, t)}
+            titleAs="h2"
+            subtitle={identity}
           />
 
-          <Fields control={control} mode="edit" />
+          <FormCardBody>
+            <FormInput
+              name="name"
+              control={control}
+              label={t('settings.account_name_label')}
+              placeholder={t('settings.account_name_placeholder')}
+              rules={{ required: true }}
+            />
 
-          {configModule.note && (
-            <p className={`provider-note ${configModule.note.variant}`}>
-              {configModule.note.variant === 'warn' ? (
-                <AlertTriangle size={18} aria-hidden="true" />
-              ) : (
-                <Info size={18} aria-hidden="true" />
-              )}
-              <span>{t(configModule.note.i18nKey)}</span>
-            </p>
-          )}
+            <Fields control={control} mode="edit" />
 
-          <FormSwitch
-            name="enabled"
-            control={control}
-            label={t('settings.enabled')}
-          />
-        </FormShell>
-      </FormCard>
+            {configModule.note && (
+              <p className={`provider-note ${configModule.note.variant}`}>
+                {configModule.note.variant === 'warn' ? (
+                  <AlertTriangle size={18} aria-hidden="true" />
+                ) : (
+                  <Info size={18} aria-hidden="true" />
+                )}
+                <span>{t(configModule.note.i18nKey)}</span>
+              </p>
+            )}
+
+            <FormSwitch
+              name="enabled"
+              control={control}
+              label={t('settings.enabled')}
+            />
+          </FormCardBody>
+        </FormCard>
+      </FormShell>
 
       {supportsPetLinking && accountId > 0 && (
         <ProviderPetLinksEditor

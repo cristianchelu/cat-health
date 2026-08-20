@@ -33,6 +33,7 @@ import type { WizardEntry, WizardState } from './wizardTypes';
 import {
   buildWizardPlan,
   getBackTarget,
+  getBackTargetLabelKey,
   getVisualStep,
   initialAddDeviceState,
   planHasStep,
@@ -241,19 +242,23 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
 
   const goBack = () => requestLeave(goBackNow);
 
+  /** Give up on the wizard from the commit row. */
+  const abandon = () => requestLeave(leaveWizard);
+
   const title =
     entry === 'connect'
       ? t('settings.add_provider')
       : t('settings.add_device_title');
 
   /*
-   * The header control abandons the wizard; the footer `Back` walks the plan
-   * (AGENTS.md: "header Cancel still means abandon", "Wizards keep Back +
-   * Continue/Register labels via FormActions"). Labelling the header with its
-   * destination rather than "Back" keeps the two from reading as duplicates of
-   * each other.
+   * Navigation is not a form action, so the header control walks the plan and
+   * the row keeps the two buttons every other form has (Form Actions spec, R3).
+   * It is labelled with where it lands: the previous step mid-wizard, and the
+   * page outside the wizard on the first one, where there is no step to go back
+   * to and back is the way out.
    */
-  const leaveLabel = leave.label;
+  const backLabelKey = getBackTargetLabelKey(plan, state);
+  const backLabel = backLabelKey ? t(backLabelKey) : leave.label;
 
   /** Advance past a step that has no work left for the current provider. */
   const afterDiscovery = (accountId: number) => {
@@ -386,16 +391,12 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
   return (
     <div className="page-shell-narrow provider-wizard-page">
       {/*
-       * Abandons the wizard — never a step-back. Steps own their own `Back` in
-       * FormActions, so this is labelled with where it lands instead of
-       * duplicating that word.
+       * The wizard's only step-back, and its way out of the first step. Steps
+       * carry Cancel (abandon) and their primary in the commit row instead.
        */}
       <AppHeader>
         <AppHeaderBar
-          back={{
-            label: leaveLabel,
-            onNavigate: () => requestLeave(leaveWizard),
-          }}
+          back={{ label: backLabel, onNavigate: goBack }}
           title={title}
         />
       </AppHeader>
@@ -452,7 +453,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
                 : t('settings.connect')
             }
             onSubmit={handleConnectSubmit}
-            onBack={goBack}
+            onCancel={abandon}
             onDirtyChange={setStepDirty}
           />
         </div>
@@ -474,7 +475,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
             onImport={handleImport}
             onDirectRegister={handleDirectRegister}
             onRescan={() => void refetchDiscovery()}
-            onBack={goBack}
+            onCancel={abandon}
             onSkip={
               entry === 'connect'
                 ? () => afterDiscovery(state.accountId)
@@ -497,7 +498,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
             isSubmitting={addDevice.isPending}
             serverError={serverError}
             onSubmitDevice={submitDevice}
-            onBack={goBack}
+            onCancel={abandon}
             onDirtyChange={setStepDirty}
           />
         </div>
@@ -511,7 +512,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
             isSaving={updateAccount.isPending}
             serverError={serverError}
             onFinish={handleFinishLinking}
-            onBack={goBack}
+            onCancel={abandon}
             onSkip={() => finishConnect(state.accountId)}
             onDirtyChange={setStepDirty}
           />

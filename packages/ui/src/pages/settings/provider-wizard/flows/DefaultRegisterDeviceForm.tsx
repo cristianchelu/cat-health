@@ -7,7 +7,6 @@ import {
   Input,
   LabeledSwitchField,
 } from '@/components/ui/form';
-import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm } from '@/hooks/form';
 import { DeviceSummary } from '../../components/DeviceSummary';
 import { RegisterDeviceCard } from './shared/RegisterDeviceCard';
@@ -31,7 +30,7 @@ export const DefaultRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
   isSubmitting,
   serverError,
   onSubmitDevice,
-  onBack,
+  onCancel,
   onDirtyChange,
 }) => {
   const { t } = useTranslation();
@@ -40,8 +39,6 @@ export const DefaultRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
     handleSubmit,
     control,
     formState: { isDirty },
-    requestDiscard,
-    discardConfirm,
   } = useAppForm<DefaultFormValues>({
     defaultValues: {
       name: prefill?.name ?? '',
@@ -76,22 +73,22 @@ export const DefaultRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
     <>
       <p className="step-description">{t('settings.confirm_device_details')}</p>
 
-      <RegisterDeviceCard
-        account={account}
-        prefill={prefill}
-        type={prefill.type}
+      <FormShell
+        onSubmit={onSubmit}
+        error={serverError}
+        actions={{
+          onCancel,
+          cancelLabel: t('settings.cancel'),
+          submitLabel: isSubmitting
+            ? t('settings.registering')
+            : t('settings.register_device'),
+          isSubmitting,
+        }}
       >
-        <FormShell
-          onSubmit={onSubmit}
-          error={serverError}
-          actions={{
-            onCancel: () => requestDiscard(onBack),
-            cancelLabel: t('settings.back'),
-            submitLabel: isSubmitting
-              ? t('settings.registering')
-              : t('settings.register_device'),
-            isSubmitting,
-          }}
+        <RegisterDeviceCard
+          account={account}
+          prefill={prefill}
+          type={prefill.type}
         >
           <FormField label={t('settings.device_name_label')}>
             <Input {...register('name', { required: true })} />
@@ -121,9 +118,8 @@ export const DefaultRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
             />
             <p className="help-text">{t('settings.visit_annotation_help')}</p>
           </FormField>
-        </FormShell>
-      </RegisterDeviceCard>
-      <DiscardUnsavedDialog {...discardConfirm} />
+        </RegisterDeviceCard>
+      </FormShell>
     </>
   );
 };

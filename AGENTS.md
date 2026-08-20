@@ -213,13 +213,24 @@ export default ComponentName;
 
 #### Forms
 
-**Contract:** draft locally → primary **Save** persists → secondary **Cancel** discards. Never auto-save (on change / blur / debounce) on anything that looks like a form. Cancel must not be a fake “back” after already saving.
+**Contract:** draft locally → primary **Save** persists → **Cancel** discards. Never auto-save (on change / blur / debounce) on anything that looks like a form — including a page of switches, which gets the same row with the primary disabled until dirty. Cancel must not be a fake “back” after already saving.
+
+**The commit row** — the reference build is _Form Actions.dc.html_ in the Pet Assistant design project, and a screen that disagrees with it is wrong:
+
+- One row per screen, after the last card, **in the page column** — `FormShell` wraps `FormCard`, never the other way round. A `FormActions` inside a `FormCard` is a bug, and so is a second Save in the page header.
+- `Cancel` (`neutral`) · primary, right-aligned, `padding-top: --space-lg`, **no hairline above it**. One filled button per row.
+- **Navigation is not a form action.** Page back and step back are the `AppHeaderBar` back control; the row never grows a Back. `leading` is the far end of the row: the page's destructive, or state (“2 new selected”). Never a second commit.
+- **Card-local buttons are tools** — Test recognition, Rescan, Scan barcode. Left-aligned inside the card at the point of use, `size="sm"`, `secondary` for the real tool and `ghost` for the incidental one. Never in the commit row.
+- Mobile stacks the same row full width in flow. **Nothing is sticky, fixed or floating** — `MobileNav` is the app's only fixed bottom surface.
+- Modals own their footer: desktop dialog gets the pair, a mobile sheet gets one primary (handle and scrim already dismiss). `DialogFooter` and `ConfirmDialog` follow the same grammar as the row — `Cancel` is `neutral` there too, and only the confirm is filled.
+- **Destructives sit in `leading`** — `danger`, opening a `ConfirmDialog`, as far from the commit as the row is wide. `FormShell.css` buys that distance back in vertical space once the row stacks.
 
 **Kit** (`packages/ui/src/components/ui/form/`):
 
-- `FormShell` — `<form>` + optional `FormError` + `FormActions`
-- `FormCard` / `FormCardHead` — the card an add/edit form sits on, plus its tile + title + subtitle header (provider brand tile, or `DeviceTypeTile` for devices)
-- `FormActions` — Cancel/Back (`secondary`) left, Save/Create/Register (`primary`) right
+- `FormShell` — `<form>` + optional `FormError` + `FormActions`; wraps the card
+- `FormCard` / `FormCardHead` / `FormCardBody` — the card the fields sit on, its tile + title + subtitle header (provider brand tile, or `DeviceTypeTile` for devices), and the field stack
+- `FormActions` — `Cancel` (`neutral`) left, Save/Create/Register (`primary`) right, optional `leading` at the far end; `cancelVariant` only where the default is genuinely wrong
+- `FormInlineDiscard` — a `FormActions` preset (Keep editing `neutral` · Discard `danger`) that swaps into a dirty modal's footer; **never** a second `Dialog` over the form modal
 - `FormError` — mutation error banner
 - `FormInput` / `FormSelect` / `FormTextarea` / `FormDatePicker` / `FormSwitch` — RHF-wired fields
 - Dumb controls (`Input`, `Select`, …, `FormField`) for non-RHF / draft-mode sections
@@ -238,12 +249,12 @@ export default ComponentName;
 **Chrome:**
 
 - Settings edit pages → `SettingsFormPage` + `LoadingState`
-- Provider / device add + edit → `PageBackLink` + `FormCard` + `FormCardHead` (never fields on the bare page background)
+- Provider / device add + edit → `PageBackLink` + `FormCard` + `FormCardHead` + `FormCardBody` (never fields on the bare page background)
 - Destructives → `ConfirmDialog` (never `window.confirm`)
 - Full-page unsaved leave → `DiscardUnsavedDialog`
 - In-modal unsaved discard → `FormInlineDiscard`
 
-Wizards keep Back + Continue/Register labels via `FormActions`; header Cancel still means abandon (guard if dirty).
+**Wizards:** the header back control walks the plan — labelled with the step it lands on, and with the page outside the wizard on the first step, where back is the way out. The row is the same `Cancel` · `Continue`/`Register`/`Finish` every other form has, where Cancel abandons the flow. Both route through the shell's `requestLeave`, so a step-local `requestDiscard` would ask twice; report dirty state up with `onDirtyChange` instead. A step whose only action is Continue (`PickProviderStep`, `SelectAccountStep`) still spaces it like the row: `--space-lg`, no hairline.
 
 ### API Patterns
 

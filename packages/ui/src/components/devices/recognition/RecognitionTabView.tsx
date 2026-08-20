@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Cpu, Loader2, PawPrint, Pencil, Sparkles } from 'lucide-react';
+import { Cpu, PawPrint, Pencil, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
@@ -167,40 +167,16 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
         className="recognition-tab-form"
         onSubmit={onSubmit}
         error={saveFailed ? copy.saveError : null}
-        actionsSlot={
-          hasLinkedRecognizer ? (
-            <div className="recognition-tab-actions">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setTestModalOpen(true)}
-              >
-                <Sparkles size="1em" aria-hidden="true" />
-                {copy.testRecognitionLabel}
-              </Button>
-              <div className="recognition-tab-actions-end">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={onCancel}
-                  disabled={isSaving}
-                >
-                  {copy.cancelLabel}
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={!isDirty || isSaving}
-                  aria-busy={isSaving || undefined}
-                >
-                  {isSaving && (
-                    <Loader2 className="animate-spin" size="1em" aria-hidden />
-                  )}
-                  {copy.saveLabel}
-                </Button>
-              </div>
-            </div>
-          ) : undefined
+        actions={
+          hasLinkedRecognizer
+            ? {
+                onCancel,
+                cancelLabel: copy.cancelLabel,
+                submitLabel: copy.saveLabel,
+                isSubmitting: isSaving,
+                submitDisabled: !isDirty,
+              }
+            : undefined
         }
       >
         <SectionHeader
@@ -276,6 +252,25 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
                   </div>
                 }
               />
+              {/*
+               * A card-local tool, not a commit: it runs the recognizer named
+               * in the row above against a live frame and writes nothing, so it
+               * sits at the point of use rather than in the form's Save row.
+               */}
+              {hasLinkedRecognizer && (
+                <div className="recognition-card-tools">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setTestModalOpen(true)}
+                    disabled={disabled}
+                  >
+                    <Sparkles size="1em" aria-hidden="true" />
+                    {copy.testRecognitionLabel}
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

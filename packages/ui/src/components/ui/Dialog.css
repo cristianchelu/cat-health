@@ -76,14 +76,24 @@
   text-align: center;
 }
 
+/*
+ * The commit row, in the one container allowed to hold it: `Cancel` then the
+ * primary, right-aligned. Separation comes from `.dialog-content`'s own grid
+ * gap, so the footer adds none of its own.
+ */
 .dialog-footer {
   display: flex;
-  flex-direction: column-reverse;
-  gap: var(--space-sm);
+  gap: var(--space-md);
+  justify-content: flex-end;
 
-  @media (min-width: 768px) {
-    flex-direction: row;
-    justify-content: flex-end;
+  /* Stacks the way `FormActions` does, primary last and full width. */
+  @media (max-width: 767px) {
+    flex-direction: column;
+    gap: var(--space-sm);
+
+    button {
+      width: 100%;
+    }
   }
 }
 

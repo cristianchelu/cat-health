@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Cog, Loader2, Video } from 'lucide-react';
+import { Cog, Video } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { ControlGroup } from '@/components/ui/ControlGroup';
@@ -248,29 +248,13 @@ const CameraTabView: React.FC<CameraTabViewProps> = ({
         className="camera-tab-form"
         onSubmit={onSubmit}
         error={saveFailed ? copy.saveError : null}
-        actionsSlot={
-          <div className="camera-tab-actions">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onCancel}
-              disabled={isSaving}
-            >
-              {copy.cancelLabel}
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={!isDirty || isSaving}
-              aria-busy={isSaving || undefined}
-            >
-              {isSaving && (
-                <Loader2 className="animate-spin" size="1em" aria-hidden />
-              )}
-              {copy.saveLabel}
-            </Button>
-          </div>
-        }
+        actions={{
+          onCancel,
+          cancelLabel: copy.cancelLabel,
+          submitLabel: copy.saveLabel,
+          isSubmitting: isSaving,
+          submitDisabled: !isDirty,
+        }}
       >
         {cameraHeader}
         <Card className="camera-tab-card">

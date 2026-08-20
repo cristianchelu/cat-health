@@ -9,6 +9,7 @@ import type {
 import {
   buildWizardPlan,
   getBackTarget,
+  getBackTargetLabelKey,
   getVisualStep,
   initialAddDeviceState,
   planHasStep,
@@ -232,6 +233,28 @@ describe('getBackTarget', () => {
         },
       }),
       { step: 'discover', accountId: 3 },
+    );
+  });
+});
+
+describe('getBackTargetLabelKey', () => {
+  const plan = buildWizardPlan('add-device', DISCOVERY_ONLY)!;
+
+  it('names the step the control lands on', () => {
+    assert.equal(
+      getBackTargetLabelKey(plan, { step: 'discover', accountId: 3 }),
+      'settings.step_select_account',
+    );
+  });
+
+  it('has no step to name when back leaves the wizard', () => {
+    // The header falls back to the page outside the wizard, which only it knows.
+    assert.equal(getBackTargetLabelKey(plan, { step: 'pick' }), null);
+
+    const connectPlan = buildWizardPlan('connect', DISCOVERY_AND_LINKING)!;
+    assert.equal(
+      getBackTargetLabelKey(connectPlan, { step: 'discover', accountId: 7 }),
+      null,
     );
   });
 });

@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
-import './ConfirmDialog.css';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -66,10 +65,14 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           ) : null}
         </DialogHeader>
         {children}
-        <DialogFooter className="confirm-dialog__footer">
+        <DialogFooter>
+          {/*
+           * `neutral`, not the teal `secondary` fill: the confirm is the only
+           * thing in here that does something, so it is the only fill.
+           */}
           <Button
             type="button"
-            variant="secondary"
+            variant="neutral"
             onClick={onCancel}
             disabled={isConfirming}
           >

@@ -32,6 +32,27 @@ describe('ConfirmDialog', () => {
     );
   });
 
+  it('leaves the footer exactly one filled button', async () => {
+    // Same rule as the form's commit row: Cancel is `neutral`, so the only
+    // fill in the dialog is the thing that actually happens.
+    await renderWithProviders(
+      <ConfirmDialog
+        open
+        title="Delete pet?"
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    const confirm = screen.getByRole('button', { name: 'Delete' });
+    assert.equal(cancel.classList.contains('neutral'), true);
+    assert.equal(cancel.classList.contains('secondary'), false);
+    assert.equal(confirm.classList.contains('danger'), true);
+  });
+
   it('dismisses with Escape when not confirming', async () => {
     const user = userEvent.setup();
     let cancelled = false;
