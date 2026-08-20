@@ -8,6 +8,7 @@ import {
 
 import { decodeLitterboxRawData } from '../../../ui/src/components/events/decodeLitterboxRawData.ts';
 
+/** Mirrors `serializeEventRow` — detail/mutation responses only; list rows omit `raw_data` entirely. */
 function serializeRawData(buffer: Uint8Array): number[] {
   return Array.from(buffer);
 }

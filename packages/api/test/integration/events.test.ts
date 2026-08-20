@@ -53,6 +53,33 @@ describe('events API list', () => {
     assert.equal(body.data[1].data.elimination_weight, 23);
   });
 
+  it('omits raw_data from list rows; the detail fetch still carries the bytes', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Blob' });
+    const rawData = Buffer.from([2, 1, 3, 3, 7]);
+    const event = await insertLitterboxEvent(ctx.db, {
+      pet_id: pet.id,
+      raw_data: rawData,
+    });
+
+    const list = await app.inject({
+      method: 'GET',
+      url: `/api/events?pet_id=${pet.id}`,
+    });
+    assert.equal(list.statusCode, 200);
+    const row = list.json().data.find((e: { id: number }) => e.id === event.id);
+    assert.ok(row);
+    // Sensor blobs would dominate list payloads (litterbox v2 ≈ 6 bytes/sample
+    // as JSON numbers) — detail views fetch GET /events/:id instead.
+    assert.ok(!('raw_data' in row));
+
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/api/events/${event.id}`,
+    });
+    assert.equal(detail.statusCode, 200);
+    assert.deepEqual(detail.json().raw_data, Array.from(rawData));
+  });
+
   it('skips corrupt rows in the list and 500s on direct fetch', async () => {
     const pet = await insertPet(ctx.db, { name: 'Corrupt' });
     const valid = await insertLitterboxEvent(ctx.db, {

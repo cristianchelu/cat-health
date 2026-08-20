@@ -1,7 +1,7 @@
 import * as React from 'react';
 import Timeline from '@/components/ui/Timeline';
 import { cn } from '@/lib/utils';
-import type { GetEventDTO } from 'shared';
+import type { GetEventListItemDTO } from 'shared';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import EventDevice from './meta/EventDevice';
 import EventPet from './meta/EventPet';
@@ -16,7 +16,7 @@ type TimelineShellVariant =
   | 'danger';
 
 export interface TimelineEventShellProps {
-  event: GetEventDTO;
+  event: GetEventListItemDTO;
   onClick?: () => void;
   showPet?: boolean;
   showDevice?: boolean;

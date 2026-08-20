@@ -28,7 +28,7 @@ import FoodIntakeCard from '@/pages/overview/components/FoodIntakeCard';
 import LitterboxVisitsCard from '@/pages/overview/components/LitterboxVisitsCard';
 
 import './Overview.css';
-import type { GetEventDTO } from 'shared';
+import type { GetEventListItemDTO } from 'shared';
 
 const Overview: React.FC = () => {
   const { t } = useTranslation();
@@ -41,9 +41,8 @@ const Overview: React.FC = () => {
     pets.length > 0 && !isDevicesLoading && devices?.length === 0;
   const showWidgetGrid =
     !showNoPetsEmpty && !showNoDevicesEmpty && (!!selectedPet || isPetsLoading);
-  const [selectedEvent, setSelectedEvent] = React.useState<GetEventDTO | null>(
-    null,
-  );
+  const [selectedEvent, setSelectedEvent] =
+    React.useState<GetEventListItemDTO | null>(null);
   const [showFoodModal, setShowFoodModal] = React.useState(false);
 
   const {
@@ -54,7 +53,7 @@ const Overview: React.FC = () => {
     resetToCurrentWindow,
   } = useDateWindowNavigation({ days: 1 });
 
-  const handleEventClick = (event: GetEventDTO) => {
+  const handleEventClick = (event: GetEventListItemDTO) => {
     setSelectedEvent(event);
   };
 

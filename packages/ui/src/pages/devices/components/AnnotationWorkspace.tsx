@@ -37,7 +37,7 @@ import {
   causeLabelKey,
 } from '@/lib/eventAttribution';
 import type {
-  GetEventDTO,
+  GetEventListItemDTO,
   LitterboxAnalysisStatePeriod,
   LitterboxUseEliminationType,
   LitterboxUseEventDataDTO,
@@ -53,7 +53,8 @@ import './AnnotationWorkspace.css';
 const EMPTY_ANALYSIS_PERIODS: LitterboxAnalysisStatePeriod[] = [];
 
 interface AnnotationWorkspaceProps {
-  event: GetEventDTO;
+  /** List row — carries no `raw_data`; the signal is fetched via GET /events/:id below. */
+  event: GetEventListItemDTO;
   /** From URL (`video=1`); panel visibility for media strip. */
   videoOpen: boolean;
   onVideoOpenChange: (open: boolean) => void;
@@ -80,15 +81,17 @@ const ELIMINATION_TYPES: {
   { value: 'unknown', label: 'common.unknown' },
 ];
 
-function getLitterboxData(event: GetEventDTO): LitterboxUseEventDataDTO | null {
+function getLitterboxData(
+  event: GetEventListItemDTO,
+): LitterboxUseEventDataDTO | null {
   return event.data.type === 'litterbox_use' ? event.data : null;
 }
 
-function getBouts(event: GetEventDTO): LitterboxBoutAnnotation[] {
+function getBouts(event: GetEventListItemDTO): LitterboxBoutAnnotation[] {
   return getLitterboxData(event)?.annotation?.bouts ?? [];
 }
 
-function hasPersistedBouts(event: GetEventDTO): boolean {
+function hasPersistedBouts(event: GetEventListItemDTO): boolean {
   const annotation = getLitterboxData(event)?.annotation;
   return (
     annotation != null &&
@@ -166,7 +169,8 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
     useAnalyzeLitterboxEvent();
   const { data: pets } = usePets();
   const { data: media, isLoading: isLoadingMedia } = useEventMedia(event.id);
-  const { data: eventDetail } = useQuery({
+  /** List rows carry no `raw_data`; the signal (and children) comes from the detail fetch. */
+  const { data: eventDetail, isPending: isDetailPending } = useQuery({
     queryKey: ['event', event.id],
     queryFn: () => getEventById(event.id),
   });
@@ -175,8 +179,8 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
   const segmentsFromServer = litterboxData.segments;
 
   const decodedRaw = React.useMemo(
-    () => decodeLitterboxRawData(event.raw_data),
-    [event.raw_data],
+    () => decodeLitterboxRawData(eventDetail?.raw_data),
+    [eventDetail?.raw_data],
   );
   const weights = React.useMemo(() => decodedRaw?.weights ?? [], [decodedRaw]);
 
@@ -831,6 +835,10 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
             onSelectBout={setSelectedBoutIndex}
             mediaSync={chartMediaSync}
           />
+        ) : isDetailPending ? (
+          <div className="annotation-no-chart">
+            <Loader2 size={24} aria-hidden className="animate-spin" />
+          </div>
         ) : (
           <div className="annotation-no-chart">
             <AlertCircle size={24} />

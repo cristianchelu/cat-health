@@ -49,11 +49,12 @@ import {
 } from '../services/analytics/trendCoverage.ts';
 import { isBucketTracked } from '../services/analytics/analyticsCoverage.ts';
 
-import type { EventCauseDTO, GetEventDTO } from 'shared';
+import type { EventCauseDTO, GetEventListItemDTO } from 'shared';
 import { parseStoredEventData } from '../database/types/storedEventData.ts';
 import {
   eventDataFromDto,
   requireSerializedEventRow,
+  serializeEventListRow,
   serializeEventRow,
 } from './mappers/events.ts';
 import {
@@ -393,9 +394,9 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const total = countResult?.count || 0;
       const hasMore = offset + events.length < total;
-      const serializedEvents: GetEventDTO[] = [];
+      const serializedEvents: GetEventListItemDTO[] = [];
       for (const event of events) {
-        const serialized = serializeEventRow(event);
+        const serialized = serializeEventListRow(event);
         if (!serialized) {
           fastify.log.warn(
             { eventId: event.id },

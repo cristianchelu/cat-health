@@ -9,7 +9,7 @@ import { EventTimelineItem, TimelineSkeleton } from '@/components/events';
 import { isDeviceTimelineEvent } from '@/components/events/eventTimelineRegistry';
 import './DeviceTimeline.css';
 import EventDetailsModal from '@/components/events/EventDetailsModal';
-import type { GetEventDTO } from 'shared';
+import type { GetEventListItemDTO } from 'shared';
 
 interface DeviceTimelineProps {
   deviceId: number;
@@ -26,11 +26,10 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
     goToNextWindow,
     resetToCurrentWindow,
   } = useDateWindowNavigation({ days: 1 });
-  const [selectedEvent, setSelectedEvent] = React.useState<GetEventDTO | null>(
-    null,
-  );
+  const [selectedEvent, setSelectedEvent] =
+    React.useState<GetEventListItemDTO | null>(null);
 
-  const handleEventClick = (event: GetEventDTO) => {
+  const handleEventClick = (event: GetEventListItemDTO) => {
     setSelectedEvent(event);
   };
 

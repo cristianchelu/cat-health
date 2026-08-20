@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { GetEventDTO } from 'shared';
+import type { GetEventListItemDTO } from 'shared';
 import type { EventComponentProps } from './types';
 import LitterboxEvent from './LitterboxEvent';
 import WeightEvent from './WeightEvent';
@@ -62,7 +62,7 @@ const PET_OVERVIEW_HIDDEN_TYPES = new Set([
 ]);
 
 export function resolveTimelineEventComponent(
-  event: GetEventDTO,
+  event: GetEventListItemDTO,
 ): TimelineEventComponent {
   const type = event.data?.type;
   if (typeof type === 'string') {
@@ -77,7 +77,9 @@ export function resolveTimelineEventComponent(
   return GenericEvent;
 }
 
-export function isPetOverviewActivityEvent(event: GetEventDTO): boolean {
+export function isPetOverviewActivityEvent(
+  event: GetEventListItemDTO,
+): boolean {
   const type = event.data?.type;
   if (typeof type !== 'string') {
     return true;
@@ -86,7 +88,7 @@ export function isPetOverviewActivityEvent(event: GetEventDTO): boolean {
   return !PET_OVERVIEW_HIDDEN_TYPES.has(type);
 }
 
-export function isDeviceTimelineEvent(event: GetEventDTO): boolean {
+export function isDeviceTimelineEvent(event: GetEventListItemDTO): boolean {
   const type = event.data?.type;
   if (typeof type !== 'string') {
     return true;

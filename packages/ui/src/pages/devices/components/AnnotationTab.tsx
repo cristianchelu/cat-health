@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router';
 import { getEventById } from '@/api/pets';
 import { useDeviceAnnotationEvents } from '@/hooks/queries/deviceQueries';
 import { usePets } from '@/hooks/queries/petQueries';
-import type { GetEventDTO, LitterboxUseEliminationType } from 'shared';
+import type { GetEventListItemDTO, LitterboxUseEliminationType } from 'shared';
 import type { LitterboxAnnotation } from '@/types/litterbox';
 import AnnotationWorkspace, {
   type AnnotationWorkspaceActions,
@@ -38,7 +38,7 @@ const MAIN_ELIM_ALT_DIGIT_CODE_INDEX: Record<string, number> = {
 };
 
 function getAnnotationStatus(
-  event: GetEventDTO,
+  event: GetEventListItemDTO,
 ): 'excluded' | 'bout' | 'session' | 'none' {
   const d = event.data as { annotation?: LitterboxAnnotation };
   if (d.annotation?.excluded === true) return 'excluded';
@@ -381,7 +381,7 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
     enabled: shouldFetchSelectedEventById,
   });
 
-  const selectedEvent = React.useMemo((): GetEventDTO | null => {
+  const selectedEvent = React.useMemo((): GetEventListItemDTO | null => {
     if (selectedEventId == null) return null;
     if (litterboxEventOnPage) return litterboxEventOnPage;
     if (selectedEventFetched) {
