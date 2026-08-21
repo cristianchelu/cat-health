@@ -122,6 +122,38 @@ return (
 **ALWAYS use CSS variables** from `packages/ui/src/theme.css` instead of hardcoding values.
 **ALWAYS use CSS nesting** with one single top-level classname that contains everything else.
 
+#### One stylesheet, one namespace
+
+There is no CSS modules and no code splitting here: every stylesheet is
+concatenated into one global sheet, so a class declared at the outermost level
+of two files is one class that two components take turns losing. Three clauses,
+enforced by `packages/ui/src/test/cssStructure.test.ts`:
+
+- **One top-level class per file.** Everything else nests inside it. Reopening
+  the same root under `@media (prefers-color-scheme: dark)` to restate tokens is
+  still one namespace and is fine. `@media` / `@supports` / `@container` are
+  transparent to this rule — a second root does not become legal by hiding
+  inside a breakpoint.
+- **The root is named after the file.** `CardList.css` → `.card-list`. A route's
+  stylesheet takes a `page-` prefix and drops the redundant `Page` suffix —
+  `Overview.css` → `.page-overview`, `AddEditPetPage.css` → `.page-add-edit-pet`
+  — which is what keeps `.overview` and `.settings` out of the namespace
+  components draw from. Colocated components under `pages/*/components/` are
+  ordinary components and take no prefix.
+- **No file selects outside its own namespace.** Never another component's
+  class, and no bare element selector on markup you did not author. A component
+  that needs to style what a caller passed it says so at the slot, with `>` or
+  `@scope` — it does not reach down the tree and hope.
+
+The global layer — `index.css`, `App.css`, `theme.css`, `styles/*.css` — is
+exempt: those are the only sheets that own bare element selectors and
+free-standing utilities.
+
+`KNOWN_VIOLATIONS` in the checker carries the files still being migrated. It may
+only shrink, and a file that starts passing **must** have its line deleted in the
+same commit — a stale entry fails the suite, so the list cannot rot into a
+graveyard.
+
 **No raw spacing `px` in component CSS.** Padding, margin, gap, and inset must use `--space-*` (or a semantic token that resolves to one, e.g. `--card-padding`, `--page-section-gap`). Same for type: `--text-*` / `--font-*` / `--line-height-*`, not bare `13px` / `600`.
 
 - **NEVER** copy a design-file number into CSS because Figma said `15px`. Map it to the nearest existing token (`15` → `--space-md` / `16px` is fine; do not invent `15px`).
