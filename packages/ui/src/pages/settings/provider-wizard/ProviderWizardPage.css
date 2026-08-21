@@ -40,8 +40,9 @@
       color: var(--color-text-light);
     }
 
-    /* The picker card and a following note have no flex gap between them. */
-    .provider-picker-list + .provider-note {
+    /* Nothing here has a flex gap, so a note that follows something needs
+       its own air; one that opens a step does not. */
+    .provider-wizard-note:not(:first-child) {
       margin-top: var(--space-md);
     }
 

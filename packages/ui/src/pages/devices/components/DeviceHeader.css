@@ -1,60 +1,60 @@
 /*
- * Everything here is handed to `AppHeaderBar` — the name as `title`, the meta
- * line as `subtitle`, the two controls as `actions` — so nothing is nested
- * under a page-level wrapper: these all render inside the header.
+ * The device page's chrome. Everything is handed to `AppHeaderBar` — the name
+ * as `title`, the meta line as `subtitle`, the two controls as `actions` — so
+ * none of it is nested under a wrapper of this component's own. The root here
+ * is the `AppHeader` itself, which is the one element `DeviceHeader` renders
+ * and the only ancestor all three slots share.
  *
  * `.app-header-subtitle` already lays the meta line out as a wrapping row in
  * the right size and tone, and collapses it to one line on a phone. All that is
  * left for the meta line itself is what the shared rule can't know.
  */
-.device-meta {
-  display: contents;
+.device-header {
+  .device-meta {
+    display: contents;
+  }
 
-  .separator {
+  .device-meta-separator {
     color: var(--color-text-subtle);
   }
 
   /* Raw device-type key; the provider label comes pre-cased. */
-  .device-type {
+  .device-meta-type {
     text-transform: capitalize;
   }
-}
 
-.edit-button {
-  flex-shrink: 0;
+  .device-header-edit,
+  .device-header-icon-action {
+    flex-shrink: 0;
 
-  .icon {
-    height: 1rem;
-    width: 1rem;
-  }
-}
-
-.device-header-icon-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  padding: var(--space-xs);
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-text-muted);
-  text-decoration: none;
-  cursor: pointer;
-  transition: var(--transition-fast);
-
-  &:hover {
-    color: var(--color-text);
-    background-color: var(--color-surface-muted);
+    /* Smaller than lucide's default, to sit on the app bar's scale. */
+    > svg {
+      height: 1rem;
+      width: 1rem;
+    }
   }
 
-  &:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-  }
+  .device-header-icon-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xs);
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition-fast);
 
-  .icon {
-    height: 1rem;
-    width: 1rem;
+    &:hover {
+      color: var(--color-text);
+      background-color: var(--color-surface-muted);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
   }
 }

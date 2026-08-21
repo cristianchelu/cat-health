@@ -153,11 +153,13 @@ const LitterboxDetails: React.FC = () => {
 
   return (
     <div className="page-litterbox-details">
-      <AppHeader>
+      <AppHeader className="litterbox-details-header">
         <AppHeaderBar
           back={{ to: '/', label: t('navigation.overview') }}
           title={t('litterbox_details.title')}
           actions={rangeActions}
+          /* A date range and two steppers do not fit beside the title. */
+          actionsOwnRow
         />
         {/*
           A detail page, so it keeps its title bar — but the pet strip still

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Info, Search, Settings } from 'lucide-react';
+import { Search, Settings } from 'lucide-react';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/Button';
 import type { ProviderAccountDTO } from 'shared';
@@ -13,6 +13,7 @@ import {
   type PickerGroup,
   type PickerOption,
 } from '../components/ProviderPickerList';
+import { ProviderNote } from '@/pages/settings/components/ProviderNote';
 
 interface SelectAccountStepProps {
   accounts: ProviderAccountDTO[];
@@ -117,19 +118,16 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
         />
       )}
 
-      <p className="provider-note info">
-        <Info size={18} aria-hidden="true" />
-        <span>
-          {t('settings.provider_missing_hint')}{' '}
-          <Link
-            to="/settings/providers"
-            replace
-            state={backState('/settings', t('navigation.settings'))}
-          >
-            {t('settings.providers')}
-          </Link>
-        </span>
-      </p>
+      <ProviderNote className="provider-wizard-note">
+        {t('settings.provider_missing_hint')}{' '}
+        <Link
+          to="/settings/providers"
+          replace
+          state={backState('/settings', t('navigation.settings'))}
+        >
+          {t('settings.providers')}
+        </Link>
+      </ProviderNote>
 
       <div className="connect-provider-actions">
         <Button

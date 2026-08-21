@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router';
 import { ListChecks, Pencil } from 'lucide-react';
 import type { GetDeviceResponseDTO } from 'shared';
 import { Button } from '@/components/ui/Button';
+import { cn } from '@/lib/utils';
 import {
   AppHeader,
   AppHeaderBar,
@@ -86,15 +87,15 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
       : t(`devices.status.${device.status}`);
 
   return (
-    <AppHeader className={className}>
+    <AppHeader className={cn('device-header', className)}>
       <AppHeaderBar
         back={{ to: '/devices', label: t('navigation.devices') }}
         title={device.name}
         /* What the title can't say: type, provider, and how it's doing. */
         subtitle={
           <span className="device-meta">
-            <span className="device-type">{formatType(device.type)}</span>
-            <span className="separator">•</span>
+            <span className="device-meta-type">{formatType(device.type)}</span>
+            <span className="device-meta-separator">•</span>
             <span className="device-provider">
               {providerBrandLabel(getProviderBrand(device.provider), t)}
             </span>
@@ -127,7 +128,7 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
                 aria-label={t('devices.open_annotation_workspace')}
                 title={t('devices.open_annotation_workspace')}
               >
-                <ListChecks className="icon" />
+                <ListChecks aria-hidden />
               </Link>
             )}
             <Button
@@ -138,10 +139,10 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
                   state: backState(`/devices/${device.id}`, device.name),
                 })
               }
-              className="edit-button"
+              className="device-header-edit"
               aria-label={t('settings.edit_device_title')}
             >
-              <Pencil className="icon" />
+              <Pencil aria-hidden />
             </Button>
           </>
         }

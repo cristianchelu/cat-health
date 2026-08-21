@@ -58,14 +58,12 @@ const MULTI_ROOT_BY_DESIGN = new Map<string, string>([
 /**
  * Files that still break the rule, kept green while they are migrated.
  *
- * This list may only shrink. Removing the last entry is the point of the
- * exercise; adding one means a new stylesheet went in unnamespaced.
+ * Empty, which was the point of the exercise. It stays a set rather than
+ * becoming an assertion of emptiness so that a large migration can put a file
+ * back for one commit — but a name added here needs the same justification a
+ * `git revert` would, and it may only shrink again from there.
  */
-const KNOWN_VIOLATIONS = new Set<string>([
-  path.join('components', 'ui', 'AppHeader.css'),
-  path.join('pages', 'devices', 'components', 'DeviceHeader.css'),
-  path.join('pages', 'settings', 'providerForm.css'),
-]);
+const KNOWN_VIOLATIONS = new Set<string>([]);
 
 function cssFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

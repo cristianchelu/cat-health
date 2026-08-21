@@ -41,7 +41,6 @@ import {
   stepAfterAccountPick,
 } from './wizardPlan';
 import { importDevices } from './importSelection';
-import '../providerForm.css';
 import './ProviderWizardPage.css';
 
 interface ProviderWizardPageProps {

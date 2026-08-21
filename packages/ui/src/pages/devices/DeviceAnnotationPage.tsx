@@ -82,7 +82,7 @@ const DeviceAnnotationPage: React.FC = () => {
         'page-shell-bleed',
       )}
     >
-      <AppHeader>
+      <AppHeader className="device-annotation-header">
         <AppHeaderBar
           back={{
             to: deviceBack.to,

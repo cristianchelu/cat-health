@@ -167,10 +167,11 @@ The global layer — `index.css`, `App.css`, `theme.css`, `styles/*.css` — is
 exempt: those are the only sheets that own bare element selectors and
 free-standing utilities.
 
-`KNOWN_VIOLATIONS` in the checker carries the files still being migrated. It may
-only shrink, and a file that starts passing **must** have its line deleted in the
-same commit — a stale entry fails the suite, so the list cannot rot into a
-graveyard.
+`KNOWN_VIOLATIONS` in the checker is **empty**, and that is the finished state:
+every stylesheet in `src` now names its own namespace. It may only shrink, and a
+file that starts passing **must** have its line deleted in the same commit — a
+stale entry fails the suite, so the list cannot rot into a graveyard. Adding a
+name back needs the justification a revert would.
 
 **No raw spacing `px` in component CSS.** Padding, margin, gap, and inset must use `--space-*` (or a semantic token that resolves to one, e.g. `--card-padding`, `--page-section-gap`). Same for type: `--text-*` / `--font-*` / `--line-height-*`, not bare `13px` / `600`.
 

@@ -9,7 +9,7 @@
   height: 100svh;
   max-height: 100svh;
 
-  .app-header {
+  .device-annotation-header {
     flex-shrink: 0;
   }
 

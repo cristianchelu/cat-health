@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Info } from 'lucide-react';
 import {
   FormCard,
   FormCardBody,
@@ -10,6 +9,7 @@ import {
 } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form';
 import { ProviderBrandTile } from '../../providers/components/ProviderBrandTile';
+import { ProviderNote } from '@/pages/settings/components/ProviderNote';
 import {
   getProviderBrand,
   providerBrandLabel,
@@ -99,14 +99,9 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
             <Fields control={control} mode="connect" />
 
             {configModule.note && (
-              <p className={`provider-note ${configModule.note.variant}`}>
-                {configModule.note.variant === 'warn' ? (
-                  <AlertTriangle size={18} aria-hidden="true" />
-                ) : (
-                  <Info size={18} aria-hidden="true" />
-                )}
-                <span>{t(configModule.note.i18nKey)}</span>
-              </p>
+              <ProviderNote variant={configModule.note.variant}>
+                {t(configModule.note.i18nKey)}
+              </ProviderNote>
             )}
 
             <FormInput

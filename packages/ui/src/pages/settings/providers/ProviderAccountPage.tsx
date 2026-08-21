@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import { AlertTriangle, Info, Plus, Smartphone } from 'lucide-react';
+import { Plus, Smartphone } from 'lucide-react';
 import type { ProviderPetLink } from 'shared';
 import {
   useProviders,
@@ -42,7 +42,7 @@ import {
 } from '../provider-wizard/flows/accountConfigRegistry.ts';
 import type { ProviderAccountFormValues } from '../provider-wizard/flows/accountConfigTypes.ts';
 import { ProviderBrandTile } from './components/ProviderBrandTile';
-import '../providerForm.css';
+import { ProviderNote } from '@/pages/settings/components/ProviderNote';
 import './ProviderAccountPage.css';
 
 const EMPTY_PET_LINKS: ProviderPetLink[] = [];
@@ -262,14 +262,9 @@ const ProviderAccountPage: React.FC = () => {
             <Fields control={control} mode="edit" />
 
             {configModule.note && (
-              <p className={`provider-note ${configModule.note.variant}`}>
-                {configModule.note.variant === 'warn' ? (
-                  <AlertTriangle size={18} aria-hidden="true" />
-                ) : (
-                  <Info size={18} aria-hidden="true" />
-                )}
-                <span>{t(configModule.note.i18nKey)}</span>
-              </p>
+              <ProviderNote variant={configModule.note.variant}>
+                {t(configModule.note.i18nKey)}
+              </ProviderNote>
             )}
 
             <FormSwitch
