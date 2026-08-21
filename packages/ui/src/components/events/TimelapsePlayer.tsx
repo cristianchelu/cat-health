@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pause, Play } from 'lucide-react';
+import { ImageOff, Pause, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FallbackImage } from '@/components/ui/FallbackImage';
 import {
   frameIndexAtTimelineSec,
   type TimelapseFrameInput,
@@ -169,7 +170,13 @@ const TimelapsePlayer: React.FC<TimelapsePlayerProps> = ({
 
   return (
     <div className="timelapse-player">
-      <img className="timelapse-player-image" src={currentUrl} alt={alt} />
+      <FallbackImage
+        className="timelapse-player-image"
+        src={currentUrl}
+        alt={alt}
+        fit="contain"
+        fallback={<ImageOff size={24} aria-hidden="true" />}
+      />
       {frameCount > 1 && (
         <div className="timelapse-player-chrome">
           <div className="timelapse-player-bar">

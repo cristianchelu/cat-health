@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
+import { FallbackImage } from '@/components/ui/FallbackImage';
 import {
   FormActions,
   FormInlineDiscard,
@@ -59,6 +60,7 @@ import {
   Download,
   Info,
   Image,
+  ImageOff,
   Activity,
   Sparkles,
   Timer,
@@ -454,9 +456,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     )}
                     {imageFrames.length === 1 && !hasTimelapse && (
                       <div className="event-media-static-image">
-                        <img
+                        <FallbackImage
                           src={`api/media/${imageFrames[0].file_path}`}
                           alt={t('event_details.event_media_alt')}
+                          fit="contain"
+                          fallback={<ImageOff size={24} aria-hidden="true" />}
                         />
                       </div>
                     )}

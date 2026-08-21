@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Cat } from 'lucide-react';
+import { FallbackImage } from './FallbackImage';
 
 import './Avatar.css';
 
@@ -30,8 +31,6 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
     },
     ref,
   ) => {
-    const [failed, setFailed] = React.useState(false);
-    const shouldShowImg = src && !failed;
     return (
       <div
         ref={ref}
@@ -39,20 +38,17 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
         aria-label={alt}
         {...props}
       >
-        {shouldShowImg ? (
-          <img
-            src={src}
-            alt={alt}
-            className={cn('avatar-img')}
-            onError={() => setFailed(true)}
-          />
-        ) : (
-          <div className="avatar-fallback">
-            {fallbackIcon || (
+        <FallbackImage
+          src={src}
+          alt={alt ?? ''}
+          imgClassName="avatar-img"
+          fallbackClassName="avatar-fallback"
+          fallback={
+            fallbackIcon ?? (
               <Cat size={size === 'sm' ? 20 : size === 'md' ? 24 : 32} />
-            )}
-          </div>
-        )}
+            )
+          }
+        />
       </div>
     );
   },

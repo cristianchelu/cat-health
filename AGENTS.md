@@ -122,6 +122,24 @@ return (
 **ALWAYS use CSS variables** from `packages/ui/src/theme.css` instead of hardcoding values.
 **ALWAYS use CSS nesting** with one single top-level classname that contains everything else.
 
+#### Images from the server
+
+**Anything the server serves is drawn through `FallbackImage`** — never a bare
+`<img>`. Enforced by `packages/ui/src/test/serverImages.test.ts`.
+
+Media rows outlive their files: a snapshot is pruned, a volume is remounted
+somewhere else, a seeded database names photos nobody has. A bare `<img>` answers
+that with the UA's broken-image glyph and the alt text spilling out of a 52px
+square. `FallbackImage` answers it with an icon sized to its box, and it is the
+only place that behaviour is written down.
+
+- `Avatar` and `MediaTile` already render through it, so reach for those first —
+  a pet's photo is an `Avatar`, a wall of media is a `MediaGrid` of `MediaTile`s.
+- `fit="contain"` where the photo _is_ the content (an event's full frame);
+  the default `cover` is for anything that reads as a thumbnail.
+- The exemptions are the primitive itself and a local object-URL preview of a
+  file the user just picked — there is no request there to fail.
+
 #### One stylesheet, one namespace
 
 There is no CSS modules and no code splitting here: every stylesheet is

@@ -11,6 +11,12 @@ interface FallbackImageProps extends Omit<
   alt: string;
   /** Centered content when there is no usable image (icon, initials, etc.). */
   fallback: React.ReactNode;
+  /**
+   * `cover` crops to fill, which is what a square thumbnail wants. `contain`
+   * letterboxes, for the one place a photo is the content rather than a
+   * preview of it.
+   */
+  fit?: 'cover' | 'contain';
   imgClassName?: string;
   fallbackClassName?: string;
   onLoad?: React.ReactEventHandler<HTMLImageElement>;
@@ -27,6 +33,7 @@ const FallbackImage = React.forwardRef<HTMLDivElement, FallbackImageProps>(
       src,
       alt,
       fallback,
+      fit = 'cover',
       className,
       imgClassName,
       fallbackClassName,
@@ -61,6 +68,7 @@ const FallbackImage = React.forwardRef<HTMLDivElement, FallbackImageProps>(
             alt={alt}
             className={cn(
               'fallback-image-img',
+              fit,
               loaded && 'is-ready',
               imgClassName,
             )}
