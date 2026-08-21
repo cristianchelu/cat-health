@@ -12,4 +12,20 @@
     background: var(--color-text-subtle);
     flex-shrink: 0;
   }
+
+  /*
+   * One row, no wrapping: the parts share what space there is and whichever
+   * is longest gives up the most, so a long brand name ellipsises while
+   * "dry" beside it stays whole.
+   */
+  &.nowrap {
+    flex-wrap: nowrap;
+
+    > span:not(.meta-line-sep) {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
 }

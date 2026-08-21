@@ -5,6 +5,12 @@ import './MetaLine.css';
 interface MetaLineProps extends React.ComponentProps<'span'> {
   /** Falsy parts are dropped, so callers can pass conditionals straight in. */
   parts: ReadonlyArray<string | null | undefined>;
+  /**
+   * Hold one row and truncate instead of wrapping. For lines with a height
+   * to respect — a sheet header, a list row — rather than a card that can
+   * grow a little.
+   */
+  nowrap?: boolean;
 }
 
 /**
@@ -17,14 +23,18 @@ interface MetaLineProps extends React.ComponentProps<'span'> {
  * announcing "bullet" between every fact adds nothing to "Feeder, PetKit".
  */
 const MetaLine = React.forwardRef<HTMLSpanElement, MetaLineProps>(
-  ({ parts, className, ...props }, ref) => {
+  ({ parts, nowrap = false, className, ...props }, ref) => {
     const visible = parts.filter((part): part is string => Boolean(part));
     if (visible.length === 0) {
       return null;
     }
 
     return (
-      <span className={cn('meta-line', className)} ref={ref} {...props}>
+      <span
+        className={cn('meta-line', nowrap && 'nowrap', className)}
+        ref={ref}
+        {...props}
+      >
         {visible.map((part, index) => (
           /*
            * Keyed by position, not content: two parts can legitimately read the
