@@ -21,7 +21,7 @@ const FormShell = React.forwardRef<HTMLFormElement, FormShellProps>(
   ) => {
     return (
       <form
-        className={cn('app-form', className)}
+        className={cn('form-shell', className)}
         onSubmit={onSubmit}
         ref={ref}
         noValidate

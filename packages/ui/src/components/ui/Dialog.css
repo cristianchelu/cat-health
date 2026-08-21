@@ -27,86 +27,86 @@
   max-height: calc(100vh - var(--space-lg) * 2);
   max-height: calc(100dvh - var(--space-lg) * 2);
   overflow: hidden;
-}
 
-/* Bottom-sheet placement: docked to the bottom edge on phone widths,
-   identical to the centered dialog on desktop. */
-.dialog-content-sheet {
-  @media (max-width: 767px) {
-    top: auto;
-    bottom: 0;
-    left: 0;
-    transform: none;
-    width: 100%;
-    max-width: none;
-    max-height: 85vh;
-    max-height: 85dvh;
-    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
-    animation: none;
-  }
-}
-
-.dialog-close {
-  position: absolute;
-  right: var(--space-md);
-  top: var(--space-md);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-surface);
-  transition: opacity var(--transition-fast);
-
-  color: var(--color-text);
-  padding: 4px;
-  border-radius: 50%;
-  top: var(--space-sm);
-  right: var(--space-sm);
-  z-index: 10;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-
-  &:hover {
-    opacity: 1;
-  }
-}
-
-.dialog-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  text-align: center;
-}
-
-/*
- * The commit row, in the one container allowed to hold it: `Cancel` then the
- * primary, right-aligned. Separation comes from `.dialog-content`'s own grid
- * gap, so the footer adds none of its own.
- */
-.dialog-footer {
-  display: flex;
-  gap: var(--space-md);
-  justify-content: flex-end;
-
-  /* Stacks the way `FormActions` does, primary last and full width. */
-  @media (max-width: 767px) {
-    flex-direction: column;
-    gap: var(--space-sm);
-
-    button {
+  /* Bottom-sheet placement: docked to the bottom edge on phone widths,
+     identical to the centered dialog on desktop. */
+  &.dialog-content-sheet {
+    @media (max-width: 767px) {
+      top: auto;
+      bottom: 0;
+      left: 0;
+      transform: none;
       width: 100%;
+      max-width: none;
+      max-height: 85vh;
+      max-height: 85dvh;
+      border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+      animation: none;
     }
   }
-}
 
-.dialog-title {
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  line-height: 1.2;
-}
+  .dialog-close {
+    position: absolute;
+    right: var(--space-md);
+    top: var(--space-md);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-surface);
+    transition: opacity var(--transition-fast);
 
-.dialog-description {
-  font-size: var(--text-base);
-  color: var(--color-text-muted);
+    color: var(--color-text);
+    padding: 4px;
+    border-radius: 50%;
+    top: var(--space-sm);
+    right: var(--space-sm);
+    z-index: 10;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  .dialog-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    text-align: center;
+  }
+
+  /*
+   * The commit row, in the one container allowed to hold it: `Cancel` then the
+   * primary, right-aligned. Separation comes from `.dialog-content`'s own grid
+   * gap, so the footer adds none of its own.
+   */
+  .dialog-footer {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: flex-end;
+
+    /* Stacks the way `FormActions` does, primary last and full width. */
+    @media (max-width: 767px) {
+      flex-direction: column;
+      gap: var(--space-sm);
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+
+  .dialog-title {
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    line-height: 1.2;
+  }
+
+  .dialog-description {
+    font-size: var(--text-base);
+    color: var(--color-text-muted);
+  }
 }

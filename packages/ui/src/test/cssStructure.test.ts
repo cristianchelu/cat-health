@@ -34,6 +34,27 @@ const ROOT_OVERRIDES = new Map<string, string>([
 ]);
 
 /**
+ * The one shape that cannot have a single root: a component whose elements
+ * mount at different points in the document, so no element of its own can
+ * contain the rest.
+ *
+ * Permanent, unlike `KNOWN_VIOLATIONS`, and each entry carries the structural
+ * fact that earns it. Nothing else belongs here — "it was awkward to nest" is
+ * not a mount point.
+ */
+const MULTI_ROOT_BY_DESIGN = new Map<string, string>([
+  [
+    path.join('components', 'ui', 'Dialog.css'),
+    '`DialogPortal` renders the overlay beside the content, not around it.',
+  ],
+  [
+    path.join('components', 'ui', 'PageMainAction.css'),
+    'The desktop header link and the phone FAB mount at different points; the ' +
+      'FAB is portalled into a zero-height slot at the bottom of the page.',
+  ],
+]);
+
+/**
  * Files that still break the rule, kept green while they are migrated.
  *
  * This list may only shrink. Removing the last entry is the point of the
@@ -46,10 +67,6 @@ const KNOWN_VIOLATIONS = new Set<string>([
   path.join('components', 'navigation', 'MobileNav.css'),
   path.join('components', 'ui', 'AppHeader.css'),
   path.join('components', 'ui', 'CardList.css'),
-  path.join('components', 'ui', 'Dialog.css'),
-  path.join('components', 'ui', 'form', 'FormCard.css'),
-  path.join('components', 'ui', 'form', 'FormShell.css'),
-  path.join('components', 'ui', 'PageMainAction.css'),
   path.join('pages', 'devices', 'components', 'DeviceHeader.css'),
   path.join('pages', 'settings', 'providerForm.css'),
 ]);
@@ -201,6 +218,8 @@ interface Offence {
 }
 
 function offencesFor(full: string, relative: string): Offence[] {
+  if (MULTI_ROOT_BY_DESIGN.has(relative)) return [];
+
   const roots = topLevelSelectors(readFileSync(full, 'utf8'));
 
   if (roots.length === 0) {

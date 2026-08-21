@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { FormActions } from './FormActions';
+import './FormInlineDiscard.css';
 
 interface FormInlineDiscardProps extends React.ComponentProps<'div'> {
   /** Short prompt; omit for buttons-only (quiet UI). */
