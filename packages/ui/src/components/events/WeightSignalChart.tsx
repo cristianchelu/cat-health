@@ -1,6 +1,12 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import {
+  ChartLegend,
+  type ChartLegendItem,
+} from '@/components/charts/ChartLegend';
+import { createPath } from '@/components/charts/path';
+import { downsample } from '@/components/charts/downsample';
 import type { LitterboxAnalysisStatePeriod as StatePeriod } from 'shared';
 import type { LitterboxBoutAnnotation } from '@/types/litterbox';
 
@@ -45,79 +51,6 @@ const BOUT_STROKE_COLORS: Record<LitterboxBoutAnnotation['bout_type'], string> =
     defecation: 'rgba(139, 69, 19, 0.9)',
     unknown: 'rgba(100, 110, 130, 0.8)',
   };
-
-// LTTB (Largest Triangle Three Buckets) downsampling
-function downsample(data: number[], maxPoints: number): number[] {
-  if (data.length <= maxPoints) return data;
-
-  const sampled: number[] = [];
-  const bucketSize = (data.length - 2) / (maxPoints - 2);
-
-  sampled.push(data[0]);
-
-  for (let i = 0; i < maxPoints - 2; i++) {
-    const bucketStart = Math.floor((i + 0) * bucketSize) + 1;
-    const bucketEnd = Math.floor((i + 1) * bucketSize) + 1;
-
-    const nextBucketStart = Math.floor((i + 1) * bucketSize) + 1;
-    const nextBucketEnd = Math.floor((i + 2) * bucketSize) + 1;
-
-    let nextAvg = 0;
-    const nextBucketLen =
-      Math.min(nextBucketEnd, data.length) - nextBucketStart;
-    for (
-      let j = nextBucketStart;
-      j < Math.min(nextBucketEnd, data.length);
-      j++
-    ) {
-      nextAvg += data[j];
-    }
-    nextAvg /= nextBucketLen || 1;
-
-    const prevX = sampled.length - 1;
-    const prevY = sampled[sampled.length - 1];
-    const nextX = i + 2;
-    const nextY = nextAvg;
-
-    let maxArea = -1;
-    let maxIdx = bucketStart;
-
-    for (let j = bucketStart; j < Math.min(bucketEnd, data.length); j++) {
-      const area = Math.abs(
-        (prevX - nextX) * (data[j] - prevY) -
-          (prevX - (j - bucketStart + i + 1)) * (nextY - prevY),
-      );
-      if (area > maxArea) {
-        maxArea = area;
-        maxIdx = j;
-      }
-    }
-
-    sampled.push(data[maxIdx]);
-  }
-
-  sampled.push(data[data.length - 1]);
-  return sampled;
-}
-
-function createPath(
-  weights: number[],
-  width: number,
-  height: number,
-  minWeight: number,
-  maxWeight: number,
-): string {
-  if (weights.length === 0) return '';
-  const range = maxWeight - minWeight || 1;
-  const xStep = width / (weights.length - 1 || 1);
-  let path = '';
-  for (let i = 0; i < weights.length; i++) {
-    const x = i * xStep;
-    const y = height - ((weights[i] - minWeight) / range) * height;
-    path += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
-  }
-  return path;
-}
 
 // Clamp a value between min and max
 function clamp(v: number, lo: number, hi: number) {
@@ -236,6 +169,47 @@ const WeightSignalChartInner = React.forwardRef<
   ) => {
     const { t } = useTranslation();
     const isInteractive = !!onBoutsChange;
+
+    /*
+     * The annotation-only keys sit behind `isInteractive` because μ/σ and the
+     * bout shading are only drawn there — a read-only chart naming them would
+     * be a key to marks that are not on it.
+     */
+    const legendItems: ChartLegendItem[] = [
+      {
+        tone: STATE_COLORS.entering,
+        label: t('event_details.legend_entering'),
+      },
+      {
+        tone: STATE_COLORS.occupied,
+        label: t('event_details.legend_occupied'),
+      },
+      {
+        tone: STATE_COLORS.eliminating,
+        label: t('event_details.legend_eliminating'),
+      },
+      { tone: STATE_COLORS.gap, label: t('event_details.legend_gap') },
+      ...(isInteractive
+        ? ([
+            {
+              swatch: <span className="chart-stat-swatch mean" aria-hidden />,
+              label: t('annotation.chart_legend_mean'),
+            },
+            {
+              swatch: <span className="chart-stat-swatch sigma" aria-hidden />,
+              label: t('annotation.chart_legend_sigma_rms'),
+            },
+            {
+              swatch: <span className="bout-swatch urination" aria-hidden />,
+              label: t('overview.urination'),
+            },
+            {
+              swatch: <span className="bout-swatch defecation" aria-hidden />,
+              label: t('overview.defecation'),
+            },
+          ] satisfies ChartLegendItem[])
+        : []),
+    ];
 
     const maxPoints = 800;
     const displayWeights = React.useMemo(
@@ -871,51 +845,7 @@ const WeightSignalChartInner = React.forwardRef<
           )}
         </svg>
 
-        {/* Legend */}
-        <div className="chart-legend">
-          <div className="legend-item">
-            <span className="legend-color entering" />
-            <span>{t('event_details.legend_entering')}</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-color occupied" />
-            <span>{t('event_details.legend_occupied')}</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-color eliminating" />
-            <span>{t('event_details.legend_eliminating')}</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-color gap" />
-            <span>{t('event_details.legend_gap')}</span>
-          </div>
-          {isInteractive && (
-            <>
-              <div className="legend-item">
-                <span
-                  className="legend-swatch chart-stat-legend-swatch--mean"
-                  aria-hidden
-                />
-                <span>{t('annotation.chart_legend_mean')}</span>
-              </div>
-              <div className="legend-item">
-                <span
-                  className="legend-swatch chart-stat-legend-swatch--sigma"
-                  aria-hidden
-                />
-                <span>{t('annotation.chart_legend_sigma_rms')}</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color bout-urination" />
-                <span>{t('overview.urination')}</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color bout-defecation" />
-                <span>{t('overview.defecation')}</span>
-              </div>
-            </>
-          )}
-        </div>
+        <ChartLegend items={legendItems} />
 
         {/* Duration + last-sample ending weight (same pill, no extra row) */}
         <div className="chart-duration">

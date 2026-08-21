@@ -1,6 +1,9 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { ChartLegend } from '@/components/charts/ChartLegend';
+import { createPath } from '@/components/charts/path';
+import { downsample } from '@/components/charts/downsample';
 import type { WaterPeriod } from './analyzeWaterSegments';
 
 import './WaterSignalChart.css';
@@ -27,75 +30,6 @@ function emaSmooth(weights: number[]): number[] {
     out[i] = alpha * weights[i] + (1 - alpha) * out[i - 1];
   }
   return out;
-}
-
-// LTTB downsampling — preserves visual shape far better than simple decimation
-function downsample(data: number[], maxPoints: number): number[] {
-  if (data.length <= maxPoints) return data;
-
-  const sampled: number[] = [];
-  const bucketSize = (data.length - 2) / (maxPoints - 2);
-
-  sampled.push(data[0]);
-
-  for (let i = 0; i < maxPoints - 2; i++) {
-    const bucketStart = Math.floor(i * bucketSize) + 1;
-    const bucketEnd = Math.floor((i + 1) * bucketSize) + 1;
-    const nextBucketStart = Math.floor((i + 1) * bucketSize) + 1;
-    const nextBucketEnd = Math.floor((i + 2) * bucketSize) + 1;
-
-    let nextAvg = 0;
-    const nextLen = Math.min(nextBucketEnd, data.length) - nextBucketStart;
-    for (
-      let j = nextBucketStart;
-      j < Math.min(nextBucketEnd, data.length);
-      j++
-    ) {
-      nextAvg += data[j];
-    }
-    nextAvg /= nextLen || 1;
-
-    const prevX = sampled.length - 1;
-    const prevY = sampled[sampled.length - 1];
-    const nextX = i + 2;
-    const nextY = nextAvg;
-
-    let maxArea = -1;
-    let maxIdx = bucketStart;
-    for (let j = bucketStart; j < Math.min(bucketEnd, data.length); j++) {
-      const area = Math.abs(
-        (prevX - nextX) * (data[j] - prevY) -
-          (prevX - (j - bucketStart + i + 1)) * (nextY - prevY),
-      );
-      if (area > maxArea) {
-        maxArea = area;
-        maxIdx = j;
-      }
-    }
-    sampled.push(data[maxIdx]);
-  }
-
-  sampled.push(data[data.length - 1]);
-  return sampled;
-}
-
-function createPath(
-  weights: number[],
-  width: number,
-  height: number,
-  minWeight: number,
-  maxWeight: number,
-): string {
-  if (weights.length === 0) return '';
-  const range = maxWeight - minWeight || 1;
-  const xStep = width / (weights.length - 1 || 1);
-  let path = '';
-  for (let i = 0; i < weights.length; i++) {
-    const x = i * xStep;
-    const y = height - ((weights[i] - minWeight) / range) * height;
-    path += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
-  }
-  return path;
 }
 
 const WaterSignalChart = React.forwardRef<
@@ -167,20 +101,16 @@ const WaterSignalChart = React.forwardRef<
         />
       </svg>
 
-      <div className="chart-legend">
-        <div className="legend-item">
-          <span className="legend-color drinking" />
-          <span>{t('event_details.legend_drinking')}</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-color spill" />
-          <span>{t('event_details.legend_spill')}</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-color noise" />
-          <span>{t('event_details.legend_noise')}</span>
-        </div>
-      </div>
+      <ChartLegend
+        items={[
+          {
+            tone: STATE_COLORS.drinking,
+            label: t('event_details.legend_drinking'),
+          },
+          { tone: STATE_COLORS.spill, label: t('event_details.legend_spill') },
+          { tone: STATE_COLORS.noise, label: t('event_details.legend_noise') },
+        ]}
+      />
 
       <div className="chart-duration">{duration.toFixed(1)}s</div>
     </div>
