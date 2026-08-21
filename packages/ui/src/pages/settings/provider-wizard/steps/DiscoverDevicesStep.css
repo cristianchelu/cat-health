@@ -3,11 +3,6 @@
   flex-direction: column;
   gap: var(--space-lg);
 
-  /* Keyframes live globally (Card.css), same as PetSelector. */
-  .animate-spin {
-    animation: spin 1s linear infinite;
-  }
-
   /*
    * Only multi-select rows carry a hit target, so only they get a pointer and
    * a hover border — a row with nothing to activate must not look clickable.

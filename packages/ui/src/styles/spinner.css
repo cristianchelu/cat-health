@@ -1,0 +1,26 @@
+/*
+ * The one spin.
+ *
+ * `.animate-spin` is a Tailwind-shaped utility name that eight components
+ * already write on a `Loader2`, but only three stylesheets ever defined it —
+ * each nested under its own root, so a spinner only turned when it happened to
+ * be inside a `Card`, a `PetSelector` or the discover step. The other five
+ * rendered a stationary icon.
+ *
+ * A utility that markup all over the app opts into by class belongs in the
+ * global layer, which is also the only layer allowed to own a free-standing
+ * class like this one.
+ */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}

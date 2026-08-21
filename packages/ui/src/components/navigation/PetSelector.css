@@ -60,12 +60,6 @@
     color: var(--color-text-muted);
   }
 
-  .loading {
-    .animate-spin {
-      animation: pet-selector-spin 1s linear infinite;
-    }
-  }
-
   .error {
     color: var(--color-error);
   }
@@ -89,15 +83,5 @@
     @media (max-width: 767px) {
       display: flex;
     }
-  }
-}
-
-@keyframes pet-selector-spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
   }
 }
