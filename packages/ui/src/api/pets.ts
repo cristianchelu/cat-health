@@ -20,6 +20,7 @@ import type {
   PatchPetRequestDTO,
   DeletePetResponseDTO,
   GetEventMediaResponseDTO,
+  EventType,
 } from 'shared';
 
 import apiClient from './apiClient';
@@ -82,6 +83,21 @@ export async function getPetEvents(
   }
   const { data } = await apiClient.get<GetEventsResponseDTO>('/events', {
     params,
+  });
+  return data;
+}
+
+/**
+ * Newest-first events of one type for a pet — the log flow's recents, without
+ * dragging a whole day of litterbox and presence rows across the wire.
+ */
+export async function getRecentPetEventsByType(
+  petId: number,
+  eventType: EventType,
+  limit: number,
+) {
+  const { data } = await apiClient.get<GetEventsResponseDTO>('/events', {
+    params: { pet_id: petId, eventType, limit },
   });
   return data;
 }
