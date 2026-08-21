@@ -67,12 +67,11 @@
       flex-direction: row;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      padding: 4px 8px;
+      gap: var(--space-2xs);
+      padding: var(--space-2xs) var(--space-xs);
       background-color: var(--color-surface-muted);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-full);
       text-align: center;
-      min-height: 28px;
 
       svg {
         color: var(--color-text-light);

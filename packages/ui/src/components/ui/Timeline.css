@@ -260,7 +260,8 @@
     align-items: center;
     gap: var(--space-3xs);
     padding: var(--space-3xs) var(--space-xs);
-    border-radius: var(--radius-sm);
+    /* StatusPill's padding already — so StatusPill's corner too. */
+    border-radius: var(--radius-full);
     font-size: var(--text-2xs);
     font-weight: var(--font-medium);
     letter-spacing: 0.02em;
