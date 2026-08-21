@@ -21,7 +21,7 @@ import {
   CardList,
   CardListContent,
   CardListItem,
-} from '../components/CardList';
+} from '@/components/ui/CardList';
 import {
   getProviderBrand,
   providerBrandLabel,

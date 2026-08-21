@@ -6,9 +6,10 @@ import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { FormShell, LabeledSwitchField } from '@/components/ui/form';
 import {
-  DeviceModelRow,
-  DeviceModelRowTile,
-} from '@/components/devices/camera';
+  CardList,
+  CardListContent,
+  CardListItem,
+} from '@/components/ui/CardList';
 import ReferenceImagePicker from '@/components/devices/ReferenceImagePicker';
 import TestRecognitionModal from '@/components/devices/TestRecognitionModal';
 import type { RecognitionGate } from '@/lib/petRecognizerDraft';
@@ -202,56 +203,56 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
                   <p className="auto-identify-hint">{copy.autoIdentifyHint}</p>
                 </div>
               )}
-              <DeviceModelRow
-                leading={
-                  <DeviceModelRowTile
-                    variant={hasLinkedRecognizer ? 'primary-lightest' : 'muted'}
-                  >
-                    <Cpu aria-hidden="true" />
-                  </DeviceModelRowTile>
-                }
-                title={
-                  hasLinkedRecognizer
-                    ? selectedRecognizerName
-                    : copy.modelNoneTitle
-                }
-                subtitle={
-                  hasLinkedRecognizer ? selectedRecognizerModel : undefined
-                }
-                action={
-                  <div className="recognition-model-row-actions">
-                    {(hasLinkedRecognizer
-                      ? recognizerOptions.length > 1
-                      : recognizerOptions.length > 0) && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setRecognizerPickerOpen(true)}
-                        disabled={disabled}
-                      >
-                        {copy.modelChangeLabel}
-                      </Button>
-                    )}
-                    {selectedRecognizerId != null && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        icon
-                        onClick={() =>
-                          onOpenRecognizerSettings(selectedRecognizerId)
-                        }
-                        aria-label={copy.modelSettingsLabel}
-                        title={copy.modelSettingsLabel}
-                        disabled={disabled}
-                      >
-                        <Pencil aria-hidden="true" />
-                      </Button>
-                    )}
-                  </div>
-                }
-              />
+              <CardList variant="bare">
+                <CardListItem
+                  icon={<Cpu aria-hidden="true" />}
+                  iconTone={hasLinkedRecognizer ? 'primary' : 'muted'}
+                  trailing={
+                    <div className="recognition-model-row-actions">
+                      {(hasLinkedRecognizer
+                        ? recognizerOptions.length > 1
+                        : recognizerOptions.length > 0) && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setRecognizerPickerOpen(true)}
+                          disabled={disabled}
+                        >
+                          {copy.modelChangeLabel}
+                        </Button>
+                      )}
+                      {selectedRecognizerId != null && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          icon
+                          onClick={() =>
+                            onOpenRecognizerSettings(selectedRecognizerId)
+                          }
+                          aria-label={copy.modelSettingsLabel}
+                          title={copy.modelSettingsLabel}
+                          disabled={disabled}
+                        >
+                          <Pencil aria-hidden="true" />
+                        </Button>
+                      )}
+                    </div>
+                  }
+                >
+                  <CardListContent
+                    title={
+                      hasLinkedRecognizer
+                        ? selectedRecognizerName
+                        : copy.modelNoneTitle
+                    }
+                    description={
+                      hasLinkedRecognizer ? selectedRecognizerModel : undefined
+                    }
+                  />
+                </CardListItem>
+              </CardList>
               {/*
                * A card-local tool, not a commit: it runs the recognizer named
                * in the row above against a live frame and writes nothing, so it

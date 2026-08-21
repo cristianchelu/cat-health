@@ -1,0 +1,315 @@
+.settings-list {
+  /*
+   * The leading column. A loose mark needs a box to sit in, so there is a
+   * default — but anything that brings its own width is entitled to keep it,
+   * and a row that pads a 2.5rem tile into a 2.75rem column has silently
+   * widened something whose whole point was to be one of a few fixed sizes.
+   * Such a list sets this to the width it actually holds.
+   */
+  --list-item-icon-size: 2.75rem;
+
+  /*
+   * Card.css declares --card-border-radius on .card, so a list inside one
+   * inherits it. A `plain` list has no card above it and the variable does
+   * not resolve — which is not a fallback to something round, it is an
+   * invalid value and a square corner. So the token is named here too.
+   */
+  --list-radius: var(--card-border-radius, var(--radius-2xl));
+
+  /*
+   * Rows on a surface that is already there — a dialog, a fieldset. No card
+   * chrome, but the same clipping, because the first and last rows draw their
+   * focus ring inside and need a corner to sit in.
+   */
+  &.plain {
+    border-radius: var(--list-radius);
+    overflow: hidden;
+  }
+
+  /*
+   * Rows that are not a list: one or two of them inside something that
+   * already brings padding and a surface — a card's content, a form field.
+   * Everything a list adds comes off, and the type tightens, because such a
+   * row labels its card rather than being one of many.
+   */
+  &.bare {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+
+    .list-item {
+      padding: 0;
+      border-bottom: none;
+      border-radius: 0;
+      align-items: flex-start;
+      cursor: default;
+
+      &:hover {
+        background: none;
+      }
+
+      .item-left {
+        gap: var(--space-sm);
+        align-items: flex-start;
+      }
+
+      .item-icon {
+        width: 2.125rem;
+        height: 2.125rem;
+
+        svg {
+          width: 1.125rem;
+          height: 1.125rem;
+        }
+      }
+
+      .item-content h3,
+      .item-content-wrapper h3 {
+        font-size: var(--text-sm);
+        font-weight: var(--font-bold);
+        line-height: var(--line-height-tight);
+        margin: 0;
+      }
+
+      .item-content p,
+      .item-content-wrapper p {
+        font-size: var(--text-xs);
+        line-height: var(--line-height-tight);
+        color: var(--color-text-light);
+      }
+    }
+  }
+
+  .list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-lg);
+    cursor: pointer;
+    transition: var(--transition-normal);
+    /* Reset when rendered as <a> / <button> */
+    text-decoration: none;
+    color: inherit;
+    background: none;
+    border: none;
+    border-bottom: var(--border-thin);
+    font: inherit;
+    width: 100%;
+    text-align: left;
+    box-sizing: border-box;
+
+    &.list-item--static {
+      cursor: default;
+
+      &:hover {
+        background-color: transparent;
+      }
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    /*
+     * `.card` clips to its own radius with overflow: hidden, so the global
+     * focus ring — 2px *outside* the element — loses its corners on the first
+     * and last row. Draw it inside instead, and give those rows the card's
+     * radius so the ring curves with the corner it sits in.
+     */
+    &:focus-visible {
+      outline: 2px solid var(--color-border-focus);
+      outline-offset: -2px;
+    }
+
+    &:first-child {
+      border-top-left-radius: var(--list-radius);
+      border-top-right-radius: var(--list-radius);
+    }
+
+    &:last-child {
+      border-bottom-left-radius: var(--list-radius);
+      border-bottom-right-radius: var(--list-radius);
+    }
+
+    &:hover {
+      background-color: var(--color-surface-highlight);
+    }
+
+    /* The current choice. Same wash as hover, so pointing at another row
+       does not read as having already moved the choice there. */
+    &.list-item--selected {
+      background-color: var(--color-surface-highlight);
+
+      .item-content h3,
+      .item-content-wrapper h3 {
+        color: var(--color-primary-dark);
+      }
+    }
+
+    .item-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      flex: 1;
+      min-width: 0;
+
+      .item-icon,
+      .item-avatar {
+        width: var(--list-item-icon-size);
+        height: var(--list-item-icon-size);
+        font-size: 2rem;
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        &.item-avatar {
+          background-color: var(--color-primary-light);
+          color: var(--color-primary);
+        }
+
+        /* A mark on a tile rather than loose: `primary` where the row is its
+           card's subject, `muted` where it is one detail among several. */
+        &.muted,
+        &.primary {
+          border-radius: var(--radius-md);
+          color: var(--color-primary);
+        }
+
+        &.muted {
+          background: var(--color-surface-muted);
+        }
+
+        &.primary {
+          background: var(--color-primary-lightest);
+        }
+      }
+
+      .item-content {
+        h3 {
+          font-size: var(--text-base);
+          font-weight: var(--font-medium);
+          color: var(--color-text);
+          margin: 0 0 var(--space-xs) 0;
+        }
+
+        p {
+          font-size: var(--text-sm);
+          color: var(--color-text-light);
+          margin: 0;
+          line-height: var(--line-height-normal);
+        }
+      }
+
+      .item-content-wrapper {
+        h3 {
+          font-size: var(--text-base);
+          font-weight: var(--font-medium);
+          color: var(--color-text);
+          margin: 0;
+        }
+
+        p {
+          font-size: var(--text-sm);
+          color: var(--color-text-muted);
+          margin: 0;
+          line-height: var(--line-height-normal);
+        }
+      }
+    }
+
+    .item-arrow {
+      color: var(--color-text-subtle);
+      flex-shrink: 0;
+    }
+
+    .item-check {
+      color: var(--color-primary);
+      flex-shrink: 0;
+    }
+
+    .item-radio {
+      width: 1.25rem;
+      height: 1.25rem;
+      flex-shrink: 0;
+      border-radius: var(--radius-full);
+      border: 2px solid var(--color-border-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color var(--transition-fast);
+    }
+
+    /* The input is visually hidden, so the row wears its state: focus on the
+       row, and the dot fills from `:checked` rather than from a prop. */
+    &:has(input[type='radio']) {
+      cursor: pointer;
+
+      &:focus-within {
+        outline: 2px solid var(--color-border-focus);
+        outline-offset: -2px;
+      }
+
+      &[data-disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      &:has(input:checked) .item-radio {
+        border-color: var(--color-primary);
+
+        &::after {
+          content: '';
+          width: 0.625rem;
+          height: 0.625rem;
+          border-radius: var(--radius-full);
+          background: var(--color-primary);
+        }
+      }
+    }
+
+    .item-trailing {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      flex-shrink: 0;
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  /* On the column itself, not on the box, so a list that declared its own
+     width keeps it here too rather than having its tile squeezed. */
+  .settings-list {
+    --list-item-icon-size: 36px;
+  }
+
+  .settings-list .list-item {
+    padding: var(--space-md);
+
+    .item-left {
+      gap: var(--space-sm);
+
+      .item-content {
+        h3 {
+          font-size: var(--text-sm);
+        }
+
+        p {
+          font-size: var(--text-xs);
+        }
+      }
+
+      .item-content-wrapper {
+        h3 {
+          font-size: var(--text-sm);
+        }
+
+        p {
+          font-size: var(--text-xs);
+        }
+      }
+    }
+  }
+}

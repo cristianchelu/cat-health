@@ -17,104 +17,12 @@
     color: var(--color-text-muted);
   }
 
+  /* Surface, corner, shadow and clipping are the Card's — this group was
+     hand-rolling all four to the same values. */
   .provider-picker-rows {
-    --picker-radius: var(--radius-2xl);
-
-    background: var(--color-surface);
-    border-radius: var(--picker-radius);
-    box-shadow: var(--shadow-md);
-    overflow: hidden;
-  }
-
-  .provider-picker-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-md) var(--space-lg);
-    border-bottom: var(--border-thin);
-    cursor: pointer;
-    transition: background-color var(--transition-fast);
-
-    &:last-child {
-      border-bottom: none;
-    }
-
-    /*
-     * The rows are square but the container is rounded and clips to it, so the
-     * end rows need its radius or their focus/selected ring is cut at the
-     * outer corners.
-     */
-    &:first-child {
-      border-top-left-radius: var(--picker-radius);
-      border-top-right-radius: var(--picker-radius);
-    }
-
-    &:last-child {
-      border-bottom-left-radius: var(--picker-radius);
-      border-bottom-right-radius: var(--picker-radius);
-    }
-
-    &:hover {
-      background: var(--color-surface-highlight);
-    }
-
-    /* The radio is visually hidden, so surface focus on the row itself. */
-    &:focus-within {
-      outline: 2px solid var(--color-border-focus);
-      outline-offset: -2px;
-    }
-
-    &[data-disabled] {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .provider-picker-text {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .provider-picker-title {
-      font-size: var(--text-sm);
-      font-weight: var(--font-semibold);
-      color: var(--color-text);
-    }
-
-    .provider-picker-meta {
-      font-size: var(--text-xs);
-      color: var(--color-text-muted);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .provider-picker-dot {
-      width: 1.25rem;
-      height: 1.25rem;
-      flex-shrink: 0;
-      border-radius: var(--radius-full);
-      border: 2px solid var(--color-border-hover);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: border-color var(--transition-fast);
-    }
-
-    &:has(input:checked) {
-      .provider-picker-dot {
-        border-color: var(--color-primary);
-
-        &::after {
-          content: '';
-          width: 0.625rem;
-          height: 0.625rem;
-          border-radius: var(--radius-full);
-          background: var(--color-primary);
-        }
-      }
-    }
+    /* The column is the tile, exactly. `sm` is 2.5rem and that is a promise
+       the tile makes — a wider column would pad it into a size it does not
+       have, and the text would start a few pixels late. */
+    --list-item-icon-size: 2.5rem;
   }
 }

@@ -1,4 +1,9 @@
 import * as React from 'react';
+import {
+  CardList,
+  CardListContent,
+  CardListItem,
+} from '@/components/ui/CardList';
 import { ProviderBrandTile } from '../../providers/components/ProviderBrandTile';
 import './ProviderPickerList.css';
 
@@ -34,9 +39,10 @@ interface ProviderPickerListProps {
 /**
  * Grouped radio list of providers or accounts.
  *
- * Built on real `<input type="radio">` elements inside `<label>`s so keyboard
- * roving, form semantics and screen-reader grouping come for free — the visual
- * dot is decorative only.
+ * The rows are the app's list rows in their radio mode — real
+ * `<input type="radio">` elements inside `<label>`s, so keyboard roving, form
+ * semantics and screen-reader grouping come for free. What is left here is
+ * what is actually about providers: the grouping and the brand tile.
  */
 export const ProviderPickerList: React.FC<ProviderPickerListProps> = ({
   groups,
@@ -52,33 +58,28 @@ export const ProviderPickerList: React.FC<ProviderPickerListProps> = ({
           {group.label && (
             <p className="provider-picker-group-label">{group.label}</p>
           )}
-          <div className="provider-picker-rows">
+          <CardList className="provider-picker-rows">
             {group.options.map((option) => (
-              <label
-                className="provider-picker-row"
+              <CardListItem
                 key={option.value}
-                data-disabled={option.disabled || undefined}
+                icon={
+                  <ProviderBrandTile provider={option.provider} size="sm" />
+                }
+                radio={{
+                  name,
+                  value: option.value,
+                  checked: value === option.value,
+                  disabled: option.disabled,
+                  onChange: () => onChange(option.value),
+                }}
               >
-                <input
-                  type="radio"
-                  className="sr-only"
-                  name={name}
-                  value={option.value}
-                  checked={value === option.value}
-                  disabled={option.disabled}
-                  onChange={() => onChange(option.value)}
+                <CardListContent
+                  title={option.title}
+                  description={option.meta}
                 />
-                <ProviderBrandTile provider={option.provider} size="sm" />
-                <span className="provider-picker-text">
-                  <span className="provider-picker-title">{option.title}</span>
-                  {option.meta && (
-                    <span className="provider-picker-meta">{option.meta}</span>
-                  )}
-                </span>
-                <span className="provider-picker-dot" aria-hidden="true" />
-              </label>
+              </CardListItem>
             ))}
-          </div>
+          </CardList>
         </div>
       ))}
     </fieldset>

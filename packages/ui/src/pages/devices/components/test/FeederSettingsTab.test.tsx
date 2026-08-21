@@ -115,7 +115,7 @@ async function renderTab() {
 function bowls() {
   return [
     ...document.querySelectorAll<HTMLElement>(
-      '.feeder-settings-compartments .device-model-row',
+      '.feeder-settings-compartments .list-item',
     ),
   ];
 }

@@ -29,7 +29,7 @@ import {
   CardList,
   CardListContent,
   CardListItem,
-} from '../components/CardList';
+} from '@/components/ui/CardList';
 import ProviderPetLinksEditor from '../components/ProviderPetLinksEditor';
 import {
   getProviderBrand,

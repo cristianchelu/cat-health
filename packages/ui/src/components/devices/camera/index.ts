@@ -1,10 +1,4 @@
 export {
-  DeviceModelRow,
-  DeviceModelRowTile,
-  type DeviceModelRowProps,
-  type DeviceModelRowTileProps,
-} from './DeviceModelRow';
-export {
   CameraRoiEditor,
   type CameraRoiEditorProps,
   type CameraCropRect,

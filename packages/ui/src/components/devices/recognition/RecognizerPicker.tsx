@@ -1,7 +1,11 @@
 import * as React from 'react';
-import { Check, ScanSearch } from 'lucide-react';
+import { ScanSearch } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
-import { cn } from '@/lib/utils';
+import {
+  CardList,
+  CardListContent,
+  CardListItem,
+} from '@/components/ui/CardList';
 import './RecognizerPicker.css';
 
 export interface RecognizerPickerOption {
@@ -42,33 +46,22 @@ const RecognizerPicker: React.FC<RecognizerPickerProps> = ({
         {recognizers.length === 0 ? (
           <p className="recognizer-picker-empty">{emptyLabel}</p>
         ) : (
-          <ul className="recognizer-picker-list">
+          <CardList variant="plain" className="recognizer-picker-list">
             {recognizers.map((recognizer) => (
-              <li key={recognizer.id}>
-                <button
-                  type="button"
-                  className={cn(
-                    'recognizer-picker-row',
-                    recognizer.id === selectedId && 'selected',
-                  )}
-                  onClick={() => onSelect(recognizer.id)}
-                >
-                  <ScanSearch size={18} aria-hidden="true" />
-                  <span className="recognizer-picker-row-body">
-                    <span className="recognizer-picker-row-name">
-                      {recognizer.name}
-                    </span>
-                    <span className="recognizer-picker-row-model">
-                      {recognizer.model}
-                    </span>
-                  </span>
-                  {recognizer.id === selectedId && (
-                    <Check size={16} aria-hidden="true" />
-                  )}
-                </button>
-              </li>
+              <CardListItem
+                key={recognizer.id}
+                icon={<ScanSearch size="1em" aria-hidden="true" />}
+                onClick={() => onSelect(recognizer.id)}
+                selected={recognizer.id === selectedId}
+                indicator="check"
+              >
+                <CardListContent
+                  title={recognizer.name}
+                  description={recognizer.model}
+                />
+              </CardListItem>
             ))}
-          </ul>
+          </CardList>
         )}
       </DialogContent>
     </Dialog>

@@ -5,14 +5,15 @@ import { UtensilsCrossed } from 'lucide-react';
 import type { GetDeviceResponseDTO } from 'shared';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import {
+  CardList,
+  CardListContent,
+  CardListItem,
+} from '@/components/ui/CardList';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { MetaLine } from '@/components/ui/MetaLine';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { FormField, FormShell } from '@/components/ui/form';
-import {
-  DeviceModelRow,
-  DeviceModelRowTile,
-} from '@/components/devices/camera';
 import { FoodPickerSheet } from '@/components/food-picker/FoodPickerSheet';
 import {
   coarseFoodGroup,
@@ -211,70 +212,70 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
 
                 return (
                   <FormField key={compartment.id} label={label}>
-                    <DeviceModelRow
-                      leading={
-                        <DeviceModelRowTile
-                          variant={food ? 'primary-lightest' : 'muted'}
-                        >
-                          <UtensilsCrossed aria-hidden="true" />
-                        </DeviceModelRowTile>
-                      }
-                      title={
-                        food
-                          ? food.name
-                          : t('devices.feeder.food_compartment_unlinked')
-                      }
-                      subtitle={
-                        food ? (
-                          <MetaLine
-                            nowrap
-                            parts={[
-                              food.brand,
-                              t(
-                                `food_picker.group_${coarseFoodGroup(food.food_type)}_short`,
-                              ),
-                              density != null
-                                ? t('food_picker.kcal_per_kg', {
-                                    value: density,
-                                  })
-                                : null,
-                            ]}
-                          />
-                        ) : (
-                          t('devices.feeder.food_compartment_hint')
-                        )
-                      }
-                      action={
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setPickerCompartment(compartment.id)}
-                          disabled={updateDevice.isPending}
-                          /* On a multi-bowl feeder every button says the same
+                    <CardList variant="bare">
+                      <CardListItem
+                        icon={<UtensilsCrossed aria-hidden="true" />}
+                        iconTone={food ? 'primary' : 'muted'}
+                        trailing={
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setPickerCompartment(compartment.id)}
+                            disabled={updateDevice.isPending}
+                            /* On a multi-bowl feeder every button says the same
                              word, so the name has to carry which bowl it
                              belongs to. On a single-bowl one there is nothing
                              to tell apart, and naming it would only produce
                              "Change the food in Food". */
-                          aria-label={
-                            compartments.length > 1
-                              ? t(
-                                  food
-                                    ? 'devices.feeder.food_compartment_change_aria'
-                                    : 'devices.feeder.food_compartment_choose_aria',
-                                  { compartment: label },
-                                )
-                              : undefined
-                          }
-                        >
-                          {t(
+                            aria-label={
+                              compartments.length > 1
+                                ? t(
+                                    food
+                                      ? 'devices.feeder.food_compartment_change_aria'
+                                      : 'devices.feeder.food_compartment_choose_aria',
+                                    { compartment: label },
+                                  )
+                                : undefined
+                            }
+                          >
+                            {t(
+                              food
+                                ? 'devices.feeder.food_compartment_change'
+                                : 'devices.feeder.food_compartment_choose',
+                            )}
+                          </Button>
+                        }
+                      >
+                        <CardListContent
+                          title={
                             food
-                              ? 'devices.feeder.food_compartment_change'
-                              : 'devices.feeder.food_compartment_choose',
-                          )}
-                        </Button>
-                      }
-                    />
+                              ? food.name
+                              : t('devices.feeder.food_compartment_unlinked')
+                          }
+                          description={
+                            food ? (
+                              <MetaLine
+                                nowrap
+                                parts={[
+                                  food.brand,
+                                  t(
+                                    `food_picker.group_${coarseFoodGroup(food.food_type)}_short`,
+                                  ),
+                                  density != null
+                                    ? t('food_picker.kcal_per_kg', {
+                                        value: density,
+                                      })
+                                    : null,
+                                ]}
+                              />
+                            ) : (
+                              t('devices.feeder.food_compartment_hint')
+                            )
+                          }
+                        />
+                      </CardListItem>
+                    </CardList>
                   </FormField>
                 );
               })}
