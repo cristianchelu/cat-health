@@ -1,0 +1,106 @@
+.slider {
+  /* The pointer surface is taller than the visual track: the padding above is
+     the fine-drag zone, the padding below (over the labels) is the detent
+     zone — the whole surface stays comfortably past 44px on touch.
+
+     The inline padding is what the thumb and the end labels hang into at 0%
+     and 100%, so a slider at either end does not widen its container. */
+  padding-block: var(--space-md);
+  padding-inline: var(--space-sm);
+  touch-action: none;
+  cursor: pointer;
+  /* A drag is a drag, not a text selection: without this, dragging with a
+     mouse paints the sheet blue. */
+  user-select: none;
+  -webkit-user-select: none;
+
+  .slider-track {
+    position: relative;
+    height: var(--space-2xs);
+    border-radius: var(--radius-full);
+    background: var(--color-surface-muted);
+  }
+
+  .slider-fill {
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+  }
+
+  /* The notch row sits wholly below the bar, so a landmark never reads as
+     part of the fill. It is also the coarse drag zone, which makes the two
+     granularities visible: drag over the notches, land on them. */
+  .slider-ticks {
+    position: relative;
+    height: var(--space-xl);
+    /* Clears the thumb, which hangs half its height below the track — any
+       less and the notch under the thumb pokes out from behind it. */
+    margin-top: var(--space-sm);
+  }
+
+  .slider-tick {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: var(--space-xs);
+    transform: translateX(-50%);
+    border-radius: var(--radius-full);
+    background: var(--color-border-hover);
+
+    &.labeled {
+      background: var(--color-text-muted);
+    }
+  }
+
+  .slider-thumb {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: var(--space-xl);
+    height: var(--space-xl);
+    border-radius: var(--radius-full);
+    background: var(--color-surface);
+    border: 2px solid var(--color-primary);
+    box-shadow: var(--shadow-md);
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px
+        color-mix(in srgb, var(--color-primary) 20%, transparent);
+    }
+  }
+
+  .slider-label {
+    position: absolute;
+    top: var(--space-sm);
+    transform: translateX(-50%);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+
+    /* Endpoint labels hug their edge instead of overflowing the track. */
+    &.at-start {
+      transform: none;
+    }
+
+    &.at-end {
+      transform: translateX(-100%);
+    }
+  }
+
+  &.disabled {
+    cursor: default;
+    opacity: 0.6;
+
+    .slider-fill,
+    .slider-thumb {
+      border-color: var(--color-text-subtle);
+    }
+
+    .slider-fill {
+      background: var(--color-text-subtle);
+    }
+  }
+}

@@ -5,11 +5,15 @@ import './FormCard.css';
 type FormCardProps = React.ComponentProps<'div'>;
 
 /**
- * Surface an add/edit form sits on: one card holding a header and the
- * `FormShell`.
+ * Surface an add/edit form sits on: one card holding a header and the fields.
  *
  * Shared by the provider and device screens so no form reads as a stack of
  * fields floating on the page background.
+ *
+ * The card holds content, not the commit. `FormShell` wraps the card rather
+ * than sitting inside it, so its `FormActions` lands after the last card in the
+ * page column — a Save row inside the card belongs to that card instead of to
+ * the form, which stops working the moment a screen grows a second card.
  */
 const FormCard = React.forwardRef<HTMLDivElement, FormCardProps>(
   ({ className, children, ...props }, ref) => (
@@ -58,4 +62,27 @@ const FormCardHead = React.forwardRef<HTMLElement, FormCardHeadProps>(
 
 FormCardHead.displayName = 'FormCardHead';
 
-export { FormCard, FormCardHead, type FormCardProps, type FormCardHeadProps };
+type FormCardBodyProps = React.ComponentProps<'div'>;
+
+/**
+ * The card's field stack, on the same `--space-md` rhythm as the page column:
+ * `FormShell` spaces what it wraps, and it wraps the card, not the fields.
+ */
+const FormCardBody = React.forwardRef<HTMLDivElement, FormCardBodyProps>(
+  ({ className, children, ...props }, ref) => (
+    <div className={cn('form-card-body', className)} ref={ref} {...props}>
+      {children}
+    </div>
+  ),
+);
+
+FormCardBody.displayName = 'FormCardBody';
+
+export {
+  FormCard,
+  FormCardHead,
+  FormCardBody,
+  type FormCardProps,
+  type FormCardHeadProps,
+  type FormCardBodyProps,
+};

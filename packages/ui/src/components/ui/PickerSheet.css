@@ -1,0 +1,98 @@
+/*
+ * Every rule here is nested inside `.picker-sheet` on purpose. "header",
+ * "body" and "title" are words any component might reach for, so scoping is
+ * what keeps this shell from styling a heading that merely shares a name.
+ */
+.picker-sheet {
+  /* The floor a list level rests on, so walking down the ladder does not
+     resize the sheet under the thumb. Each picker sets its own. */
+  --picker-sheet-floor: none;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-height: 85dvh;
+
+  /* Only lists get the floor: the steps that size to their own content —
+     an amount, a camera — would just gain dead space under the button. */
+  &:has(.food-picker-row) {
+    min-height: var(--picker-sheet-floor);
+  }
+
+  .picker-sheet-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+
+    /* Back, and whatever sits opposite it. Round, like the dialog's own
+       close button — a square wash under a chevron is the odd one out
+       among this app's icon actions. */
+    > .button.icon {
+      border-radius: var(--radius-full);
+      flex-shrink: 0;
+
+      svg {
+        width: 1.25em;
+        height: 1.25em;
+      }
+    }
+  }
+
+  .picker-sheet-heading {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* `--text-xl` semibold over `--text-sm` light, the same grammar
+     SectionHeader uses — a sheet is no different for being a sheet. */
+  .picker-sheet-title {
+    margin: 0;
+    font-size: var(--text-xl);
+    font-weight: var(--font-semibold);
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .picker-sheet-subtitle {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* One scroller per sheet, so the header stays put and no two nested
+     scroll areas fight over the gesture. */
+  .picker-sheet-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-inline: var(--space-lg);
+    margin-inline: calc(-1 * var(--space-lg));
+
+    /* Lists run edge to edge, like every other list in the app: the body
+       backs out of the dialog's padding and the rows put it back, so
+       separators reach both edges while the text stays aligned with the
+       header above. */
+    &:has(.food-picker-row) {
+      padding-inline: 0;
+      --food-picker-row-inline: var(--space-lg);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .picker-sheet-title {
+      font-size: var(--text-lg);
+    }
+
+    .picker-sheet-body:has(.food-picker-row) {
+      --food-picker-row-inline: var(--space-md);
+    }
+  }
+}

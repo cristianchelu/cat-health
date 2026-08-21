@@ -5,7 +5,7 @@ import type {
   DiscoveredDeviceDTO,
   ProviderAccountDTO,
 } from 'shared';
-import { FormCard, FormCardHead } from '@/components/ui/form';
+import { FormCard, FormCardBody, FormCardHead } from '@/components/ui/form';
 import { DeviceTypeTile } from '../../../components/DeviceTypeTile';
 
 interface RegisterDeviceCardProps {
@@ -25,6 +25,9 @@ interface RegisterDeviceCardProps {
  * A discovered device already has a name to lead with and pushes its type down
  * into the subtitle; a directly-added one has neither until the form is filled
  * in, so the type leads and the account is all the provenance there is.
+ *
+ * Takes the fields only — the `FormShell` wraps this card, so Register lands
+ * after it in the page column rather than inside the card it commits.
  */
 export const RegisterDeviceCard: React.FC<RegisterDeviceCardProps> = ({
   account,
@@ -43,7 +46,7 @@ export const RegisterDeviceCard: React.FC<RegisterDeviceCardProps> = ({
         title={prefill?.name || typeLabel}
         subtitle={prefill ? `${typeLabel} · ${account.name}` : account.name}
       />
-      {children}
+      <FormCardBody>{children}</FormCardBody>
     </FormCard>
   );
 };

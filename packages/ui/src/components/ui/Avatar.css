@@ -5,11 +5,13 @@
   background: var(--color-surface-highlight);
   overflow: hidden;
   flex-shrink: 0;
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-  transition:
-    background 0.15s ease,
-    box-shadow 0.15s ease;
+  /*
+   * Flat. No ring, no lift — the crop is the shape and the photo is the edge.
+   * There was a border and a shadow here from the start, both naming tokens
+   * this app does not have, so neither ever drew; when those names were
+   * repaired the avatar picked up chrome nobody had ever asked to see.
+   */
+  transition: background 0.15s ease;
   &.circle {
     border-radius: var(--radius-full);
   }

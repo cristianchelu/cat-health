@@ -9,7 +9,6 @@ import {
   Select,
   Textarea,
 } from '@/components/ui/form';
-import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm } from '@/hooks/form';
 import { RegisterDeviceCard } from './shared/RegisterDeviceCard';
 import { generateLocalExternalId } from '../wizardUtils';
@@ -62,7 +61,7 @@ export const InferenceRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
   isSubmitting,
   serverError,
   onSubmitDevice,
-  onBack,
+  onCancel,
   onDirtyChange,
 }) => {
   const { t } = useTranslation();
@@ -71,8 +70,6 @@ export const InferenceRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
     handleSubmit,
     control,
     formState: { isDirty },
-    requestDiscard,
-    discardConfirm,
   } = useAppForm<InferenceFormValues>({
     defaultValues: {
       name: '',
@@ -116,19 +113,19 @@ export const InferenceRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
     <>
       <p className="step-description">{t('settings.configure_recognizer')}</p>
 
-      <RegisterDeviceCard account={account} type="pet_recognizer">
-        <FormShell
-          onSubmit={onSubmit}
-          error={serverError}
-          actions={{
-            onCancel: () => requestDiscard(onBack),
-            cancelLabel: t('settings.back'),
-            submitLabel: isSubmitting
-              ? t('settings.registering')
-              : t('settings.create_recognizer'),
-            isSubmitting,
-          }}
-        >
+      <FormShell
+        onSubmit={onSubmit}
+        error={serverError}
+        actions={{
+          onCancel,
+          cancelLabel: t('settings.cancel'),
+          submitLabel: isSubmitting
+            ? t('settings.registering')
+            : t('settings.create_recognizer'),
+          isSubmitting,
+        }}
+      >
+        <RegisterDeviceCard account={account} type="pet_recognizer">
           <FormField label={t('settings.recognizer_name_label')}>
             <Input
               placeholder={t('settings.recognizer_name_placeholder')}
@@ -174,9 +171,8 @@ export const InferenceRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
               )}
             />
           </FormField>
-        </FormShell>
-      </RegisterDeviceCard>
-      <DiscardUnsavedDialog {...discardConfirm} />
+        </RegisterDeviceCard>
+      </FormShell>
     </>
   );
 };

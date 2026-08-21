@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormField, FormShell, Input } from '@/components/ui/form';
-import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm } from '@/hooks/form';
 import { DefaultRegisterDeviceForm } from './DefaultRegisterDeviceForm';
 import { RegisterDeviceCard } from './shared/RegisterDeviceCard';
@@ -27,7 +26,7 @@ const CameraDirectForm: React.FC<RegisterDeviceFormProps> = ({
   isSubmitting,
   serverError,
   onSubmitDevice,
-  onBack,
+  onCancel,
   onDirtyChange,
 }) => {
   const { t } = useTranslation();
@@ -35,8 +34,6 @@ const CameraDirectForm: React.FC<RegisterDeviceFormProps> = ({
     register,
     handleSubmit,
     formState: { isDirty },
-    requestDiscard,
-    discardConfirm,
   } = useAppForm<CameraDirectFormValues>({
     defaultValues: { name: '', snapshotUrl: '' },
   });
@@ -63,19 +60,19 @@ const CameraDirectForm: React.FC<RegisterDeviceFormProps> = ({
     <>
       <p className="step-description">{t('settings.manual_setup_desc')}</p>
 
-      <RegisterDeviceCard account={account} type="camera">
-        <FormShell
-          onSubmit={onSubmit}
-          error={serverError}
-          actions={{
-            onCancel: () => requestDiscard(onBack),
-            cancelLabel: t('settings.back'),
-            submitLabel: isSubmitting
-              ? t('settings.registering')
-              : t('settings.register_device'),
-            isSubmitting,
-          }}
-        >
+      <FormShell
+        onSubmit={onSubmit}
+        error={serverError}
+        actions={{
+          onCancel,
+          cancelLabel: t('settings.cancel'),
+          submitLabel: isSubmitting
+            ? t('settings.registering')
+            : t('settings.register_device'),
+          isSubmitting,
+        }}
+      >
+        <RegisterDeviceCard account={account} type="camera">
           <FormField label={t('settings.device_name_label')}>
             <Input
               placeholder={t('settings.device_name_placeholder')}
@@ -90,9 +87,8 @@ const CameraDirectForm: React.FC<RegisterDeviceFormProps> = ({
             />
             <p className="help-text">{t('settings.snapshot_url_help')}</p>
           </FormField>
-        </FormShell>
-      </RegisterDeviceCard>
-      <DiscardUnsavedDialog {...discardConfirm} />
+        </RegisterDeviceCard>
+      </FormShell>
     </>
   );
 };

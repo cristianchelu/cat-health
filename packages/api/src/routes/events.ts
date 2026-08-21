@@ -331,6 +331,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         offset = 0,
         includeChildren = false,
         human_verified,
+        eventType,
       } = request.query;
 
       let query = db.selectFrom('event').selectAll();
@@ -367,6 +368,15 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       if (human_verified !== undefined) {
         query = query.where('human_verified', '=', human_verified);
         countQuery = countQuery.where('human_verified', '=', human_verified);
+      }
+
+      if (eventType !== undefined) {
+        query = query.where(sql`json_extract(data, '$.type')`, '=', eventType);
+        countQuery = countQuery.where(
+          sql`json_extract(data, '$.type')`,
+          '=',
+          eventType,
+        );
       }
 
       if (startTime !== undefined) {

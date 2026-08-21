@@ -8,6 +8,7 @@ import {
 import {
   deleteEvent,
   getPetEvents,
+  getRecentPetEventsByType,
   getPets,
   getPetWeightTrends,
   getPetWaterTrends,
@@ -65,6 +66,22 @@ export function usePetEvents(
     // Keep prior day while the range changes, but never flash another pet's events.
     placeholderData: (previousData, previousQuery) =>
       previousQuery?.queryKey[1] === petId ? previousData : undefined,
+  });
+}
+
+/**
+ * The window the log flow reads "recent" and "usual" out of. Wide enough that
+ * a household rotating a handful of foods still shows three distinct ones,
+ * short enough to stay a cheap fetch.
+ */
+const RECENT_FOOD_INTAKE_LIMIT = 30;
+
+export function useRecentFoodIntakes(petId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['recentFoodIntakes', petId],
+    queryFn: () =>
+      getRecentPetEventsByType(petId, 'food_intake', RECENT_FOOD_INTAKE_LIMIT),
+    enabled,
   });
 }
 

@@ -1,14 +1,15 @@
 import * as React from 'react';
-import { Cpu, Loader2, PawPrint, Pencil, Sparkles } from 'lucide-react';
+import { Cpu, PawPrint, Pencil, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { FormShell, LabeledSwitchField } from '@/components/ui/form';
 import {
-  DeviceModelRow,
-  DeviceModelRowTile,
-} from '@/components/devices/camera';
+  CardList,
+  CardListContent,
+  CardListItem,
+} from '@/components/ui/CardList';
 import ReferenceImagePicker from '@/components/devices/ReferenceImagePicker';
 import TestRecognitionModal from '@/components/devices/TestRecognitionModal';
 import type { RecognitionGate } from '@/lib/petRecognizerDraft';
@@ -167,40 +168,16 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
         className="recognition-tab-form"
         onSubmit={onSubmit}
         error={saveFailed ? copy.saveError : null}
-        actionsSlot={
-          hasLinkedRecognizer ? (
-            <div className="recognition-tab-actions">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setTestModalOpen(true)}
-              >
-                <Sparkles size="1em" aria-hidden="true" />
-                {copy.testRecognitionLabel}
-              </Button>
-              <div className="recognition-tab-actions-end">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={onCancel}
-                  disabled={isSaving}
-                >
-                  {copy.cancelLabel}
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={!isDirty || isSaving}
-                  aria-busy={isSaving || undefined}
-                >
-                  {isSaving && (
-                    <Loader2 className="animate-spin" size="1em" aria-hidden />
-                  )}
-                  {copy.saveLabel}
-                </Button>
-              </div>
-            </div>
-          ) : undefined
+        actions={
+          hasLinkedRecognizer
+            ? {
+                onCancel,
+                cancelLabel: copy.cancelLabel,
+                submitLabel: copy.saveLabel,
+                isSubmitting: isSaving,
+                submitDisabled: !isDirty,
+              }
+            : undefined
         }
       >
         <SectionHeader
@@ -226,56 +203,75 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
                   <p className="auto-identify-hint">{copy.autoIdentifyHint}</p>
                 </div>
               )}
-              <DeviceModelRow
-                leading={
-                  <DeviceModelRowTile
-                    variant={hasLinkedRecognizer ? 'primary-lightest' : 'muted'}
+              <CardList variant="bare">
+                <CardListItem
+                  icon={<Cpu aria-hidden="true" />}
+                  iconTone={hasLinkedRecognizer ? 'primary' : 'muted'}
+                  trailing={
+                    <div className="recognition-model-row-actions">
+                      {(hasLinkedRecognizer
+                        ? recognizerOptions.length > 1
+                        : recognizerOptions.length > 0) && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setRecognizerPickerOpen(true)}
+                          disabled={disabled}
+                        >
+                          {copy.modelChangeLabel}
+                        </Button>
+                      )}
+                      {selectedRecognizerId != null && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          icon
+                          onClick={() =>
+                            onOpenRecognizerSettings(selectedRecognizerId)
+                          }
+                          aria-label={copy.modelSettingsLabel}
+                          title={copy.modelSettingsLabel}
+                          disabled={disabled}
+                        >
+                          <Pencil aria-hidden="true" />
+                        </Button>
+                      )}
+                    </div>
+                  }
+                >
+                  <CardListContent
+                    title={
+                      hasLinkedRecognizer
+                        ? selectedRecognizerName
+                        : copy.modelNoneTitle
+                    }
+                    description={
+                      hasLinkedRecognizer ? selectedRecognizerModel : undefined
+                    }
+                  />
+                </CardListItem>
+              </CardList>
+              {/*
+               * A card-local tool, not a commit: it runs the recognizer named
+               * in the row above against a live frame and writes nothing, so it
+               * sits at the point of use rather than in the form's Save row.
+               */}
+              {hasLinkedRecognizer && (
+                <div className="recognition-card-tools">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setTestModalOpen(true)}
+                    disabled={disabled}
                   >
-                    <Cpu aria-hidden="true" />
-                  </DeviceModelRowTile>
-                }
-                title={
-                  hasLinkedRecognizer
-                    ? selectedRecognizerName
-                    : copy.modelNoneTitle
-                }
-                subtitle={
-                  hasLinkedRecognizer ? selectedRecognizerModel : undefined
-                }
-                action={
-                  <div className="recognition-model-row-actions">
-                    {(hasLinkedRecognizer
-                      ? recognizerOptions.length > 1
-                      : recognizerOptions.length > 0) && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setRecognizerPickerOpen(true)}
-                        disabled={disabled}
-                      >
-                        {copy.modelChangeLabel}
-                      </Button>
-                    )}
-                    {selectedRecognizerId != null && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        icon
-                        onClick={() =>
-                          onOpenRecognizerSettings(selectedRecognizerId)
-                        }
-                        aria-label={copy.modelSettingsLabel}
-                        title={copy.modelSettingsLabel}
-                        disabled={disabled}
-                      >
-                        <Pencil aria-hidden="true" />
-                      </Button>
-                    )}
-                  </div>
-                }
-              />
+                    <Sparkles size="1em" aria-hidden="true" />
+                    {copy.testRecognitionLabel}
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

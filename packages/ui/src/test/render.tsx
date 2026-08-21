@@ -7,11 +7,31 @@ import { MemoryRouter, type MemoryRouterProps } from 'react-router';
 
 /**
  * Minimal keys used by ConfirmDialog / FormInlineDiscard / Dialog close /
- * SearchInput / SortControl.
+ * SearchInput / SortControl / the food picker's shared rows.
  */
 const testResources = {
+  food_picker: {
+    kcal_per_kg: '{{value}} kcal/kg',
+    group_wet: 'Wet food',
+    group_dry: 'Dry food',
+    group_treat: 'Treats',
+    group_wet_short: 'wet',
+    group_dry_short: 'dry',
+    group_treat_short: 'treat',
+    no_brand: 'No brand',
+    food_count: '{{count}} foods',
+  },
+  log_food: {
+    scan_hint: 'Point at the barcode on the pack',
+    scan_matched: 'Matched',
+    scan_no_match: 'No match in your library',
+    scan_rescan: 'Scan again',
+    scan_denied: 'Camera access was denied',
+  },
   common: {
     cancel: 'Cancel',
+    save: 'Save',
+    back: 'Back',
     clear: 'Clear',
     sort_ascending: 'Ascending',
     sort_descending: 'Descending',

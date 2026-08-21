@@ -8,7 +8,6 @@ import {
   LabeledSwitchField,
   Select,
 } from '@/components/ui/form';
-import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm } from '@/hooks/form';
 import type { DeviceType } from 'shared';
 import { RegisterDeviceCard } from '../shared/RegisterDeviceCard';
@@ -41,7 +40,7 @@ export const EsphomeDirectForm: React.FC<RegisterDeviceFormProps> = ({
   isSubmitting,
   serverError,
   onSubmitDevice,
-  onBack,
+  onCancel,
   onDirtyChange,
 }) => {
   const { t } = useTranslation();
@@ -50,8 +49,6 @@ export const EsphomeDirectForm: React.FC<RegisterDeviceFormProps> = ({
     handleSubmit,
     control,
     formState: { errors, isDirty },
-    requestDiscard,
-    discardConfirm,
   } = useAppForm<EsphomeDirectFormValues>({
     defaultValues: {
       deviceType: ESPHOME_DEFAULT_TYPE,
@@ -95,19 +92,19 @@ export const EsphomeDirectForm: React.FC<RegisterDeviceFormProps> = ({
         {t('settings.manual_setup_desc_esphome')}
       </p>
 
-      <RegisterDeviceCard account={account} type={deviceType}>
-        <FormShell
-          onSubmit={onSubmit}
-          error={serverError}
-          actions={{
-            onCancel: () => requestDiscard(onBack),
-            cancelLabel: t('settings.back'),
-            submitLabel: isSubmitting
-              ? t('settings.registering')
-              : t('settings.register_device'),
-            isSubmitting,
-          }}
-        >
+      <FormShell
+        onSubmit={onSubmit}
+        error={serverError}
+        actions={{
+          onCancel,
+          cancelLabel: t('settings.cancel'),
+          submitLabel: isSubmitting
+            ? t('settings.registering')
+            : t('settings.register_device'),
+          isSubmitting,
+        }}
+      >
+        <RegisterDeviceCard account={account} type={deviceType}>
           <FormField label={t('settings.esphome_device_type_label')}>
             <Select
               options={[
@@ -187,9 +184,8 @@ export const EsphomeDirectForm: React.FC<RegisterDeviceFormProps> = ({
             />
             <p className="help-text">{t('settings.visit_annotation_help')}</p>
           </FormField>
-        </FormShell>
-      </RegisterDeviceCard>
-      <DiscardUnsavedDialog {...discardConfirm} />
+        </RegisterDeviceCard>
+      </FormShell>
     </>
   );
 };

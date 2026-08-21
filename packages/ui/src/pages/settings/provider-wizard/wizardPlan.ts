@@ -208,6 +208,23 @@ export function getBackTarget(
   }
 }
 
+/**
+ * Label key for the step the back control lands on, or `null` when it leaves
+ * the wizard entirely — the caller names that destination itself.
+ *
+ * The control says where it goes rather than "Back": it is the only step-back
+ * the flow has, so on a mid-wizard step it has to read as walking the plan and
+ * not as abandoning it.
+ */
+export function getBackTargetLabelKey(
+  plan: WizardPlan | null,
+  state: WizardState,
+): string | null {
+  const target = getBackTarget(plan, state);
+  if (target === 'exit') return null;
+  return plan?.steps.find((step) => step.id === target.step)?.labelKey ?? null;
+}
+
 function registrationBackTarget(
   accountId: number,
   source: RegisterSource,

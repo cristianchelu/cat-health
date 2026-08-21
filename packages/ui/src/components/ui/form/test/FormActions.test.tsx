@@ -28,6 +28,24 @@ describe('FormActions', () => {
     assert.equal(save.getAttribute('aria-busy'), 'true');
   });
 
+  it('leaves the row exactly one filled button', async () => {
+    // Cancel is `neutral`, not the teal `secondary` fill: two fills side by
+    // side read as two commits, and the row has only one.
+    await renderWithProviders(
+      <FormActions
+        onCancel={() => {}}
+        cancelLabel="Cancel"
+        submitLabel="Save"
+      />,
+    );
+
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    const save = screen.getByRole('button', { name: 'Save' });
+    assert.equal(cancel.classList.contains('neutral'), true);
+    assert.equal(cancel.classList.contains('secondary'), false);
+    assert.equal(save.classList.contains('primary'), true);
+  });
+
   it('honors independent submitDisabled and cancelDisabled', async () => {
     const user = userEvent.setup();
     let cancelled = false;

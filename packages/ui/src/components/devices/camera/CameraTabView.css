@@ -47,23 +47,6 @@
     }
   }
 
-  .camera-tab-actions {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: var(--space-md);
-    margin-top: var(--space-sm);
-
-    @media (max-width: 767px) {
-      flex-direction: column-reverse;
-      align-items: stretch;
-
-      button {
-        width: 100%;
-      }
-    }
-  }
-
   .camera-empty-state {
     display: flex;
     flex-direction: column;

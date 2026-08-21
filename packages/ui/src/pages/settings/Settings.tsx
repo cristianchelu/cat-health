@@ -5,7 +5,11 @@ import { usePetContext } from '@/hooks/context/usePetContext';
 import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import Avatar from '@/components/ui/Avatar';
-import { CardList, CardListItem, CardListContent } from './components/CardList';
+import {
+  CardList,
+  CardListItem,
+  CardListContent,
+} from '@/components/ui/CardList';
 import {
   Plus,
   Settings as SettingsIcon,

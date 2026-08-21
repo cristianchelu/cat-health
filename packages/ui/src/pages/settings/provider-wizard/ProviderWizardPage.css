@@ -45,22 +45,17 @@
       margin-top: var(--space-md);
     }
 
+    /*
+     * A step whose only action is Continue still spaces it like the commit row
+     * it stands in for: the same `--space-lg` and no hairline, which would read
+     * as one more card edge under the card it just left.
+     */
     .connect-provider-actions {
       display: flex;
       justify-content: flex-end;
       gap: var(--space-sm);
-      margin-top: var(--space-xl);
       padding-top: var(--space-lg);
-      border-top: var(--border-thin);
     }
-  }
-
-  /* Discover step footer / scan spinner — not FormShell (multi-button row). */
-  .form-actions {
-    display: flex;
-    gap: var(--space-md);
-    justify-content: flex-end;
-    padding-top: var(--space-lg);
   }
 
   .loading-state {
@@ -153,13 +148,8 @@
      */
     padding-block-end: var(--space-sm);
 
-    .form-actions {
-      flex-direction: column;
-      gap: var(--space-sm);
-
-      button {
-        width: 100%;
-      }
+    .connect-provider-actions button {
+      width: 100%;
     }
   }
 }

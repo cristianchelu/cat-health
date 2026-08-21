@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import {
   FormCard,
+  FormCardBody,
   FormCardHead,
   FormField,
   FormShell,
@@ -242,118 +243,122 @@ const EditDevicePage: React.FC = () => {
     <div className="page-shell-narrow edit-device-page">
       {header(device.name)}
 
-      <FormCard>
-        <FormCardHead
-          tile={<DeviceTypeTile type={device.type} size="lg" />}
-          title={device.name}
-          titleAs="h2"
-          subtitle={`${t(`device_types.${device.type}`)} · ${providerLabel}`}
-        />
-
-        <FormShell
-          onSubmit={handleSubmit(onFormSubmit)}
-          error={submitError}
-          actions={{
-            onCancel: back.go,
-            cancelLabel: t('settings.cancel'),
-            submitLabel: updateDevice.isPending
-              ? t('settings.saving')
-              : t('settings.save_changes'),
-            isSubmitting: updateDevice.isPending,
-            submitDisabled: !isDirty,
-          }}
-        >
-          <FormField label={t('settings.device_name_label')}>
-            <Input {...register('name', { required: true })} />
-          </FormField>
-
-          <FormSwitch
-            name="enabled"
-            control={control}
-            label={t('settings.enabled')}
+      <FormShell
+        onSubmit={handleSubmit(onFormSubmit)}
+        error={submitError}
+        actions={{
+          onCancel: back.go,
+          cancelLabel: t('settings.cancel'),
+          submitLabel: updateDevice.isPending
+            ? t('settings.saving')
+            : t('settings.save_changes'),
+          isSubmitting: updateDevice.isPending,
+          submitDisabled: !isDirty,
+        }}
+      >
+        <FormCard>
+          <FormCardHead
+            tile={<DeviceTypeTile type={device.type} size="lg" />}
+            title={device.name}
+            titleAs="h2"
+            subtitle={`${t(`device_types.${device.type}`)} · ${providerLabel}`}
           />
 
-          <FormSwitch
-            name="visitAnnotationEnabled"
-            control={control}
-            label={t('settings.visit_annotation_label')}
-            description={t('settings.visit_annotation_help')}
-          />
-
-          <DeviceSummary externalId={device.external_id} />
-
-          {device.type === 'camera' && (
-            <FormField label={t('settings.snapshot_url_label')}>
-              <Input
-                {...register('snapshotUrl')}
-                placeholder={t('settings.snapshot_url_placeholder')}
-              />
-              <p className="help-text">{t('settings.snapshot_url_help')}</p>
+          <FormCardBody>
+            <FormField label={t('settings.device_name_label')}>
+              <Input {...register('name', { required: true })} />
             </FormField>
-          )}
 
-          {device.provider === 'thingino' && device.type === 'camera' && (
-            <>
-              <FormField label={t('settings.ssh_user_label')}>
-                <Input {...register('sshUser')} placeholder="root" />
-              </FormField>
-              <FormField label={t('settings.ssh_key_path_label')}>
+            <FormSwitch
+              name="enabled"
+              control={control}
+              label={t('settings.enabled')}
+            />
+
+            <FormSwitch
+              name="visitAnnotationEnabled"
+              control={control}
+              label={t('settings.visit_annotation_label')}
+              description={t('settings.visit_annotation_help')}
+            />
+
+            <DeviceSummary externalId={device.external_id} />
+
+            {device.type === 'camera' && (
+              <FormField label={t('settings.snapshot_url_label')}>
                 <Input
-                  {...register('sshPrivateKeyPath')}
-                  placeholder="/path/to/key"
+                  {...register('snapshotUrl')}
+                  placeholder={t('settings.snapshot_url_placeholder')}
                 />
+                <p className="help-text">{t('settings.snapshot_url_help')}</p>
               </FormField>
-              <FormField label={t('settings.remote_path_label')}>
-                <Input
-                  {...register('remotePath')}
-                  placeholder="/mnt/sd/recordings"
-                />
-              </FormField>
-              <FormField label={t('settings.clip_duration_label')}>
-                <Input
-                  type="number"
-                  {...register('clipDurationSeconds', { valueAsNumber: true })}
-                />
-              </FormField>
-            </>
-          )}
+            )}
 
-          {device.type === 'pet_recognizer' && (
-            <>
-              <FormField label={t('settings.source_device_label')}>
-                <Select
-                  {...register('sourceDeviceId', { required: true })}
-                  placeholder={t('settings.source_device_placeholder')}
-                  options={sourceDeviceOptions}
-                />
-              </FormField>
+            {device.provider === 'thingino' && device.type === 'camera' && (
+              <>
+                <FormField label={t('settings.ssh_user_label')}>
+                  <Input {...register('sshUser')} placeholder="root" />
+                </FormField>
+                <FormField label={t('settings.ssh_key_path_label')}>
+                  <Input
+                    {...register('sshPrivateKeyPath')}
+                    placeholder="/path/to/key"
+                  />
+                </FormField>
+                <FormField label={t('settings.remote_path_label')}>
+                  <Input
+                    {...register('remotePath')}
+                    placeholder="/mnt/sd/recordings"
+                  />
+                </FormField>
+                <FormField label={t('settings.clip_duration_label')}>
+                  <Input
+                    type="number"
+                    {...register('clipDurationSeconds', {
+                      valueAsNumber: true,
+                    })}
+                  />
+                </FormField>
+              </>
+            )}
 
-              <FormField label={t('settings.model_label')}>
-                <Input
-                  {...register('model', { required: true })}
-                  placeholder={t('settings.model_placeholder')}
-                />
-              </FormField>
+            {device.type === 'pet_recognizer' && (
+              <>
+                <FormField label={t('settings.source_device_label')}>
+                  <Select
+                    {...register('sourceDeviceId', { required: true })}
+                    placeholder={t('settings.source_device_placeholder')}
+                    options={sourceDeviceOptions}
+                  />
+                </FormField>
 
-              <FormField
-                label={t('settings.prompt_template_label')}
-                description={t('settings.prompt_template_help')}
-              >
-                <Textarea
-                  {...register('promptTemplate', { required: true })}
-                  rows={8}
-                />
-              </FormField>
+                <FormField label={t('settings.model_label')}>
+                  <Input
+                    {...register('model', { required: true })}
+                    placeholder={t('settings.model_placeholder')}
+                  />
+                </FormField>
 
-              <FormSwitch
-                name="autoIdentify"
-                control={control}
-                label={t('settings.auto_identify_label')}
-              />
-            </>
-          )}
-        </FormShell>
-      </FormCard>
+                <FormField
+                  label={t('settings.prompt_template_label')}
+                  description={t('settings.prompt_template_help')}
+                >
+                  <Textarea
+                    {...register('promptTemplate', { required: true })}
+                    rows={8}
+                  />
+                </FormField>
+
+                <FormSwitch
+                  name="autoIdentify"
+                  control={control}
+                  label={t('settings.auto_identify_label')}
+                />
+              </>
+            )}
+          </FormCardBody>
+        </FormCard>
+      </FormShell>
 
       <DiscardUnsavedDialog
         open={blockerOpen}

@@ -33,22 +33,38 @@
     }
   }
 
-  .discover-actions {
+  /* Tools live with the list they act on, so they stay left and stay small. */
+  .discover-tools {
+    display: flex;
     flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-top: var(--space-sm);
+  }
 
-    /* Pushes the status to the left of the action buttons. */
-    .discover-status {
-      display: flex;
-      align-items: center;
-      gap: var(--space-xs);
-      margin-right: auto;
-      align-self: center;
-      font-size: var(--text-sm);
-      color: var(--color-text-light);
+  /* What the commit row's `leading` slot carries: state, never a control. */
+  .discover-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
 
-      b {
-        color: var(--color-text);
-        font-weight: var(--font-semibold);
+    b {
+      color: var(--color-text);
+      font-weight: var(--font-semibold);
+    }
+  }
+
+  /* A step with no commit of its own still spaces its way out like the row. */
+  .discover-exit {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: var(--space-lg);
+
+    @media (max-width: 767px) {
+      button {
+        width: 100%;
       }
     }
   }

@@ -46,7 +46,6 @@
     max-height: 128px;
     object-fit: cover;
     border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-sm);
   }
   .clear-btn {
     position: absolute;

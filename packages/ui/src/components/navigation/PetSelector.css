@@ -13,9 +13,10 @@
     padding: var(--space-2xs);
     color: var(--color-text-light);
 
+    /* The gradient behind the avatar is the whole selection mark. An outline
+       on top of it only restated the edge the fill already has. */
     &.active {
       background: var(--gradient-pet);
-      border-color: var(--color-primary);
       color: var(--color-text-inverted);
     }
   }

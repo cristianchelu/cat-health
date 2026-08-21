@@ -22,9 +22,17 @@
       padding: var(--space-md) var(--space-xs);
     }
 
+    /*
+     * With the name hidden there is only the avatar left, and it wants
+     * 36px inside a box whose content area is 34 — the button's own
+     * transparent border and this item's padding take the rest. The row
+     * aligns to the start while the label is there to follow it, which
+     * handed the whole two-pixel shortfall to the right edge.
+     */
     .pet-selector .item {
       width: 2.75rem;
       height: 2.75rem;
+      justify-content: center;
     }
   }
 

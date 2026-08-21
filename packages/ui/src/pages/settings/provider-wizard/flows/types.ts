@@ -16,8 +16,13 @@ export type RegisterDeviceFormProps = {
   isSubmitting: boolean;
   serverError: string | null;
   onSubmitDevice: (payload: PostDeviceRequestDTO) => Promise<void>;
-  onBack: () => void;
-  /** Report register-step dirty state for header Cancel leave guard. */
+  /**
+   * Abandons the wizard from the commit row. Step-back is the header control,
+   * and the shell owns the dirty confirm for both — a form-local
+   * `requestDiscard` here would ask twice.
+   */
+  onCancel: () => void;
+  /** Report register-step dirty state for the shell's leave guard. */
   onDirtyChange?: (dirty: boolean) => void;
 };
 

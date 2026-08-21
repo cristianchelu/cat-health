@@ -1,0 +1,117 @@
+/*
+ * The same row the settings lists use: `--space-lg` of padding, `--text-base`
+ * over `--text-sm`, a hairline between rows and the highlight wash on hover.
+ * A picker row is a list row, so it is sized and typed like one — which is
+ * also what makes it a real touch target.
+ */
+.food-picker-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  /* The inline padding is a knob so a full-bleed list can put back exactly
+     the padding its container backed out of, keeping text aligned with the
+     heading above it. */
+  padding: var(--space-lg) var(--food-picker-row-inline, var(--space-lg));
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition-normal);
+
+  /*
+   * A separator belongs *between* two rows, so it is drawn by the second one.
+   * Hanging it off every row and unhooking `:last-child` cannot express that:
+   * the last row of a group is not the last child of the list, so its rule
+   * survived and read as the next group header's top border.
+   */
+  & + & {
+    border-top: var(--border-thin);
+  }
+
+  &:hover {
+    background-color: var(--color-surface-highlight);
+  }
+
+  /* Drawn inside, as in the settings list: a scrolling list clipped by the
+     sheet would lose an outside ring at its first and last row. */
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: -2px;
+  }
+
+  .food-picker-row-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .food-picker-row-title {
+    display: block;
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .food-picker-row-subtitle {
+    display: block;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    line-height: var(--line-height-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .food-picker-row-trailing {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .food-picker-row-chevron {
+    flex-shrink: 0;
+    color: var(--color-text-subtle);
+  }
+
+  .food-picker-row-check {
+    flex-shrink: 0;
+    color: var(--color-primary);
+  }
+
+  &.muted .food-picker-row-title {
+    font-weight: var(--font-normal);
+    color: var(--color-text-light);
+  }
+
+  &.selected {
+    background-color: var(--color-surface-highlight);
+
+    .food-picker-row-title {
+      color: var(--color-primary-dark);
+    }
+  }
+
+  @media (max-width: 767px) {
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--food-picker-row-inline, var(--space-md));
+
+    .food-picker-row-title {
+      font-size: var(--text-sm);
+    }
+
+    .food-picker-row-subtitle,
+    .food-picker-row-trailing {
+      font-size: var(--text-xs);
+    }
+  }
+}

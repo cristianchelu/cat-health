@@ -64,6 +64,45 @@
     "pet_presence_context_friend": "Friend",
     "pet_presence_context_manual": "Manual"
   },
+  "food_picker": {
+    "kcal_per_kg": "{{value}} kcal/kg",
+    "group_wet": "Wet food",
+    "group_dry": "Dry food",
+    "group_treat": "Treats",
+    "group_wet_short": "wet",
+    "group_dry_short": "dry",
+    "group_treat_short": "treat",
+    "no_brand": "No brand",
+    "food_count": "{{count}} foods"
+  },
+  "log_food": {
+    "title": "Log food",
+    "recent": "Recent",
+    "browse": "Browse",
+    "brand_subtitle": "{{pet}} · {{count}} foods",
+    "food_subtitle": "{{group}} · {{count}}",
+    "recent_amount": "{{when}} · {{amount}} g",
+    "portion_pouch": "{{size}} g pouch",
+    "food_meta": "{{brand}} · {{type}}",
+    "amount_label": "Amount in grams",
+    "amount_input_label": "Amount in grams",
+    "kcal_approx": "≈ {{kcal}} kcal",
+    "kcal_value": "{{kcal}} kcal",
+    "today_kcal": "{{pet}} today",
+    "after_log": "After this log",
+    "band_meter_label": "Calories today against the daily range",
+    "band_valuetext": "{{after}} kcal after this log, daily range {{low}} to {{high}} kcal",
+    "band_info": "The daily range comes from this cat’s average weight.",
+    "pouch_full": "1 pouch",
+    "submit": "Log {{amount}} g",
+    "scan_action": "Scan a barcode",
+    "scan_title": "Scan to log",
+    "scan_hint": "Point at the barcode on the pack",
+    "scan_matched": "Matched",
+    "scan_no_match": "No match in your library",
+    "scan_rescan": "Scan again",
+    "scan_denied": "Camera access was denied"
+  },
   "litterbox_details": {
     "title": "Litterbox visits",
     "analytics_title": "Litterbox Analytics",
@@ -381,7 +420,10 @@
     "sort_by_name": "Name",
     "sort_by_provider": "Provider",
     "sort_ascending": "Ascending",
-    "sort_descending": "Descending"
+    "sort_descending": "Descending",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "back": "Back"
   },
   "event_attribution": {
     "cause_pet": "A pet",
@@ -634,7 +676,13 @@
       },
       "signal": {
         "tooltip": "Signal strength: {{rssi}} dBm"
-      }
+      },
+      "food_compartment_hint": "Choose a food to track calories",
+      "food_compartment_change": "Change",
+      "food_compartment_choose": "Choose",
+      "food_compartment_change_aria": "Change the food in {{compartment}}",
+      "food_compartment_choose_aria": "Choose a food for {{compartment}}",
+      "food_compartment_none_desc": "Don’t attribute calories"
     },
     "needing_attention_one": "{{count}} needs attention",
     "needing_attention_other": "{{count}} need attention",

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
 import type { ProviderPetLink } from 'shared';
-import { Button } from '@/components/ui/Button';
+import { FormActions } from '@/components/ui/form';
 import ProviderPetLinksEditor from '../../components/ProviderPetLinksEditor';
 
 interface LinkPetsStepProps {
@@ -11,10 +11,11 @@ interface LinkPetsStepProps {
   isSaving: boolean;
   serverError?: string | null;
   onFinish: (links: ProviderPetLink[]) => void;
-  onBack: () => void;
+  /** Abandons the wizard. Step-back is the header control. */
+  onCancel: () => void;
   /** Linking is optional — it can be done later from the provider's settings. */
   onSkip?: () => void;
-  /** Lets the shell guard Back once the user has edited a row. */
+  /** Lets the shell guard leaving once the user has edited a row. */
   onDirtyChange?: (dirty: boolean) => void;
 }
 
@@ -28,7 +29,7 @@ export const LinkPetsStep: React.FC<LinkPetsStepProps> = ({
   isSaving,
   serverError,
   onFinish,
-  onBack,
+  onCancel,
   onSkip,
   onDirtyChange,
 }) => {
@@ -76,23 +77,19 @@ export const LinkPetsStep: React.FC<LinkPetsStepProps> = ({
         </p>
       )}
 
-      <div className="form-actions">
-        <Button type="button" variant="secondary" onClick={onBack}>
-          {t('settings.back')}
-        </Button>
-        {onSkip && (
-          <Button type="button" variant="ghost" onClick={onSkip}>
-            {t('settings.skip_for_now')}
-          </Button>
-        )}
-        <Button
-          type="button"
-          onClick={() => onFinish(links)}
-          disabled={isSaving}
-        >
-          {isSaving ? t('settings.saving') : t('settings.finish')}
-        </Button>
-      </div>
+      {/*
+       * Skipping is this step's dismiss: the account exists either way, and the
+       * links can be made later from its settings — so it takes the cancel slot
+       * rather than becoming a third button beside the commit.
+       */}
+      <FormActions
+        onCancel={onSkip ?? onCancel}
+        cancelLabel={onSkip ? t('settings.skip_for_now') : t('settings.cancel')}
+        submitLabel={isSaving ? t('settings.saving') : t('settings.finish')}
+        isSubmitting={isSaving}
+        submitType="button"
+        onSubmitClick={() => onFinish(links)}
+      />
     </>
   );
 };

@@ -1,7 +1,12 @@
 import * as React from 'react';
-import { Cog, Loader2, Video } from 'lucide-react';
+import { Cog, Video } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import {
+  CardList,
+  CardListContent,
+  CardListItem,
+} from '@/components/ui/CardList';
 import { ControlGroup } from '@/components/ui/ControlGroup';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { EmptyState } from '@/components/ui/PageState';
@@ -11,7 +16,6 @@ import { CAMERA_ROTATION_OPTIONS } from '@/lib/cameraConfig';
 import { CameraCaptureFields } from './CameraCaptureFields';
 import { CameraPicker, type CameraPickerOption } from './CameraPicker';
 import { CameraRoiEditor, type CameraCropRect } from './CameraRoiEditor';
-import { DeviceModelRow } from './DeviceModelRow';
 import './CameraTabView.css';
 
 /**
@@ -210,25 +214,21 @@ const CameraTabView: React.FC<CameraTabViewProps> = ({
     );
   }
 
-  const sourceRow = isLinked ? (
-    <DeviceModelRow
-      title={sourceName}
-      subtitle={sourceSubtitle}
-      action={
-        <Button variant="secondary" size="sm" onClick={onOpenPicker}>
-          {copy.changeSource}
-        </Button>
-      }
-    />
-  ) : (
-    <DeviceModelRow
-      title={copy.noSourceTitle}
-      action={
-        <Button variant="secondary" size="sm" onClick={onOpenPicker}>
-          {copy.changeSource}
-        </Button>
-      }
-    />
+  const sourceRow = (
+    <CardList variant="bare">
+      <CardListItem
+        trailing={
+          <Button variant="secondary" size="sm" onClick={onOpenPicker}>
+            {copy.changeSource}
+          </Button>
+        }
+      >
+        <CardListContent
+          title={isLinked ? sourceName : copy.noSourceTitle}
+          description={isLinked ? sourceSubtitle : undefined}
+        />
+      </CardListItem>
+    </CardList>
   );
 
   const cameraHeader = (
@@ -248,29 +248,13 @@ const CameraTabView: React.FC<CameraTabViewProps> = ({
         className="camera-tab-form"
         onSubmit={onSubmit}
         error={saveFailed ? copy.saveError : null}
-        actionsSlot={
-          <div className="camera-tab-actions">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onCancel}
-              disabled={isSaving}
-            >
-              {copy.cancelLabel}
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={!isDirty || isSaving}
-              aria-busy={isSaving || undefined}
-            >
-              {isSaving && (
-                <Loader2 className="animate-spin" size="1em" aria-hidden />
-              )}
-              {copy.saveLabel}
-            </Button>
-          </div>
-        }
+        actions={{
+          onCancel,
+          cancelLabel: copy.cancelLabel,
+          submitLabel: copy.saveLabel,
+          isSubmitting: isSaving,
+          submitDisabled: !isDirty,
+        }}
       >
         {cameraHeader}
         <Card className="camera-tab-card">

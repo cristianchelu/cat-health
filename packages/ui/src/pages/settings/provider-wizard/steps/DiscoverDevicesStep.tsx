@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
 import { StatusPill } from '@/components/ui/StatusPill';
+import { FormActions } from '@/components/ui/form';
 import type {
   DeviceType,
   DiscoveredDeviceDTO,
@@ -34,7 +35,8 @@ interface DiscoverDevicesStepProps {
   onImport?: (devices: DiscoveredDeviceDTO[]) => void;
   onDirectRegister: () => void;
   onRescan: () => void;
-  onBack: () => void;
+  /** Abandons the wizard. Step-back is the header control. */
+  onCancel: () => void;
   /** Offered when importing now is optional (the connect flow). */
   onSkip?: () => void;
 }
@@ -120,7 +122,7 @@ export const DiscoverDevicesStep: React.FC<DiscoverDevicesStepProps> = ({
   onImport,
   onDirectRegister,
   onRescan,
-  onBack,
+  onCancel,
   onSkip,
 }) => {
   const { t } = useTranslation();
@@ -201,90 +203,94 @@ export const DiscoverDevicesStep: React.FC<DiscoverDevicesStepProps> = ({
         </div>
       )}
 
-      {importError && (
-        <p className="discover-import-error" role="alert">
-          {importError}
-        </p>
-      )}
-
       {/*
-       * Everything here locks while an import runs. The import POSTs one device
-       * at a time and cannot be cancelled, so leaving the step would keep the
-       * loop going with the user watching an unrelated screen.
+       * Tools on the list, not commits: they re-run the scan or step around it,
+       * and neither registers anything. So they sit with the list they act on,
+       * left-aligned, rather than borrowing the commit row's authority.
+       *
+       * Everything locks while an import runs. The import POSTs one device at a
+       * time and cannot be cancelled, so leaving the step would keep the loop
+       * going with the user watching an unrelated screen.
        */}
-      <div className="form-actions discover-actions">
-        {/*
-         * `isImporting` keeps the line alive to the end: each POST invalidates
-         * the devices query, so rows flip to "already added" and `importable`
-         * can empty out while the loop is still running.
-         */}
-        {selectionMode === 'multi' &&
-          (importable.length > 0 || isImporting) && (
-            <span className="discover-status" role="status">
-              {isImporting ? (
-                <>
-                  <Loader2
-                    className="animate-spin"
-                    size={16}
-                    aria-hidden="true"
-                  />
-                  {t('settings.importing')}
-                </>
-              ) : (
-                t('settings.selected_count', {
-                  selected: selectedDevices.length,
-                  total: importable.length,
-                })
-              )}
-            </span>
-          )}
-
+      <div className="discover-tools">
         <Button
           type="button"
           variant="secondary"
-          onClick={onBack}
-          disabled={isImporting}
+          size="sm"
+          onClick={onRescan}
+          disabled={isDiscovering || isImporting}
         >
-          {t('settings.back')}
+          {t('settings.rescan')}
         </Button>
-        {onSkip && (
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onSkip}
-            disabled={isImporting}
-          >
-            {t('settings.skip_for_now')}
-          </Button>
-        )}
         {allowsDirectRegistration && (
           <Button
             type="button"
-            variant="secondary"
+            variant="ghost"
+            size="sm"
             onClick={onDirectRegister}
             disabled={isImporting}
           >
             {t('settings.add_manually')}
           </Button>
         )}
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onRescan}
-          disabled={isDiscovering || isImporting}
-        >
-          {t('settings.rescan')}
-        </Button>
-        {selectionMode === 'multi' && (
-          <Button
-            type="button"
-            onClick={() => onImport?.(selectedDevices)}
-            disabled={selectedDevices.length === 0 || isImporting}
-          >
-            {t('settings.import_and_continue')}
-          </Button>
-        )}
       </div>
+
+      {importError && (
+        <p className="discover-import-error" role="alert">
+          {importError}
+        </p>
+      )}
+
+      {selectionMode === 'multi' ? (
+        <FormActions
+          onCancel={onSkip ?? onCancel}
+          cancelLabel={
+            onSkip ? t('settings.skip_for_now') : t('settings.cancel')
+          }
+          cancelDisabled={isImporting}
+          submitLabel={t('settings.import_and_continue')}
+          submitType="button"
+          onSubmitClick={() => onImport?.(selectedDevices)}
+          submitDisabled={selectedDevices.length === 0}
+          isSubmitting={isImporting}
+          /*
+           * `isImporting` keeps the line alive to the end: each POST invalidates
+           * the devices query, so rows flip to "already added" and `importable`
+           * can empty out while the loop is still running.
+           */
+          leading={
+            importable.length > 0 || isImporting ? (
+              <span className="discover-status" role="status">
+                {isImporting ? (
+                  <>
+                    <Loader2
+                      className="animate-spin"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    {t('settings.importing')}
+                  </>
+                ) : (
+                  t('settings.selected_count', {
+                    selected: selectedDevices.length,
+                    total: importable.length,
+                  })
+                )}
+              </span>
+            ) : undefined
+          }
+        />
+      ) : (
+        /* Picking a row is the commit here, so the step has no primary of its
+           own — only the way past it, in the slot a Cancel would occupy. */
+        onSkip && (
+          <div className="discover-exit">
+            <Button type="button" variant="neutral" onClick={onSkip}>
+              {t('settings.skip_for_now')}
+            </Button>
+          </div>
+        )
+      )}
     </div>
   );
 };

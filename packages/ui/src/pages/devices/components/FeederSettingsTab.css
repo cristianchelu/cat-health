@@ -1,0 +1,13 @@
+.feeder-settings-tab {
+  .feeder-settings-muted {
+    color: var(--color-text-light);
+    font-size: var(--text-sm);
+    margin: 0;
+  }
+
+  .feeder-settings-compartments {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+}

@@ -2,6 +2,7 @@ import { Type, type Static } from '@fastify/type-provider-typebox';
 import { getPaginatedResponseSchema } from './common.ts';
 import {
   EventDataSchema,
+  EventTypeSchema,
   LitterboxUseEliminationTypeSchema,
   type LitterboxAnalysisStatePeriodDTO,
 } from './eventData.ts';
@@ -153,6 +154,8 @@ export const GetEventsQuerySchema = Type.Object({
   offset: Type.Optional(Type.Number({ minimum: 0 })),
   includeChildren: Type.Optional(Type.Boolean()),
   human_verified: Type.Optional(Type.Boolean()),
+  /** Filters on `data.type` — e.g. `food_intake` for the log flow's recents. */
+  eventType: Type.Optional(EventTypeSchema),
 });
 export type GetEventsQueryDTO = Static<typeof GetEventsQuerySchema>;
 

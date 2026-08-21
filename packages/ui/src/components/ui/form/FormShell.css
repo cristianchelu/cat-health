@@ -21,7 +21,11 @@
     justify-content: space-between;
   }
 
-  @media (max-width: 768px) {
+  /*
+   * Stacks at the same width the control scale steps up at (theme.css), so the
+   * full-width buttons are on the 44px touch step by the time they get here.
+   */
+  @media (max-width: 767px) {
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-sm);
@@ -36,41 +40,26 @@
       width: 100%;
       gap: var(--space-sm);
     }
+
+    /*
+     * Stacking collapses the width that separates the leading action from the
+     * commit pair on a desktop row, and the leading slot is where a Delete
+     * sits. Restore the distance vertically: the row gap alone would put a
+     * destructive one thumb-slip from Save, and the two mean opposite things.
+     * Controls only — a leading state line is read, not pressed.
+     */
+    &.form-actions--with-leading > button:first-child {
+      margin-bottom: var(--space-lg);
+    }
   }
 }
 
+/* Geometry comes from `.form-actions`; only the prompt is this variant's own. */
 .form-inline-discard {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-sm);
-  padding-top: var(--space-lg);
-
   .form-inline-discard__message {
     margin: 0;
     font-size: var(--text-sm);
     color: var(--color-text-light);
-    text-align: end;
-  }
-
-  .form-inline-discard__buttons {
-    display: flex;
-    gap: var(--space-md);
-    justify-content: flex-end;
-  }
-
-  @media (max-width: 768px) {
-    .form-inline-discard__message {
-      text-align: start;
-    }
-
-    .form-inline-discard__buttons {
-      flex-direction: column;
-
-      button {
-        width: 100%;
-      }
-    }
   }
 }
 

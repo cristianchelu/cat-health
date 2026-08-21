@@ -1,0 +1,62 @@
+/* No scroller of its own: the surface holding the list owns scrolling, so a
+   sheet has one scroll area under a header that stays put — not two nested
+   ones that fight over the gesture. */
+.food-flat-list {
+  display: flex;
+  flex-direction: column;
+
+  .food-flat-list-empty {
+    margin: 0;
+    padding: var(--space-lg);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  /*
+   * A StatusPill carrying its own palette. Wet/dry/treat is not a status, so
+   * none of the variants fit — but the shape, the size and the way a tint is
+   * mixed per theme are the pill's business, and are left to it. Only the
+   * accent changes here, through the pill's own ink/tint ratios so these read
+   * the same way in dark mode as every other pill.
+   */
+  .food-type-tag {
+    &.wet {
+      color: color-mix(
+        in srgb,
+        var(--color-water) var(--status-pill-ink),
+        var(--color-text)
+      );
+      background: color-mix(
+        in srgb,
+        var(--color-water) var(--status-pill-tint),
+        var(--color-surface)
+      );
+    }
+
+    &.dry {
+      color: color-mix(
+        in srgb,
+        var(--color-warning) var(--status-pill-ink),
+        var(--color-text)
+      );
+      background: color-mix(
+        in srgb,
+        var(--color-warning) var(--status-pill-tint),
+        var(--color-surface)
+      );
+    }
+
+    &.treat {
+      color: color-mix(
+        in srgb,
+        var(--color-primary) var(--status-pill-ink),
+        var(--color-text)
+      );
+      background: color-mix(
+        in srgb,
+        var(--color-primary) var(--status-pill-tint),
+        var(--color-surface)
+      );
+    }
+  }
+}
