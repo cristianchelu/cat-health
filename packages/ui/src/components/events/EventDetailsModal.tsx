@@ -18,8 +18,10 @@ import {
   DialogTitle,
 } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
+import { cn } from '@/lib/utils';
 import { FallbackImage } from '@/components/ui/FallbackImage';
 import {
+  Checkbox,
   FormActions,
   FormInlineDiscard,
   FormShell,
@@ -627,16 +629,17 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     disabled={isUpdating}
                   />
                   <label
-                    className="straining-control"
+                    className={cn(
+                      'straining-control',
+                      isUpdating && 'is-disabled',
+                    )}
                     htmlFor="event-details-straining"
                   >
                     <span>{t('annotation.straining')}</span>
-                    <input
+                    <Checkbox
                       id="event-details-straining"
-                      type="checkbox"
                       checked={draft.straining}
                       onChange={handleStrainingChange}
-                      className="straining-checkbox"
                       disabled={isUpdating}
                     />
                   </label>
@@ -661,15 +664,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         onConfirm={() => void handleDeleteConfirm()}
         onCancel={handleDeleteCancel}
       >
-        <label className="event-delete-checkbox">
-          <input
-            type="checkbox"
-            checked={reidentifyOnDelete}
-            onChange={(e) => setReidentifyOnDelete(e.target.checked)}
-            disabled={isDeleting || displayEvent.device_id == null}
-          />
-          <span>{t('event_details.reidentify_later_visits')}</span>
-        </label>
+        <Checkbox
+          checked={reidentifyOnDelete}
+          onCheckedChange={setReidentifyOnDelete}
+          disabled={isDeleting || displayEvent.device_id == null}
+          label={t('event_details.reidentify_later_visits')}
+        />
       </ConfirmDialog>
     </>
   );

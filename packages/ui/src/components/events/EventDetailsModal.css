@@ -176,19 +176,6 @@
   gap: var(--space-sm);
 }
 
-.event-delete-checkbox {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-sm);
-  color: var(--color-text);
-  cursor: pointer;
-
-  input {
-    margin: 0;
-  }
-}
-
 .elimination-type-selector-wrapper {
   width: auto;
   min-width: 150px;
@@ -206,51 +193,13 @@
     color: var(--color-text-muted);
     cursor: pointer;
 
-    &:has(.straining-checkbox:disabled) {
+    /*
+     * The label dims with its box. `Checkbox` already dims itself, but it
+     * cannot reach the text beside it, and this file must not reach into it.
+     */
+    &.is-disabled {
       cursor: not-allowed;
       opacity: 0.7;
-    }
-  }
-
-  .straining-checkbox {
-    appearance: none;
-    width: 0.95rem;
-    height: 0.95rem;
-    display: grid;
-    place-content: center;
-    margin: 0;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background-color: var(--color-surface);
-    cursor: pointer;
-    transition: var(--transition-fast);
-
-    &::after {
-      content: '';
-      width: 0.35rem;
-      height: 0.6rem;
-      border: solid var(--color-text-inverted);
-      border-width: 0 2px 2px 0;
-      opacity: 0;
-      transform: rotate(45deg) translateY(-1px);
-    }
-
-    &:checked {
-      border-color: var(--color-primary);
-      background-color: var(--color-primary);
-    }
-
-    &:checked::after {
-      opacity: 1;
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--color-primary);
-      outline-offset: 2px;
-    }
-
-    &:disabled {
-      cursor: not-allowed;
     }
   }
 }

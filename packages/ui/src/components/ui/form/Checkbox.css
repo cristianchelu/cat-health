@@ -1,0 +1,72 @@
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  cursor: pointer;
+
+  &:has(.checkbox-box:disabled) {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .checkbox-box {
+    appearance: none;
+    flex-shrink: 0;
+    width: 0.95rem;
+    height: 0.95rem;
+    margin: 0;
+    display: grid;
+    place-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-surface);
+    cursor: inherit;
+    transition: var(--transition-fast);
+
+    /* The tick is two borders of an empty box, rotated into a check. */
+    &::after {
+      content: '';
+      width: 0.35rem;
+      height: 0.6rem;
+      border: solid var(--color-text-inverted);
+      border-width: 0 2px 2px 0;
+      opacity: 0;
+      transform: rotate(45deg) translateY(-1px);
+    }
+
+    &:checked {
+      border-color: var(--color-primary);
+      background-color: var(--color-primary);
+
+      &::after {
+        opacity: 1;
+      }
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    /*
+     * The box stays 0.95rem so a row of them does not grow on touch; a centred
+     * pseudo-element carries the 44px tap target instead. Same trick as the
+     * thumb's remove control.
+     */
+    @media (max-width: 767px) {
+      position: relative;
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: var(--control-height-md);
+        height: var(--control-height-md);
+        transform: translate(-50%, -50%);
+      }
+    }
+  }
+}

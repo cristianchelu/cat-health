@@ -21,7 +21,7 @@ import {
 import { usePets } from '@/hooks/queries/petQueries';
 import { Select } from '@/components/ui/form/Select';
 import { Button } from '@/components/ui/Button';
-import { FormActions, FormError } from '@/components/ui/form';
+import { Checkbox, FormActions, FormError } from '@/components/ui/form';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import WeightSignalChart from '@/components/events/WeightSignalChart';
@@ -881,12 +881,10 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
               >
                 {t('annotation.straining')}
               </label>
-              <input
+              <Checkbox
                 id="annotation-straining"
-                type="checkbox"
                 checked={straining}
                 onChange={handleStrainingChange}
-                className="annotation-checkbox"
                 disabled={isSaving}
               />
             </div>
