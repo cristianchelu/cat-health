@@ -62,11 +62,8 @@ const MULTI_ROOT_BY_DESIGN = new Map<string, string>([
  */
 const KNOWN_VIOLATIONS = new Set<string>([
   path.join('components', 'events', 'EventDetailsModal.css'),
-  path.join('components', 'events', 'log-food', 'FoodScanStep.css'),
   path.join('components', 'events', 'TimelapsePlayer.css'),
-  path.join('components', 'navigation', 'MobileNav.css'),
   path.join('components', 'ui', 'AppHeader.css'),
-  path.join('components', 'ui', 'CardList.css'),
   path.join('pages', 'devices', 'components', 'DeviceHeader.css'),
   path.join('pages', 'settings', 'providerForm.css'),
 ]);

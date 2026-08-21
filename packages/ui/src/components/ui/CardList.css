@@ -1,4 +1,4 @@
-.settings-list {
+.card-list {
   /*
    * The leading column. A loose mark needs a box to sit in, so there is a
    * default — but anything that brings its own width is entitled to keep it,
@@ -281,33 +281,33 @@
 @media (max-width: 767px) {
   /* On the column itself, not on the box, so a list that declared its own
      width keeps it here too rather than having its tile squeezed. */
-  .settings-list {
+  .card-list {
     --list-item-icon-size: 36px;
-  }
 
-  .settings-list .list-item {
-    padding: var(--space-md);
+    .list-item {
+      padding: var(--space-md);
 
-    .item-left {
-      gap: var(--space-sm);
+      .item-left {
+        gap: var(--space-sm);
 
-      .item-content {
-        h3 {
-          font-size: var(--text-sm);
+        .item-content {
+          h3 {
+            font-size: var(--text-sm);
+          }
+
+          p {
+            font-size: var(--text-xs);
+          }
         }
 
-        p {
-          font-size: var(--text-xs);
-        }
-      }
+        .item-content-wrapper {
+          h3 {
+            font-size: var(--text-sm);
+          }
 
-      .item-content-wrapper {
-        h3 {
-          font-size: var(--text-sm);
-        }
-
-        p {
-          font-size: var(--text-xs);
+          p {
+            font-size: var(--text-xs);
+          }
         }
       }
     }

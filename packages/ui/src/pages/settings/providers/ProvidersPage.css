@@ -3,7 +3,7 @@
   /* These rows lead with a `md` brand tile, which is 2.75rem at every width.
      Left to the default, the phone-width column would squeeze it to 36px —
      a size the tile does not have and never agreed to. */
-  .settings-list {
+  .card-list {
     --list-item-icon-size: 2.75rem;
   }
 
