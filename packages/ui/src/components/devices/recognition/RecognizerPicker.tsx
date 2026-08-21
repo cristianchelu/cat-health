@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { ScanSearch } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
+import { PickerSheet } from '@/components/ui/PickerSheet';
 import {
   CardList,
   CardListContent,
@@ -39,32 +39,34 @@ const RecognizerPicker: React.FC<RecognizerPickerProps> = ({
   emptyLabel,
 }) => {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="recognizer-picker-content">
-        <DialogTitle>{title}</DialogTitle>
-
-        {recognizers.length === 0 ? (
-          <p className="recognizer-picker-empty">{emptyLabel}</p>
-        ) : (
-          <CardList variant="plain" className="recognizer-picker-list">
-            {recognizers.map((recognizer) => (
-              <CardListItem
-                key={recognizer.id}
-                icon={<ScanSearch size="1em" aria-hidden="true" />}
-                onClick={() => onSelect(recognizer.id)}
-                selected={recognizer.id === selectedId}
-                indicator="check"
-              >
-                <CardListContent
-                  title={recognizer.name}
-                  description={recognizer.model}
-                />
-              </CardListItem>
-            ))}
-          </CardList>
-        )}
-      </DialogContent>
-    </Dialog>
+    <PickerSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      className="recognizer-picker"
+      title={title}
+      onBack={() => onOpenChange(false)}
+    >
+      {recognizers.length === 0 ? (
+        <p className="recognizer-picker-empty">{emptyLabel}</p>
+      ) : (
+        <CardList variant="plain" className="recognizer-picker-list">
+          {recognizers.map((recognizer) => (
+            <CardListItem
+              key={recognizer.id}
+              icon={<ScanSearch size="1em" aria-hidden="true" />}
+              onClick={() => onSelect(recognizer.id)}
+              selected={recognizer.id === selectedId}
+              indicator="check"
+            >
+              <CardListContent
+                title={recognizer.name}
+                description={recognizer.model}
+              />
+            </CardListItem>
+          ))}
+        </CardList>
+      )}
+    </PickerSheet>
   );
 };
 

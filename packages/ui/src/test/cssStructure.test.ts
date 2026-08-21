@@ -40,9 +40,7 @@ const ROOT_OVERRIDES = new Map<string, string>([
  * exercise; adding one means a new stylesheet went in unnamespaced.
  */
 const KNOWN_VIOLATIONS = new Set<string>([
-  path.join('components', 'devices', 'camera', 'CameraPicker.css'),
   path.join('components', 'devices', 'entities', 'EntityButton.css'),
-  path.join('components', 'devices', 'recognition', 'RecognizerPicker.css'),
   path.join('components', 'devices', 'ReferenceImagePicker.css'),
   path.join('components', 'devices', 'TestRecognitionModal.css'),
   path.join('components', 'events', 'EventDetailsModal.css'),
