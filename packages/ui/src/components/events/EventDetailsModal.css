@@ -1,45 +1,20 @@
-.event-details-modal-content {
+/*
+ * One event, opened from a timeline.
+ *
+ * The dialog is two stacked halves: a fixed 16:9 stage carrying either the
+ * media or the weight chart, and the form below it that says who the event
+ * belongs to and what it was.
+ */
+.event-details-modal {
   padding: 0 !important;
   gap: 0;
   overflow: hidden;
   max-width: 400px;
   background-color: var(--color-surface);
 
-  .event-tabs {
-    display: flex;
-    background: var(--color-surface-muted);
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .tab-button {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-xs);
-    padding: var(--space-sm) var(--space-md);
-    border: none;
-    background: transparent;
-    color: var(--color-text-muted);
-    font-size: var(--text-sm);
-    font-weight: var(--font-medium);
-    cursor: pointer;
-    transition: var(--transition-fast);
-
-    &:hover {
-      color: var(--color-text);
-      background: var(--color-surface);
-    }
-
-    &.active {
-      color: var(--color-primary);
-      background: var(--color-surface);
-      box-shadow: inset 0 -2px 0 var(--color-primary);
-    }
-  }
-
-  /* Square close aligned with tab row (replaces floating .dialog-close when tabs are shown) */
-  .event-tab-close {
+  /* Square and flush with the tab strip, where the dialog's own floating
+     close would sit on top of the tabs. */
+  .event-details-tab-close {
     flex: 0 0 auto;
     align-self: stretch;
     width: auto;
@@ -51,7 +26,7 @@
     margin: 0;
     padding: 0;
     border: none;
-    border-left: 1px solid var(--color-border);
+    border-left: var(--border-thin);
     border-radius: 0;
     background: transparent;
     color: var(--color-text-muted);
@@ -61,7 +36,7 @@
 
     &:hover {
       color: var(--color-text);
-      background: var(--color-surface);
+      background-color: var(--color-surface);
     }
 
     &:focus-visible {
@@ -69,121 +44,153 @@
       outline-offset: -2px;
     }
   }
-}
 
-.event-details-media-section {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background-color: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
+  /* Both panels land here, so the dialog does not resize when you switch. */
+  .event-details-stage {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background-color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
 
-.media-loading,
-.media-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  color: var(--color-text-muted);
-}
-
-.event-details-body {
-  padding: var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.event-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.event-info {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-}
-
-.event-title {
-  font-size: var(--text-lg);
-  font-weight: var(--font-bold);
-  color: var(--color-text);
-  margin: 0;
-}
-
-.event-time {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.event-actions {
-  display: flex;
-  gap: var(--space-xs);
-
-  .action-btn {
+  /* Loading, and "no media" — a line on the black stage, not a card. */
+  .event-details-stage-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
     color: var(--color-text-muted);
+  }
 
-    &:hover {
-      color: var(--color-text);
-      background-color: var(--color-surface-muted);
+  .event-details-media-stack {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    /* The player, the still and each video share the stage evenly. Whatever
+       is placed here is sized here; none of them are asked to size
+       themselves. */
+    > * {
+      flex: 1 1 0;
+      min-height: 0;
     }
   }
-}
 
-.pet-identification-section {
-  background-color: var(--color-surface-muted);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
+  .event-details-media-video,
+  .event-details-media-still {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #000;
+  }
 
-.section-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  color: var(--color-warning);
+  .event-details-media-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 
-  .info-icon {
+  .event-details-chart {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .event-details-chart-signal {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+  }
+
+  .event-details-body {
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .event-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .event-details-identity {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .event-details-title {
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  .event-details-time {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .event-details-actions {
+    display: flex;
+    gap: var(--space-xs);
+  }
+
+  /* Attribution and event type: a label on the left, its control on the
+     right, on a tinted block. The two blocks are the same block. */
+  .event-details-section {
+    background-color: var(--color-surface-muted);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  /* Amber, because these two are what a visit is usually opened to correct.
+     The icon inherits it — lucide strokes `currentColor`. */
+  .event-details-section-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
     color: var(--color-warning);
   }
-}
 
-.pet-selector-wrapper {
-  width: auto;
-  min-width: 150px;
-}
+  .event-details-control {
+    width: auto;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
 
-.elimination-type-section {
-  background-color: var(--color-surface-muted);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
+  .event-details-select {
+    width: 100%;
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+    padding-top: var(--space-2xs);
+    padding-bottom: var(--space-2xs);
+    height: auto;
+    font-size: var(--text-sm);
+  }
 
-.elimination-type-selector-wrapper {
-  width: auto;
-  min-width: 150px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-
-  .straining-control {
+  .event-details-straining {
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -202,92 +209,59 @@
       opacity: 0.7;
     }
   }
-}
 
-.elimination-type-select {
-  width: 100%;
-  background-color: var(--color-surface);
-  border-color: var(--color-border);
-  padding-top: var(--space-2xs);
-  padding-bottom: var(--space-2xs);
-  height: auto;
-  font-size: var(--text-sm);
-}
+  .event-details-extra {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
 
-.pet-select {
-  width: 100%;
-  background-color: var(--color-surface);
-  border-color: var(--color-border);
-  padding-top: var(--space-2xs);
-  padding-bottom: var(--space-2xs);
-  height: auto;
-  font-size: var(--text-sm);
-}
-
-.details-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-/*
- * Water intake stats: label + value on one line; row aligns to the start with gaps.
- */
-.event-specific-details {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  align-items: center;
-  column-gap: var(--space-lg);
-  row-gap: var(--space-xs);
-  width: 100%;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.detail-item {
-  flex: 0 1 auto;
-  display: inline-flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--space-3xs);
-  min-width: 0;
-  line-height: var(--line-height-normal);
-}
-
-.event-specific-details .detail-item-icon {
-  flex-shrink: 0;
-  width: 14px;
-  height: 14px;
-  opacity: 0.7;
-  color: var(--color-text-muted);
-}
-
-.detail-item-label {
-  flex-shrink: 0;
-  font-size: inherit;
-  color: var(--color-text-muted);
-}
-
-.detail-item-value {
-  font-size: inherit;
-  font-weight: var(--font-medium);
-  color: var(--color-text);
-  font-variant-numeric: tabular-nums;
-}
-
-.event-details-litterbox-analysis {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-
-  .weight-signal-chart {
-    flex: 1;
-    min-height: 0;
+  /*
+   * What the sensor measured: short label/value pairs on one wrapping line.
+   * Deliberately not `DetailMetricRow` — that is a bordered card with a
+   * display-sized figure, and three of them would bury a 42ml drink.
+   */
+  .event-details-facts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    column-gap: var(--space-lg);
+    row-gap: var(--space-xs);
     width: 100%;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .event-details-fact {
+    flex: 0 1 auto;
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--space-3xs);
+    min-width: 0;
+    line-height: var(--line-height-normal);
+
+    > svg {
+      flex-shrink: 0;
+      width: 14px;
+      height: 14px;
+      opacity: 0.7;
+      color: var(--color-text-muted);
+    }
+  }
+
+  .event-details-fact-label {
+    flex-shrink: 0;
+    font-size: inherit;
+    color: var(--color-text-muted);
+  }
+
+  .event-details-fact-value {
+    font-size: inherit;
+    font-weight: var(--font-medium);
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
   }
 }
