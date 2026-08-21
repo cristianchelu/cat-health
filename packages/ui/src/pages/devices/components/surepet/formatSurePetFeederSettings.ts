@@ -1,4 +1,9 @@
 import type { TFunction } from 'i18next';
+import {
+  SUREPET_BOWL_TYPE_LARGE,
+  SUREPET_BOWL_TYPE_TWO_SMALL,
+  surePetFoodTypeHint,
+} from './surePetConstants';
 
 const TRAINING_MODE_KEYS: Record<number, string> = {
   0: 'training_mode_off',
@@ -36,10 +41,10 @@ export function getBowlLabel(
   bowlType: number | undefined,
   t: TFunction,
 ): string {
-  if (bowlType === 1) {
+  if (bowlType === SUREPET_BOWL_TYPE_LARGE) {
     return t('devices.feeder.bowl_single');
   }
-  if (bowlType === 4) {
+  if (bowlType === SUREPET_BOWL_TYPE_TWO_SMALL) {
     const position = bowl.position ?? index;
     if (position === 0) {
       return t('devices.feeder.bowl_left');
@@ -55,7 +60,8 @@ export function formatFoodTypeSubtitle(
   foodType: number | undefined,
   t: TFunction,
 ): string | undefined {
-  if (foodType === 1) return t('devices.feeder.food_wet');
-  if (foodType === 2) return t('devices.feeder.food_dry');
+  const hint = surePetFoodTypeHint(foodType);
+  if (hint === 'wet') return t('devices.feeder.food_wet');
+  if (hint === 'dry') return t('devices.feeder.food_dry');
   return undefined;
 }
