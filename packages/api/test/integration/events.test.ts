@@ -9,7 +9,11 @@ import {
   type TestDbContext,
 } from '../helpers/testDb.ts';
 import type { EventData } from '../../src/domain/events.ts';
-import { insertLitterboxEvent, insertPet } from '../helpers/fixtures.ts';
+import {
+  insertFoodIntakeEvent,
+  insertLitterboxEvent,
+  insertPet,
+} from '../helpers/fixtures.ts';
 
 describe('events API list', () => {
   let ctx: TestDbContext;
@@ -51,6 +55,50 @@ describe('events API list', () => {
     assert.equal(body.data.length, 2);
     assert.equal(body.data[0].data.elimination_weight, 24);
     assert.equal(body.data[1].data.elimination_weight, 23);
+  });
+
+  it('filters by eventType, and the total counts only matching rows', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Eater' });
+    const base = Date.UTC(2026, 0, 12, 8, 0, 0);
+
+    await insertLitterboxEvent(ctx.db, {
+      pet_id: pet.id,
+      timestamp: new Date(base),
+    });
+    for (let i = 0; i < 3; i++) {
+      await insertFoodIntakeEvent(ctx.db, {
+        pet_id: pet.id,
+        food_type: 'wet',
+        amount: 40 + i,
+        timestamp: new Date(base + (i + 1) * 60_000),
+      });
+    }
+
+    const filtered = await app.inject({
+      method: 'GET',
+      url: `/api/events?pet_id=${pet.id}&eventType=food_intake`,
+    });
+    assert.equal(filtered.statusCode, 200);
+    const body = filtered.json();
+    assert.equal(body.total, 3);
+    assert.equal(body.data.length, 3);
+    for (const row of body.data) {
+      assert.equal(row.data.type, 'food_intake');
+    }
+    // Newest-first still holds under the filter.
+    assert.equal(body.data[0].data.amount, 42);
+
+    const unfiltered = await app.inject({
+      method: 'GET',
+      url: `/api/events?pet_id=${pet.id}`,
+    });
+    assert.equal(unfiltered.json().total, 4);
+
+    const rejected = await app.inject({
+      method: 'GET',
+      url: `/api/events?pet_id=${pet.id}&eventType=not_a_type`,
+    });
+    assert.equal(rejected.statusCode, 400);
   });
 
   it('omits raw_data from list rows; the detail fetch still carries the bytes', async () => {
