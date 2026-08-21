@@ -12,6 +12,7 @@ import {
 import { backState } from '@/lib/navigationBack';
 import { isRecord } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/PageState';
 import {
   FormCard,
   FormCardBody,
@@ -213,10 +214,10 @@ const ProviderAccountPage: React.FC = () => {
     return (
       <div className="page-shell-narrow provider-account-page">
         {header(t('settings.edit_provider_title'))}
-        <div className="provider-account-error">
+        <EmptyState tone="error">
           <p>{t('settings.error_loading_provider')}</p>
           <Button onClick={back.go}>{t('settings.back')}</Button>
-        </div>
+        </EmptyState>
       </div>
     );
   }

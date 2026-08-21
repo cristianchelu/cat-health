@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Callout } from '@/components/ui/Callout';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -235,11 +236,7 @@ export const DiscoverDevicesStep: React.FC<DiscoverDevicesStepProps> = ({
         )}
       </div>
 
-      {importError && (
-        <p className="discover-import-error" role="alert">
-          {importError}
-        </p>
-      )}
+      {importError && <Callout message={importError} />}
 
       {selectionMode === 'multi' ? (
         <FormActions

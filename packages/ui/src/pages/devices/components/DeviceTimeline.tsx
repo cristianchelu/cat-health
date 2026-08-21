@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import Timeline from '@/components/ui/Timeline';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DateNavigation } from '@/components/ui/DateNavigation';
+import { EmptyState } from '@/components/ui/PageState';
 import { useDeviceEvents } from '@/hooks/queries/deviceQueries';
 import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
 import { EventTimelineItem, TimelineSkeleton } from '@/components/events';
@@ -64,9 +65,10 @@ const DeviceTimeline: React.FC<DeviceTimelineProps> = ({ deviceId }) => {
 
       <div className="device-timeline-content">
         {error && (
-          <div className="device-timeline-error">
-            {t('devices.error_loading_events')}
-          </div>
+          <EmptyState
+            tone="error"
+            message={t('devices.error_loading_events')}
+          />
         )}
 
         {!error && (

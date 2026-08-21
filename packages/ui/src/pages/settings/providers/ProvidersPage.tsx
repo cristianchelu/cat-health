@@ -107,7 +107,7 @@ const ProvidersPage: React.FC = () => {
         <LoadingState message={t('settings.loading_providers')} />
       ) : error ? (
         <EmptyState
-          className="providers-page-error"
+          tone="error"
           message={t('settings.error_loading_providers')}
         />
       ) : (

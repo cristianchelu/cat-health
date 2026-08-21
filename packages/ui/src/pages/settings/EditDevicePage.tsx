@@ -7,6 +7,7 @@ import {
   useDevices,
 } from '@/hooks/queries/deviceQueries';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/PageState';
 import {
   FormCard,
   FormCardBody,
@@ -222,10 +223,10 @@ const EditDevicePage: React.FC = () => {
     return (
       <div className="page-shell-narrow edit-device-page">
         {header(t('settings.edit_device_title'))}
-        <div className="error-state">
+        <EmptyState tone="error">
           <p>{t('devices.error_loading_device')}</p>
           <Button onClick={back.go}>{t('settings.back')}</Button>
-        </div>
+        </EmptyState>
       </div>
     );
   }

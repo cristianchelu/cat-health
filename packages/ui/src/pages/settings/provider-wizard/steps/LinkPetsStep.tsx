@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Callout } from '@/components/ui/Callout';
 import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
 import type { ProviderPetLink } from 'shared';
@@ -71,11 +72,7 @@ export const LinkPetsStep: React.FC<LinkPetsStepProps> = ({
         <span>{t('settings.pet_links_editable_later')}</span>
       </p>
 
-      {serverError && (
-        <p className="discover-import-error" role="alert">
-          {serverError}
-        </p>
-      )}
+      {serverError && <Callout message={serverError} />}
 
       {/*
        * Skipping is this step's dismiss: the account exists either way, and the

@@ -1,27 +1,16 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
-import './FormShell.css';
+import { Callout, type CalloutProps } from '@/components/ui/Callout';
 
-interface FormErrorProps extends React.ComponentProps<'div'> {
-  message?: string | null;
-}
+type FormErrorProps = Omit<CalloutProps, 'tone'>;
 
+/**
+ * A form's mutation error.
+ *
+ * A `Callout` under the name the form kit already uses — thirty-odd call sites
+ * say `FormError`, and what they mean by it is the error tone.
+ */
 const FormError = React.forwardRef<HTMLDivElement, FormErrorProps>(
-  ({ className, message, children, ...props }, ref) => {
-    const content = message ?? children;
-    if (!content) return null;
-
-    return (
-      <div
-        className={cn('form-error', className)}
-        ref={ref}
-        role="alert"
-        {...props}
-      >
-        {content}
-      </div>
-    );
-  },
+  (props, ref) => <Callout tone="error" ref={ref} {...props} />,
 );
 
 FormError.displayName = 'FormError';

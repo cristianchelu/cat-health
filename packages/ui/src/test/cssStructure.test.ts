@@ -31,14 +31,6 @@ const ROOT_OVERRIDES = new Map<string, string>([
     path.join('pages', 'devices', 'components', 'ESPHomeView.css'),
     'esphome-view',
   ],
-  /*
-   * `Devices.css` (the attention roster) already owns `.page-devices`, so the
-   * settings inventory has to say which devices page it is.
-   */
-  [
-    path.join('pages', 'settings', 'devices', 'DevicesPage.css'),
-    'page-settings-devices',
-  ],
 ]);
 
 /**
@@ -63,13 +55,11 @@ const KNOWN_VIOLATIONS = new Set<string>([
   path.join('components', 'ui', 'form', 'FormCard.css'),
   path.join('components', 'ui', 'form', 'FormShell.css'),
   path.join('components', 'ui', 'PageMainAction.css'),
-  path.join('components', 'ui', 'PageState.css'),
   path.join('components', 'ui', 'Tooltip.css'),
   path.join('pages', 'devices', 'components', 'DeviceHeader.css'),
   path.join('pages', 'devices', 'DeviceAnnotationPage.css'),
   path.join('pages', 'devices', 'DeviceDetails.css'),
   path.join('pages', 'settings', 'AddEditFoodPage.css'),
-  path.join('pages', 'settings', 'devices', 'DevicesPage.css'),
   path.join('pages', 'settings', 'EditDevicePage.css'),
   path.join('pages', 'settings', 'LanguageRegionPage.css'),
   path.join('pages', 'settings', 'providerForm.css'),
@@ -83,13 +73,6 @@ const KNOWN_VIOLATIONS = new Set<string>([
     'ProviderPickerList.css',
   ),
   path.join('pages', 'settings', 'provider-wizard', 'ProviderWizardPage.css'),
-  path.join(
-    'pages',
-    'settings',
-    'provider-wizard',
-    'steps',
-    'DiscoverDevicesStep.css',
-  ),
 ]);
 
 function cssFiles(dir: string): string[] {

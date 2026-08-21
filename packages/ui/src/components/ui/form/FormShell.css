@@ -62,11 +62,3 @@
     color: var(--color-text-light);
   }
 }
-
-.form-error {
-  color: var(--color-error);
-  font-size: var(--text-sm);
-  padding: var(--space-sm);
-  background-color: var(--color-error-light);
-  border-radius: var(--radius-sm);
-}

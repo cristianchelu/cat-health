@@ -32,14 +32,20 @@ LoadingState.displayName = 'LoadingState';
 
 interface EmptyStateProps extends React.ComponentProps<'div'> {
   message?: string;
+  /**
+   * `error` for a surface that failed to load rather than one with nothing in
+   * it. Both are empty; only one is the user's problem.
+   */
+  tone?: 'muted' | 'error';
 }
 
 const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
-  ({ className, message, children, ...props }, ref) => {
+  ({ className, message, tone = 'muted', children, ...props }, ref) => {
     return (
       <div
-        className={cn('page-state', 'empty-state', className)}
+        className={cn('page-state', 'empty-state', tone, className)}
         ref={ref}
+        role={tone === 'error' ? 'alert' : undefined}
         {...props}
       >
         {children ?? message}

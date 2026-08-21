@@ -7,10 +7,6 @@
     --list-item-icon-size: 2.75rem;
   }
 
-  .providers-page-error {
-    color: var(--color-error);
-  }
-
   /* Dot-separated provider, identity and device count under the account name. */
   .providers-page-system {
     margin-top: var(--page-section-gap);

@@ -6,16 +6,6 @@
     min-height: 200px;
   }
 
-  .device-timeline-error {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-2xl);
-    color: var(--color-text-light);
-    text-align: center;
-  }
-
   .device-timeline-empty {
     padding: var(--space-md);
     text-align: center;

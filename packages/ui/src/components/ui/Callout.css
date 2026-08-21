@@ -1,0 +1,20 @@
+.callout {
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+
+  &.error {
+    color: var(--color-error);
+    background-color: var(--color-error-light);
+  }
+
+  &.warning {
+    color: var(--color-warning);
+    background-color: var(--color-warning-light);
+  }
+
+  &.info {
+    color: var(--color-text);
+    background-color: var(--color-surface-muted);
+  }
+}
