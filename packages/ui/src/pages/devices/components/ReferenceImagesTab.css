@@ -1,12 +1,9 @@
 .reference-images-tab {
-  /*
-   * `SectionHeader` carries its own bottom margin, so the column adds nothing
-   * between it and the card — the same rhythm the Recognition tab has, since
-   * the two now render the same editor.
-   */
+  /* The same rhythm the Recognition tab has, since the two now render the
+     same editor. */
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: var(--space-md);
 
   .reference-images-card {
     --card-padding: var(--space-md);

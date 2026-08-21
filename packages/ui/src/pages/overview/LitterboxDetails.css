@@ -38,10 +38,6 @@
     flex-direction: column;
     gap: var(--space-sm);
     min-width: 0;
-
-    .section-header {
-      margin-bottom: 0;
-    }
   }
 
   .litterbox-details-chart-section--wide {
@@ -138,7 +134,7 @@
   }
 
   @media (max-width: 576px) {
-    .section-header {
+    .litterbox-details-chart-header {
       align-items: flex-start;
     }
   }

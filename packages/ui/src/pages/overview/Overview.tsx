@@ -151,7 +151,7 @@ const Overview: React.FC = () => {
         )}
       </section>
       {!showNoPetsEmpty && (
-        <section>
+        <section className="overview-activity">
           <SectionHeader icon={<Clock />} actions={dateNavigation}>
             {t('overview.activity')}
           </SectionHeader>

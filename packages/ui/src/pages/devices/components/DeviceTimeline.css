@@ -1,5 +1,8 @@
 .device-timeline {
   margin-top: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 
   .device-timeline-content {
     position: relative;

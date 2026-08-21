@@ -173,7 +173,9 @@ const LitterboxDetails: React.FC = () => {
 
       <section className="litterbox-details-chart-grid">
         <section className="litterbox-details-chart-section litterbox-details-chart-section--wide">
-          <SectionHeader>{t('litterbox_details.timeline')}</SectionHeader>
+          <SectionHeader className="litterbox-details-chart-header">
+            {t('litterbox_details.timeline')}
+          </SectionHeader>
           <Card
             className="litterbox-details-chart-card"
             isLoading={isFetching && !isLoading}
@@ -196,7 +198,7 @@ const LitterboxDetails: React.FC = () => {
           </Card>
         </section>
         <section className="litterbox-details-chart-section">
-          <SectionHeader>
+          <SectionHeader className="litterbox-details-chart-header">
             {t('litterbox_details.urination_frequency')}
           </SectionHeader>
           <Card className="litterbox-details-chart-card">
@@ -214,7 +216,7 @@ const LitterboxDetails: React.FC = () => {
           </Card>
         </section>
         <section className="litterbox-details-chart-section">
-          <SectionHeader>
+          <SectionHeader className="litterbox-details-chart-header">
             {t('litterbox_details.defecation_frequency')}
           </SectionHeader>
           <Card className="litterbox-details-chart-card">
@@ -232,7 +234,7 @@ const LitterboxDetails: React.FC = () => {
           </Card>
         </section>
         <section className="litterbox-details-chart-section">
-          <SectionHeader>
+          <SectionHeader className="litterbox-details-chart-header">
             {t('litterbox_details.urination_duration_chart')}
           </SectionHeader>
           <Card className="litterbox-details-chart-card">
@@ -261,7 +263,7 @@ const LitterboxDetails: React.FC = () => {
           </Card>
         </section>
         <section className="litterbox-details-chart-section">
-          <SectionHeader>
+          <SectionHeader className="litterbox-details-chart-header">
             {t('litterbox_details.defecation_duration_chart')}
           </SectionHeader>
           <Card className="litterbox-details-chart-card">

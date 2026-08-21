@@ -1,8 +1,18 @@
+/*
+ * Spacing is the container's, not the header's. A header that carries its own
+ * margin fights every layout it lands in — three stylesheets were zeroing this
+ * one out because their column already had a gap, and a fourth was documenting
+ * a `gap: 0` written around it.
+ *
+ * The `--compact` variant below is the exception, and earns it: the space it
+ * needs is *asymmetric* — more above than below, because a run of headers down
+ * one page belongs with what follows each one — and a flex `gap` cannot say
+ * that.
+ */
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-md);
   gap: var(--space-md);
 
   .section-header-title {
