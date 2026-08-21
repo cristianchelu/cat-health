@@ -18,7 +18,6 @@ const GLOBAL_LAYER = new Set([
   'theme.css',
   path.join('styles', 'page-shell.css'),
   path.join('styles', 'signal-tone.css'),
-  path.join('styles', 'spinner.css'),
   path.join('styles', 'untracked-pattern.css'),
 ]);
 

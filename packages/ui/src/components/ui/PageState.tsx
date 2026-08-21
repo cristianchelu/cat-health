@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Spinner } from './Spinner';
 import { cn } from '@/lib/utils';
 import './PageState.css';
 
@@ -19,7 +19,7 @@ const LoadingState = React.forwardRef<HTMLDivElement, LoadingStateProps>(
       >
         {children ?? (
           <>
-            <Loader2 className="animate-spin" size="1em" aria-hidden />
+            <Spinner />
             {message}
           </>
         )}

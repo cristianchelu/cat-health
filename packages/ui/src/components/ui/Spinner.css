@@ -1,0 +1,18 @@
+/*
+ * One rotation, owned by the component that draws it — so a spinner turns
+ * wherever it is mounted rather than wherever some ancestor's stylesheet
+ * happens to reach.
+ */
+.spinner {
+  animation: spinner-rotate 1s linear infinite;
+}
+
+@keyframes spinner-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}

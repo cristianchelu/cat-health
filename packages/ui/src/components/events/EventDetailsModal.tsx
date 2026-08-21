@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/Dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { Button } from '@/components/ui/Button';
+import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/lib/utils';
 import { FallbackImage } from '@/components/ui/FallbackImage';
 import {
@@ -57,7 +58,6 @@ import LitterboxWeightBlock from './LitterboxWeightBlock';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import './EventDetailsModal.css';
 import {
-  Loader2,
   Trash2,
   Download,
   Info,
@@ -439,7 +439,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             <TabsContent value="media" className="event-details-stage">
               {isLoadingMedia && (
                 <div className="event-details-stage-note">
-                  <Loader2 className="animate-spin" aria-hidden />
+                  <Spinner size={24} />
                 </div>
               )}
               {!isLoadingMedia && !hasMedia && (
@@ -548,11 +548,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       disabled={isAnalyzing}
                     >
                       {isAnalyzing ? (
-                        <Loader2
-                          size={20}
-                          aria-hidden
-                          className="animate-spin"
-                        />
+                        <Spinner size={20} />
                       ) : (
                         <Sparkles size={20} aria-hidden />
                       )}
@@ -566,11 +562,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   onClick={handleDeleteClick}
                   disabled={isDeleting}
                 >
-                  {isDeleting ? (
-                    <Loader2 size={20} className="animate-spin" />
-                  ) : (
-                    <Trash2 size={20} />
-                  )}
+                  {isDeleting ? <Spinner size={20} /> : <Trash2 size={20} />}
                 </Button>
                 {hasMedia && downloadMediaPath && (
                   <Button

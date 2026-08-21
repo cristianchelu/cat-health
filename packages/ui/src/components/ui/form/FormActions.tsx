@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Spinner } from '../Spinner';
 import { Button, type ButtonProps } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import './FormActions.css';
@@ -87,9 +87,7 @@ const FormActions = React.forwardRef<HTMLDivElement, FormActionsProps>(
             onClick={onSubmitClick}
             aria-busy={isSubmitting || undefined}
           >
-            {isSubmitting ? (
-              <Loader2 className="animate-spin" size="1em" aria-hidden />
-            ) : null}
+            {isSubmitting ? <Spinner /> : null}
             {submitLabel}
           </Button>
         </div>

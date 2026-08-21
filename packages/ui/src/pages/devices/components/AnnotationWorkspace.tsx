@@ -5,7 +5,6 @@ import {
   CheckCheck,
   AlertCircle,
   Trash2,
-  Loader2,
   RotateCcw,
   Ban,
   Wrench,
@@ -21,6 +20,7 @@ import {
 import { usePets } from '@/hooks/queries/petQueries';
 import { Select } from '@/components/ui/form/Select';
 import { Button } from '@/components/ui/Button';
+import { Spinner } from '@/components/ui/Spinner';
 import { Checkbox, FormActions, FormError } from '@/components/ui/form';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
@@ -769,11 +769,7 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
         >
           {isLoadingMedia && (
             <div className="annotation-media-loading">
-              <Loader2
-                size={28}
-                aria-hidden
-                className="annotation-media-spinner"
-              />
+              <Spinner size={28} />
             </div>
           )}
           {!isLoadingMedia && hasVideo && (
@@ -837,7 +833,7 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
           />
         ) : isDetailPending ? (
           <div className="annotation-no-chart">
-            <Loader2 size={24} aria-hidden className="animate-spin" />
+            <Spinner size={24} />
           </div>
         ) : (
           <div className="annotation-no-chart">
@@ -925,7 +921,7 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
                 title={t('event_details.analyze')}
               >
                 {isAnalyzing ? (
-                  <Loader2 size={16} aria-hidden className="animate-spin" />
+                  <Spinner size={16} />
                 ) : (
                   <Sparkles size={16} aria-hidden />
                 )}

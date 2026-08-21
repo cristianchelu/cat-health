@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { Check, ImageOff, Loader2 } from 'lucide-react';
+import { Check, ImageOff } from 'lucide-react';
+import { Spinner } from './Spinner';
 import { cn } from '@/lib/utils';
 import { FallbackImage } from './FallbackImage';
 import './MediaTile.css';
@@ -60,7 +61,7 @@ const MediaTile = React.forwardRef<HTMLButtonElement, MediaTileProps>(
         />
         {busy && (
           <span className="media-tile-busy">
-            <Loader2 className="animate-spin" size={24} aria-hidden="true" />
+            <Spinner size={24} />
           </span>
         )}
         {selected && (
