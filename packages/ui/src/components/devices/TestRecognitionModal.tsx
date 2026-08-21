@@ -151,7 +151,7 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="test-recognition-modal-content">
+      <DialogContent className="test-recognition-modal">
         <DialogTitle>{t('pet_recognizer.test_modal_title')}</DialogTitle>
 
         <p className="modal-description">

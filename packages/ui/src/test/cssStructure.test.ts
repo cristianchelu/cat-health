@@ -40,9 +40,6 @@ const ROOT_OVERRIDES = new Map<string, string>([
  * exercise; adding one means a new stylesheet went in unnamespaced.
  */
 const KNOWN_VIOLATIONS = new Set<string>([
-  path.join('components', 'devices', 'entities', 'EntityButton.css'),
-  path.join('components', 'devices', 'ReferenceImagePicker.css'),
-  path.join('components', 'devices', 'TestRecognitionModal.css'),
   path.join('components', 'events', 'EventDetailsModal.css'),
   path.join('components', 'events', 'log-food', 'FoodScanStep.css'),
   path.join('components', 'events', 'TimelapsePlayer.css'),
@@ -53,24 +50,8 @@ const KNOWN_VIOLATIONS = new Set<string>([
   path.join('components', 'ui', 'form', 'FormCard.css'),
   path.join('components', 'ui', 'form', 'FormShell.css'),
   path.join('components', 'ui', 'PageMainAction.css'),
-  path.join('components', 'ui', 'Tooltip.css'),
   path.join('pages', 'devices', 'components', 'DeviceHeader.css'),
-  path.join('pages', 'devices', 'DeviceAnnotationPage.css'),
-  path.join('pages', 'devices', 'DeviceDetails.css'),
-  path.join('pages', 'settings', 'AddEditFoodPage.css'),
-  path.join('pages', 'settings', 'EditDevicePage.css'),
-  path.join('pages', 'settings', 'LanguageRegionPage.css'),
   path.join('pages', 'settings', 'providerForm.css'),
-  path.join('pages', 'settings', 'providers', 'ProviderAccountPage.css'),
-  path.join('pages', 'settings', 'providers', 'ProvidersPage.css'),
-  path.join(
-    'pages',
-    'settings',
-    'provider-wizard',
-    'components',
-    'ProviderPickerList.css',
-  ),
-  path.join('pages', 'settings', 'provider-wizard', 'ProviderWizardPage.css'),
 ]);
 
 function cssFiles(dir: string): string[] {

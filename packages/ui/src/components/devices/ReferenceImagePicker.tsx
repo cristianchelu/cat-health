@@ -79,7 +79,7 @@ const ReferenceImagePicker: React.FC<ReferenceImagePickerProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCancel}>
-      <DialogContent className="reference-image-picker-content">
+      <DialogContent className="reference-image-picker">
         <DialogTitle>
           {pet?.name
             ? t('pet_recognizer.picker_title', { name: pet.name })

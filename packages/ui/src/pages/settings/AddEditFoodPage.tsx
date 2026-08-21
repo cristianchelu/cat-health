@@ -197,9 +197,8 @@ const AddEditFoodPage: React.FC = () => {
      * bar while the panels stay inside the form. The triggers are
      * `type="button"`, so sitting outside the <form> costs them nothing.
      */
-    <Tabs defaultValue="basic" className="add-edit-food-tabs">
+    <Tabs defaultValue="basic" className="page-add-edit-food">
       <SettingsFormPage
-        className="add-edit-food-page"
         title={
           isNew ? t('settings.add_food_title') : t('settings.edit_food_title')
         }

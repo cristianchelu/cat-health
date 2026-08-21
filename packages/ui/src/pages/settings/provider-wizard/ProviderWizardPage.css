@@ -1,5 +1,5 @@
 /* Measure from `.page-shell-narrow` (page-shell.css). */
-.provider-wizard-page {
+.page-provider-wizard {
   .step-container {
     display: flex;
     flex-direction: column;
@@ -41,7 +41,7 @@
     }
 
     /* The picker card and a following note have no flex gap between them. */
-    .provider-picker + .provider-note {
+    .provider-picker-list + .provider-note {
       margin-top: var(--space-md);
     }
 

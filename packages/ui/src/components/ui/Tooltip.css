@@ -3,7 +3,7 @@
  * it settled on after avoiding collisions, so there is no positioning to do
  * here — only what the label looks like.
  */
-.tooltip-content {
+.tooltip {
   z-index: var(--z-index-tooltip);
   max-width: 16rem;
   padding: var(--space-2xs) var(--space-xs);
@@ -32,7 +32,7 @@
 
 /* A dark page needs the label lighter than the text it explains, not darker. */
 @media (prefers-color-scheme: dark) {
-  .tooltip-content {
+  .tooltip {
     background-color: var(--color-surface-highlight);
     color: var(--color-text);
 
@@ -43,7 +43,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tooltip-content {
+  .tooltip {
     animation: none;
   }
 }

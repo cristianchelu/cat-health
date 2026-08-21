@@ -76,7 +76,7 @@ const DeviceAnnotationPage: React.FC = () => {
   return (
     <div
       className={cn(
-        'device-annotate-page',
+        'page-device-annotation',
         'page-viewport-fill',
         'page-shell-wide',
         'page-shell-bleed',

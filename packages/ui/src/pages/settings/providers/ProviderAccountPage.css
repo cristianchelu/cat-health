@@ -1,5 +1,5 @@
 /* Measure from `.page-shell-narrow` (page-shell.css). */
-.provider-account-page {
+.page-provider-account {
   .provider-pet-links-editor,
   .provider-account-devices {
     margin-top: var(--page-section-gap);

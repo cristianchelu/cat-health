@@ -1,5 +1,5 @@
 /* Measure from `.page-shell-narrow` (page-shell.css). */
-.providers-page {
+.page-providers {
   /* These rows lead with a `md` brand tile, which is 2.75rem at every width.
      Left to the default, the phone-width column would squeeze it to 36px —
      a size the tile does not have and never agreed to. */

@@ -137,7 +137,7 @@ const DeviceDetails: React.FC = () => {
   };
 
   return (
-    <div className="device-details-page">
+    <div className="page-device-details">
       <Tabs
         value={effectiveTab}
         onValueChange={handleTabChange}
