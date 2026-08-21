@@ -14,7 +14,7 @@
     "icons": "node scripts/generate-icons.js",
     "typecheck": "tsc -b --force --noEmit",
     "test": "npm run test:unit",
-    "test:unit": "tsx --tsconfig ./tsconfig.app.json --import ./src/test/register.ts --test 'src/**/test/*.test.ts' 'src/**/test/*.test.tsx'"
+    "test:unit": "tsx --tsconfig ./tsconfig.app.json --import ./src/test/register.ts --test --test-concurrency=4 'src/**/test/*.test.ts' 'src/**/test/*.test.tsx'"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.99.0",
