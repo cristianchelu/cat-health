@@ -797,6 +797,8 @@
     "mark_verified": "Mark as Verified",
     "prev_event": "Prev",
     "next_event": "Next",
+    "prev_page": "Previous page",
+    "next_page": "Next page",
     "no_weight_data": "No weight stream data for this event.",
     "chart_occ_mean": "μ {{value}}",
     "chart_bout_sigma": "σ {{value}}",

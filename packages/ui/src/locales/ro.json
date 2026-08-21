@@ -717,6 +717,8 @@
     "mark_verified": "Marchează ca verificat",
     "prev_event": "Anterior",
     "next_event": "Următor",
+    "prev_page": "Pagina anterioară",
+    "next_page": "Pagina următoare",
     "no_weight_data": "Nu există date despre fluxul de greutate pentru acest eveniment.",
     "chart_occ_mean": "μ {{value}}",
     "chart_bout_sigma": "σ {{value}}",

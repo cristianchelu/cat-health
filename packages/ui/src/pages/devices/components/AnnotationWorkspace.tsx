@@ -895,6 +895,7 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
                 size="sm"
                 onClick={toggleVideo}
                 disabled={videoToggleDisabled}
+                icon
                 className="annotation-icon-action-btn"
                 aria-pressed={videoOpen}
                 aria-label={
@@ -918,6 +919,7 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
                 size="sm"
                 onClick={handleReanalyze}
                 disabled={isDirty || isSaving || isAnalyzing || !hasRawData}
+                icon
                 className="annotation-icon-action-btn"
                 aria-label={t('event_details.analyze')}
                 title={t('event_details.analyze')}
@@ -934,6 +936,7 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
                 size="sm"
                 onClick={handleToggleVerified}
                 disabled={isDirty || isSaving}
+                icon
                 className="annotation-icon-action-btn"
                 aria-label={
                   event.human_verified
@@ -954,6 +957,7 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
                 size="sm"
                 onClick={() => void handleToggleExcluded()}
                 disabled={isSaving}
+                icon
                 className="annotation-icon-action-btn"
                 aria-label={t('annotation.exclude_toggle_aria')}
                 title={t('annotation.exclude_toggle_aria')}
@@ -966,6 +970,7 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
                 size="sm"
                 onClick={() => void handleConvertToMaintenance()}
                 disabled={isSaving}
+                icon
                 className="annotation-icon-action-btn"
                 aria-label={t('annotation.mark_as_maintenance_aria')}
                 title={t('annotation.mark_as_maintenance_aria')}
@@ -978,6 +983,7 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
                 size="sm"
                 onClick={() => void actionsRef?.current?.clearAllBouts()}
                 disabled={isSaving}
+                icon
                 className="annotation-icon-action-btn"
                 aria-label={t('annotation.clear_bouts')}
                 title={t('annotation.clear_bouts')}
@@ -990,6 +996,7 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
                 size="sm"
                 onClick={() => void actionsRef?.current?.resetToDetector()}
                 disabled={isSaving || !analysisResult}
+                icon
                 className="annotation-icon-action-btn"
                 aria-label={t('annotation.reset_detector_bouts')}
                 title={t('annotation.reset_detector_bouts')}

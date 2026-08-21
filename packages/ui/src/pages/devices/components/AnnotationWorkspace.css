@@ -139,13 +139,6 @@
     gap: var(--space-2xs);
     flex-shrink: 0;
     margin-left: auto;
-
-    /* Icon-only, so the box is square rather than carrying label padding. */
-    .button.sm {
-      --button-padding-inline: 0;
-
-      width: var(--button-height);
-    }
   }
 
   .annotation-icon-action-btn {
