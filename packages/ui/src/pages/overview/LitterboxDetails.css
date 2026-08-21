@@ -23,8 +23,8 @@
     min-width: 0;
   }
 
-  .card,
-  .card-content {
+  .litterbox-details-chart-card,
+  .litterbox-details-chart-body {
     min-width: 0;
     max-width: 100%;
   }
@@ -55,7 +55,7 @@
       flex-direction: column;
     }
 
-    .card-content {
+    .litterbox-details-chart-body {
       display: flex;
       flex-direction: column;
       flex: 1;
@@ -119,12 +119,6 @@
     padding: var(--space-md);
     color: var(--color-text-muted);
     text-align: center;
-  }
-
-  .card-title {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
   }
 
   @media (max-width: 900px) {

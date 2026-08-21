@@ -77,7 +77,7 @@ const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
             alt={pet.name}
             size="sm"
             fallbackIcon={<Cat size={20} />}
-            className="avatar"
+            className="pet-selector-avatar"
           />
           <label>{pet.name}</label>
         </Button>

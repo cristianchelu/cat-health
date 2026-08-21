@@ -113,7 +113,7 @@ const ProvidersPage: React.FC = () => {
       ) : (
         <>
           {userAccounts.length > 0 ? (
-            <CardList>
+            <CardList className="providers-page-list">
               {userAccounts.map((account) => (
                 <ProviderRow
                   key={account.id}
@@ -134,7 +134,7 @@ const ProvidersPage: React.FC = () => {
           {systemAccounts.length > 0 && (
             <section className="providers-page-system">
               <h2>{t('settings.system_integrations')}</h2>
-              <CardList>
+              <CardList className="providers-page-list">
                 {systemAccounts.map((account) => (
                   <ProviderRow
                     key={account.id}

@@ -180,7 +180,7 @@ const LitterboxDetails: React.FC = () => {
             className="litterbox-details-chart-card"
             isLoading={isFetching && !isLoading}
           >
-            <CardContent>
+            <CardContent className="litterbox-details-chart-body">
               {error ? (
                 <p className="litterbox-details-empty">
                   {t('litterbox_details.error_loading')}
@@ -202,7 +202,7 @@ const LitterboxDetails: React.FC = () => {
             {t('litterbox_details.urination_frequency')}
           </SectionHeader>
           <Card className="litterbox-details-chart-card">
-            <CardContent>
+            <CardContent className="litterbox-details-chart-body">
               <LitterboxMetricChart
                 title={t('litterbox_details.urination_frequency')}
                 unit={t('litterbox_details.hours_between')}
@@ -220,7 +220,7 @@ const LitterboxDetails: React.FC = () => {
             {t('litterbox_details.defecation_frequency')}
           </SectionHeader>
           <Card className="litterbox-details-chart-card">
-            <CardContent>
+            <CardContent className="litterbox-details-chart-body">
               <LitterboxMetricChart
                 title={t('litterbox_details.defecation_frequency')}
                 unit={t('litterbox_details.hours_between')}
@@ -238,7 +238,7 @@ const LitterboxDetails: React.FC = () => {
             {t('litterbox_details.urination_duration_chart')}
           </SectionHeader>
           <Card className="litterbox-details-chart-card">
-            <CardContent>
+            <CardContent className="litterbox-details-chart-body">
               <LitterboxMetricChart
                 title={t('litterbox_details.urination_duration_chart')}
                 unit={t('litterbox_details.seconds')}
@@ -267,7 +267,7 @@ const LitterboxDetails: React.FC = () => {
             {t('litterbox_details.defecation_duration_chart')}
           </SectionHeader>
           <Card className="litterbox-details-chart-card">
-            <CardContent>
+            <CardContent className="litterbox-details-chart-body">
               <LitterboxMetricChart
                 title={t('litterbox_details.defecation_duration_chart')}
                 unit={t('litterbox_details.seconds')}

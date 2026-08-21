@@ -58,6 +58,7 @@ const DeviceConnectivityEventRow: React.FC<EventComponentProps> = (props) => {
           : undefined
       }
       valueVariant="default"
+      valueClassName="device-connectivity-event-value"
     />
   );
 };

@@ -33,7 +33,7 @@
     overflow: hidden;
   }
 
-  .avatar {
+  .pet-selector-avatar {
     background: var(--color-surface-highlight);
   }
 

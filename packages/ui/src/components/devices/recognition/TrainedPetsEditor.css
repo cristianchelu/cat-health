@@ -12,7 +12,7 @@
 
     &.is-ignored {
       .trained-pet-row-name,
-      .avatar {
+      .trained-pet-row-avatar {
         opacity: 0.5;
       }
 

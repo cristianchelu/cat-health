@@ -25,6 +25,13 @@ export interface TimelineEventShellProps {
   iconVariant?: TimelineShellVariant;
   value?: React.ReactNode;
   valueVariant?: TimelineShellVariant;
+  /**
+   * For a value that is a phrase rather than a figure. `Timeline.Value` is
+   * typed for readings — semibold, tabular — and a row whose value reads
+   * "from online" wants body type instead. The variants are tones, so this is
+   * a class rather than another one of those.
+   */
+  valueClassName?: string;
   title: string;
   className?: string;
   itemStyle?: React.CSSProperties;
@@ -45,6 +52,7 @@ const TimelineEventShell = React.forwardRef<
       iconVariant = 'default',
       value,
       valueVariant = 'default',
+      valueClassName,
       title,
       className,
       itemStyle,
@@ -66,7 +74,9 @@ const TimelineEventShell = React.forwardRef<
               {formatTime(new Date(event.timestamp))}
             </Timeline.Timestamp>
             {value != null && (
-              <Timeline.Value variant={valueVariant}>{value}</Timeline.Value>
+              <Timeline.Value variant={valueVariant} className={valueClassName}>
+                {value}
+              </Timeline.Value>
             )}
             <Timeline.TitleGroup>
               {event.human_verified && <EventVerified />}

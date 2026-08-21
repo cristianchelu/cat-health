@@ -75,7 +75,12 @@ const TrainedPetsEditor: React.FC<TrainedPetsEditorProps> = ({
             className={cn('trained-pet-row', !pet.isWatched && 'is-ignored')}
           >
             <div className="trained-pet-row-header">
-              <Avatar src={pet.avatarUrl} alt={pet.name} size="sm" />
+              <Avatar
+                src={pet.avatarUrl}
+                alt={pet.name}
+                size="sm"
+                className="trained-pet-row-avatar"
+              />
               <div className="trained-pet-row-info">
                 <span className="trained-pet-row-name">{pet.name}</span>
                 <span className="trained-pet-row-status">
