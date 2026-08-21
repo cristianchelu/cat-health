@@ -81,10 +81,10 @@
     overflow: hidden;
     background: var(--color-surface-muted);
 
-    img {
+    .fallback-image {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      color: var(--color-text-subtle);
     }
 
     .trained-pet-thumb-remove {
