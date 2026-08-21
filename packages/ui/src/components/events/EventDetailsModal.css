@@ -91,31 +91,6 @@
   color: var(--color-text-muted);
 }
 
-.media-gallery {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-}
-
-.media-item {
-  flex: 0 0 100%;
-  width: 100%;
-  height: 100%;
-  scroll-snap-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  img,
-  video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
-}
-
 .event-details-body {
   padding: var(--space-lg);
   display: flex;

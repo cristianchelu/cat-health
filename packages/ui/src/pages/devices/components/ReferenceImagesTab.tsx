@@ -4,6 +4,8 @@ import { usePetContext } from '@/hooks/context/usePetContext';
 import { useUpdateDevice } from '@/hooks/queries/deviceQueries';
 import { Button } from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
+import { MediaGrid } from '@/components/ui/MediaGrid';
+import { MediaTile } from '@/components/ui/MediaTile';
 import { Switch } from '@/components/ui/Switch';
 import { cn } from '@/lib/utils';
 import { Cat, ImagePlus, X, Sparkles } from 'lucide-react';
@@ -162,10 +164,11 @@ const ReferenceImagesTab: React.FC<ReferenceImagesTabProps> = ({ device }) => {
               </div>
 
               {refs.length > 0 && (
-                <div className="images-grid">
+                <MediaGrid size="sm">
                   {refs.map((ref) => (
+                    /* Positions the remove control, which overhangs the tile. */
                     <div key={ref.id} className="image-item">
-                      <img
+                      <MediaTile
                         src={`api/media/${ref.file_path}`}
                         alt={t('pet_recognizer.reference_for_alt', {
                           name: pet.name,
@@ -180,7 +183,7 @@ const ReferenceImagesTab: React.FC<ReferenceImagesTabProps> = ({ device }) => {
                       </button>
                     </div>
                   ))}
-                </div>
+                </MediaGrid>
               )}
             </div>
           );

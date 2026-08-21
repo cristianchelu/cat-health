@@ -1,0 +1,23 @@
+.media-grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fill, minmax(var(--media-grid-min), 1fr));
+
+  --media-grid-min: 140px;
+
+  &.sm {
+    gap: var(--space-sm);
+
+    --media-grid-min: 100px;
+  }
+
+  /*
+   * A phone is narrow enough that the `md` track would fit two tiles and waste
+   * the rest, so it borrows the `sm` track rather than declaring a third.
+   */
+  @media (max-width: 480px) {
+    gap: var(--space-sm);
+
+    --media-grid-min: 100px;
+  }
+}
