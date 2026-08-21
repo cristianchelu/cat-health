@@ -34,7 +34,7 @@
   .camera-rotation-options {
     width: 100%;
 
-    > .button {
+    .camera-rotation-option {
       flex: 1;
       /* Icon + degree on one row; Button already lays children out horizontally. */
       --button-padding-inline: var(--space-xs);

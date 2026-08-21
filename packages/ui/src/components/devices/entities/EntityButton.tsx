@@ -23,7 +23,13 @@ export const EntityButton: React.FC<EntityButtonProps> = ({
       <div className="entity-info">
         <span className="entity-label">{label}</span>
       </div>
-      <Button type="button" variant="outline" size="sm" onClick={() => {}}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="entity-button-action"
+        onClick={() => {}}
+      >
         {pressLabel}
       </Button>
     </div>

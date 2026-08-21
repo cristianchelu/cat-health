@@ -1,5 +1,7 @@
 .entity-button {
-  .button.outline.sm {
+  /* Wide enough that the row's action column does not shift between entities
+     whose labels differ in length. */
+  .entity-button-action {
     flex-shrink: 0;
     min-width: 4.5rem;
   }

@@ -296,6 +296,7 @@ const CameraTabView: React.FC<CameraTabViewProps> = ({
                             type="button"
                             variant={active ? 'outline' : 'neutral'}
                             size="sm"
+                            className="camera-rotation-option"
                             aria-pressed={active}
                             onClick={() => onRotateChange(degrees)}
                             disabled={disabled}
