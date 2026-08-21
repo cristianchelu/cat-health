@@ -23,7 +23,7 @@ import Timeline from '@/components/ui/Timeline';
 import { EventTimelineItem, TimelineSkeleton } from '@/components/events';
 import { isPetOverviewActivityEvent } from '@/components/events/eventTimelineRegistry';
 import EventDetailsModal from '@/components/events/EventDetailsModal';
-import LogFoodModal from '@/components/events/LogFoodModal';
+import LogFoodSheet from '@/components/events/log-food/LogFoodSheet';
 
 import WeightTrendCard from '@/pages/overview/components/WeightTrendCard';
 import WaterConsumptionCard from '@/pages/overview/components/WaterConsumptionCard';
@@ -193,10 +193,11 @@ const Overview: React.FC = () => {
         />
       ) : null}
       {selectedPet && showFoodModal ? (
-        <LogFoodModal
+        <LogFoodSheet
           isOpen
           onClose={() => setShowFoodModal(false)}
           petId={selectedPet.id}
+          petName={selectedPet.name}
           dateRange={dateRange}
         />
       ) : null}

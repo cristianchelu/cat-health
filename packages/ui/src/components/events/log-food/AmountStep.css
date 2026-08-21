@@ -1,0 +1,76 @@
+.amount-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+
+  .amount-value {
+    text-align: center;
+    padding-top: var(--space-xs);
+  }
+
+  .amount-value-button,
+  .amount-value-input {
+    font-family: inherit;
+    font-size: var(--text-4xl);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+    background: transparent;
+    border: none;
+    text-align: center;
+  }
+
+  .amount-value-button {
+    /* A dotted rule under the number is the only hint it can be typed into —
+       a full input box here would read as the primary way in, which it isn't. */
+    border-bottom: 2px dotted var(--color-border-hover);
+    cursor: text;
+    padding: 0 var(--space-2xs);
+
+    small {
+      font-size: var(--text-lg);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-light);
+      margin-left: var(--space-3xs);
+    }
+  }
+
+  .amount-value-input {
+    width: 6ch;
+    border-bottom: 2px solid var(--color-primary);
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  .amount-kcal {
+    margin: var(--space-3xs) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .amount-kcal-rows {
+    margin-top: auto;
+  }
+
+  .amount-kcal-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-3xs) var(--space-2xs);
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
+  }
+
+  .amount-kcal-row-value {
+    font-weight: var(--font-semibold);
+    color: var(--color-text);
+    white-space: nowrap;
+  }
+
+  .amount-submit {
+    width: 100%;
+    justify-content: center;
+  }
+}

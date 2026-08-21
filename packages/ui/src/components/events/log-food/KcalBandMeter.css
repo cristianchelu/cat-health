@@ -1,0 +1,60 @@
+.kcal-band-meter {
+  padding-block: var(--space-2xs) 0;
+
+  .kcal-band-track {
+    position: relative;
+    height: var(--space-2xs);
+    border-radius: var(--radius-full);
+    background: var(--color-surface-muted);
+    overflow: hidden;
+  }
+
+  .kcal-band-zone {
+    position: absolute;
+    inset-block: 0;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-secondary) 30%, transparent);
+  }
+
+  .kcal-band-today {
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    border-radius: var(--radius-full) 0 0 var(--radius-full);
+    background: var(--color-primary);
+  }
+
+  /* Flat seam against today's fill: the addition is the same bar continuing,
+     not a second reading. */
+  .kcal-band-delta {
+    position: absolute;
+    inset-block: 0;
+    border-radius: 0 var(--radius-full) var(--radius-full) 0;
+    background: var(--color-warning);
+  }
+
+  .kcal-band-ticks {
+    position: relative;
+    height: var(--space-xl);
+    margin-top: var(--space-2xs);
+  }
+
+  .kcal-band-tick {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: var(--space-xs);
+    transform: translateX(-50%);
+    border-radius: var(--radius-full);
+    background: var(--color-text-muted);
+  }
+
+  .kcal-band-label {
+    position: absolute;
+    top: var(--space-sm);
+    transform: translateX(-50%);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+}
