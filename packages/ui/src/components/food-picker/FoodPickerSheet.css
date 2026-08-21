@@ -1,0 +1,6 @@
+/* The shell is `PickerSheet`; all this adds is how tall a level rests at.
+   Shorter than the log flow's, because there is no amount step below it to
+   keep room for. */
+.food-picker-sheet {
+  --picker-sheet-floor: min(50dvh, 26rem);
+}

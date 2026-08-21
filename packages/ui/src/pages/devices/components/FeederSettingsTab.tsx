@@ -3,10 +3,21 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { UtensilsCrossed } from 'lucide-react';
 import type { GetDeviceResponseDTO } from 'shared';
+import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
+import { MetaLine } from '@/components/ui/MetaLine';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { FormField, FormShell, Select } from '@/components/ui/form';
+import { FormField, FormShell } from '@/components/ui/form';
+import {
+  DeviceModelRow,
+  DeviceModelRowTile,
+} from '@/components/devices/camera';
+import { FoodPickerSheet } from '@/components/food-picker/FoodPickerSheet';
+import {
+  coarseFoodGroup,
+  kcalPerKilogram,
+} from '@/components/food-picker/foodGroups';
 import { useDraftForm } from '@/hooks/form';
 import { useFoods } from '@/hooks/queries/foodQueries';
 import { useUpdateDevice } from '@/hooks/queries/deviceQueries';
@@ -33,11 +44,6 @@ type FoodAssignments = Record<string, number | null>;
  */
 interface FeederSettingsDraft {
   foodAssignments: FoodAssignments;
-}
-
-function foodOptionLabel(brand: string | null, name: string): string {
-  const b = brand?.trim();
-  return b ? `${b} — ${name}` : name;
 }
 
 /**
@@ -88,25 +94,39 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
     return () => onDirtyChange?.(false);
   }, [isDirty, onDirtyChange]);
 
-  const foodOptions = React.useMemo(
-    () => [
-      { value: '', label: t('devices.feeder.food_compartment_unlinked') },
-      ...foods.map((food) => ({
-        value: String(food.id),
-        label: foodOptionLabel(food.brand, food.name),
-      })),
-    ],
-    [foods, t],
+  const foodsById = React.useMemo(
+    () => new Map(foods.map((food) => [food.id, food])),
+    [foods],
   );
 
-  const handleCompartmentChange = (compartmentId: string, value: string) => {
+  const [pickerCompartment, setPickerCompartment] = React.useState<
+    string | null
+  >(null);
+
+  /* Assigning only fills the field. The tab's one Save is what writes it —
+     the same bargain every other section on this page makes. */
+  const handleCompartmentChange = (
+    compartmentId: string,
+    foodId: number | null,
+  ) => {
     patchDraft({
       foodAssignments: {
         ...draft.foodAssignments,
-        [compartmentId]: value === '' ? null : Number.parseInt(value, 10),
+        [compartmentId]: foodId,
       },
     });
+    setPickerCompartment(null);
   };
+
+  const openCompartment =
+    compartments.find((row) => row.id === pickerCompartment) ?? null;
+
+  const compartmentLabel = (
+    compartment: (typeof compartments)[number],
+  ): string =>
+    compartment.labelKey === 'devices.feeder.food_compartment_numbered'
+      ? t(compartment.labelKey, { number: compartment.id })
+      : t(compartment.labelKey);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -183,21 +203,77 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
           <CardContent>
             <div className="feeder-settings-compartments">
               {compartments.map((compartment) => {
-                const label =
-                  compartment.labelKey ===
-                  'devices.feeder.food_compartment_numbered'
-                    ? t(compartment.labelKey, { number: compartment.id })
-                    : t(compartment.labelKey);
                 const current = draft.foodAssignments[compartment.id];
+                const food =
+                  current != null ? (foodsById.get(current) ?? null) : null;
+                const label = compartmentLabel(compartment);
+                const density = food ? kcalPerKilogram(food) : null;
+
                 return (
                   <FormField key={compartment.id} label={label}>
-                    <Select
-                      value={current != null ? String(current) : ''}
-                      onChange={(e) =>
-                        handleCompartmentChange(compartment.id, e.target.value)
+                    <DeviceModelRow
+                      leading={
+                        <DeviceModelRowTile
+                          variant={food ? 'primary-lightest' : 'muted'}
+                        >
+                          <UtensilsCrossed aria-hidden="true" />
+                        </DeviceModelRowTile>
                       }
-                      options={foodOptions}
-                      disabled={updateDevice.isPending}
+                      title={
+                        food
+                          ? food.name
+                          : t('devices.feeder.food_compartment_unlinked')
+                      }
+                      subtitle={
+                        food ? (
+                          <MetaLine
+                            nowrap
+                            parts={[
+                              food.brand,
+                              t(
+                                `food_picker.group_${coarseFoodGroup(food.food_type)}_short`,
+                              ),
+                              density != null
+                                ? t('food_picker.kcal_per_kg', {
+                                    value: density,
+                                  })
+                                : null,
+                            ]}
+                          />
+                        ) : (
+                          t('devices.feeder.food_compartment_hint')
+                        )
+                      }
+                      action={
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setPickerCompartment(compartment.id)}
+                          disabled={updateDevice.isPending}
+                          /* On a multi-bowl feeder every button says the same
+                             word, so the name has to carry which bowl it
+                             belongs to. On a single-bowl one there is nothing
+                             to tell apart, and naming it would only produce
+                             "Change the food in Food". */
+                          aria-label={
+                            compartments.length > 1
+                              ? t(
+                                  food
+                                    ? 'devices.feeder.food_compartment_change_aria'
+                                    : 'devices.feeder.food_compartment_choose_aria',
+                                  { compartment: label },
+                                )
+                              : undefined
+                          }
+                        >
+                          {t(
+                            food
+                              ? 'devices.feeder.food_compartment_change'
+                              : 'devices.feeder.food_compartment_choose',
+                          )}
+                        </Button>
+                      }
                     />
                   </FormField>
                 );
@@ -206,6 +282,22 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
           </CardContent>
         </Card>
       </FormShell>
+
+      {/* Outside the form: the picker fills a field, it does not submit one. */}
+      {openCompartment && (
+        <FoodPickerSheet
+          open
+          onOpenChange={(next) => !next && setPickerCompartment(null)}
+          title={compartmentLabel(openCompartment)}
+          foods={foods}
+          selectedFoodId={draft.foodAssignments[openCompartment.id] ?? null}
+          noneLabel={t('devices.feeder.food_compartment_unlinked')}
+          noneHint={t('devices.feeder.food_compartment_none_desc')}
+          onPick={(foodId) =>
+            handleCompartmentChange(openCompartment.id, foodId)
+          }
+        />
+      )}
 
       <DiscardUnsavedDialog {...discardConfirm} />
     </div>
