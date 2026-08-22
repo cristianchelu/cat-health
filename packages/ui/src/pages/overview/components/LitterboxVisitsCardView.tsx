@@ -61,12 +61,12 @@ const LitterboxVisitsCardView: React.FC<LitterboxVisitsCardViewProps> = ({
 
   const statsHeader = (
     <div className="litterbox-stats">
-      <span className="litterbox-stat">
-        <Droplets size={18} color="#FFA500" />
+      <span className="litterbox-stat litterbox-stat-pee">
+        <Droplets size={18} />
         {peeLabel}
       </span>
-      <span className="litterbox-stat">
-        <PoopIcon size={18} color="#8B4513" />
+      <span className="litterbox-stat litterbox-stat-poop">
+        <PoopIcon size={18} />
         {poopLabel}
       </span>
     </div>

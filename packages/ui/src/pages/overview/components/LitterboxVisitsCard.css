@@ -32,6 +32,40 @@
     font-size: var(--text-xl);
     font-weight: var(--font-bold);
     color: var(--color-text);
+
+    /*
+     * The label stays --color-text; only the glyph carries the hue, mixed the
+     * way a timeline icon is. Drawn raw on this card --color-urine is 2.0:1,
+     * and unlike a timeline glyph it has no tinted disc to sit on.
+     *
+     * Measured against --color-surface (a glyph is non-text, so the bar is 3:1):
+     *   light — urine 3.66 · stool 8.62
+     *   dark  — urine 8.52 · stool 4.08
+     * Re-measure before touching these numbers.
+     */
+    svg {
+      color: color-mix(
+        in srgb,
+        var(--litterbox-stat-hue) 60%,
+        var(--color-text)
+      );
+
+      @media (prefers-color-scheme: dark) {
+        color: color-mix(
+          in srgb,
+          var(--litterbox-stat-hue) 65%,
+          var(--color-text)
+        );
+      }
+    }
+  }
+
+  .litterbox-stat-pee {
+    --litterbox-stat-hue: var(--color-urine);
+  }
+
+  .litterbox-stat-poop {
+    --litterbox-stat-hue: var(--color-stool);
   }
 
   .overview-litterbox-chart-slot {
