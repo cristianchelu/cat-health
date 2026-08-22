@@ -7,17 +7,17 @@ const SKELETON_ROWS = [
   {
     icon: Toilet,
     value: '--g',
-    iconColor: 'var(--color-text-muted)',
+    iconColor: 'var(--color-litterbox-unknown)',
   },
   {
     icon: GlassWater,
     value: '---ml',
-    iconColor: 'var(--color-primary)',
+    iconColor: 'var(--color-water)',
   },
   {
     icon: Drumstick,
     value: '--- kcal',
-    iconColor: 'var(--color-success)',
+    iconColor: 'var(--color-food)',
   },
 ] as const;
 

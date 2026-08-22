@@ -19,15 +19,6 @@
   --color-success: #22c55e;
   --color-success-light: #dcfce7;
 
-  /*
-   * Two hues that name a thing rather than a signal, so they sit outside the
-   * ok/warn/error vocabulary: what a litterbox visit left behind. Authored
-   * hues, used raw — every surface that paints with them mixes for contrast
-   * (see the ink recipe in Timeline.css), so there is no dark-theme pair.
-   */
-  --color-urine: #ffa500;
-  --color-stool: #8b4513;
-
   --color-background: #f8fafc;
   --color-white: #ffffff;
   --color-black: #121212;
@@ -59,10 +50,17 @@
   --color-litterbox-both: rgb(76, 175, 80);
   --color-litterbox-unknown: rgb(158, 158, 158);
 
-  /** Water Colors **/
+  /**
+   * Intake Colors
+   *
+   * Water has its own hue; food borrows the success green it has always been
+   * drawn in. Both name a thing rather than a signal, like the litterbox
+   * colours above — a row is green because it is food, not because it is good.
+   */
   --color-water: #06b6d4;
   --color-water-light: #67e8f9;
   --color-water-dark: #0891b2;
+  --color-food: var(--color-success);
 
   /* Border Radius */
   --radius-sm: 0.25rem;

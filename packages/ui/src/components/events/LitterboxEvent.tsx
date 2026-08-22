@@ -21,12 +21,17 @@ const ICON_MAP: Record<LitterboxUseEliminationType, React.ElementType> = {
   unknown: Toilet,
 };
 
+/*
+ * The app's elimination palette, shared with the deposit pips and the
+ * elimination charts. `both` is the open one — it is the only kind whose
+ * colour is not a thing it contains, so it borrows a signal for now.
+ */
 const COLOR_MAP: Record<LitterboxUseEliminationType, string> = {
-  urination: 'var(--color-urine)',
-  defecation: 'var(--color-stool)',
+  urination: 'var(--color-litterbox-urination)',
+  defecation: 'var(--color-litterbox-defecation)',
   both: 'var(--color-warning)',
-  no_elimination: 'var(--color-text-muted)',
-  unknown: 'var(--color-text-muted)',
+  no_elimination: 'var(--color-litterbox-unknown)',
+  unknown: 'var(--color-litterbox-unknown)',
 };
 
 const TITLE_KEY: Record<LitterboxUseEliminationType, string> = {

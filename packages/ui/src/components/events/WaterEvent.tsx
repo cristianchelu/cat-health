@@ -20,7 +20,7 @@ const WaterEvent: React.FC<EventComponentProps> = (props) => {
     <TimelineEventShell
       {...props}
       icon={<GlassWater aria-hidden />}
-      iconColor="var(--color-primary)"
+      iconColor="var(--color-water)"
       value={`${waterData.amount}ml`}
       valueVariant="primary"
       title={t('overview.water_intake')}
