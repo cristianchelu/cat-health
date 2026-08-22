@@ -238,10 +238,6 @@
     row-gap: var(--space-3xs);
     font-size: var(--text-xs);
     color: var(--color-text-muted);
-
-    & > .timeline-badge {
-      flex-shrink: 0;
-    }
   }
 
   .timeline-meta-item {
@@ -279,46 +275,6 @@
     gap: var(--space-xs);
     flex-wrap: wrap;
     margin-top: var(--space-3xs);
-  }
-
-  .timeline-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3xs);
-    padding: var(--space-3xs) var(--space-xs);
-    /* StatusPill's padding already — so StatusPill's corner too. */
-    border-radius: var(--radius-full);
-    font-size: var(--text-2xs);
-    font-weight: var(--font-medium);
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    background-color: var(--color-surface-muted);
-    color: var(--color-text-muted);
-  }
-
-  .timeline-badge-neutral {
-    background-color: var(--color-surface-muted);
-    color: var(--color-text-muted);
-  }
-
-  .timeline-badge-primary {
-    background-color: rgba(from var(--color-primary) r g b / 0.12);
-    color: var(--color-primary);
-  }
-
-  .timeline-badge-success {
-    background-color: rgba(from var(--color-success) r g b / 0.12);
-    color: var(--color-success);
-  }
-
-  .timeline-badge-warning {
-    background-color: rgba(from var(--color-warning) r g b / 0.12);
-    color: var(--color-warning);
-  }
-
-  .timeline-badge-danger {
-    background-color: rgba(from var(--color-error) r g b / 0.12);
-    color: var(--color-error);
   }
 
   .timeline-item-skeleton {

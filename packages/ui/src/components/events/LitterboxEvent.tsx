@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Droplets, Gift, Toilet } from 'lucide-react';
 import Timeline from '@/components/ui/Timeline';
+import { StatusPill } from '@/components/ui/StatusPill';
 import type { EventComponentProps } from './types';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import EventDevice from './meta/EventDevice';
@@ -107,9 +108,9 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
                 </Timeline.Value>
               )}
               {litterboxData.straining && (
-                <Timeline.Badge variant="warning">
+                <StatusPill variant="warn">
                   {t('overview.straining')}
-                </Timeline.Badge>
+                </StatusPill>
               )}
             </span>
           )}

@@ -11,10 +11,6 @@ interface TimelineValueProps extends React.ComponentProps<'span'> {
   variant?: TimelineVariant;
 }
 
-interface TimelineBadgeProps extends React.ComponentProps<'span'> {
-  variant?: Exclude<TimelineVariant, 'default'> | 'neutral';
-}
-
 const TimelineRoot = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<typeof Card>
@@ -165,23 +161,6 @@ const TimelineFooter = React.forwardRef<
   );
 });
 
-const TimelineBadge = React.forwardRef<HTMLSpanElement, TimelineBadgeProps>(
-  ({ className, variant = 'neutral', ...props }, ref) => {
-    return (
-      <span
-        className={cn(
-          'timeline-badge',
-          variant !== 'neutral' && `timeline-badge-${variant}`,
-          variant === 'neutral' && 'timeline-badge-neutral',
-          className,
-        )}
-        ref={ref}
-        {...props}
-      />
-    );
-  },
-);
-
 TimelineRoot.displayName = 'Timeline';
 TimelineItem.displayName = 'Timeline.Item';
 TimelineIcon.displayName = 'Timeline.Icon';
@@ -195,7 +174,6 @@ TimelineDescription.displayName = 'Timeline.Description';
 TimelineMeta.displayName = 'Timeline.Meta';
 TimelineMetaItem.displayName = 'Timeline.MetaItem';
 TimelineFooter.displayName = 'Timeline.Footer';
-TimelineBadge.displayName = 'Timeline.Badge';
 
 const Timeline = Object.assign(TimelineRoot, {
   Item: TimelineItem,
@@ -210,13 +188,10 @@ const Timeline = Object.assign(TimelineRoot, {
   Meta: TimelineMeta,
   MetaItem: TimelineMetaItem,
   Footer: TimelineFooter,
-  Badge: TimelineBadge,
 });
 
 export {
   type TimelineValueProps,
-  type TimelineBadgeProps,
-  TimelineBadge,
   TimelineContent,
   TimelineDescription,
   TimelineFooter,
