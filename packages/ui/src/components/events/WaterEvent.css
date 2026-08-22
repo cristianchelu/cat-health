@@ -1,0 +1,26 @@
+.water-event {
+  /*
+   * The row's accent, carried by the reading as well as the glyph. The kit's
+   * value tones are signals — primary, success, warning — and the amount a cat
+   * drank is not one; it is water, and water is cyan here.
+   *
+   * A reading is text, so the bar is AA's 4.5:1 rather than the 3:1 a glyph
+   * answers to, and --glyph-ink is too generous for it: --color-water drawn
+   * raw is 2.43:1 on the card. These are the shares StatusPill.css and
+   * signal-tone.css measured for the same job. They are written out here
+   * rather than shared, which is one copy more than this branch would like —
+   * worth hoisting the pair the way --glyph-ink was, once something other
+   * than water needs them.
+   *
+   * Measured at 16px/600 against --color-surface:
+   *   light — 5.63 · dark — 7.41
+   * Re-measure before touching these numbers.
+   */
+  .water-event-value {
+    color: color-mix(in srgb, var(--color-water) 40%, var(--color-text));
+
+    @media (prefers-color-scheme: dark) {
+      color: color-mix(in srgb, var(--color-water) 65%, var(--color-text));
+    }
+  }
+}
