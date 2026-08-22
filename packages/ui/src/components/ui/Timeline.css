@@ -215,6 +215,10 @@
     color: var(--color-success);
   }
 
+  .timeline-value-muted {
+    color: var(--color-text-muted);
+  }
+
   .timeline-value-primary {
     color: var(--color-primary);
   }

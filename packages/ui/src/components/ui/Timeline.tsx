@@ -5,7 +5,13 @@ import { cn } from '@/lib/utils';
 
 import './Timeline.css';
 
-type TimelineVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger';
+type TimelineVariant =
+  | 'default'
+  | 'muted'
+  | 'primary'
+  | 'success'
+  | 'warning'
+  | 'danger';
 
 interface TimelineValueProps extends React.ComponentProps<'span'> {
   variant?: TimelineVariant;
@@ -121,6 +127,23 @@ const TimelineValue = React.forwardRef<HTMLSpanElement, TimelineValueProps>(
   },
 );
 
+/**
+ * Holds the value and anything that qualifies it — a warning pill, a unit —
+ * together, so the pair breaks as one against the title beside it.
+ */
+const TimelineValueGroup = React.forwardRef<
+  HTMLSpanElement,
+  React.ComponentProps<'span'>
+>(({ className, ...props }, ref) => {
+  return (
+    <span
+      className={cn('timeline-value-group', className)}
+      ref={ref}
+      {...props}
+    />
+  );
+});
+
 const TimelineMetaItem = React.forwardRef<
   HTMLSpanElement,
   React.ComponentProps<'span'>
@@ -170,6 +193,7 @@ TimelineTitleGroup.displayName = 'Timeline.TitleGroup';
 TimelineTitle.displayName = 'Timeline.Title';
 TimelineTimestamp.displayName = 'Timeline.Timestamp';
 TimelineValue.displayName = 'Timeline.Value';
+TimelineValueGroup.displayName = 'Timeline.ValueGroup';
 TimelineDescription.displayName = 'Timeline.Description';
 TimelineMeta.displayName = 'Timeline.Meta';
 TimelineMetaItem.displayName = 'Timeline.MetaItem';
@@ -184,6 +208,7 @@ const Timeline = Object.assign(TimelineRoot, {
   Title: TimelineTitle,
   Timestamp: TimelineTimestamp,
   Value: TimelineValue,
+  ValueGroup: TimelineValueGroup,
   Description: TimelineDescription,
   Meta: TimelineMeta,
   MetaItem: TimelineMetaItem,
@@ -191,6 +216,7 @@ const Timeline = Object.assign(TimelineRoot, {
 });
 
 export {
+  type TimelineVariant,
   type TimelineValueProps,
   TimelineContent,
   TimelineDescription,
@@ -204,5 +230,6 @@ export {
   TimelineTimestamp,
   TimelineTitle,
   TimelineValue,
+  TimelineValueGroup,
 };
 export default Timeline;

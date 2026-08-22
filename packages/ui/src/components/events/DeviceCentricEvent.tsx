@@ -45,7 +45,7 @@ const DeviceConnectivityEventRow: React.FC<EventComponentProps> = (props) => {
   return (
     <TimelineEventShell
       {...props}
-      className="device-centric-event device-connectivity-event"
+      className="device-centric-event"
       icon={<Icon aria-hidden />}
       iconColor={CONNECTIVITY_COLOR[connectivity.state]}
       title={t(titleKey)}

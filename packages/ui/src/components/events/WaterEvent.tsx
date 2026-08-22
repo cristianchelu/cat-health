@@ -8,7 +8,7 @@ import TimelineEventShell from './TimelineEventShell';
 
 const WaterEvent: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
-  const { event, children } = props;
+  const { event } = props;
   if (event.data.type !== 'water_intake') return null;
   const waterData = event.data;
 
@@ -36,7 +36,6 @@ const WaterEvent: React.FC<EventComponentProps> = (props) => {
           {excludedAmount}ml
         </Timeline.MetaItem>
       )}
-      {children}
     </TimelineEventShell>
   );
 };

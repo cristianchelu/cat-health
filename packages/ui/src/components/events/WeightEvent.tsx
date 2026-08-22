@@ -1,61 +1,23 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Weight } from 'lucide-react';
-import Timeline from '@/components/ui/Timeline';
 import type { EventComponentProps } from './types';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
-import EventDevice from './meta/EventDevice';
-import EventPet from './meta/EventPet';
-import EventVerified from './meta/EventVerified';
+import TimelineEventShell from './TimelineEventShell';
 
-const WeightEvent: React.FC<EventComponentProps> = ({
-  event,
-  children,
-  onClick,
-  showPet = true,
-  showDevice = true,
-}) => {
+const WeightEvent: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
-  const { formatTime } = useFormatters();
-  if (event.data.type !== 'weight_measurement') return null;
-  const weightData = event.data;
+  if (props.event.data.type !== 'weight_measurement') return null;
+  const weightData = props.event.data;
 
   return (
-    <Timeline.Item
-      onClick={onClick}
-      style={
-        {
-          '--timeline-icon-color': 'var(--color-primary)',
-        } as React.CSSProperties
-      }
-    >
-      <Timeline.Icon>
-        <Weight />
-      </Timeline.Icon>
-      <Timeline.Content>
-        <Timeline.Header>
-          <Timeline.Timestamp>
-            {formatTime(new Date(event.timestamp))}
-          </Timeline.Timestamp>
-          <Timeline.Value variant="primary">
-            {weightData.weight}g
-          </Timeline.Value>
-          <Timeline.TitleGroup>
-            {event.human_verified && <EventVerified />}
-            <Timeline.Title>{t('overview.weight_recorded')}</Timeline.Title>
-          </Timeline.TitleGroup>
-        </Timeline.Header>
-        <Timeline.Meta>
-          {showPet && (
-            <EventPet petId={event.pet_id} causedBy={event.caused_by} />
-          )}
-          {showDevice && event.device_id && (
-            <EventDevice deviceId={event.device_id} />
-          )}
-          {children}
-        </Timeline.Meta>
-      </Timeline.Content>
-    </Timeline.Item>
+    <TimelineEventShell
+      {...props}
+      icon={<Weight aria-hidden />}
+      iconColor="var(--color-primary)"
+      value={`${weightData.weight}g`}
+      valueVariant="primary"
+      title={t('overview.weight_recorded')}
+    />
   );
 };
 

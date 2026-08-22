@@ -4,7 +4,6 @@ import { Home, LogOut } from 'lucide-react';
 import type { PetPresenceEventDataDTO } from 'shared';
 import type { EventComponentProps } from './types';
 import TimelineEventShell from './TimelineEventShell';
-import './PetPresenceEvent.css';
 
 type PresenceState = PetPresenceEventDataDTO['state'];
 
@@ -42,7 +41,6 @@ const PetPresenceEvent: React.FC<EventComponentProps> = (props) => {
   return (
     <TimelineEventShell
       {...props}
-      className="pet-presence-event"
       icon={<Icon aria-hidden />}
       iconColor={PRESENCE_COLOR[presence.state]}
       title={t(titleKey)}

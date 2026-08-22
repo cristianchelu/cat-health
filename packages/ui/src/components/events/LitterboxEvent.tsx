@@ -1,20 +1,17 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Droplets, Gift, Toilet } from 'lucide-react';
-import Timeline from '@/components/ui/Timeline';
 import { StatusPill } from '@/components/ui/StatusPill';
+import type { TimelineVariant } from '@/components/ui/Timeline';
 import type { EventComponentProps } from './types';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
-import EventDevice from './meta/EventDevice';
 import EventDuration from './meta/EventDuration';
-import EventPet from './meta/EventPet';
 import EventAnnotated from './meta/EventAnnotated';
-import EventVerified from './meta/EventVerified';
 import PoopIcon from '../icons/PoopIcon';
 import { LITTERBOX_SAMPLE_HZ, type LitterboxUseEliminationType } from 'shared';
 import { eliminationBadgeRowsFromSegments } from '@/lib/litterboxEliminationBadges';
 import { hasPersistedLitterboxAnnotation } from '@/types/litterbox';
 import EventEliminationSegments from './meta/EventEliminationSegments';
+import TimelineEventShell from './TimelineEventShell';
 
 const ICON_MAP: Record<LitterboxUseEliminationType, React.ElementType> = {
   urination: Droplets,
@@ -32,16 +29,18 @@ const COLOR_MAP: Record<LitterboxUseEliminationType, string> = {
   unknown: 'var(--color-text-muted)',
 };
 
-const LitterboxEvent: React.FC<EventComponentProps> = ({
-  event,
-  children,
-  onClick,
-  showPet = true,
-  showDevice = true,
-}) => {
+const TITLE_KEY: Record<LitterboxUseEliminationType, string> = {
+  urination: 'overview.urination',
+  defecation: 'overview.defecation',
+  both: 'overview.both',
+  no_elimination: 'overview.no_elimination',
+  unknown: 'overview.litterbox_visit',
+};
+
+const LitterboxEvent: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
-  const { formatTime } = useFormatters();
-  const litterboxData = event.data.type === 'litterbox_use' ? event.data : null;
+  const litterboxData =
+    props.event.data.type === 'litterbox_use' ? props.event.data : null;
   const persistedSegments = litterboxData?.segments;
   const sampleRateHz = litterboxData?.sample_rate_hz ?? LITTERBOX_SAMPLE_HZ;
   const badgeSegments = React.useMemo(
@@ -49,98 +48,51 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
     [persistedSegments, sampleRateHz],
   );
 
-  const eliminationType = litterboxData?.elimination_type ?? 'unknown';
-
-  const showEliminationSegments = badgeSegments.length > 0;
-
-  const variant = React.useMemo(() => {
-    if (!litterboxData) return 'default';
-    if (litterboxData.straining) return 'danger';
-    if (eliminationType === 'no_elimination') return 'default';
-    return 'warning';
-  }, [eliminationType, litterboxData]);
-
-  const title = React.useMemo(() => {
-    switch (eliminationType) {
-      case 'urination':
-        return t('overview.urination');
-      case 'defecation':
-        return t('overview.defecation');
-      case 'both':
-        return t('overview.both');
-      case 'no_elimination':
-        return t('overview.no_elimination');
-      default:
-        return t('overview.litterbox_visit');
-    }
-  }, [eliminationType, t]);
-
   if (!litterboxData) return null;
 
-  const Icon = ICON_MAP[eliminationType] || Toilet;
-  const style = {
-    '--timeline-icon-color': COLOR_MAP[eliminationType],
-  } as React.CSSProperties;
+  const eliminationType = litterboxData.elimination_type ?? 'unknown';
+  const Icon = ICON_MAP[eliminationType];
+
+  /*
+   * The weight is a reading about the visit, so straining — a sign, not a
+   * measurement — colours it rather than sitting in the tone the icon carries.
+   */
+  const valueVariant: TimelineVariant = litterboxData.straining
+    ? 'danger'
+    : eliminationType === 'no_elimination'
+      ? 'muted'
+      : 'warning';
 
   return (
-    <Timeline.Item onClick={onClick} style={style}>
-      <Timeline.Icon>
-        <Icon />
-      </Timeline.Icon>
-      <Timeline.Content>
-        <Timeline.Header>
-          <Timeline.Timestamp>
-            {formatTime(new Date(event.timestamp))}
-          </Timeline.Timestamp>
-          {(litterboxData.elimination_weight !== undefined ||
-            litterboxData.straining) && (
-            <span className="timeline-value-group">
-              {litterboxData.elimination_weight !== undefined && (
-                <Timeline.Value
-                  variant={variant}
-                  style={
-                    eliminationType === 'no_elimination'
-                      ? { color: 'var(--color-text-muted)' }
-                      : undefined
-                  }
-                >
-                  {litterboxData.elimination_weight}g
-                </Timeline.Value>
-              )}
-              {litterboxData.straining && (
-                <StatusPill variant="warn">
-                  {t('overview.straining')}
-                </StatusPill>
-              )}
-            </span>
-          )}
-          <Timeline.TitleGroup>
-            {event.human_verified &&
-              (hasPersistedLitterboxAnnotation(litterboxData) ? (
-                <EventAnnotated />
-              ) : (
-                <EventVerified />
-              ))}
-            <Timeline.Title>{title}</Timeline.Title>
-          </Timeline.TitleGroup>
-        </Timeline.Header>
-        <Timeline.Meta>
-          {litterboxData.duration > 0 && (
-            <EventDuration duration={litterboxData.duration} />
-          )}
-          {showEliminationSegments && (
-            <EventEliminationSegments segments={badgeSegments} />
-          )}
-          {showPet && (
-            <EventPet petId={event.pet_id} causedBy={event.caused_by} />
-          )}
-          {showDevice && event.device_id && (
-            <EventDevice deviceId={event.device_id} />
-          )}
-          {children}
-        </Timeline.Meta>
-      </Timeline.Content>
-    </Timeline.Item>
+    <TimelineEventShell
+      {...props}
+      icon={<Icon aria-hidden />}
+      iconColor={COLOR_MAP[eliminationType]}
+      value={
+        litterboxData.elimination_weight !== undefined
+          ? `${litterboxData.elimination_weight}g`
+          : undefined
+      }
+      valueVariant={valueVariant}
+      valueAdornment={
+        litterboxData.straining ? (
+          <StatusPill variant="warn">{t('overview.straining')}</StatusPill>
+        ) : undefined
+      }
+      title={t(TITLE_KEY[eliminationType])}
+      verifiedMark={
+        hasPersistedLitterboxAnnotation(litterboxData) ? (
+          <EventAnnotated />
+        ) : undefined
+      }
+    >
+      {litterboxData.duration > 0 && (
+        <EventDuration duration={litterboxData.duration} />
+      )}
+      {badgeSegments.length > 0 && (
+        <EventEliminationSegments segments={badgeSegments} />
+      )}
+    </TimelineEventShell>
   );
 };
 

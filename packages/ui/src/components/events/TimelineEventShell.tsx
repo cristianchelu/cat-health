@@ -1,25 +1,21 @@
 import * as React from 'react';
-import Timeline from '@/components/ui/Timeline';
-import { cn } from '@/lib/utils';
+import Timeline, { type TimelineVariant } from '@/components/ui/Timeline';
 import type { GetEventListItemDTO } from 'shared';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import EventDevice from './meta/EventDevice';
 import EventPet from './meta/EventPet';
 import EventVerified from './meta/EventVerified';
-import './TimelineEventShell.css';
-
-type TimelineShellVariant =
-  | 'default'
-  | 'primary'
-  | 'success'
-  | 'warning'
-  | 'danger';
 
 export interface TimelineEventShellProps {
   event: GetEventListItemDTO;
   onClick?: () => void;
   showPet?: boolean;
   showDevice?: boolean;
+  /**
+   * Meta about the event itself — how long it took, what it contained. Runs
+   * ahead of the pet and the device, which are the circumstances rather than
+   * the event.
+   */
   children?: React.ReactNode;
   icon: React.ReactNode;
   /**
@@ -29,7 +25,7 @@ export interface TimelineEventShellProps {
    */
   iconColor?: string;
   value?: React.ReactNode;
-  valueVariant?: TimelineShellVariant;
+  valueVariant?: TimelineVariant;
   /**
    * For a value that is a phrase rather than a figure. `Timeline.Value` is
    * typed for readings — semibold, tabular — and a row whose value reads
@@ -37,10 +33,22 @@ export interface TimelineEventShellProps {
    * a class rather than another one of those.
    */
   valueClassName?: string;
+  /** Sits beside the value and breaks with it, for a pill that qualifies it. */
+  valueAdornment?: React.ReactNode;
   title: string;
+  /**
+   * The mark shown when a human has been through this event. Defaults to
+   * `EventVerified`; rows with a richer notion of reviewed pass their own.
+   */
+  verifiedMark?: React.ReactNode;
   className?: string;
 }
 
+/**
+ * Every event row. The registry decides which event type renders, and the type
+ * decides its glyph, its accent and its value — the timestamp, the verified
+ * mark, the pet and the device are the same on all of them, so they live here.
+ */
 const TimelineEventShell = React.forwardRef<
   HTMLLIElement,
   TimelineEventShellProps
@@ -57,7 +65,9 @@ const TimelineEventShell = React.forwardRef<
       value,
       valueVariant = 'default',
       valueClassName,
+      valueAdornment,
       title,
+      verifiedMark,
       className,
     },
     ref,
@@ -67,7 +77,7 @@ const TimelineEventShell = React.forwardRef<
       <Timeline.Item
         ref={ref}
         onClick={onClick}
-        className={cn('timeline-event-shell', className)}
+        className={className}
         style={
           iconColor
             ? ({ '--timeline-icon-color': iconColor } as React.CSSProperties)
@@ -80,24 +90,32 @@ const TimelineEventShell = React.forwardRef<
             <Timeline.Timestamp>
               {formatTime(new Date(event.timestamp))}
             </Timeline.Timestamp>
-            {value != null && (
-              <Timeline.Value variant={valueVariant} className={valueClassName}>
-                {value}
-              </Timeline.Value>
+            {(value != null || valueAdornment) && (
+              <Timeline.ValueGroup>
+                {value != null && (
+                  <Timeline.Value
+                    variant={valueVariant}
+                    className={valueClassName}
+                  >
+                    {value}
+                  </Timeline.Value>
+                )}
+                {valueAdornment}
+              </Timeline.ValueGroup>
             )}
             <Timeline.TitleGroup>
-              {event.human_verified && <EventVerified />}
+              {event.human_verified && (verifiedMark ?? <EventVerified />)}
               <Timeline.Title>{title}</Timeline.Title>
             </Timeline.TitleGroup>
           </Timeline.Header>
           <Timeline.Meta>
+            {children}
             {showPet && (
               <EventPet petId={event.pet_id} causedBy={event.caused_by} />
             )}
             {showDevice && event.device_id && (
               <EventDevice deviceId={event.device_id} />
             )}
-            {children}
           </Timeline.Meta>
         </Timeline.Content>
       </Timeline.Item>
