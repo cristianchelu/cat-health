@@ -14,7 +14,16 @@ import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useUnsavedBlocker } from '@/hooks/form';
 import { causeLabelKey } from '@/lib/eventAttribution';
 import './AnnotationTab.css';
-import { CheckCheck, ListChecks, CircleDot, Ban } from 'lucide-react';
+import {
+  Ban,
+  CheckCheck,
+  ChevronLeft,
+  ChevronRight,
+  CircleDot,
+  ListChecks,
+} from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/form';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 
 type VerifiedFilter = 'all' | 'verified' | 'unverified';
@@ -245,6 +254,20 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
       );
     }
   }, [searchParams, setSearchParams]);
+
+  const verifiedFilterOptions = [
+    { value: 'all', label: t('annotation.filter_all') },
+    { value: 'verified', label: t('annotation.filter_verified_only') },
+    { value: 'unverified', label: t('annotation.filter_unverified_only') },
+  ];
+
+  const elimFilterOptions = [
+    { value: 'all', label: t('annotation.filter_all_types') },
+    ...ELIMINATION_TYPES.map((et) => ({
+      value: et,
+      label: t(`overview.${et}`),
+    })),
+  ];
 
   const verifiedFilter = parseVerifiedFilterParam(
     searchParams.get(VERIFIED_QUERY_KEY),
@@ -636,59 +659,48 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
       <div className="annotation-tab-list">
         {filteredEvents.length > 1 && (
           <div className="annotation-list-event-nav">
-            <button
+            <Button
               type="button"
-              className="annotation-event-nav-btn"
+              variant="neutral"
+              size="sm"
               disabled={eventNavIndex <= 0}
               onClick={() => handleNavigate('prev')}
-              aria-label={t('annotation.prev_event')}
             >
-              ‹ {t('annotation.prev_event')}
-            </button>
-            <button
+              <ChevronLeft size={14} aria-hidden />
+              {t('annotation.prev_event')}
+            </Button>
+            <Button
               type="button"
-              className="annotation-event-nav-btn"
+              variant="neutral"
+              size="sm"
               disabled={
                 eventNavIndex < 0 || eventNavIndex >= filteredEvents.length - 1
               }
               onClick={() => handleNavigate('next')}
-              aria-label={t('annotation.next_event')}
             >
-              {t('annotation.next_event')} ›
-            </button>
+              {t('annotation.next_event')}
+              <ChevronRight size={14} aria-hidden />
+            </Button>
           </div>
         )}
 
         <div className="annotation-list-filters">
-          <select
-            className="annotation-filter-select"
+          <Select
+            inputSize="sm"
+            options={verifiedFilterOptions}
             value={verifiedFilter}
             onChange={(e) => {
               setVerifiedFilter(e.target.value as VerifiedFilter);
             }}
-          >
-            <option value="all">{t('annotation.filter_all')}</option>
-            <option value="verified">
-              {t('annotation.filter_verified_only')}
-            </option>
-            <option value="unverified">
-              {t('annotation.filter_unverified_only')}
-            </option>
-          </select>
-          <select
-            className="annotation-filter-select"
+          />
+          <Select
+            inputSize="sm"
+            options={elimFilterOptions}
             value={elimFilter}
             onChange={(e) => {
               setElimFilter(e.target.value as EliminationFilter);
             }}
-          >
-            <option value="all">{t('annotation.filter_all_types')}</option>
-            {ELIMINATION_TYPES.map((et) => (
-              <option key={et} value={et}>
-                {t(`overview.${et}`)}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className="annotation-list-count">
@@ -795,26 +807,34 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
 
         {totalPages > 1 && (
           <div className="annotation-list-pagination">
-            <button
-              className="annotation-page-btn"
+            <Button
+              type="button"
+              variant="neutral"
+              size="sm"
+              icon
+              aria-label={t('annotation.prev_page')}
               disabled={page <= 1}
               onClick={() => goToPage(page - 1)}
             >
-              ‹
-            </button>
+              <ChevronLeft size={16} aria-hidden />
+            </Button>
             <span>
               {t('annotation.page_of', {
                 current: currentPage,
                 total: totalPages,
               })}
             </span>
-            <button
-              className="annotation-page-btn"
+            <Button
+              type="button"
+              variant="neutral"
+              size="sm"
+              icon
+              aria-label={t('annotation.next_page')}
               disabled={!eventsPage?.hasMore}
               onClick={() => goToPage(page + 1)}
             >
-              ›
-            </button>
+              <ChevronRight size={16} aria-hidden />
+            </Button>
           </div>
         )}
       </div>

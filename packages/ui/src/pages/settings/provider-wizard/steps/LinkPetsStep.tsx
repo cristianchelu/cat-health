@@ -1,6 +1,7 @@
 import * as React from 'react';
+import { Callout } from '@/components/ui/Callout';
+import { ProviderNote } from '@/pages/settings/components/ProviderNote';
 import { useTranslation } from 'react-i18next';
-import { Info } from 'lucide-react';
 import type { ProviderPetLink } from 'shared';
 import { FormActions } from '@/components/ui/form';
 import ProviderPetLinksEditor from '../../components/ProviderPetLinksEditor';
@@ -66,16 +67,9 @@ export const LinkPetsStep: React.FC<LinkPetsStepProps> = ({
         onBaselineResolved={rebase}
       />
 
-      <p className="provider-note info">
-        <Info size={18} aria-hidden="true" />
-        <span>{t('settings.pet_links_editable_later')}</span>
-      </p>
+      <ProviderNote>{t('settings.pet_links_editable_later')}</ProviderNote>
 
-      {serverError && (
-        <p className="discover-import-error" role="alert">
-          {serverError}
-        </p>
-      )}
+      {serverError && <Callout message={serverError} />}
 
       {/*
        * Skipping is this step's dismiss: the account exists either way, and the

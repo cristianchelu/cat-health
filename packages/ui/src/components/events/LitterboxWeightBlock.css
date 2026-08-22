@@ -71,19 +71,6 @@
     color: var(--color-error);
   }
 
-  .litterbox-weight-block-checkbox {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--text-sm);
-    color: var(--color-text);
-    cursor: pointer;
-
-    input {
-      margin: 0;
-    }
-  }
-
   .litterbox-weight-block-actions {
     display: flex;
     justify-content: flex-end;

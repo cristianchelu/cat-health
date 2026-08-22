@@ -1,9 +1,9 @@
 /*
- * The callout used for provider notes. The card and header the provider forms
- * sit in are generic chrome and live in `components/ui/form/FormCard.css`.
+ * Accent in the icon and the wash; body text stays --color-text for contrast.
+ *
+ * The card and header these sit in are generic form chrome and live in
+ * `components/ui/form/FormCard.css`.
  */
-
-/* Accent in the icon and the wash; body text stays --color-text for contrast. */
 .provider-note {
   display: flex;
   gap: var(--space-sm);

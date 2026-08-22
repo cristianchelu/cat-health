@@ -107,7 +107,7 @@ const LanguageRegionPage: React.FC = () => {
 
   return (
     <SettingsFormPage
-      className="language-region-page"
+      className="page-language-region"
       title={t('settings.language_region')}
       back={{ to: back.to, label: back.label, onNavigate: back.go }}
       isLoading={!settings}

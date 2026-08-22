@@ -153,11 +153,13 @@ const LitterboxDetails: React.FC = () => {
 
   return (
     <div className="page-litterbox-details">
-      <AppHeader>
+      <AppHeader className="litterbox-details-header">
         <AppHeaderBar
           back={{ to: '/', label: t('navigation.overview') }}
           title={t('litterbox_details.title')}
           actions={rangeActions}
+          /* A date range and two steppers do not fit beside the title. */
+          actionsOwnRow
         />
         {/*
           A detail page, so it keeps its title bar — but the pet strip still
@@ -171,12 +173,14 @@ const LitterboxDetails: React.FC = () => {
 
       <section className="litterbox-details-chart-grid">
         <section className="litterbox-details-chart-section litterbox-details-chart-section--wide">
-          <SectionHeader>{t('litterbox_details.timeline')}</SectionHeader>
+          <SectionHeader className="litterbox-details-chart-header">
+            {t('litterbox_details.timeline')}
+          </SectionHeader>
           <Card
             className="litterbox-details-chart-card"
             isLoading={isFetching && !isLoading}
           >
-            <CardContent>
+            <CardContent className="litterbox-details-chart-body">
               {error ? (
                 <p className="litterbox-details-empty">
                   {t('litterbox_details.error_loading')}
@@ -194,11 +198,11 @@ const LitterboxDetails: React.FC = () => {
           </Card>
         </section>
         <section className="litterbox-details-chart-section">
-          <SectionHeader>
+          <SectionHeader className="litterbox-details-chart-header">
             {t('litterbox_details.urination_frequency')}
           </SectionHeader>
           <Card className="litterbox-details-chart-card">
-            <CardContent>
+            <CardContent className="litterbox-details-chart-body">
               <LitterboxMetricChart
                 title={t('litterbox_details.urination_frequency')}
                 unit={t('litterbox_details.hours_between')}
@@ -212,11 +216,11 @@ const LitterboxDetails: React.FC = () => {
           </Card>
         </section>
         <section className="litterbox-details-chart-section">
-          <SectionHeader>
+          <SectionHeader className="litterbox-details-chart-header">
             {t('litterbox_details.defecation_frequency')}
           </SectionHeader>
           <Card className="litterbox-details-chart-card">
-            <CardContent>
+            <CardContent className="litterbox-details-chart-body">
               <LitterboxMetricChart
                 title={t('litterbox_details.defecation_frequency')}
                 unit={t('litterbox_details.hours_between')}
@@ -230,11 +234,11 @@ const LitterboxDetails: React.FC = () => {
           </Card>
         </section>
         <section className="litterbox-details-chart-section">
-          <SectionHeader>
+          <SectionHeader className="litterbox-details-chart-header">
             {t('litterbox_details.urination_duration_chart')}
           </SectionHeader>
           <Card className="litterbox-details-chart-card">
-            <CardContent>
+            <CardContent className="litterbox-details-chart-body">
               <LitterboxMetricChart
                 title={t('litterbox_details.urination_duration_chart')}
                 unit={t('litterbox_details.seconds')}
@@ -259,11 +263,11 @@ const LitterboxDetails: React.FC = () => {
           </Card>
         </section>
         <section className="litterbox-details-chart-section">
-          <SectionHeader>
+          <SectionHeader className="litterbox-details-chart-header">
             {t('litterbox_details.defecation_duration_chart')}
           </SectionHeader>
           <Card className="litterbox-details-chart-card">
-            <CardContent>
+            <CardContent className="litterbox-details-chart-body">
               <LitterboxMetricChart
                 title={t('litterbox_details.defecation_duration_chart')}
                 unit={t('litterbox_details.seconds')}

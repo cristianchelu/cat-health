@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { ChevronDown, ChevronUp, ImagePlus, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, ImageOff, ImagePlus, X } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { FallbackImage } from '@/components/ui/FallbackImage';
 import { Switch } from '@/components/ui/Switch';
 import { cn } from '@/lib/utils';
 import './TrainedPetsEditor.css';
@@ -74,7 +75,12 @@ const TrainedPetsEditor: React.FC<TrainedPetsEditorProps> = ({
             className={cn('trained-pet-row', !pet.isWatched && 'is-ignored')}
           >
             <div className="trained-pet-row-header">
-              <Avatar src={pet.avatarUrl} alt={pet.name} size="sm" />
+              <Avatar
+                src={pet.avatarUrl}
+                alt={pet.name}
+                size="sm"
+                className="trained-pet-row-avatar"
+              />
               <div className="trained-pet-row-info">
                 <span className="trained-pet-row-name">{pet.name}</span>
                 <span className="trained-pet-row-status">
@@ -111,7 +117,11 @@ const TrainedPetsEditor: React.FC<TrainedPetsEditorProps> = ({
                 <div className="trained-pet-thumbs">
                   {pet.thumbs.map((thumb) => (
                     <div key={thumb.id} className="trained-pet-thumb">
-                      <img src={thumb.url} alt={thumb.alt} />
+                      <FallbackImage
+                        src={thumb.url}
+                        alt={thumb.alt}
+                        fallback={<ImageOff size={16} aria-hidden="true" />}
+                      />
                       <button
                         type="button"
                         className="trained-pet-thumb-remove"

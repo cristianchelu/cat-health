@@ -16,6 +16,14 @@
     gap: var(--page-section-gap);
     grid-template-columns: 1fr;
 
+    /* Every section here is a heading over a list, and the heading no longer
+       spaces itself. */
+    > section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
     .settings-tracking-gap-editor {
       display: flex;
       flex-direction: column;

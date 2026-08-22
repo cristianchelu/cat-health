@@ -37,7 +37,7 @@ const Tooltip: React.FC<TooltipProps> = ({
     <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
-        className={cn('tooltip-content', className)}
+        className={cn('tooltip', className)}
         side={side}
         sideOffset={6}
         collisionPadding={8}

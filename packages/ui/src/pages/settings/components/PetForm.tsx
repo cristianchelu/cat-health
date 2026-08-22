@@ -92,7 +92,6 @@ const PetForm: React.FC<PetFormProps> = ({
 
   return (
     <SettingsFormPage
-      className="pet-form"
       title={title || t('settings.add_pet_title')}
       back={{ to: back.to, label: back.label, onNavigate: onCancel }}
     >

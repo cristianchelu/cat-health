@@ -5,22 +5,16 @@ import { cn } from '@/lib/utils';
 
 import './Timeline.css';
 
-type TimelineVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger';
-
-interface TimelineItemProps extends React.ComponentProps<'li'> {
-  variant?: 'default' | 'warning' | 'danger';
-}
-
-interface TimelineIconProps extends React.ComponentProps<'div'> {
-  variant?: TimelineVariant;
-}
+type TimelineVariant =
+  | 'default'
+  | 'muted'
+  | 'primary'
+  | 'success'
+  | 'warning'
+  | 'danger';
 
 interface TimelineValueProps extends React.ComponentProps<'span'> {
   variant?: TimelineVariant;
-}
-
-interface TimelineBadgeProps extends React.ComponentProps<'span'> {
-  variant?: Exclude<TimelineVariant, 'default'> | 'neutral';
 }
 
 const TimelineRoot = React.forwardRef<
@@ -36,41 +30,33 @@ const TimelineRoot = React.forwardRef<
   );
 });
 
-const TimelineItem = React.forwardRef<HTMLLIElement, TimelineItemProps>(
-  ({ className, variant = 'default', children, ...props }, ref) => {
-    return (
-      <li
-        className={cn(
-          'timeline-item',
-          variant !== 'default' && `timeline-item-${variant}`,
-          className,
-        )}
-        ref={ref}
-        {...props}
-      >
-        {children}
-      </li>
-    );
-  },
-);
+const TimelineItem = React.forwardRef<
+  HTMLLIElement,
+  React.ComponentProps<'li'>
+>(({ className, children, ...props }, ref) => {
+  return (
+    <li className={cn('timeline-item', className)} ref={ref} {...props}>
+      {children}
+    </li>
+  );
+});
 
-const TimelineIcon = React.forwardRef<HTMLDivElement, TimelineIconProps>(
-  ({ className, variant = 'default', children, ...props }, ref) => {
-    return (
-      <div
-        className={cn(
-          'timeline-icon',
-          variant !== 'default' && `timeline-icon-${variant}`,
-          className,
-        )}
-        ref={ref}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  },
-);
+/**
+ * The glyph that says what kind of event this is. Its colour is the row's, not
+ * the kit's: set `--timeline-icon-color` on the item and the disc and glyph
+ * follow. A tone name would have to mean something here, and every meaning a
+ * timeline row wants — a litterbox hue, a device state — is the row's to know.
+ */
+const TimelineIcon = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<'div'>
+>(({ className, children, ...props }, ref) => {
+  return (
+    <div className={cn('timeline-icon', className)} ref={ref} {...props}>
+      {children}
+    </div>
+  );
+});
 
 const TimelineContent = React.forwardRef<
   HTMLDivElement,
@@ -141,6 +127,23 @@ const TimelineValue = React.forwardRef<HTMLSpanElement, TimelineValueProps>(
   },
 );
 
+/**
+ * Holds the value and anything that qualifies it — a warning pill, a unit —
+ * together, so the pair breaks as one against the title beside it.
+ */
+const TimelineValueGroup = React.forwardRef<
+  HTMLSpanElement,
+  React.ComponentProps<'span'>
+>(({ className, ...props }, ref) => {
+  return (
+    <span
+      className={cn('timeline-value-group', className)}
+      ref={ref}
+      {...props}
+    />
+  );
+});
+
 const TimelineMetaItem = React.forwardRef<
   HTMLSpanElement,
   React.ComponentProps<'span'>
@@ -154,15 +157,6 @@ const TimelineMetaItem = React.forwardRef<
   );
 });
 
-const TimelineDescription = React.forwardRef<
-  HTMLParagraphElement,
-  React.ComponentProps<'p'>
->(({ className, ...props }, ref) => {
-  return (
-    <p className={cn('timeline-description', className)} ref={ref} {...props} />
-  );
-});
-
 const TimelineMeta = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<'div'>
@@ -171,32 +165,6 @@ const TimelineMeta = React.forwardRef<
     <div className={cn('timeline-meta', className)} ref={ref} {...props} />
   );
 });
-
-const TimelineFooter = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<'div'>
->(({ className, ...props }, ref) => {
-  return (
-    <div className={cn('timeline-footer', className)} ref={ref} {...props} />
-  );
-});
-
-const TimelineBadge = React.forwardRef<HTMLSpanElement, TimelineBadgeProps>(
-  ({ className, variant = 'neutral', ...props }, ref) => {
-    return (
-      <span
-        className={cn(
-          'timeline-badge',
-          variant !== 'neutral' && `timeline-badge-${variant}`,
-          variant === 'neutral' && 'timeline-badge-neutral',
-          className,
-        )}
-        ref={ref}
-        {...props}
-      />
-    );
-  },
-);
 
 TimelineRoot.displayName = 'Timeline';
 TimelineItem.displayName = 'Timeline.Item';
@@ -207,11 +175,9 @@ TimelineTitleGroup.displayName = 'Timeline.TitleGroup';
 TimelineTitle.displayName = 'Timeline.Title';
 TimelineTimestamp.displayName = 'Timeline.Timestamp';
 TimelineValue.displayName = 'Timeline.Value';
-TimelineDescription.displayName = 'Timeline.Description';
+TimelineValueGroup.displayName = 'Timeline.ValueGroup';
 TimelineMeta.displayName = 'Timeline.Meta';
 TimelineMetaItem.displayName = 'Timeline.MetaItem';
-TimelineFooter.displayName = 'Timeline.Footer';
-TimelineBadge.displayName = 'Timeline.Badge';
 
 const Timeline = Object.assign(TimelineRoot, {
   Item: TimelineItem,
@@ -222,22 +188,15 @@ const Timeline = Object.assign(TimelineRoot, {
   Title: TimelineTitle,
   Timestamp: TimelineTimestamp,
   Value: TimelineValue,
-  Description: TimelineDescription,
+  ValueGroup: TimelineValueGroup,
   Meta: TimelineMeta,
   MetaItem: TimelineMetaItem,
-  Footer: TimelineFooter,
-  Badge: TimelineBadge,
 });
 
 export {
-  type TimelineItemProps,
-  type TimelineIconProps,
+  type TimelineVariant,
   type TimelineValueProps,
-  type TimelineBadgeProps,
-  TimelineBadge,
   TimelineContent,
-  TimelineDescription,
-  TimelineFooter,
   TimelineHeader,
   TimelineTitleGroup,
   TimelineIcon,
@@ -247,5 +206,6 @@ export {
   TimelineTimestamp,
   TimelineTitle,
   TimelineValue,
+  TimelineValueGroup,
 };
 export default Timeline;

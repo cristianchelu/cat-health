@@ -41,7 +41,6 @@ import {
   stepAfterAccountPick,
 } from './wizardPlan';
 import { importDevices } from './importSelection';
-import '../providerForm.css';
 import './ProviderWizardPage.css';
 
 interface ProviderWizardPageProps {
@@ -389,7 +388,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
   const selectionMode = flow?.buildDeviceFromDiscovery ? 'multi' : 'single';
 
   return (
-    <div className="page-shell-narrow provider-wizard-page">
+    <div className="page-shell-narrow page-provider-wizard">
       {/*
        * The wizard's only step-back, and its way out of the first step. Steps
        * carry Cancel (abandon) and their primary in the commit row instead.

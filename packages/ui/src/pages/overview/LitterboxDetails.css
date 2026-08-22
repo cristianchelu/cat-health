@@ -13,7 +13,7 @@
   }
 
   /* The page is a flex column with its own gap; the header's margin doubles it. */
-  .app-header {
+  .litterbox-details-header {
     margin-bottom: 0;
   }
 
@@ -23,8 +23,8 @@
     min-width: 0;
   }
 
-  .card,
-  .card-content {
+  .litterbox-details-chart-card,
+  .litterbox-details-chart-body {
     min-width: 0;
     max-width: 100%;
   }
@@ -38,10 +38,6 @@
     flex-direction: column;
     gap: var(--space-sm);
     min-width: 0;
-
-    .section-header {
-      margin-bottom: 0;
-    }
   }
 
   .litterbox-details-chart-section--wide {
@@ -59,7 +55,7 @@
       flex-direction: column;
     }
 
-    .card-content {
+    .litterbox-details-chart-body {
       display: flex;
       flex-direction: column;
       flex: 1;
@@ -125,39 +121,14 @@
     text-align: center;
   }
 
-  .card-title {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-  }
-
   @media (max-width: 900px) {
     .litterbox-details-chart-grid {
       grid-template-columns: 1fr;
     }
   }
 
-  /*
-   * A date range plus its two steppers cannot share the app-bar row with the
-   * title on a phone — the title loses, and `AppHeaderBar` ellipsises it away
-   * to nothing. Give the range its own row. Pages whose actions are a couple of
-   * icon buttons keep the single-row default.
-   */
-  @media (max-width: 767px) {
-    .app-header-bar {
-      grid-template-columns: auto minmax(0, 1fr);
-      grid-template-areas:
-        'back    title'
-        'actions actions';
-    }
-
-    .app-header-actions {
-      justify-content: center;
-    }
-  }
-
   @media (max-width: 576px) {
-    .section-header {
+    .litterbox-details-chart-header {
       align-items: flex-start;
     }
   }

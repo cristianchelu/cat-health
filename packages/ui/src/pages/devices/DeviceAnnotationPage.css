@@ -1,4 +1,4 @@
-.device-annotate-page {
+.page-device-annotation {
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -9,7 +9,7 @@
   height: 100svh;
   max-height: 100svh;
 
-  .app-header {
+  .device-annotation-header {
     flex-shrink: 0;
   }
 

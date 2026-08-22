@@ -17,8 +17,13 @@ import {
   DialogContent,
   DialogTitle,
 } from '@/components/ui/Dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { Button } from '@/components/ui/Button';
+import { Spinner } from '@/components/ui/Spinner';
+import { cn } from '@/lib/utils';
+import { FallbackImage } from '@/components/ui/FallbackImage';
 import {
+  Checkbox,
   FormActions,
   FormInlineDiscard,
   FormShell,
@@ -52,13 +57,12 @@ import { analyzeWaterSegments } from './analyzeWaterSegments';
 import LitterboxWeightBlock from './LitterboxWeightBlock';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import './EventDetailsModal.css';
-import './TimelapsePlayer.css';
 import {
-  Loader2,
   Trash2,
   Download,
   Info,
   Image,
+  ImageOff,
   Activity,
   Sparkles,
   Timer,
@@ -87,6 +91,19 @@ interface EventDetailsModalProps {
   onClose: () => void;
 }
 
+/** One measured fact: an icon, what it is, and what it read. */
+const Fact: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}> = ({ icon, label, value }) => (
+  <span className="event-details-fact">
+    {icon}
+    <span className="event-details-fact-label">{label}</span>
+    <span className="event-details-fact-value">{value}</span>
+  </span>
+);
+
 const WaterIntakeDetails: React.FC<{ event: GetEventListItemDTO }> = ({
   event,
 }) => {
@@ -95,41 +112,29 @@ const WaterIntakeDetails: React.FC<{ event: GetEventListItemDTO }> = ({
   const data = event.data;
   const hasFiltering = data.excluded_amount != null && data.excluded_amount > 0;
   return (
-    <div className="event-specific-details">
+    <div className="event-details-facts">
       {data.duration != null && (
-        <span className="detail-item">
-          <Timer className="detail-item-icon" aria-hidden />
-          <span className="detail-item-label">
-            {t('event_details.duration_label')}
-          </span>
-          <span className="detail-item-value">
-            {t('event_details.duration_value', { seconds: data.duration })}
-          </span>
-        </span>
+        <Fact
+          icon={<Timer aria-hidden />}
+          label={t('event_details.duration_label')}
+          value={t('event_details.duration_value', { seconds: data.duration })}
+        />
       )}
       {data.amount != null && (
-        <span className="detail-item">
-          <GlassWater className="detail-item-icon" aria-hidden />
-          <span className="detail-item-label">
-            {t('event_details.amount_label')}
-          </span>
-          <span className="detail-item-value">
-            {t('event_details.amount_value', { amount: data.amount })}
-          </span>
-        </span>
+        <Fact
+          icon={<GlassWater aria-hidden />}
+          label={t('event_details.amount_label')}
+          value={t('event_details.amount_value', { amount: data.amount })}
+        />
       )}
       {hasFiltering && (
-        <span className="detail-item">
-          <DropletOff className="detail-item-icon" aria-hidden />
-          <span className="detail-item-label">
-            {t('event_details.water_spilled_label')}
-          </span>
-          <span className="detail-item-value">
-            {t('event_details.water_spilled_amount', {
-              amount: data.excluded_amount,
-            })}
-          </span>
-        </span>
+        <Fact
+          icon={<DropletOff aria-hidden />}
+          label={t('event_details.water_spilled_label')}
+          value={t('event_details.water_spilled_amount', {
+            amount: data.excluded_amount,
+          })}
+        />
       )}
     </div>
   );
@@ -396,84 +401,86 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent
-          className="event-details-modal-content"
+          className="event-details-modal"
           showCloseButton={!hasAnalysisData}
         >
-          {/* Tab buttons + inline close — only when analysis tab exists */}
-          {hasAnalysisData && (
-            <div className="event-tabs">
-              <button
-                type="button"
-                className={`tab-button ${activeTab === 'media' ? 'active' : ''}`}
-                onClick={() => setActiveTab('media')}
-              >
-                <Image size={16} />
-                {t('event_details.media')}
-              </button>
-              <button
-                type="button"
-                className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
-                onClick={() => setActiveTab('analysis')}
-              >
-                <Activity size={16} />
-                {t('event_details.analysis')}
-              </button>
-              <DialogClose
-                type="button"
-                className="event-tab-close"
-                aria-label={t('common.close')}
-                title={t('common.close')}
-              >
-                <X size={18} aria-hidden />
-              </DialogClose>
-            </div>
-          )}
-
-          <div className="event-details-media-section">
-            {activeTab === 'media' && (
-              <>
-                {isLoadingMedia && (
-                  <div className="media-loading">
-                    <Loader2 className="animate-spin" />
-                  </div>
-                )}
-                {!isLoadingMedia && !hasMedia && (
-                  <div className="media-placeholder">
-                    <p>{t('event_details.no_media_available')}</p>
-                  </div>
-                )}
-                {!isLoadingMedia && hasMedia && (
-                  <div className="event-media-stack">
-                    {timelapseTimeline && (
-                      <TimelapsePlayer
-                        frames={timelapseTimeline.frames}
-                        durationSec={timelapseTimeline.durationSec}
-                        intervalSec={timelapseTimeline.intervalSec}
-                        alt={t('event_details.event_media_alt')}
-                      />
-                    )}
-                    {imageFrames.length === 1 && !hasTimelapse && (
-                      <div className="event-media-static-image">
-                        <img
-                          src={`api/media/${imageFrames[0].file_path}`}
-                          alt={t('event_details.event_media_alt')}
-                        />
-                      </div>
-                    )}
-                    {videoItems.map((m) => (
-                      <div key={m.id} className="event-media-video">
-                        <video controls src={`api/media/${m.file_path}`} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
+          <Tabs
+            variant="bar"
+            value={activeTab}
+            onValueChange={(value) =>
+              setActiveTab(value as 'media' | 'analysis')
+            }
+          >
+            {/* The strip exists only when there is a second panel to reach.
+                Without it the dialog keeps its own floating close. */}
+            {hasAnalysisData && (
+              <TabsList>
+                <TabsTrigger value="media">
+                  <Image size={16} aria-hidden />
+                  {t('event_details.media')}
+                </TabsTrigger>
+                <TabsTrigger value="analysis">
+                  <Activity size={16} aria-hidden />
+                  {t('event_details.analysis')}
+                </TabsTrigger>
+                {/* Square, flush with the strip — the dialog's floating close
+                    would sit on top of the tabs. */}
+                <DialogClose
+                  type="button"
+                  className="event-details-tab-close"
+                  aria-label={t('common.close')}
+                  title={t('common.close')}
+                >
+                  <X size={18} aria-hidden />
+                </DialogClose>
+              </TabsList>
             )}
-            {activeTab === 'analysis' &&
-              hasLitterboxChartWeights &&
-              decodedRawData && (
-                <div className="event-details-litterbox-analysis">
+
+            <TabsContent value="media" className="event-details-stage">
+              {isLoadingMedia && (
+                <div className="event-details-stage-note">
+                  <Spinner size={24} />
+                </div>
+              )}
+              {!isLoadingMedia && !hasMedia && (
+                <div className="event-details-stage-note">
+                  <p>{t('event_details.no_media_available')}</p>
+                </div>
+              )}
+              {!isLoadingMedia && hasMedia && (
+                <div className="event-details-media-stack">
+                  {timelapseTimeline && (
+                    <TimelapsePlayer
+                      frames={timelapseTimeline.frames}
+                      durationSec={timelapseTimeline.durationSec}
+                      intervalSec={timelapseTimeline.intervalSec}
+                      alt={t('event_details.event_media_alt')}
+                    />
+                  )}
+                  {imageFrames.length === 1 && !hasTimelapse && (
+                    <div className="event-details-media-still">
+                      <FallbackImage
+                        src={`api/media/${imageFrames[0].file_path}`}
+                        alt={t('event_details.event_media_alt')}
+                        fit="contain"
+                        fallback={<ImageOff size={24} aria-hidden="true" />}
+                      />
+                    </div>
+                  )}
+                  {videoItems.map((m) => (
+                    <div key={m.id} className="event-details-media-video">
+                      <video controls src={`api/media/${m.file_path}`} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="analysis" className="event-details-stage">
+              {hasLitterboxChartWeights && decodedRawData && (
+                <div className="event-details-chart">
                   <WeightSignalChart
+                    className="event-details-chart-signal"
                     weights={decodedRawData.weights}
                     sampleRate={deriveLitterboxSampleRateHz(
                       decodedRawData,
@@ -483,15 +490,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   />
                 </div>
               )}
-            {activeTab === 'analysis' &&
-              hasWaterChartWeights &&
-              decodedWaterData && (
+              {hasWaterChartWeights && decodedWaterData && (
                 <WaterSignalChart
                   weights={decodedWaterData.weights}
                   periods={waterPeriods}
                 />
               )}
-          </div>
+            </TabsContent>
+          </Tabs>
 
           <FormShell
             className="event-details-body"
@@ -517,18 +523,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               )
             }
           >
-            <div className="event-header-row">
-              <div className="event-info">
-                <DialogTitle className="event-title">
+            <div className="event-details-header">
+              <div className="event-details-identity">
+                <DialogTitle className="event-details-title">
                   {getEventTitle(displayEvent, t)}
                 </DialogTitle>
-                <span className="event-time">
+                <span className="event-details-time">
                   {displayEvent.timestamp
                     ? formatDateTime(new Date(displayEvent.timestamp))
                     : ''}
                 </span>
               </div>
-              <div className="event-actions">
+              <div className="event-details-actions">
                 {hasLitterboxChartWeights && (
                   <>
                     {/* TODO: Hide for devices with visit annotation off — needs device context on the event (or similar) without an extra device fetch. */}
@@ -536,18 +542,13 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       type="button"
                       variant="ghost"
                       icon
-                      className="action-btn"
                       title={t('event_details.analyze')}
                       aria-label={t('event_details.analyze')}
                       onClick={() => runAnalyze(displayEvent.id)}
                       disabled={isAnalyzing}
                     >
                       {isAnalyzing ? (
-                        <Loader2
-                          size={20}
-                          aria-hidden
-                          className="animate-spin"
-                        />
+                        <Spinner size={20} />
                       ) : (
                         <Sparkles size={20} aria-hidden />
                       )}
@@ -557,22 +558,16 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 <Button
                   variant="ghost"
                   icon
-                  className="action-btn"
                   title={t('event_details.delete_event')}
                   onClick={handleDeleteClick}
                   disabled={isDeleting}
                 >
-                  {isDeleting ? (
-                    <Loader2 size={20} className="animate-spin" />
-                  ) : (
-                    <Trash2 size={20} />
-                  )}
+                  {isDeleting ? <Spinner size={20} /> : <Trash2 size={20} />}
                 </Button>
                 {hasMedia && downloadMediaPath && (
                   <Button
                     variant="ghost"
                     icon
-                    className="action-btn"
                     title={t('event_details.download_media')}
                     onClick={() => {
                       const link = document.createElement('a');
@@ -588,17 +583,17 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               </div>
             </div>
 
-            <div className="event-section pet-identification-section">
-              <div className="section-label">
-                <Info size={14} className="info-icon" />
+            <div className="event-details-section">
+              <div className="event-details-section-label">
+                <Info size={14} aria-hidden />
                 <span>{t('event_details.pet_identification')}</span>
               </div>
-              <div className="pet-selector-wrapper">
+              <div className="event-details-control">
                 <Select
                   options={petOptions}
                   value={attributionSelectValue(draft.pet)}
                   onChange={handlePetChange}
-                  className="pet-select"
+                  className="event-details-select"
                   disabled={isUpdating}
                 />
               </div>
@@ -609,30 +604,31 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             )}
 
             {displayEvent.data?.type === 'litterbox_use' && (
-              <div className="event-section elimination-type-section">
-                <div className="section-label">
-                  <Info size={14} className="info-icon" />
+              <div className="event-details-section">
+                <div className="event-details-section-label">
+                  <Info size={14} aria-hidden />
                   <span>{t('event_details.event_type')}</span>
                 </div>
-                <div className="elimination-type-selector-wrapper">
+                <div className="event-details-control">
                   <Select
                     options={eliminationTypeOptions}
                     value={draft.eliminationType}
                     onChange={handleEliminationTypeChange}
-                    className="elimination-type-select"
+                    className="event-details-select"
                     disabled={isUpdating}
                   />
                   <label
-                    className="straining-control"
+                    className={cn(
+                      'event-details-straining',
+                      isUpdating && 'is-disabled',
+                    )}
                     htmlFor="event-details-straining"
                   >
                     <span>{t('annotation.straining')}</span>
-                    <input
+                    <Checkbox
                       id="event-details-straining"
-                      type="checkbox"
                       checked={draft.straining}
                       onChange={handleStrainingChange}
-                      className="straining-checkbox"
                       disabled={isUpdating}
                     />
                   </label>
@@ -640,7 +636,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               </div>
             )}
 
-            <div className="event-section details-section">
+            <div className="event-details-extra">
               <EventDetailsRenderer event={displayEvent} />
             </div>
           </FormShell>
@@ -657,15 +653,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         onConfirm={() => void handleDeleteConfirm()}
         onCancel={handleDeleteCancel}
       >
-        <label className="event-delete-checkbox">
-          <input
-            type="checkbox"
-            checked={reidentifyOnDelete}
-            onChange={(e) => setReidentifyOnDelete(e.target.checked)}
-            disabled={isDeleting || displayEvent.device_id == null}
-          />
-          <span>{t('event_details.reidentify_later_visits')}</span>
-        </label>
+        <Checkbox
+          checked={reidentifyOnDelete}
+          onCheckedChange={setReidentifyOnDelete}
+          disabled={isDeleting || displayEvent.device_id == null}
+          label={t('event_details.reidentify_later_visits')}
+        />
       </ConfirmDialog>
     </>
   );

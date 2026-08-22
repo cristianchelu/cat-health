@@ -89,20 +89,54 @@
   }
 
   .timeline-icon {
+    /*
+     * The disc is a wash of the row's accent; the glyph is that accent inked
+     * by --glyph-ink, because several accents are illegible drawn raw on their
+     * own wash. The share and the reasoning live in theme.css.
+     *
+     * Measured against the disc, which is the only thing the glyph sits on:
+     *   light — primary 5.41 · food 3.80 · water 3.91 · warning 3.75 ·
+     *           error 5.26 · muted 4.04 · urination 3.19 · defecation 6.57 ·
+     *           unknown 4.15
+     *   dark  — primary 4.73 · food 5.65 · water 5.72 · warning 6.22 ·
+     *           error 4.74 · muted 5.80 · urination 6.98 · defecation 3.98 ·
+     *           unknown 5.71
+     * Re-measure before touching these numbers.
+     */
+    position: relative;
     display: grid;
     place-items: center;
     width: var(--timeline-icon-size);
     height: var(--timeline-icon-size);
     border-radius: var(--radius-full);
     background-color: rgba(from var(--timeline-icon-color) r g b / 0.15);
-    color: var(--timeline-icon-color);
+    color: color-mix(
+      in srgb,
+      var(--timeline-icon-color) var(--glyph-ink),
+      var(--color-text)
+    );
     font-size: var(--text-base);
     flex-shrink: 0;
-    position: relative;
 
-    svg {
+    /*
+     * The glyph the disc holds directly. A child that fills the disc and draws
+     * its own glyphs — `SplitIcon`, for a row whose kind is two things — sizes
+     * those against itself, so this must not reach past its own.
+     */
+    & > svg {
       width: 16px;
       height: 16px;
+    }
+
+    /*
+     * A glyph that fills the slot brings its own tint, so the disc stops
+     * laying one down. Both washes are translucent by design — that is what
+     * lets them blend with the row's hover highlight — which also means they
+     * would stack, and the default grey underneath would tint every half of
+     * the glyph above it away from the colour it shares with its own row.
+     */
+    &:has(> .split-icon) {
+      background-color: transparent;
     }
   }
 
@@ -189,6 +223,10 @@
     color: var(--color-success);
   }
 
+  .timeline-value-muted {
+    color: var(--color-text-muted);
+  }
+
   .timeline-value-primary {
     color: var(--color-primary);
   }
@@ -212,10 +250,6 @@
     row-gap: var(--space-3xs);
     font-size: var(--text-xs);
     color: var(--color-text-muted);
-
-    & > .timeline-badge {
-      flex-shrink: 0;
-    }
   }
 
   .timeline-meta-item {
@@ -240,59 +274,6 @@
       height: 12px;
       opacity: 0.7;
     }
-  }
-
-  .timeline-description {
-    font-size: var(--text-xs);
-    line-height: var(--line-height-normal);
-    color: var(--color-text-muted);
-  }
-
-  .timeline-footer {
-    display: flex;
-    gap: var(--space-xs);
-    flex-wrap: wrap;
-    margin-top: var(--space-3xs);
-  }
-
-  .timeline-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3xs);
-    padding: var(--space-3xs) var(--space-xs);
-    /* StatusPill's padding already — so StatusPill's corner too. */
-    border-radius: var(--radius-full);
-    font-size: var(--text-2xs);
-    font-weight: var(--font-medium);
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    background-color: var(--color-surface-muted);
-    color: var(--color-text-muted);
-  }
-
-  .timeline-badge-neutral {
-    background-color: var(--color-surface-muted);
-    color: var(--color-text-muted);
-  }
-
-  .timeline-badge-primary {
-    background-color: rgba(from var(--color-primary) r g b / 0.12);
-    color: var(--color-primary);
-  }
-
-  .timeline-badge-success {
-    background-color: rgba(from var(--color-success) r g b / 0.12);
-    color: var(--color-success);
-  }
-
-  .timeline-badge-warning {
-    background-color: rgba(from var(--color-warning) r g b / 0.12);
-    color: var(--color-warning);
-  }
-
-  .timeline-badge-danger {
-    background-color: rgba(from var(--color-error) r g b / 0.12);
-    color: var(--color-error);
   }
 
   .timeline-item-skeleton {

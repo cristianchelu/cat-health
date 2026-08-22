@@ -6,6 +6,14 @@ interface TabsProps extends React.ComponentProps<'div'> {
   defaultValue?: string;
   value?: string;
   onValueChange?: (value: string) => void;
+  /**
+   * `underline` is the page strip: labels on the page's own background with a
+   * rule beneath them. `bar` is the panel strip — full-bleed, equal-width
+   * triggers on a tinted band, the active one lifted onto the surface. Reach
+   * for `bar` when the strip is the top edge of a surface (a dialog, a panel)
+   * rather than a heading inside one.
+   */
+  variant?: 'underline' | 'bar';
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -26,7 +34,15 @@ const TabsContext = React.createContext<{
 
 const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
   (
-    { className, defaultValue, value, onValueChange, children, ...props },
+    {
+      className,
+      defaultValue,
+      value,
+      onValueChange,
+      variant = 'underline',
+      children,
+      ...props
+    },
     ref,
   ) => {
     const [internalValue, setInternalValue] = React.useState(
@@ -48,7 +64,11 @@ const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
       <TabsContext.Provider
         value={{ value: currentValue, onValueChange: handleValueChange }}
       >
-        <div className={cn('tabs', className)} ref={ref} {...props}>
+        <div
+          className={cn('tabs', variant === 'bar' && 'bar', className)}
+          ref={ref}
+          {...props}
+        >
           {children}
         </div>
       </TabsContext.Provider>

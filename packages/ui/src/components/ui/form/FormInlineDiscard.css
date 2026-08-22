@@ -1,0 +1,8 @@
+/* Geometry comes from `.form-actions`; only the prompt is this variant's own. */
+.form-inline-discard {
+  .form-inline-discard__message {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
+  }
+}

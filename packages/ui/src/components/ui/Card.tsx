@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Spinner } from './Spinner';
 
 import { cn } from '@/lib/utils';
 
@@ -21,7 +21,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         {children}
         {isLoading && (
           <div className="card-loading-overlay">
-            <Loader2 className="animate-spin" size={32} />
+            <Spinner size={32} />
           </div>
         )}
       </div>

@@ -2,7 +2,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { cn } from '@/lib/utils';
-import { Cat, Loader2, Plus } from 'lucide-react';
+import { Cat, Plus } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { Button } from '../ui/Button';
@@ -29,7 +30,7 @@ const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
         aria-label={t('common.loading_pets')}
       >
         <div className="loading">
-          <Loader2 className="animate-spin" size={20} aria-hidden />
+          <Spinner size={20} />
         </div>
       </div>
     );
@@ -76,7 +77,7 @@ const PetSelector: React.FC<PetSelectorProps> = ({ variant = 'desktop' }) => {
             alt={pet.name}
             size="sm"
             fallbackIcon={<Cat size={20} />}
-            className="avatar"
+            className="pet-selector-avatar"
           />
           <label>{pet.name}</label>
         </Button>

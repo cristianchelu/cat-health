@@ -1,146 +1,17 @@
 .reference-images-tab {
-  .tab-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: var(--space-lg);
-    margin-bottom: var(--space-xl);
+  /* The same rhythm the Recognition tab has, since the two now render the
+     same editor. */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 
-    .tab-description {
-      flex: 1;
-      color: var(--color-text-muted);
-      font-size: var(--text-sm);
-
-      p {
-        margin: 0;
-      }
-
-      p + p {
-        margin-top: var(--space-xs);
-      }
-    }
-
-    .test-button {
-      flex-shrink: 0;
-    }
-
-    @media (max-width: 600px) {
-      flex-direction: column;
-
-      .test-button {
-        align-self: center;
-      }
-    }
+  .reference-images-card {
+    --card-padding: var(--space-md);
   }
 
-  .pets-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: var(--space-xl);
-  }
-
-  .pet-card {
+  .reference-images-tools {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-
-    .pet-header {
-      display: flex;
-      align-items: center;
-      gap: var(--space-md);
-
-      .pet-info {
-        flex: 1;
-        min-width: 0;
-
-        h3 {
-          margin: 0;
-          font-size: var(--text-lg);
-          font-weight: 600;
-          color: var(--color-text);
-        }
-
-        .image-count {
-          font-size: var(--text-sm);
-          color: var(--color-text-muted);
-        }
-      }
-
-      .switch,
-      .add-images-button {
-        flex-shrink: 0;
-      }
-    }
-
-    /*
-     * Faded, not hidden: the photos are still there, and the card has to show
-     * that turning the switch back on costs nothing. Everything but the switch
-     * dims, so the way back stays the one thing at full contrast.
-     */
-    &.is-ignored {
-      .avatar,
-      .pet-info h3,
-      .images-grid,
-      .add-images-button {
-        opacity: 0.45;
-      }
-
-      .image-count {
-        color: var(--color-text-muted);
-        font-style: italic;
-      }
-    }
-
-    .images-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-      gap: var(--space-sm);
-
-      .image-item {
-        position: relative;
-        aspect-ratio: 1;
-        border-radius: var(--radius-md);
-        background: var(--color-surface-muted);
-
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          border-radius: inherit;
-        }
-
-        .image-placeholder {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: var(--text-xs);
-          color: var(--color-text-subtle);
-        }
-
-        .remove-button {
-          position: absolute;
-          top: -6px;
-          right: -6px;
-          background: var(--color-error);
-          color: white;
-          border: 2px solid var(--color-surface, #1e293b);
-          border-radius: var(--radius-full);
-          width: 22px;
-          height: 22px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-
-          &:hover {
-            filter: brightness(0.85);
-            transform: scale(1.1);
-          }
-        }
-      }
-    }
+    align-items: center;
+    padding: var(--space-md);
   }
 }

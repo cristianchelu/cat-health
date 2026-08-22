@@ -34,31 +34,20 @@
     pointer-events: none;
   }
 
-  .chart-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-xs) var(--space-md);
-    padding: var(--space-sm) var(--space-md);
-    font-size: var(--text-xs);
-    color: var(--color-text-muted);
-    background: var(--color-surface-muted);
-    border-top: 1px solid var(--color-border);
-  }
-
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2xs);
-  }
-
-  /* μ / σ: neutral gray tile (matches earlier chart legend), slightly larger than 12px state chips */
-  .legend-swatch {
+  /*
+   * The annotation chart's own keys. μ and σ are glyphs rather than colours —
+   * they mark a value the chart writes on itself, not a shaded region — and the
+   * bout swatches carry a heavier border than a state chip because a bout is a
+   * user's annotation over the trace rather than part of it.
+   */
+  .chart-stat-swatch {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
     box-sizing: border-box;
     width: 15px;
     height: 15px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
     border-radius: var(--radius-sm);
     font-size: 11px;
     font-weight: 600;
@@ -66,64 +55,28 @@
     color: var(--color-text-muted);
     border: 1px solid var(--color-border);
     background: var(--color-surface);
-    flex-shrink: 0;
+
+    &.mean::after {
+      content: 'μ';
+    }
+
+    &.sigma::after {
+      content: 'σ';
+    }
   }
 
-  .chart-stat-legend-swatch--mean::after {
-    content: 'μ';
-  }
-
-  .chart-stat-legend-swatch--sigma::after {
-    content: 'σ';
-  }
-
-  .legend-color {
+  .bout-swatch {
     width: 12px;
     height: 12px;
+    flex-shrink: 0;
     border-radius: var(--radius-sm);
 
-    &.entering {
-      background: var(--color-state-entering);
-      border: 1px solid
-        color-mix(
-          in srgb,
-          var(--color-state-entering) 60%,
-          var(--color-text) 40%
-        );
-    }
-
-    &.occupied {
-      background: var(--color-state-occupied);
-      border: 1px solid
-        color-mix(
-          in srgb,
-          var(--color-state-occupied) 60%,
-          var(--color-text) 40%
-        );
-    }
-
-    &.eliminating {
-      background: var(--color-state-eliminating);
-      border: 1px solid
-        color-mix(
-          in srgb,
-          var(--color-state-eliminating) 60%,
-          var(--color-text) 40%
-        );
-    }
-
-    &.gap {
-      background: var(--color-state-gap);
-      border: 1px solid
-        color-mix(in srgb, var(--color-state-gap) 60%, var(--color-text) 40%);
-    }
-
-    &.bout-urination {
+    &.urination {
       background: rgba(180, 120, 20, 0.35);
       border: 1.5px solid rgba(180, 120, 20, 0.9);
     }
 
-    &.bout-defecation {
+    &.defecation {
       background: rgba(139, 69, 19, 0.35);
       border: 1.5px solid rgba(139, 69, 19, 0.9);
     }

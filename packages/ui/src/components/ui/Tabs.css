@@ -32,4 +32,44 @@
   .tabs-content {
     flex: 1;
   }
+
+  /*
+   * The panel strip: the top edge of a surface rather than a heading inside
+   * one. Triggers share the width, the band is tinted, and the active trigger
+   * is lifted onto the surface colour so the strip reads as the panel's own
+   * chrome. A caller may put its own control in the list beside the triggers —
+   * a dialog's close, for one — which is why the triggers grow and nothing
+   * else in here does.
+   */
+  &.bar {
+    .tabs-list {
+      background-color: var(--color-surface-muted);
+      border-bottom: var(--border-thin);
+      margin-bottom: 0;
+    }
+
+    .tabs-trigger {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-xs);
+      padding: var(--space-sm) var(--space-md);
+      color: var(--color-text-muted);
+      border-bottom: none;
+      transition: var(--transition-fast);
+
+      &:hover {
+        color: var(--color-text);
+        background-color: var(--color-surface);
+      }
+    }
+
+    .tabs-trigger-active {
+      color: var(--color-primary);
+      background-color: var(--color-surface);
+      /* The active underline, inset so it does not add height to the band. */
+      box-shadow: inset 0 -2px 0 var(--color-primary);
+    }
+  }
 }

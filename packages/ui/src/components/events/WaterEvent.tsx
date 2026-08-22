@@ -5,10 +5,11 @@ import Timeline from '@/components/ui/Timeline';
 import type { EventComponentProps } from './types';
 import EventDuration from './meta/EventDuration';
 import TimelineEventShell from './TimelineEventShell';
+import './WaterEvent.css';
 
 const WaterEvent: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
-  const { event, children } = props;
+  const { event } = props;
   if (event.data.type !== 'water_intake') return null;
   const waterData = event.data;
 
@@ -19,16 +20,12 @@ const WaterEvent: React.FC<EventComponentProps> = (props) => {
   return (
     <TimelineEventShell
       {...props}
+      className="water-event"
       icon={<GlassWater aria-hidden />}
-      iconVariant="primary"
+      iconColor="var(--color-water)"
       value={`${waterData.amount}ml`}
-      valueVariant="primary"
+      valueClassName="water-event-value"
       title={t('overview.water_intake')}
-      itemStyle={
-        {
-          '--timeline-icon-color': 'var(--color-primary)',
-        } as React.CSSProperties
-      }
     >
       {typeof waterData.duration === 'number' && (
         <EventDuration duration={waterData.duration} />
@@ -41,7 +38,6 @@ const WaterEvent: React.FC<EventComponentProps> = (props) => {
           {excludedAmount}ml
         </Timeline.MetaItem>
       )}
-      {children}
     </TimelineEventShell>
   );
 };

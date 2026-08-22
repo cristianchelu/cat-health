@@ -1,6 +1,7 @@
 import * as React from 'react';
+import { Callout } from '@/components/ui/Callout';
 import { useTranslation } from 'react-i18next';
-import { Loader2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
@@ -178,7 +179,7 @@ export const DiscoverDevicesStep: React.FC<DiscoverDevicesStepProps> = ({
     >
       {isDiscovering ? (
         <div className="loading-state">
-          <Loader2 className="animate-spin" size={32} />
+          <Spinner size={32} />
           <p>{t('settings.scanning')}</p>
         </div>
       ) : (
@@ -235,11 +236,7 @@ export const DiscoverDevicesStep: React.FC<DiscoverDevicesStepProps> = ({
         )}
       </div>
 
-      {importError && (
-        <p className="discover-import-error" role="alert">
-          {importError}
-        </p>
-      )}
+      {importError && <Callout message={importError} />}
 
       {selectionMode === 'multi' ? (
         <FormActions
@@ -263,11 +260,7 @@ export const DiscoverDevicesStep: React.FC<DiscoverDevicesStepProps> = ({
               <span className="discover-status" role="status">
                 {isImporting ? (
                   <>
-                    <Loader2
-                      className="animate-spin"
-                      size={16}
-                      aria-hidden="true"
-                    />
+                    <Spinner size={16} />
                     {t('settings.importing')}
                   </>
                 ) : (

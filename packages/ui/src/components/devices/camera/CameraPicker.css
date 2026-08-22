@@ -1,4 +1,4 @@
-.camera-picker-content {
+.camera-picker {
   max-width: var(--max-width-sm);
   padding: var(--space-md);
   display: flex;

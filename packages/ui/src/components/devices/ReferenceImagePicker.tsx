@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { FormActions } from '@/components/ui/form';
-import { LoadingState } from '@/components/ui/PageState';
-import { Check } from 'lucide-react';
+import { EmptyState, LoadingState } from '@/components/ui/PageState';
+import { MediaGrid } from '@/components/ui/MediaGrid';
+import { MediaTile } from '@/components/ui/MediaTile';
 import { usePet } from '@/hooks/queries/petQueries';
 import { useVerifiedEventMedia } from '@/hooks/queries/eventQueries';
 import './ReferenceImagePicker.css';
@@ -78,7 +79,7 @@ const ReferenceImagePicker: React.FC<ReferenceImagePickerProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCancel}>
-      <DialogContent className="reference-image-picker-content">
+      <DialogContent className="reference-image-picker">
         <DialogTitle>
           {pet?.name
             ? t('pet_recognizer.picker_title', { name: pet.name })
@@ -107,37 +108,31 @@ const ReferenceImagePicker: React.FC<ReferenceImagePickerProps> = ({
           )}
 
           {!isLoading && candidateMedia && candidateMedia.length === 0 && (
-            <div className="empty-state">
+            <EmptyState>
               <p>
                 {t('pet_recognizer.picker_no_images', {
                   name: pet?.name ?? '',
                 })}
               </p>
-              <p className="help-text">{t('pet_recognizer.picker_help')}</p>
-            </div>
+              <p className="picker-help-text">
+                {t('pet_recognizer.picker_help')}
+              </p>
+            </EmptyState>
           )}
 
           {!isLoading && candidateMedia && candidateMedia.length > 0 && (
             <>
-              <div className="media-grid">
+              <MediaGrid>
                 {displayedMedia.map((media) => (
-                  <div
+                  <MediaTile
                     key={media.id}
-                    className={`media-item ${selectedIds.has(media.id) ? 'selected' : ''}`}
+                    src={`api/media/${media.file_path}`}
+                    alt={t('pet_recognizer.event_snapshot_alt')}
+                    selected={selectedIds.has(media.id)}
                     onClick={() => toggleSelection(media.id)}
-                  >
-                    <img
-                      src={`api/media/${media.file_path}`}
-                      alt={t('pet_recognizer.event_snapshot_alt')}
-                    />
-                    {selectedIds.has(media.id) && (
-                      <div className="selected-indicator">
-                        <Check size={20} />
-                      </div>
-                    )}
-                  </div>
+                  />
                 ))}
-              </div>
+              </MediaGrid>
               {hasMore && (
                 <div className="load-more-container">
                   <Button

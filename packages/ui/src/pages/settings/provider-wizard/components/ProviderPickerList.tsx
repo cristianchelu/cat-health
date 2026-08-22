@@ -49,10 +49,10 @@ export const ProviderPickerList: React.FC<ProviderPickerListProps> = ({
   value,
   onChange,
   labelledBy,
-  name = 'provider-picker',
+  name = 'provider-picker-list',
 }) => {
   return (
-    <fieldset className="provider-picker" aria-labelledby={labelledBy}>
+    <fieldset className="provider-picker-list" aria-labelledby={labelledBy}>
       {groups.map((group, groupIndex) => (
         <div className="provider-picker-group" key={group.label ?? groupIndex}>
           {group.label && (

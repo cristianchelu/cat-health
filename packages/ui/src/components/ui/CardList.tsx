@@ -26,13 +26,13 @@ export const CardList: React.FC<CardListProps> = ({
 }) => {
   if (variant !== 'card') {
     return (
-      <div className={cn('settings-list', variant, className)}>{children}</div>
+      <div className={cn('card-list', variant, className)}>{children}</div>
     );
   }
 
   return (
     <Card>
-      <CardContent noPadding className={cn('settings-list', className)}>
+      <CardContent noPadding className={cn('card-list', className)}>
         {children}
       </CardContent>
     </Card>

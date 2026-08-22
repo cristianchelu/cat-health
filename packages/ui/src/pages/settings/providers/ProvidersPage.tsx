@@ -89,7 +89,7 @@ const ProvidersPage: React.FC = () => {
   const error = accountsQuery.error ?? devicesQuery.error;
 
   return (
-    <div className="page-shell-narrow providers-page">
+    <div className="page-shell-narrow page-providers">
       <AppHeader>
         <AppHeaderBar
           back={{ to: '/settings', label: t('navigation.settings') }}
@@ -107,13 +107,13 @@ const ProvidersPage: React.FC = () => {
         <LoadingState message={t('settings.loading_providers')} />
       ) : error ? (
         <EmptyState
-          className="providers-page-error"
+          tone="error"
           message={t('settings.error_loading_providers')}
         />
       ) : (
         <>
           {userAccounts.length > 0 ? (
-            <CardList>
+            <CardList className="providers-page-list">
               {userAccounts.map((account) => (
                 <ProviderRow
                   key={account.id}
@@ -134,7 +134,7 @@ const ProvidersPage: React.FC = () => {
           {systemAccounts.length > 0 && (
             <section className="providers-page-system">
               <h2>{t('settings.system_integrations')}</h2>
-              <CardList>
+              <CardList className="providers-page-list">
                 {systemAccounts.map((account) => (
                   <ProviderRow
                     key={account.id}

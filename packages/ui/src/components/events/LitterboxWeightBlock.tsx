@@ -8,7 +8,7 @@ import {
   type GetEventWithChildrenDTO,
 } from 'shared';
 import { Button } from '@/components/ui/Button';
-import { FormActions } from '@/components/ui/form';
+import { Checkbox, FormActions } from '@/components/ui/form';
 import { addEvent } from '@/api/pets';
 import { reidentifyLitterboxVisits } from '@/api/devices';
 import {
@@ -167,15 +167,12 @@ const LitterboxWeightBlock = ({ parentEvent }: LitterboxWeightBlockProps) => {
           </div>
         </div>
         {error && <p className="litterbox-weight-block-error">{error}</p>}
-        <label className="litterbox-weight-block-checkbox">
-          <input
-            type="checkbox"
-            checked={reidentifyAfterSave}
-            onChange={(e) => setReidentifyAfterSave(e.target.checked)}
-            disabled={isSaving || parentEvent.device_id == null}
-          />
-          <span>{t('event_details.reidentify_later_visits')}</span>
-        </label>
+        <Checkbox
+          checked={reidentifyAfterSave}
+          onCheckedChange={setReidentifyAfterSave}
+          disabled={isSaving || parentEvent.device_id == null}
+          label={t('event_details.reidentify_later_visits')}
+        />
         <FormActions
           className="litterbox-weight-block-actions"
           onCancel={cancelEdit}

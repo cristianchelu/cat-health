@@ -19,11 +19,17 @@ export const EntityButton: React.FC<EntityButtonProps> = ({
   className,
 }) => {
   return (
-    <div className={cn('entity-control', 'entity-button-entity', className)}>
+    <div className={cn('entity-control', 'entity-button', className)}>
       <div className="entity-info">
         <span className="entity-label">{label}</span>
       </div>
-      <Button type="button" variant="outline" size="sm" onClick={() => {}}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="entity-button-action"
+        onClick={() => {}}
+      >
         {pressLabel}
       </Button>
     </div>

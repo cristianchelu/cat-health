@@ -1,15 +1,8 @@
 .device-centric-event {
-  &.device-connectivity-event {
-    .timeline-value {
-      font-size: var(--text-sm);
-      font-weight: var(--font-normal);
-      color: var(--color-text-muted);
-    }
-  }
-
-  &.litterbox-maintenance-event {
-    .timeline-icon {
-      color: var(--color-warning);
-    }
+  /* "from online" is a phrase, not a reading, so it is not typed like one. */
+  .device-connectivity-event-value {
+    font-size: var(--text-sm);
+    font-weight: var(--font-normal);
+    color: var(--color-text-muted);
   }
 }

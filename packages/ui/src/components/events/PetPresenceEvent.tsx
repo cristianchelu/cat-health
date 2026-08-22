@@ -4,7 +4,6 @@ import { Home, LogOut } from 'lucide-react';
 import type { PetPresenceEventDataDTO } from 'shared';
 import type { EventComponentProps } from './types';
 import TimelineEventShell from './TimelineEventShell';
-import './PetPresenceEvent.css';
 
 type PresenceState = PetPresenceEventDataDTO['state'];
 
@@ -14,13 +13,10 @@ const PRESENCE_ICON: Record<PresenceState, React.ElementType> = {
   outside: LogOut,
 };
 
-const PRESENCE_VARIANT: Record<
-  PresenceState,
-  'success' | 'default' | 'warning'
-> = {
-  home: 'success',
-  away: 'default',
-  outside: 'warning',
+const PRESENCE_COLOR: Record<PresenceState, string> = {
+  home: 'var(--color-success)',
+  away: 'var(--color-text-muted)',
+  outside: 'var(--color-warning)',
 };
 
 const PetPresenceEvent: React.FC<EventComponentProps> = (props) => {
@@ -45,9 +41,8 @@ const PetPresenceEvent: React.FC<EventComponentProps> = (props) => {
   return (
     <TimelineEventShell
       {...props}
-      className="pet-presence-event"
       icon={<Icon aria-hidden />}
-      iconVariant={PRESENCE_VARIANT[presence.state]}
+      iconColor={PRESENCE_COLOR[presence.state]}
       title={t(titleKey)}
       showDevice={false}
       value={contextLabel}

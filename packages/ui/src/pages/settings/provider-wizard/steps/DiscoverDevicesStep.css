@@ -3,11 +3,6 @@
   flex-direction: column;
   gap: var(--space-lg);
 
-  /* Keyframes live globally (Card.css), same as PetSelector. */
-  .animate-spin {
-    animation: spin 1s linear infinite;
-  }
-
   /*
    * Only multi-select rows carry a hit target, so only they get a pointer and
    * a hover border — a row with nothing to activate must not look clickable.
@@ -71,11 +66,3 @@
 }
 
 /* Shared with LinkPetsStep, so it stays outside .discover-devices-step. */
-.discover-import-error {
-  margin: var(--space-md) 0 0;
-  padding: var(--space-md);
-  border-radius: var(--radius-lg);
-  background: var(--color-error-light);
-  color: var(--color-error);
-  font-size: var(--text-sm);
-}

@@ -1,12 +1,15 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import { PawPrint, Sparkles } from 'lucide-react';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { useUpdateDevice } from '@/hooks/queries/deviceQueries';
 import { Button } from '@/components/ui/Button';
-import Avatar from '@/components/ui/Avatar';
-import { Switch } from '@/components/ui/Switch';
-import { cn } from '@/lib/utils';
-import { Cat, ImagePlus, X, Sparkles } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/Card';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import {
+  TrainedPetsEditor,
+  type TrainedPetRow,
+} from '@/components/devices/recognition';
 import type { GetDeviceResponseDTO, PetRecognizerConfig } from 'shared';
 import ReferenceImagePicker from '@/components/devices/ReferenceImagePicker';
 import TestRecognitionModal from '@/components/devices/TestRecognitionModal';
@@ -16,11 +19,19 @@ interface ReferenceImagesTabProps {
   device: GetDeviceResponseDTO;
 }
 
+/**
+ * The recognizer device's own view of who it is trained on.
+ *
+ * The same `TrainedPetsEditor` the Recognition tab uses, because this asks the
+ * user the identical question from the other end of the link — a device's
+ * recognizer, rather than a recognizer's device.
+ */
 const ReferenceImagesTab: React.FC<ReferenceImagesTabProps> = ({ device }) => {
   const { t } = useTranslation();
   const { pets } = usePetContext();
   const { mutate: updateDevice } = useUpdateDevice(device.id);
   const [selectedPetId, setSelectedPetId] = React.useState<number | null>(null);
+  const [expandedPetId, setExpandedPetId] = React.useState<number | null>(null);
   const [isPickerOpen, setIsPickerOpen] = React.useState(false);
   const [isTestModalOpen, setIsTestModalOpen] = React.useState(false);
 
@@ -58,33 +69,31 @@ const ReferenceImagesTab: React.FC<ReferenceImagesTabProps> = ({ device }) => {
   const handleRemoveImage = (petId: number, mediaId: number) => {
     const petIdStr = petId.toString();
     const currentIds = referenceImages[petIdStr] || [];
-    const updatedIds = currentIds.filter((id) => id !== mediaId);
 
-    const updatedConfig = {
-      ...config,
-      reference_images: {
-        ...referenceImages,
-        [petIdStr]: updatedIds,
+    updateDevice({
+      config: {
+        ...config,
+        reference_images: {
+          ...referenceImages,
+          [petIdStr]: currentIds.filter((id) => id !== mediaId),
+        },
       },
-    };
-
-    updateDevice({ config: updatedConfig });
+    });
   };
 
   const handleAddImages = (petId: number, mediaIds: number[]) => {
     const petIdStr = petId.toString();
     const currentIds = referenceImages[petIdStr] || [];
-    const updatedIds = [...currentIds, ...mediaIds];
 
-    const updatedConfig = {
-      ...config,
-      reference_images: {
-        ...referenceImages,
-        [petIdStr]: updatedIds,
+    updateDevice({
+      config: {
+        ...config,
+        reference_images: {
+          ...referenceImages,
+          [petIdStr]: [...currentIds, ...mediaIds],
+        },
       },
-    };
-
-    updateDevice({ config: updatedConfig });
+    });
     setIsPickerOpen(false);
   };
 
@@ -93,99 +102,69 @@ const ReferenceImagesTab: React.FC<ReferenceImagesTabProps> = ({ device }) => {
     setIsPickerOpen(true);
   };
 
+  const petRows: TrainedPetRow[] = pets.map((pet) => {
+    const petKey = String(pet.id);
+    const media = referenceMedia?.[petKey] ?? [];
+    const watched = !ignoredPets.has(pet.id);
+
+    return {
+      id: pet.id,
+      name: pet.name,
+      avatarUrl: pet.avatar_url,
+      isWatched: watched,
+      watchAriaLabel: t('pet_recognizer.watch_pet_label', { name: pet.name }),
+      statusLabel: watched
+        ? t('pet_recognizer.reference_images_count', { count: media.length })
+        : t('pet_recognizer.pet_not_watched'),
+      thumbs: media.map((item) => ({
+        id: item.id,
+        url: `api/media/${item.file_path}`,
+        alt: t('pet_recognizer.reference_for_alt', { name: pet.name }),
+      })),
+      referenceImageIds: referenceImages[petKey] ?? [],
+      expandLabel: t('pet_recognizer.expand_pet_row', { name: pet.name }),
+      addImagesLabel: t('pet_recognizer.add_from_events'),
+      removeImageLabel: t('pet_recognizer.remove_image'),
+    };
+  });
+
+  const selectedPetRow = petRows.find((row) => row.id === selectedPetId);
+
   return (
     <div className="reference-images-tab">
-      <div className="tab-header">
-        <div className="tab-description">
-          <p>{t('pet_recognizer.tab_description')}</p>
-          <p>{t('pet_recognizer.watch_help')}</p>
-        </div>
-        <Button
-          variant="secondary"
-          onClick={() => setIsTestModalOpen(true)}
-          className="test-button"
-        >
-          <Sparkles size="1em" />
-          {t('pet_recognizer.test_recognition')}
-        </Button>
-      </div>
+      <SectionHeader
+        icon={<PawPrint aria-hidden="true" />}
+        subtitle={t('recognition.trained_pets_subtitle')}
+      >
+        {t('recognition.trained_pets_title')}
+      </SectionHeader>
 
-      <div className="pets-grid">
-        {pets.map((pet) => {
-          const petIdStr = pet.id.toString();
-          const refs = referenceMedia?.[petIdStr] ?? [];
-          const isWatched = !ignoredPets.has(pet.id);
-
-          return (
-            <div
-              key={pet.id}
-              className={cn('pet-card', !isWatched && 'is-ignored')}
+      <Card className="reference-images-card">
+        <CardContent noPadding>
+          <TrainedPetsEditor
+            pets={petRows}
+            emptyLabel={t('recognition.trained_pets_empty')}
+            expandedPetId={expandedPetId}
+            onToggleExpand={(petId) =>
+              setExpandedPetId((current) => (current === petId ? null : petId))
+            }
+            onToggleWatched={handleWatchedChange}
+            onAddImages={openPicker}
+            onRemoveImage={handleRemoveImage}
+          />
+          {/* A tool acting on this card's own content, so it stays left. */}
+          <div className="reference-images-tools">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsTestModalOpen(true)}
             >
-              <div className="pet-header">
-                <Avatar
-                  src={pet.avatar_url}
-                  alt={pet.name}
-                  fallbackIcon={<Cat size="1em" />}
-                />
-                <div className="pet-info">
-                  <h3>{pet.name}</h3>
-                  <span className="image-count">
-                    {isWatched
-                      ? t('pet_recognizer.reference_images_count', {
-                          count: refs.length,
-                        })
-                      : t('pet_recognizer.pet_not_watched')}
-                  </span>
-                </div>
-                <Switch
-                  checked={isWatched}
-                  onCheckedChange={(checked) =>
-                    handleWatchedChange(pet.id, checked)
-                  }
-                  aria-label={t('pet_recognizer.watch_pet_label', {
-                    name: pet.name,
-                  })}
-                  title={t('pet_recognizer.watch_pet_label', {
-                    name: pet.name,
-                  })}
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon
-                  onClick={() => openPicker(pet.id)}
-                  className="add-images-button"
-                  title={t('pet_recognizer.add_from_events')}
-                >
-                  <ImagePlus size={18} />
-                </Button>
-              </div>
-
-              {refs.length > 0 && (
-                <div className="images-grid">
-                  {refs.map((ref) => (
-                    <div key={ref.id} className="image-item">
-                      <img
-                        src={`api/media/${ref.file_path}`}
-                        alt={t('pet_recognizer.reference_for_alt', {
-                          name: pet.name,
-                        })}
-                      />
-                      <button
-                        className="remove-button"
-                        onClick={() => handleRemoveImage(pet.id, ref.id)}
-                        title={t('pet_recognizer.remove_image')}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              <Sparkles size="1em" />
+              {t('pet_recognizer.test_recognition')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {selectedPetId !== null && (
         <ReferenceImagePicker
@@ -193,6 +172,7 @@ const ReferenceImagesTab: React.FC<ReferenceImagesTabProps> = ({ device }) => {
           onClose={() => setIsPickerOpen(false)}
           petId={selectedPetId}
           sourceDeviceId={config.source_device_id}
+          excludeMediaIds={selectedPetRow?.referenceImageIds}
           onSelect={(mediaIds) => handleAddImages(selectedPetId, mediaIds)}
         />
       )}

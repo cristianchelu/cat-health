@@ -76,13 +76,13 @@ const DeviceAnnotationPage: React.FC = () => {
   return (
     <div
       className={cn(
-        'device-annotate-page',
+        'page-device-annotation',
         'page-viewport-fill',
         'page-shell-wide',
         'page-shell-bleed',
       )}
     >
-      <AppHeader>
+      <AppHeader className="device-annotation-header">
         <AppHeaderBar
           back={{
             to: deviceBack.to,

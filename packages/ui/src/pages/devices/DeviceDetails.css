@@ -1,4 +1,4 @@
-.device-details-page {
+.page-device-details {
   display: flex;
   flex-direction: column;
   background-color: var(--color-background);

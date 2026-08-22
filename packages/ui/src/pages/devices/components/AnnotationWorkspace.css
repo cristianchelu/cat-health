@@ -24,10 +24,6 @@
     width: 100%;
     height: 100%;
     color: var(--color-text-muted);
-
-    .annotation-media-spinner {
-      animation: annotation-workspace-spin 1s linear infinite;
-    }
   }
 
   .annotation-media-gallery {
@@ -139,13 +135,6 @@
     gap: var(--space-2xs);
     flex-shrink: 0;
     margin-left: auto;
-
-    /* Icon-only, so the box is square rather than carrying label padding. */
-    .button.sm {
-      --button-padding-inline: 0;
-
-      width: var(--button-height);
-    }
   }
 
   .annotation-icon-action-btn {
@@ -166,14 +155,6 @@
     height: auto;
     padding-top: var(--space-2xs);
     padding-bottom: var(--space-2xs);
-  }
-
-  .annotation-checkbox {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    cursor: pointer;
-    accent-color: var(--color-primary);
   }
 
   .annotation-bouts-section {
@@ -340,14 +321,5 @@
         background: color-mix(in srgb, var(--color-error) 10%, transparent);
       }
     }
-  }
-}
-
-@keyframes annotation-workspace-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
   }
 }

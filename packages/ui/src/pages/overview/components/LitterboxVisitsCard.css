@@ -32,6 +32,33 @@
     font-size: var(--text-xl);
     font-weight: var(--font-bold);
     color: var(--color-text);
+
+    /*
+     * The label stays --color-text; only the glyph carries the hue, inked by
+     * --glyph-ink like every other icon. Drawn raw on this card
+     * --color-litterbox-urination is 1.6:1, and unlike a timeline glyph it has
+     * no tinted disc to sit on — it meets the card white directly.
+     *
+     * Measured against --color-surface (a glyph is non-text, so the bar is 3:1):
+     *   light — urination 3.45 · defecation 8.16
+     *   dark  — urination 9.69 · defecation 4.40
+     * Re-measure before touching these numbers.
+     */
+    svg {
+      color: color-mix(
+        in srgb,
+        var(--litterbox-stat-hue) var(--glyph-ink),
+        var(--color-text)
+      );
+    }
+  }
+
+  .litterbox-stat-pee {
+    --litterbox-stat-hue: var(--color-litterbox-urination);
+  }
+
+  .litterbox-stat-poop {
+    --litterbox-stat-hue: var(--color-litterbox-defecation);
   }
 
   .overview-litterbox-chart-slot {

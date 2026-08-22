@@ -1,5 +1,5 @@
 /* Measure from `.page-shell-narrow` (page-shell.css). */
-.provider-wizard-page {
+.page-provider-wizard {
   .step-container {
     display: flex;
     flex-direction: column;
@@ -40,8 +40,9 @@
       color: var(--color-text-light);
     }
 
-    /* The picker card and a following note have no flex gap between them. */
-    .provider-picker + .provider-note {
+    /* Nothing here has a flex gap, so a note that follows something needs
+       its own air; one that opens a step does not. */
+    .provider-wizard-note:not(:first-child) {
       margin-top: var(--space-md);
     }
 
@@ -129,14 +130,6 @@
     color: var(--color-text-light);
     background-color: var(--color-surface-muted);
     border-radius: var(--radius-md);
-  }
-
-  .error-message {
-    color: var(--color-error);
-    font-size: var(--text-sm);
-    padding: var(--space-sm);
-    background-color: var(--color-error-light);
-    border-radius: var(--radius-sm);
   }
 
   @media (max-width: 767px) {

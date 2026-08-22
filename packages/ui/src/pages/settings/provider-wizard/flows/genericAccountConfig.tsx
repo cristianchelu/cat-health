@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Info } from 'lucide-react';
-import '../../providerForm.css';
+import { ProviderNote } from '@/pages/settings/components/ProviderNote';
 import type {
   ProviderAccountConfigModule,
   ProviderAccountFieldsProps,
@@ -22,12 +21,7 @@ import type {
 const GenericAccountFields: React.FC<ProviderAccountFieldsProps> = () => {
   const { t } = useTranslation();
 
-  return (
-    <p className="provider-note info">
-      <Info size={18} aria-hidden="true" />
-      <span>{t('settings.no_configurable_settings')}</span>
-    </p>
-  );
+  return <ProviderNote>{t('settings.no_configurable_settings')}</ProviderNote>;
 };
 
 export const genericAccountConfig: ProviderAccountConfigModule = {

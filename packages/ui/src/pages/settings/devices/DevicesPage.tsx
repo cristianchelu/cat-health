@@ -32,7 +32,6 @@ import {
   sortDevices,
   type DeviceSort,
 } from './deviceListUtils.ts';
-import './DevicesPage.css';
 
 /**
  * Below this many devices the toolbar is pure chrome — the whole list is
@@ -100,7 +99,7 @@ const DevicesPage: React.FC = () => {
   const deviceCount = devices?.length ?? 0;
 
   return (
-    <div className="page-shell-narrow settings-devices-page">
+    <div className="page-shell-narrow">
       <AppHeader>
         <AppHeaderBar
           back={{ to: '/settings', label: t('navigation.settings') }}
@@ -118,7 +117,7 @@ const DevicesPage: React.FC = () => {
         <LoadingState message={t('settings.loading_devices')} />
       ) : devicesQuery.error ? (
         <EmptyState
-          className="settings-devices-error"
+          tone="error"
           message={t('settings.error_loading_devices')}
         />
       ) : (

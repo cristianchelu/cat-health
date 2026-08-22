@@ -52,6 +52,15 @@ interface AppHeaderBarProps extends Omit<React.ComponentProps<'div'>, 'title'> {
   /** Trailing controls. */
   actions?: React.ReactNode;
   /**
+   * Give the trailing controls their own row under the title below 768px.
+   *
+   * For actions too wide to share the app-bar row: a date range with two
+   * steppers leaves the `<h1>` a sliver, and the bar ellipsises the title away
+   * to nothing rather than the controls. Pages whose actions are a couple of
+   * icon buttons keep the single-row default.
+   */
+  actionsOwnRow?: boolean;
+  /**
    * Drop the whole bar below 768px, for the pages whose phone chrome is the
    * `AppHeaderRow` itself — the overview and health screens lead with the pet
    * strip, because switching cat is the thing you came to the top of the page
@@ -159,6 +168,7 @@ const AppHeaderBar = React.forwardRef<HTMLDivElement, AppHeaderBarProps>(
       title,
       subtitle,
       actions,
+      actionsOwnRow = false,
       desktopOnly = false,
       className,
       ...props
@@ -204,6 +214,7 @@ const AppHeaderBar = React.forwardRef<HTMLDivElement, AppHeaderBarProps>(
       <div
         className={cn(
           'app-header-bar',
+          actionsOwnRow && 'app-header-bar-actions-row',
           desktopOnly && 'app-header-bar-desktop-only',
           className,
         )}

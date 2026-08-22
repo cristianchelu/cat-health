@@ -63,6 +63,13 @@
     color: var(--color-text-muted);
   }
 
+  /* A heading over the day's timeline; the heading no longer spaces itself. */
+  .overview-activity {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
   .overview-timeline-container {
     position: relative;
     min-height: 100px;

@@ -135,11 +135,11 @@ const FoodScanStep: React.FC<FoodScanStepProps> = ({
   };
 
   if (state.status === 'denied') {
-    return <p className="food-scan-denied">{t('log_food.scan_denied')}</p>;
+    return <p className="food-scan-step denied">{t('log_food.scan_denied')}</p>;
   }
 
   return (
-    <div className="food-scan">
+    <div className="food-scan-step">
       <div className="food-scan-viewport">
         <video ref={videoRef} muted playsInline className="food-scan-video" />
         <div className="food-scan-frame" aria-hidden="true">

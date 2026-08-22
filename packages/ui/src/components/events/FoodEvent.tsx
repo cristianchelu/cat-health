@@ -7,7 +7,7 @@ import TimelineEventShell from './TimelineEventShell';
 
 const FoodEvent: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
-  const { event, children } = props;
+  const { event } = props;
   if (event.data.type !== 'food_intake') return null;
   const foodData = event.data;
 
@@ -17,13 +17,12 @@ const FoodEvent: React.FC<EventComponentProps> = (props) => {
     <TimelineEventShell
       {...props}
       icon={<Drumstick aria-hidden />}
-      iconVariant="success"
+      iconColor="var(--color-food)"
       value={`${foodData.amount}g`}
       valueVariant="success"
       title={t('overview.food_intake')}
     >
       {foodId != null && <EventFood foodId={foodId} />}
-      {children}
     </TimelineEventShell>
   );
 };

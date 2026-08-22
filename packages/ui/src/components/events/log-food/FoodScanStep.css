@@ -1,4 +1,4 @@
-.food-scan {
+.food-scan-step {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
@@ -82,13 +82,23 @@
       color: var(--color-text-muted);
     }
   }
-}
 
-.food-scan-denied {
-  margin: 0;
-  padding: var(--space-md) var(--space-2xs);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
+  /*
+   * The permission-denied state is the whole step, not something inside it —
+   * the component renders this instead of the viewport, never alongside it.
+   */
+  &.denied {
+    margin: 0;
+    padding: var(--space-md) var(--space-2xs);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .food-scan-line {
+      animation: none;
+    }
+  }
 }
 
 @keyframes food-scan-sweep {
@@ -98,11 +108,5 @@
 
   to {
     top: 80%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .food-scan .food-scan-line {
-    animation: none;
   }
 }

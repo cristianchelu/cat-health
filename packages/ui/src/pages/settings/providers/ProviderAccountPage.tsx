@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import { AlertTriangle, Info, Plus, Smartphone } from 'lucide-react';
+import { Plus, Smartphone } from 'lucide-react';
 import type { ProviderPetLink } from 'shared';
 import {
   useProviders,
@@ -12,6 +12,7 @@ import {
 import { backState } from '@/lib/navigationBack';
 import { isRecord } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/PageState';
 import {
   FormCard,
   FormCardBody,
@@ -41,7 +42,7 @@ import {
 } from '../provider-wizard/flows/accountConfigRegistry.ts';
 import type { ProviderAccountFormValues } from '../provider-wizard/flows/accountConfigTypes.ts';
 import { ProviderBrandTile } from './components/ProviderBrandTile';
-import '../providerForm.css';
+import { ProviderNote } from '@/pages/settings/components/ProviderNote';
 import './ProviderAccountPage.css';
 
 const EMPTY_PET_LINKS: ProviderPetLink[] = [];
@@ -202,7 +203,7 @@ const ProviderAccountPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="page-shell-narrow provider-account-page">
+      <div className="page-shell-narrow page-provider-account">
         {header(t('settings.edit_provider_title'))}
         <LoadingState message={t('settings.loading_provider_data')} />
       </div>
@@ -211,12 +212,12 @@ const ProviderAccountPage: React.FC = () => {
 
   if (loadError || !account) {
     return (
-      <div className="page-shell-narrow provider-account-page">
+      <div className="page-shell-narrow page-provider-account">
         {header(t('settings.edit_provider_title'))}
-        <div className="provider-account-error">
+        <EmptyState tone="error">
           <p>{t('settings.error_loading_provider')}</p>
           <Button onClick={back.go}>{t('settings.back')}</Button>
-        </div>
+        </EmptyState>
       </div>
     );
   }
@@ -225,7 +226,7 @@ const ProviderAccountPage: React.FC = () => {
   const Fields = configModule.Fields;
 
   return (
-    <div className="page-shell-narrow provider-account-page">
+    <div className="page-shell-narrow page-provider-account">
       {header(account.name)}
 
       <FormShell
@@ -261,14 +262,9 @@ const ProviderAccountPage: React.FC = () => {
             <Fields control={control} mode="edit" />
 
             {configModule.note && (
-              <p className={`provider-note ${configModule.note.variant}`}>
-                {configModule.note.variant === 'warn' ? (
-                  <AlertTriangle size={18} aria-hidden="true" />
-                ) : (
-                  <Info size={18} aria-hidden="true" />
-                )}
-                <span>{t(configModule.note.i18nKey)}</span>
-              </p>
+              <ProviderNote variant={configModule.note.variant}>
+                {t(configModule.note.i18nKey)}
+              </ProviderNote>
             )}
 
             <FormSwitch

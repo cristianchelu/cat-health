@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
-import { Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { EmptyState, LoadingState } from '@/components/ui/PageState';
+import { MediaGrid } from '@/components/ui/MediaGrid';
+import { MediaTile } from '@/components/ui/MediaTile';
+import { CheckCircle, XCircle } from 'lucide-react';
 import apiClient from '@/api/apiClient';
 import { testDeviceIdentification } from '@/api/devices';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -148,7 +151,7 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="test-recognition-modal-content">
+      <DialogContent className="test-recognition-modal">
         <DialogTitle>{t('pet_recognizer.test_modal_title')}</DialogTitle>
 
         <p className="modal-description">
@@ -165,64 +168,52 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
 
         <div className="media-grid-container">
           {isLoading && (
-            <div className="loading-state">
-              <Loader2 className="animate-spin" />
-              <p>{t('pet_recognizer.loading_images')}</p>
-            </div>
+            <LoadingState message={t('pet_recognizer.loading_images')} />
           )}
 
           {!isLoading && allMedia && allMedia.length === 0 && (
-            <div className="empty-state">
-              <p>{t('pet_recognizer.no_verified_images_device')}</p>
-            </div>
+            <EmptyState
+              message={t('pet_recognizer.no_verified_images_device')}
+            />
           )}
 
           {!isLoading && allMedia && allMedia.length > 0 && (
-            <div className="media-grid">
+            <MediaGrid>
               {allMedia.slice(0, 50).map((media) => {
                 const result = testResults.get(media.id);
                 const isTesting = pendingTestIds.has(media.id);
 
                 return (
-                  <div
+                  <MediaTile
                     key={media.id}
-                    className={`media-item ${result ? 'tested' : ''} ${isTesting ? 'testing' : ''}`}
-                    onClick={() =>
-                      !isTesting && handleTest(media.id, media.actualPetId)
+                    src={`api/media/${media.file_path}`}
+                    alt={t('pet_recognizer.test_image_alt')}
+                    busy={isTesting}
+                    onClick={() => handleTest(media.id, media.actualPetId)}
+                    footerTone={result?.isCorrect ? 'ok' : 'error'}
+                    footer={
+                      result && (
+                        <>
+                          {result.isCorrect ? (
+                            <CheckCircle size={20} aria-hidden="true" />
+                          ) : (
+                            <XCircle size={20} aria-hidden="true" />
+                          )}
+                          <span>
+                            {result.causedBy === 'error'
+                              ? t('pet_recognizer.unknown_error')
+                              : result.causedBy === 'pet' ||
+                                  result.causedBy === 'unknown'
+                                ? result.petName
+                                : t(causeLabelKey(result.causedBy))}
+                          </span>
+                        </>
+                      )
                     }
-                  >
-                    <img
-                      src={`api/media/${media.file_path}`}
-                      alt={t('pet_recognizer.test_image_alt')}
-                    />
-                    {isTesting && (
-                      <div className="testing-indicator">
-                        <Loader2 className="animate-spin" size={24} />
-                      </div>
-                    )}
-                    {result && (
-                      <div
-                        className={`result-indicator ${result.isCorrect ? 'correct' : 'incorrect'}`}
-                      >
-                        {result.isCorrect ? (
-                          <CheckCircle size={20} />
-                        ) : (
-                          <XCircle size={20} />
-                        )}
-                        <span className="result-name">
-                          {result.causedBy === 'error'
-                            ? t('pet_recognizer.unknown_error')
-                            : result.causedBy === 'pet' ||
-                                result.causedBy === 'unknown'
-                              ? result.petName
-                              : t(causeLabelKey(result.causedBy))}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  />
                 );
               })}
-            </div>
+            </MediaGrid>
           )}
         </div>
 

@@ -122,6 +122,57 @@ return (
 **ALWAYS use CSS variables** from `packages/ui/src/theme.css` instead of hardcoding values.
 **ALWAYS use CSS nesting** with one single top-level classname that contains everything else.
 
+#### Images from the server
+
+**Anything the server serves is drawn through `FallbackImage`** — never a bare
+`<img>`. Enforced by `packages/ui/src/test/serverImages.test.ts`.
+
+Media rows outlive their files: a snapshot is pruned, a volume is remounted
+somewhere else, a seeded database names photos nobody has. A bare `<img>` answers
+that with the UA's broken-image glyph and the alt text spilling out of a 52px
+square. `FallbackImage` answers it with an icon sized to its box, and it is the
+only place that behaviour is written down.
+
+- `Avatar` and `MediaTile` already render through it, so reach for those first —
+  a pet's photo is an `Avatar`, a wall of media is a `MediaGrid` of `MediaTile`s.
+- `fit="contain"` where the photo _is_ the content (an event's full frame);
+  the default `cover` is for anything that reads as a thumbnail.
+- The exemptions are the primitive itself and a local object-URL preview of a
+  file the user just picked — there is no request there to fail.
+
+#### One stylesheet, one namespace
+
+There is no CSS modules and no code splitting here: every stylesheet is
+concatenated into one global sheet, so a class declared at the outermost level
+of two files is one class that two components take turns losing. Three clauses,
+enforced by `packages/ui/src/test/cssStructure.test.ts`:
+
+- **One top-level class per file.** Everything else nests inside it. Reopening
+  the same root under `@media (prefers-color-scheme: dark)` to restate tokens is
+  still one namespace and is fine. `@media` / `@supports` / `@container` are
+  transparent to this rule — a second root does not become legal by hiding
+  inside a breakpoint.
+- **The root is named after the file.** `CardList.css` → `.card-list`. A route's
+  stylesheet takes a `page-` prefix and drops the redundant `Page` suffix —
+  `Overview.css` → `.page-overview`, `AddEditPetPage.css` → `.page-add-edit-pet`
+  — which is what keeps `.overview` and `.settings` out of the namespace
+  components draw from. Colocated components under `pages/*/components/` are
+  ordinary components and take no prefix.
+- **No file selects outside its own namespace.** Never another component's
+  class, and no bare element selector on markup you did not author. A component
+  that needs to style what a caller passed it says so at the slot, with `>` or
+  `@scope` — it does not reach down the tree and hope.
+
+The global layer — `index.css`, `App.css`, `theme.css`, `styles/*.css` — is
+exempt: those are the only sheets that own bare element selectors and
+free-standing utilities.
+
+`KNOWN_VIOLATIONS` in the checker is **empty**, and that is the finished state:
+every stylesheet in `src` now names its own namespace. It may only shrink, and a
+file that starts passing **must** have its line deleted in the same commit — a
+stale entry fails the suite, so the list cannot rot into a graveyard. Adding a
+name back needs the justification a revert would.
+
 **No raw spacing `px` in component CSS.** Padding, margin, gap, and inset must use `--space-*` (or a semantic token that resolves to one, e.g. `--card-padding`, `--page-section-gap`). Same for type: `--text-*` / `--font-*` / `--line-height-*`, not bare `13px` / `600`.
 
 - **NEVER** copy a design-file number into CSS because Figma said `15px`. Map it to the nearest existing token (`15` → `--space-md` / `16px` is fine; do not invent `15px`).
