@@ -157,30 +157,12 @@ const TimelineMetaItem = React.forwardRef<
   );
 });
 
-const TimelineDescription = React.forwardRef<
-  HTMLParagraphElement,
-  React.ComponentProps<'p'>
->(({ className, ...props }, ref) => {
-  return (
-    <p className={cn('timeline-description', className)} ref={ref} {...props} />
-  );
-});
-
 const TimelineMeta = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<'div'>
 >(({ className, ...props }, ref) => {
   return (
     <div className={cn('timeline-meta', className)} ref={ref} {...props} />
-  );
-});
-
-const TimelineFooter = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<'div'>
->(({ className, ...props }, ref) => {
-  return (
-    <div className={cn('timeline-footer', className)} ref={ref} {...props} />
   );
 });
 
@@ -194,10 +176,8 @@ TimelineTitle.displayName = 'Timeline.Title';
 TimelineTimestamp.displayName = 'Timeline.Timestamp';
 TimelineValue.displayName = 'Timeline.Value';
 TimelineValueGroup.displayName = 'Timeline.ValueGroup';
-TimelineDescription.displayName = 'Timeline.Description';
 TimelineMeta.displayName = 'Timeline.Meta';
 TimelineMetaItem.displayName = 'Timeline.MetaItem';
-TimelineFooter.displayName = 'Timeline.Footer';
 
 const Timeline = Object.assign(TimelineRoot, {
   Item: TimelineItem,
@@ -209,18 +189,14 @@ const Timeline = Object.assign(TimelineRoot, {
   Timestamp: TimelineTimestamp,
   Value: TimelineValue,
   ValueGroup: TimelineValueGroup,
-  Description: TimelineDescription,
   Meta: TimelineMeta,
   MetaItem: TimelineMetaItem,
-  Footer: TimelineFooter,
 });
 
 export {
   type TimelineVariant,
   type TimelineValueProps,
   TimelineContent,
-  TimelineDescription,
-  TimelineFooter,
   TimelineHeader,
   TimelineTitleGroup,
   TimelineIcon,
