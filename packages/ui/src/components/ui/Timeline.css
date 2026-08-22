@@ -90,17 +90,11 @@
 
   .timeline-icon {
     /*
-     * The disc is a wash of the row's accent; the glyph is that accent mixed
-     * toward --color-text, because several accents (--color-warning at 1.9:1,
-     * --color-litterbox-urination at 1.7:1) are illegible drawn raw on their
-     * own wash. Same recipe as StatusPill.css and signal-tone.css, and the
-     * share differs per theme for the same reason. A glyph is a non-text
-     * component, so the bar is 3:1 rather than AA's 4.5:1 — which is why it
-     * can stay more saturated than a StatusPill label.
+     * The disc is a wash of the row's accent; the glyph is that accent inked
+     * by --glyph-ink, because several accents are illegible drawn raw on their
+     * own wash. The share and the reasoning live in theme.css.
      *
-     * Measured against the disc, which is the only thing the glyph sits on.
-     * The light share is set by urination, the palest accent any row carries;
-     * at 60% it lands on 2.91 and everything else has room to spare.
+     * Measured against the disc, which is the only thing the glyph sits on:
      *   light — primary 5.41 · food 3.80 · water 3.91 · warning 3.75 ·
      *           error 5.26 · muted 4.04 · urination 3.19 · defecation 6.57 ·
      *           unknown 4.15
@@ -109,8 +103,7 @@
      *           unknown 5.71
      * Re-measure before touching these numbers.
      */
-    --timeline-icon-ink: 55%;
-
+    position: relative;
     display: grid;
     place-items: center;
     width: var(--timeline-icon-size);
@@ -119,20 +112,31 @@
     background-color: rgba(from var(--timeline-icon-color) r g b / 0.15);
     color: color-mix(
       in srgb,
-      var(--timeline-icon-color) var(--timeline-icon-ink),
+      var(--timeline-icon-color) var(--glyph-ink),
       var(--color-text)
     );
     font-size: var(--text-base);
     flex-shrink: 0;
 
-    @media (prefers-color-scheme: dark) {
-      /* Dark surfaces are already low-luminance, so the accent stays vivid. */
-      --timeline-icon-ink: 65%;
-    }
-
-    svg {
+    /*
+     * The glyph the disc holds directly. A child that fills the disc and draws
+     * its own glyphs — `SplitIcon`, for a row whose kind is two things — sizes
+     * those against itself, so this must not reach past its own.
+     */
+    & > svg {
       width: 16px;
       height: 16px;
+    }
+
+    /*
+     * A glyph that fills the slot brings its own tint, so the disc stops
+     * laying one down. Both washes are translucent by design — that is what
+     * lets them blend with the row's hover highlight — which also means they
+     * would stack, and the default grey underneath would tint every half of
+     * the glyph above it away from the colour it shares with its own row.
+     */
+    &:has(> .split-icon) {
+      background-color: transparent;
     }
   }
 

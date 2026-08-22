@@ -1,0 +1,36 @@
+.split-icon {
+  /*
+   * Fills the slot it is given and takes that slot's shape, so a container
+   * that draws a disc gets a split disc without knowing it. The tint it lays
+   * down is the same 15% wash a single-accent icon slot derives for itself,
+   * which is what makes a split slot weigh the same as a plain one beside it.
+   */
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: inherit;
+  overflow: hidden;
+
+  .split-icon-half {
+    display: grid;
+    place-items: center;
+    background-color: rgba(from var(--split-icon-hue) r g b / 0.15);
+    color: color-mix(
+      in srgb,
+      var(--split-icon-hue) var(--glyph-ink),
+      var(--color-text)
+    );
+  }
+
+  /*
+   * Sized against the half's height rather than a fixed length, so the glyphs
+   * scale with whatever slot this lands in. 38% is the largest that keeps a
+   * glyph's corners inside a circular slot: centred in its half it sits 8/16
+   * of the radius off-centre, and past this the far corner crosses the rim.
+   */
+  svg {
+    height: 38%;
+    width: auto;
+  }
+}

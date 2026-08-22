@@ -34,10 +34,10 @@
     color: var(--color-text);
 
     /*
-     * The label stays --color-text; only the glyph carries the hue, mixed the
-     * way a timeline icon is, and at the same shares. Drawn raw on this card
+     * The label stays --color-text; only the glyph carries the hue, inked by
+     * --glyph-ink like every other icon. Drawn raw on this card
      * --color-litterbox-urination is 1.6:1, and unlike a timeline glyph it has
-     * no tinted disc to sit on.
+     * no tinted disc to sit on — it meets the card white directly.
      *
      * Measured against --color-surface (a glyph is non-text, so the bar is 3:1):
      *   light — urination 3.45 · defecation 8.16
@@ -47,17 +47,9 @@
     svg {
       color: color-mix(
         in srgb,
-        var(--litterbox-stat-hue) 55%,
+        var(--litterbox-stat-hue) var(--glyph-ink),
         var(--color-text)
       );
-
-      @media (prefers-color-scheme: dark) {
-        color: color-mix(
-          in srgb,
-          var(--litterbox-stat-hue) 65%,
-          var(--color-text)
-        );
-      }
     }
   }
 

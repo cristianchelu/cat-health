@@ -62,6 +62,22 @@
   --color-water-dark: #0891b2;
   --color-food: var(--color-success);
 
+  /*
+   * How much of an accent survives when a glyph is drawn in it. The rest is
+   * --color-text: several of the colours above are illegible raw at icon size
+   * (--color-litterbox-urination is 1.7:1 on white), and the ones that are not
+   * still want to agree with the ones that are. Same idea as StatusPill's
+   * --status-pill-ink and signal-tone's --tone-ink-share, and it differs per
+   * theme for the same reason — a dark surface is already low-luminance, so
+   * the accent can stay vivid.
+   *
+   * A glyph is a non-text component, so the bar is 3:1 rather than AA's 4.5:1,
+   * which is why this sits higher than StatusPill's 40%. The light share is
+   * set by urination, the palest accent any surface carries. Each consumer
+   * records its own measured table, because what a glyph sits on differs.
+   */
+  --glyph-ink: 55%;
+
   /* Border Radius */
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
@@ -291,6 +307,8 @@
 
     --color-success: #10b981;
     --color-success-light: #34d399;
+
+    --glyph-ink: 65%;
 
     --color-background: #0f172a;
     --color-white: #1e293b;
