@@ -14,13 +14,10 @@ const PRESENCE_ICON: Record<PresenceState, React.ElementType> = {
   outside: LogOut,
 };
 
-const PRESENCE_VARIANT: Record<
-  PresenceState,
-  'success' | 'default' | 'warning'
-> = {
-  home: 'success',
-  away: 'default',
-  outside: 'warning',
+const PRESENCE_COLOR: Record<PresenceState, string> = {
+  home: 'var(--color-success)',
+  away: 'var(--color-text-muted)',
+  outside: 'var(--color-warning)',
 };
 
 const PetPresenceEvent: React.FC<EventComponentProps> = (props) => {
@@ -47,7 +44,7 @@ const PetPresenceEvent: React.FC<EventComponentProps> = (props) => {
       {...props}
       className="pet-presence-event"
       icon={<Icon aria-hidden />}
-      iconVariant={PRESENCE_VARIANT[presence.state]}
+      iconColor={PRESENCE_COLOR[presence.state]}
       title={t(titleKey)}
       showDevice={false}
       value={contextLabel}

@@ -24,8 +24,8 @@ const ICON_MAP: Record<LitterboxUseEliminationType, React.ElementType> = {
 };
 
 const COLOR_MAP: Record<LitterboxUseEliminationType, string> = {
-  urination: '#FFA500',
-  defecation: '#8B4513',
+  urination: 'var(--color-urine)',
+  defecation: 'var(--color-stool)',
   both: 'var(--color-warning)',
   no_elimination: 'var(--color-text-muted)',
   unknown: 'var(--color-text-muted)',
@@ -83,7 +83,7 @@ const LitterboxEvent: React.FC<EventComponentProps> = ({
 
   return (
     <Timeline.Item onClick={onClick} style={style}>
-      <Timeline.Icon variant={variant}>
+      <Timeline.Icon>
         <Icon />
       </Timeline.Icon>
       <Timeline.Content>

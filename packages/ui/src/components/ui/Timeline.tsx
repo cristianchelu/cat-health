@@ -7,14 +7,6 @@ import './Timeline.css';
 
 type TimelineVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger';
 
-interface TimelineItemProps extends React.ComponentProps<'li'> {
-  variant?: 'default' | 'warning' | 'danger';
-}
-
-interface TimelineIconProps extends React.ComponentProps<'div'> {
-  variant?: TimelineVariant;
-}
-
 interface TimelineValueProps extends React.ComponentProps<'span'> {
   variant?: TimelineVariant;
 }
@@ -36,41 +28,33 @@ const TimelineRoot = React.forwardRef<
   );
 });
 
-const TimelineItem = React.forwardRef<HTMLLIElement, TimelineItemProps>(
-  ({ className, variant = 'default', children, ...props }, ref) => {
-    return (
-      <li
-        className={cn(
-          'timeline-item',
-          variant !== 'default' && `timeline-item-${variant}`,
-          className,
-        )}
-        ref={ref}
-        {...props}
-      >
-        {children}
-      </li>
-    );
-  },
-);
+const TimelineItem = React.forwardRef<
+  HTMLLIElement,
+  React.ComponentProps<'li'>
+>(({ className, children, ...props }, ref) => {
+  return (
+    <li className={cn('timeline-item', className)} ref={ref} {...props}>
+      {children}
+    </li>
+  );
+});
 
-const TimelineIcon = React.forwardRef<HTMLDivElement, TimelineIconProps>(
-  ({ className, variant = 'default', children, ...props }, ref) => {
-    return (
-      <div
-        className={cn(
-          'timeline-icon',
-          variant !== 'default' && `timeline-icon-${variant}`,
-          className,
-        )}
-        ref={ref}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  },
-);
+/**
+ * The glyph that says what kind of event this is. Its colour is the row's, not
+ * the kit's: set `--timeline-icon-color` on the item and the disc and glyph
+ * follow. A tone name would have to mean something here, and every meaning a
+ * timeline row wants — a litterbox hue, a device state — is the row's to know.
+ */
+const TimelineIcon = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<'div'>
+>(({ className, children, ...props }, ref) => {
+  return (
+    <div className={cn('timeline-icon', className)} ref={ref} {...props}>
+      {children}
+    </div>
+  );
+});
 
 const TimelineContent = React.forwardRef<
   HTMLDivElement,
@@ -230,8 +214,6 @@ const Timeline = Object.assign(TimelineRoot, {
 });
 
 export {
-  type TimelineItemProps,
-  type TimelineIconProps,
   type TimelineValueProps,
   type TimelineBadgeProps,
   TimelineBadge,

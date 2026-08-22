@@ -22,7 +22,12 @@ export interface TimelineEventShellProps {
   showDevice?: boolean;
   children?: React.ReactNode;
   icon: React.ReactNode;
-  iconVariant?: TimelineShellVariant;
+  /**
+   * The row's accent, as a colour rather than a tone name — a CSS colour or a
+   * token reference. What an event type looks like is the event type's to say,
+   * and the kit mixes it to a legible glyph. Omitted rows read muted.
+   */
+  iconColor?: string;
   value?: React.ReactNode;
   valueVariant?: TimelineShellVariant;
   /**
@@ -34,7 +39,6 @@ export interface TimelineEventShellProps {
   valueClassName?: string;
   title: string;
   className?: string;
-  itemStyle?: React.CSSProperties;
 }
 
 const TimelineEventShell = React.forwardRef<
@@ -49,13 +53,12 @@ const TimelineEventShell = React.forwardRef<
       showDevice = true,
       children,
       icon,
-      iconVariant = 'default',
+      iconColor,
       value,
       valueVariant = 'default',
       valueClassName,
       title,
       className,
-      itemStyle,
     },
     ref,
   ) => {
@@ -65,9 +68,13 @@ const TimelineEventShell = React.forwardRef<
         ref={ref}
         onClick={onClick}
         className={cn('timeline-event-shell', className)}
-        style={itemStyle}
+        style={
+          iconColor
+            ? ({ '--timeline-icon-color': iconColor } as React.CSSProperties)
+            : undefined
+        }
       >
-        <Timeline.Icon variant={iconVariant}>{icon}</Timeline.Icon>
+        <Timeline.Icon>{icon}</Timeline.Icon>
         <Timeline.Content>
           <Timeline.Header>
             <Timeline.Timestamp>

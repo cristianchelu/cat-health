@@ -21,8 +21,15 @@ const WeightEvent: React.FC<EventComponentProps> = ({
   const weightData = event.data;
 
   return (
-    <Timeline.Item onClick={onClick}>
-      <Timeline.Icon variant="primary">
+    <Timeline.Item
+      onClick={onClick}
+      style={
+        {
+          '--timeline-icon-color': 'var(--color-primary)',
+        } as React.CSSProperties
+      }
+    >
+      <Timeline.Icon>
         <Weight />
       </Timeline.Icon>
       <Timeline.Content>

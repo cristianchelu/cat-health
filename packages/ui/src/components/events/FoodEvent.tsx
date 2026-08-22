@@ -17,7 +17,7 @@ const FoodEvent: React.FC<EventComponentProps> = (props) => {
     <TimelineEventShell
       {...props}
       icon={<Drumstick aria-hidden />}
-      iconVariant="success"
+      iconColor="var(--color-success)"
       value={`${foodData.amount}g`}
       valueVariant="success"
       title={t('overview.food_intake')}

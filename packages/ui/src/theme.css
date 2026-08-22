@@ -19,6 +19,15 @@
   --color-success: #22c55e;
   --color-success-light: #dcfce7;
 
+  /*
+   * Two hues that name a thing rather than a signal, so they sit outside the
+   * ok/warn/error vocabulary: what a litterbox visit left behind. Authored
+   * hues, used raw — every surface that paints with them mixes for contrast
+   * (see the ink recipe in Timeline.css), so there is no dark-theme pair.
+   */
+  --color-urine: #ffa500;
+  --color-stool: #8b4513;
+
   --color-background: #f8fafc;
   --color-white: #ffffff;
   --color-black: #121212;

@@ -5,10 +5,4 @@
     font-weight: var(--font-normal);
     color: var(--color-text-muted);
   }
-
-  &.litterbox-maintenance-event {
-    .timeline-icon {
-      color: var(--color-warning);
-    }
-  }
 }

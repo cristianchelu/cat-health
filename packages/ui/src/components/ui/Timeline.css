@@ -89,16 +89,42 @@
   }
 
   .timeline-icon {
+    /*
+     * The disc is a wash of the row's accent; the glyph is that accent mixed
+     * toward --color-text, because several accents (--color-warning at 1.9:1,
+     * --color-urine at 2.0:1) are illegible drawn raw on their own wash. Same
+     * recipe as StatusPill.css and signal-tone.css, and the share differs per
+     * theme for the same reason. A glyph is a non-text component, so the bar
+     * is 3:1 rather than AA's 4.5:1 — which is why it can stay more saturated
+     * than a StatusPill label.
+     *
+     * Measured against the disc, which is the only thing the glyph sits on:
+     *   light — primary 5.18 · success 3.52 · warning 3.46 · error 4.97 ·
+     *           muted 3.77 · urine 3.29 · stool 6.83
+     *   dark  — primary 4.73 · success 5.65 · warning 6.22 · error 4.74 ·
+     *           muted 5.80 · urine 6.44 · stool 3.78
+     * Re-measure before touching these numbers.
+     */
+    --timeline-icon-ink: 60%;
+
     display: grid;
     place-items: center;
     width: var(--timeline-icon-size);
     height: var(--timeline-icon-size);
     border-radius: var(--radius-full);
     background-color: rgba(from var(--timeline-icon-color) r g b / 0.15);
-    color: var(--timeline-icon-color);
+    color: color-mix(
+      in srgb,
+      var(--timeline-icon-color) var(--timeline-icon-ink),
+      var(--color-text)
+    );
     font-size: var(--text-base);
     flex-shrink: 0;
-    position: relative;
+
+    @media (prefers-color-scheme: dark) {
+      /* Dark surfaces are already low-luminance, so the accent stays vivid. */
+      --timeline-icon-ink: 65%;
+    }
 
     svg {
       width: 16px;

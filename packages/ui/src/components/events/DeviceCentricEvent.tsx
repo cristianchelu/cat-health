@@ -17,13 +17,10 @@ const CONNECTIVITY_ICON: Record<ConnectivityState, React.ElementType> = {
   error: AlertTriangle,
 };
 
-const CONNECTIVITY_VARIANT: Record<
-  ConnectivityState,
-  'success' | 'default' | 'danger'
-> = {
-  online: 'success',
-  offline: 'default',
-  error: 'danger',
+const CONNECTIVITY_COLOR: Record<ConnectivityState, string> = {
+  online: 'var(--color-success)',
+  offline: 'var(--color-text-muted)',
+  error: 'var(--color-error)',
 };
 
 const MAINTENANCE_LABEL_KEY: Record<LitterboxMaintenanceEventTypeDTO, string> =
@@ -50,7 +47,7 @@ const DeviceConnectivityEventRow: React.FC<EventComponentProps> = (props) => {
       {...props}
       className="device-centric-event device-connectivity-event"
       icon={<Icon aria-hidden />}
-      iconVariant={CONNECTIVITY_VARIANT[connectivity.state]}
+      iconColor={CONNECTIVITY_COLOR[connectivity.state]}
       title={t(titleKey)}
       value={
         connectivity.previous_state
@@ -77,9 +74,9 @@ const LitterboxMaintenanceEventRow: React.FC<EventComponentProps> = (props) => {
   return (
     <TimelineEventShell
       {...props}
-      className="device-centric-event litterbox-maintenance-event"
+      className="device-centric-event"
       icon={<Brush aria-hidden />}
-      iconVariant="warning"
+      iconColor="var(--color-warning)"
       title={t('events.litterbox_maintenance')}
       value={litterAmount != null ? `${litterAmount}g` : t(detailKey)}
       valueVariant="warning"
