@@ -23,7 +23,6 @@ const testResources = {
   },
   log_food: {
     scan_hint: 'Point at the barcode on the pack',
-    scan_matched: 'Matched',
     scan_no_match: 'No match in your library',
     scan_rescan: 'Scan again',
     scan_denied: 'Camera access was denied',

@@ -2,22 +2,24 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  flex: 1;
-  min-height: 0;
 
+  /* The box is sized by its own ratio, never by the video inside it: a
+     <video> with no stream yet is 300x150, so letting the frame follow its
+     content would resize the sheet the moment the camera wakes up. */
   .food-scan-viewport {
     position: relative;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    max-height: 50dvh;
+    flex-shrink: 0;
     border-radius: var(--radius-lg);
     background: var(--color-black);
     overflow: hidden;
   }
 
   .food-scan-video {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -67,20 +69,6 @@
     min-width: 0;
     font-size: var(--text-sm);
     color: var(--color-text);
-
-    b {
-      display: block;
-      font-weight: var(--font-bold);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    small {
-      display: block;
-      font-size: var(--text-xs);
-      color: var(--color-text-muted);
-    }
   }
 
   /*

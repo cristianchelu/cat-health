@@ -98,7 +98,6 @@
     "scan_action": "Scanează un cod de bare",
     "scan_title": "Scanează pentru notare",
     "scan_hint": "Îndreaptă camera spre codul de bare de pe ambalaj",
-    "scan_matched": "Găsit",
     "scan_no_match": "Niciun sortiment cu acest cod",
     "scan_rescan": "Scanează din nou",
     "scan_denied": "Accesul la cameră a fost refuzat"

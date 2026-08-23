@@ -2,9 +2,6 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { GetFoodDTO } from 'shared';
 import { Button } from '@/components/ui/Button';
-import { MetaLine } from '@/components/ui/MetaLine';
-import { StatusPill } from '@/components/ui/StatusPill';
-import { kcalPerKilogram } from '@/components/food-picker/foodGroups';
 import {
   createEan13Detector,
   matchFoodByBarcode,
@@ -23,14 +20,15 @@ interface FoodScanStepProps {
 type ScanState =
   | { status: 'scanning' }
   | { status: 'denied' }
-  | { status: 'matched'; food: GetFoodDTO }
   | { status: 'no-match' };
 
 /** How often to ask the detector — often enough to feel instant, rarely
     enough that a phone does not cook itself holding a pouch steady. */
 const DETECT_INTERVAL_MS = 200;
-/** Long enough to read what was matched before the amount step replaces it. */
-const CONFIRM_MS = 1200;
+
+/** The camera you point at something, not the one pointed at you. */
+const requestRearCamera = (): Promise<MediaStream> =>
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
 
 /**
  * Point the camera at the pack and land on the amount step. Zero reading,
@@ -41,10 +39,7 @@ const FoodScanStep: React.FC<FoodScanStepProps> = ({
   foods,
   onMatch,
   createDetector = createEan13Detector,
-  requestCamera = () =>
-    navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' },
-    }),
+  requestCamera = requestRearCamera,
 }) => {
   const { t } = useTranslation();
   const videoRef = React.useRef<HTMLVideoElement>(null);
@@ -52,10 +47,17 @@ const FoodScanStep: React.FC<FoodScanStepProps> = ({
   /* The code just rejected, so a pack left in frame does not re-fire the
      same "no match" the moment it is dismissed. */
   const dismissedRef = React.useRef<string | null>(null);
+  /* Everything the camera effect reads goes through a ref: it runs once per
+     attempt, and a caller's inline callback must not restart the stream just
+     by being a new function this render. */
   const foodsRef = React.useRef(foods);
   foodsRef.current = foods;
   const onMatchRef = React.useRef(onMatch);
   onMatchRef.current = onMatch;
+  const createDetectorRef = React.useRef(createDetector);
+  createDetectorRef.current = createDetector;
+  const requestCameraRef = React.useRef(requestCamera);
+  requestCameraRef.current = requestCamera;
 
   const [attempt, setAttempt] = React.useState(0);
 
@@ -65,21 +67,19 @@ const FoodScanStep: React.FC<FoodScanStepProps> = ({
     const video = videoRef.current;
     let stream: MediaStream | null = null;
     let interval: ReturnType<typeof setInterval> | null = null;
-    let confirm: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
     let busy = false;
 
     const stop = () => {
       if (interval) clearInterval(interval);
-      if (confirm) clearTimeout(confirm);
       stream?.getTracks().forEach((track) => track.stop());
     };
 
     const start = async () => {
       let detector: Ean13Detector;
       try {
-        detector = createDetector();
-        stream = await requestCamera();
+        detector = createDetectorRef.current();
+        stream = await requestCameraRef.current();
       } catch {
         if (!cancelled) setState({ status: 'denied' });
         return;
@@ -109,9 +109,10 @@ const FoodScanStep: React.FC<FoodScanStepProps> = ({
             setState({ status: 'no-match' });
             return;
           }
-          if (interval) clearInterval(interval);
-          setState({ status: 'matched', food });
-          confirm = setTimeout(() => onMatchRef.current(food), CONFIRM_MS);
+          /* Nothing left to confirm: the pack in frame is the answer, so
+             release the camera and let the amount step take the screen. */
+          stop();
+          onMatchRef.current(food);
         } catch {
           /* A frame that will not decode is the normal case, not an error. */
         } finally {
@@ -127,7 +128,7 @@ const FoodScanStep: React.FC<FoodScanStepProps> = ({
       stop();
       if (video) video.srcObject = null;
     };
-  }, [attempt, createDetector, requestCamera]);
+  }, [attempt]);
 
   const rescan = () => {
     setState({ status: 'scanning' });
@@ -147,28 +148,6 @@ const FoodScanStep: React.FC<FoodScanStepProps> = ({
         </div>
         <p className="food-scan-hint">{t('log_food.scan_hint')}</p>
       </div>
-
-      {state.status === 'matched' && (
-        <div className="food-scan-result">
-          <StatusPill variant="ok">{t('log_food.scan_matched')}</StatusPill>
-          <div className="food-scan-result-text">
-            <b>{state.food.name}</b>
-            <small>
-              <MetaLine
-                nowrap
-                parts={[
-                  state.food.brand,
-                  kcalPerKilogram(state.food) != null
-                    ? t('food_picker.kcal_per_kg', {
-                        value: kcalPerKilogram(state.food),
-                      })
-                    : null,
-                ]}
-              />
-            </small>
-          </div>
-        </div>
-      )}
 
       {state.status === 'no-match' && (
         <div className="food-scan-result">

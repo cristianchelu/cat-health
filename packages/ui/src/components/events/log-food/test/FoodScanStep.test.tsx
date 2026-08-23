@@ -67,9 +67,9 @@ function fakeDetector(codes: string[]) {
 }
 
 describe('FoodScanStep', () => {
-  it('confirms a match and hands the food on', async () => {
+  it('hands the food on the moment it reads the code', async () => {
     const matched: GetFoodDTO[] = [];
-    const { stream } = fakeStream();
+    const { stream, stopped } = fakeStream();
 
     await renderWithProviders(
       <FoodScanStep
@@ -80,12 +80,39 @@ describe('FoodScanStep', () => {
       />,
     );
 
-    // The strip names what was found before the amount step takes over.
-    await waitFor(() => assert.ok(screen.getByText('Tuna in Gravy')));
-    assert.ok(screen.getByText('Matched'));
-
-    await waitFor(() => assert.equal(matched.length, 1), { timeout: 3000 });
+    // No confirmation to sit through: the match is the answer.
+    await waitFor(() => assert.equal(matched.length, 1));
     assert.equal(matched[0].id, 1);
+    // And the camera is released without waiting to be unmounted.
+    assert.equal(stopped.length, 1);
+  });
+
+  it('keeps scanning on one camera, however often it re-renders', async () => {
+    /* The camera is opened by an effect. Were its inputs to change identity
+       every render, a match would tear down the very timer meant to report
+       it — the step would sit on the viewport forever. */
+    let opened = 0;
+    const { stream } = fakeStream();
+    const matched: GetFoodDTO[] = [];
+
+    await renderWithProviders(
+      <FoodScanStep
+        foods={FOODS}
+        onMatch={(f) => matched.push(f)}
+        createDetector={() => fakeDetector(['1111111111116', '4002052003456'])}
+        requestCamera={async () => {
+          opened += 1;
+          return stream;
+        }}
+      />,
+    );
+
+    // A "no match" re-renders the step; the second code still gets through.
+    await waitFor(() =>
+      assert.ok(screen.getByText('No match in your library')),
+    );
+    await waitFor(() => assert.equal(matched.length, 1));
+    assert.equal(opened, 1);
   });
 
   it('says so for a code the library does not hold, and rescans on request', async () => {
