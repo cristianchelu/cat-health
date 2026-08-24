@@ -333,10 +333,6 @@
     "auto_identify_label": "Auto-identify",
     "create_recognizer": "Create Recognizer",
     "snapshot_url_placeholder": "http://camera-ip/snapshot.jpg",
-    "ssh_user_label": "SSH User",
-    "ssh_key_path_label": "SSH Private Key Path",
-    "remote_path_label": "Remote Recording Path",
-    "clip_duration_label": "Clip Duration (seconds)",
     "edit_device_title": "Edit Device",
     "edit_provider_title": "Edit Provider",
     "edit_device_error": "Failed to update device",
@@ -384,7 +380,10 @@
     "error_loading_devices": "Could not load devices",
     "search_devices": "Search devices",
     "no_devices_yet": "No devices yet.",
-    "no_matching_devices": "No devices match your search."
+    "no_matching_devices": "No devices match your search.",
+    "camera_origin_label": "Camera address",
+    "camera_origin_placeholder": "http://camera.local",
+    "webui_api_key_label": "WebUI API key"
   },
   "common": {
     "loading": "Loading...",
@@ -712,7 +711,10 @@
         "never_seen": "Never seen",
         "food_wet": "Wet",
         "food_dry": "Dry",
-        "bowl": "Bowl"
+        "bowl": "Bowl",
+        "recording_on": "Recording",
+        "recording_idle": "Idle",
+        "recording_off": "Off"
       },
       "units": {
         "percent": "{{value}}%",
@@ -737,7 +739,9 @@
         "weak": "Weak",
         "very_weak": "Very weak"
       },
-      "signal_strength_summary": "{{quality}} ({{dbm}} dBm)"
+      "signal_strength_summary": "{{quality}} ({{dbm}} dBm)",
+      "storage": "Storage",
+      "recording": "Recording"
     }
   },
   "annotation": {

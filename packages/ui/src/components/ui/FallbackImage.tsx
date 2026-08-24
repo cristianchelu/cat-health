@@ -73,6 +73,13 @@ const FallbackImage = React.forwardRef<HTMLDivElement, FallbackImageProps>(
               imgClassName,
             )}
             onLoad={(event) => {
+              const image = event.currentTarget;
+              if (image.naturalWidth === 0 || image.naturalHeight === 0) {
+                setFailed(true);
+                setLoaded(false);
+                onError?.(event);
+                return;
+              }
               setLoaded(true);
               onLoad?.(event);
             }}

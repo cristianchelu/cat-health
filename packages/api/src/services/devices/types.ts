@@ -111,6 +111,10 @@ export interface AccountManager {
   instantiateDeviceController(device: Device): DeviceController;
   /** Teardown and clear cached controller for a device (e.g. after config update). */
   invalidateDeviceController?(deviceId: number): Promise<void>;
+  /**
+   * Probe the proposed config before it is written. Register and config PATCH
+   * both call this; throw to reject the write with 400.
+   */
   validateDeviceConfig?(device: {
     type: DeviceType;
     config: unknown;

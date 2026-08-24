@@ -46,7 +46,7 @@ This is a personal project I've been building and using daily for over a year. I
 | [ESPHome Pet Bowl Monitor](https://github.com/cristianchelu/oddware/tree/main/esphome.pet-bowl-monitor) | Water bowl monitor (ESP32-CAM + load cell) | Direct via mDNS on your LAN      |
 | **SurePet**                                                                                             | SureFeed Connect feeders                   | Cloud API (unofficial)           |
 | **Cameras**                                                                                             | Any HTTP snapshot camera                   | URL polling                      |
-| **Thingino**                                                                                            | Thingino-flashed cameras                   | SSH clip retrieval               |
+| **Thingino**                                                                                            | Thingino-flashed cameras                   | HTTP WebUI (API key)             |
 | **AI recognizer**                                                                                       | Pet identification                         | Any OpenAI-compatible vision API |
 
 The ESPHome devices are DIY builds — check their repos for hardware details and flashing instructions. More device firmware will be published as it's ready.

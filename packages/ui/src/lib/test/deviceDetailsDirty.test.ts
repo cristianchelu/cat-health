@@ -3,15 +3,21 @@ import { describe, it } from 'node:test';
 
 import { shouldBlockDeviceDetailsTabLeave } from '../deviceDetailsDirty.ts';
 
+const clean = {
+  cameraDirty: false,
+  recognitionDirty: false,
+  feederDirty: false,
+  overviewDirty: false,
+};
+
 describe('shouldBlockDeviceDetailsTabLeave', () => {
   it('does not block when the active tab is unchanged', () => {
     assert.equal(
       shouldBlockDeviceDetailsTabLeave({
+        ...clean,
         activeTab: 'camera',
         nextTab: 'camera',
         cameraDirty: true,
-        recognitionDirty: false,
-        feederDirty: false,
       }),
       false,
     );
@@ -20,21 +26,21 @@ describe('shouldBlockDeviceDetailsTabLeave', () => {
   it('blocks leaving the camera tab only when the camera draft is dirty', () => {
     assert.equal(
       shouldBlockDeviceDetailsTabLeave({
+        ...clean,
         activeTab: 'camera',
         nextTab: 'overview',
         cameraDirty: true,
-        recognitionDirty: false,
-        feederDirty: false,
       }),
       true,
     );
     assert.equal(
       shouldBlockDeviceDetailsTabLeave({
+        ...clean,
         activeTab: 'camera',
         nextTab: 'overview',
-        cameraDirty: false,
         recognitionDirty: true,
         feederDirty: true,
+        overviewDirty: true,
       }),
       false,
     );
@@ -43,21 +49,21 @@ describe('shouldBlockDeviceDetailsTabLeave', () => {
   it('blocks leaving the recognition tab only when the recognition draft is dirty', () => {
     assert.equal(
       shouldBlockDeviceDetailsTabLeave({
+        ...clean,
         activeTab: 'recognition',
         nextTab: 'camera',
-        cameraDirty: false,
         recognitionDirty: true,
-        feederDirty: false,
       }),
       true,
     );
     assert.equal(
       shouldBlockDeviceDetailsTabLeave({
+        ...clean,
         activeTab: 'recognition',
         nextTab: 'camera',
         cameraDirty: true,
-        recognitionDirty: false,
         feederDirty: true,
+        overviewDirty: true,
       }),
       false,
     );
@@ -66,29 +72,39 @@ describe('shouldBlockDeviceDetailsTabLeave', () => {
   it('blocks leaving settings only when the feeder draft is dirty', () => {
     assert.equal(
       shouldBlockDeviceDetailsTabLeave({
+        ...clean,
         activeTab: 'settings',
         nextTab: 'history',
-        cameraDirty: false,
-        recognitionDirty: false,
         feederDirty: true,
       }),
       true,
     );
     assert.equal(
       shouldBlockDeviceDetailsTabLeave({
+        ...clean,
         activeTab: 'settings',
         nextTab: 'history',
         cameraDirty: true,
         recognitionDirty: true,
-        feederDirty: false,
+        overviewDirty: true,
       }),
       false,
     );
   });
 
-  it('never blocks leaving overview or history', () => {
+  it('blocks leaving overview only when the overview draft is dirty', () => {
     assert.equal(
       shouldBlockDeviceDetailsTabLeave({
+        ...clean,
+        activeTab: 'overview',
+        nextTab: 'camera',
+        overviewDirty: true,
+      }),
+      true,
+    );
+    assert.equal(
+      shouldBlockDeviceDetailsTabLeave({
+        ...clean,
         activeTab: 'overview',
         nextTab: 'camera',
         cameraDirty: true,
@@ -97,13 +113,18 @@ describe('shouldBlockDeviceDetailsTabLeave', () => {
       }),
       false,
     );
+  });
+
+  it('never blocks leaving history', () => {
     assert.equal(
       shouldBlockDeviceDetailsTabLeave({
+        ...clean,
         activeTab: 'history',
         nextTab: 'recognition',
         cameraDirty: true,
         recognitionDirty: true,
         feederDirty: true,
+        overviewDirty: true,
       }),
       false,
     );

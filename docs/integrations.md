@@ -20,4 +20,4 @@ Optional pet recognition via any OpenAI-compatible HTTP API. API keys are stored
 
 ## Cameras (Thingino and others)
 
-Camera integrations may use HTTP snapshot URLs and optional SSH for clip retrieval. Credentials and key paths are stored locally.
+Generic cameras use an HTTP snapshot URL. Thingino cameras talk to the WebUI over HTTP (`origin` + API key as `?token=`): snapshots from `/x/ch0.jpg`, recorder layout from `/x/tool-record.cgi`, agent JSON through `/x/agent.cgi/api/v1/…`, and visit clips from those recorder directories via tool-file-manager `cd=` / `dl=`. The hub keeps the API key; the browser never sends `?token=` to the camera. Custom recording paths are not supported.

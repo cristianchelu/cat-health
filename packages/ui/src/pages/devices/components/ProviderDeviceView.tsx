@@ -4,12 +4,13 @@ import { resolveDevicePage } from './devicePageRegistry';
 
 interface ProviderDeviceViewProps {
   device: GetDeviceResponseDTO;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 export const ProviderDeviceView: React.FC<ProviderDeviceViewProps> = ({
   device,
+  onDirtyChange,
 }) => {
-  // Check if device has entities in state
   const state = device.state as Record<string, unknown> | undefined;
   const entities = state?.entities as EntityDTO[] | undefined;
   const sensors = state?.sensors as Record<string, unknown> | undefined;
@@ -18,5 +19,6 @@ export const ProviderDeviceView: React.FC<ProviderDeviceViewProps> = ({
     device,
     entities,
     sensors,
+    onDirtyChange,
   });
 };

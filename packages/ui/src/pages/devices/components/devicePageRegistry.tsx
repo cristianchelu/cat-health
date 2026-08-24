@@ -14,6 +14,7 @@ export interface DevicePageContext {
   device: GetDeviceResponseDTO;
   entities?: EntityDTO[];
   sensors?: Record<string, unknown>;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 export type DevicePageComponent = React.ComponentType<DevicePageContext>;

@@ -1,112 +1,326 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import * as fs from 'fs/promises';
+import * as fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createWriteStream } from 'node:fs';
-import { format } from 'date-fns';
-import { NodeSSH } from 'node-ssh';
+import { execa } from 'execa';
+import sharp from 'sharp';
 import { type Static, Type } from '@fastify/type-provider-typebox';
-import { requireWithSchema, type EventType } from 'shared';
-import type { Camera, RecordingResult, RecordingSource } from '../../types.ts';
 import {
-  CameraConfigSchema,
-  CameraDeviceController,
-} from '../camera/CameraDeviceController.ts';
-import type { Device, ProviderDeps } from '../../types.ts';
+  DEVICE_SIGNAL_KEYS,
+  requireWithSchema,
+  type DeviceSignal,
+  type DeviceStatus,
+  type EventType,
+} from 'shared';
+import type {
+  Camera,
+  Device,
+  ProviderDeps,
+  RecordingResult,
+  RecordingSource,
+} from '../../types.ts';
+import {
+  percentSignal,
+  statusSignal,
+  unknownSignal,
+} from '../../signalBuilders.ts';
+import {
+  ThinginoHttpClient,
+  ThinginoHttpError,
+  isJpegBuffer,
+  parseFileManagerNames,
+  unwrapAgentValue,
+} from './ThinginoHttpClient.ts';
+import {
+  BUFFER_SECONDS,
+  DEFAULT_CLIP_DURATION_SECONDS,
+  assertDefaultRecordingLayout,
+  clipsRoot,
+  dayDirectories,
+  filenameToEpoch,
+  filesOverlappingWindow,
+  hourDirectories,
+  joinListedFile,
+  recordingLayoutKind,
+  recordsRoot,
+} from './thinginoLayout.ts';
 
-const execAsync = promisify(exec);
-
-export const ThinginoConfigSchema = Type.Intersect([
-  CameraConfigSchema,
-  Type.Object({
-    recording: Type.Optional(
-      Type.Object({
-        ssh: Type.Object({
-          user: Type.Optional(Type.String()),
-          privateKeyPath: Type.Optional(Type.String()),
-          password: Type.Optional(Type.String()),
-        }),
-        remotePath: Type.String(),
-        clipDurationSeconds: Type.Optional(Type.Number()),
-        bufferSeconds: Type.Optional(Type.Number()),
-      }),
-    ),
-  }),
-]);
+export const ThinginoConfigSchema = Type.Object(
+  {
+    origin: Type.String({ minLength: 1 }),
+    token: Type.String({ minLength: 1 }),
+  },
+  { additionalProperties: true },
+);
 export type ThinginoConfig = Static<typeof ThinginoConfigSchema>;
 
-interface ThinginoRecordingConfig {
-  host: string;
-  sshUser: string;
-  privateKeyPath?: string;
-  password?: string;
-  remotePath: string;
-  clipDurationSeconds: number;
-  bufferSeconds: number;
+const FILE_MANAGER_PATH = '/x/tool-file-manager.cgi';
+const RECORD_TOOL_PATH = '/x/tool-record.cgi';
+const SNAPSHOT_PATH = '/x/ch0.jpg';
+/** Agent CGI takes ~1s; `/health` is ~3s and shells out. `/device` is identity JSON. */
+const HEARTBEAT_INTERVAL_MS = 10_000;
+const HEARTBEAT_TIMEOUT_MS = 4_000;
+const HEARTBEAT_MISS_LIMIT = 2;
+
+interface CachedStorage {
+  recordingEnabled: boolean;
+  recorderActive: boolean;
+  durationSeconds: number | null;
+  mount: string | null;
+  usedBytes: number | null;
+  totalBytes: number | null;
 }
 
-/**
- * Thingino camera controller: HTTP snapshot (via base Camera) + SSH onboard recording fetch.
- * Assumes server and camera use the same timezone.
- */
-export class ThinginoDeviceController
-  extends CameraDeviceController
-  implements Camera, RecordingSource
-{
-  private ssh: NodeSSH;
-  private recordingConfig: ThinginoRecordingConfig | null = null;
-  private connectionPromise: Promise<void> | null = null;
-  private isSshConnected = false;
+interface RuntimeRecording {
+  active: boolean;
+}
 
-  constructor(device: Device, deps: ProviderDeps) {
-    super(device, deps);
-    this.ssh = new NodeSSH();
+interface RecordingLayout {
+  hostname: string;
+  mount: string | null;
+  filename: string | null;
+  devicePath: string | null;
+  durationSeconds: number | null;
+  autostart: boolean;
+}
 
-    const rawConfig = requireWithSchema(
+export class ThinginoDeviceController implements Camera, RecordingSource {
+  readonly deviceId: number;
+  private readonly device: Device;
+  private readonly deps: ProviderDeps;
+  private readonly config: ThinginoConfig;
+  private readonly client: ThinginoHttpClient;
+  private status: DeviceStatus = 'unknown';
+  private cachedStorage: CachedStorage | null = null;
+  private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatEnabled = false;
+  private heartbeatBusy = false;
+  private heartbeatMisses = 0;
+
+  constructor(device: Device, deps: ProviderDeps, client?: ThinginoHttpClient) {
+    this.device = device;
+    this.deps = deps;
+    this.deviceId = device.id;
+    this.config = requireWithSchema(
       ThinginoConfigSchema,
       device.config,
       'Thingino configuration',
     );
-    if (rawConfig.recording) {
-      const r = rawConfig.recording;
-      const host =
-        typeof rawConfig.snapshotUrl === 'string'
-          ? new URL(rawConfig.snapshotUrl).hostname
-          : '';
-      if (!host) {
-        throw new Error(
-          'Thingino recording requires snapshotUrl with a valid host for SSH',
-        );
+    this.client =
+      client ??
+      new ThinginoHttpClient(
+        this.config.origin.replace(/\/+$/, ''),
+        this.config.token,
+      );
+  }
+
+  async connect(): Promise<void> {
+    try {
+      await this.refreshStorage();
+      this.status = 'online';
+      this.markReachable();
+      if (this.deviceId !== 0) {
+        this.deps.presence.reportOnline(this.deviceId);
       }
-      this.recordingConfig = {
-        host,
-        sshUser: r.ssh?.user ?? 'root',
-        privateKeyPath: r.ssh?.privateKeyPath,
-        password: r.ssh?.password,
-        remotePath: r.remotePath,
-        clipDurationSeconds: r.clipDurationSeconds ?? 120,
-        bufferSeconds: r.bufferSeconds ?? 60,
-      };
+    } catch (error) {
+      this.status = 'error';
+      if (this.deviceId !== 0) {
+        this.deps.presence.reportOffline(this.deviceId);
+      }
+      throw error;
+    } finally {
+      this.startHeartbeat();
     }
   }
 
-  override async connect(): Promise<void> {
-    await super.connect();
-    // SSH connects lazily on first fetchRecording
+  async disconnect(): Promise<void> {
+    this.stopHeartbeat();
+    this.status = 'offline';
+    if (this.deviceId !== 0) {
+      this.deps.presence.reportOffline(this.deviceId);
+    }
   }
 
-  override async disconnect(): Promise<void> {
+  getStatus(): DeviceStatus {
+    return this.status;
+  }
+
+  private markReachable(): void {
+    this.heartbeatMisses = 0;
+    if (this.heartbeatEnabled) {
+      this.scheduleHeartbeat();
+    }
+  }
+
+  private startHeartbeat(): void {
+    this.heartbeatEnabled = true;
+    this.scheduleHeartbeat();
+  }
+
+  private scheduleHeartbeat(): void {
+    this.clearHeartbeatTimer();
+    this.heartbeatTimer = setTimeout(() => {
+      void this.tickHeartbeat();
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  private stopHeartbeat(): void {
+    this.heartbeatEnabled = false;
+    this.clearHeartbeatTimer();
+  }
+
+  private clearHeartbeatTimer(): void {
+    if (this.heartbeatTimer != null) {
+      clearTimeout(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  private async tickHeartbeat(): Promise<void> {
     try {
-      if (this.isSshConnected) {
-        this.ssh.dispose();
-        this.isSshConnected = false;
-        this.connectionPromise = null;
+      if (this.heartbeatEnabled && !this.heartbeatBusy) {
+        await this.pingCamera();
+      }
+    } finally {
+      if (this.heartbeatEnabled) {
+        this.scheduleHeartbeat();
+      }
+    }
+  }
+
+  private async pingCamera(): Promise<void> {
+    this.heartbeatBusy = true;
+    try {
+      await this.client.getJson(
+        this.client.agentPath('device'),
+        undefined,
+        HEARTBEAT_TIMEOUT_MS,
+      );
+      if (!this.heartbeatEnabled) return;
+      this.heartbeatMisses = 0;
+      if (this.status !== 'online') {
+        try {
+          await this.refreshStorage();
+        } catch {
+          /* identity ping already succeeded */
+        }
+        this.status = 'online';
+        if (this.deviceId !== 0) {
+          this.deps.presence.reportOnline(this.deviceId);
+        }
+      } else if (this.deviceId !== 0) {
+        this.deps.presence.recordActivity(this.deviceId);
       }
     } catch {
-      /* ignore */
+      if (!this.heartbeatEnabled) return;
+      this.heartbeatMisses += 1;
+      if (
+        this.heartbeatMisses >= HEARTBEAT_MISS_LIMIT &&
+        this.status !== 'offline'
+      ) {
+        this.status = 'offline';
+        if (this.deviceId !== 0) {
+          this.deps.presence.reportOffline(this.deviceId);
+        }
+      }
+    } finally {
+      this.heartbeatBusy = false;
     }
-    await super.disconnect();
+  }
+
+  getSignals(): DeviceSignal[] {
+    const storage = this.cachedStorage;
+    if (!storage) {
+      return [
+        unknownSignal({ key: DEVICE_SIGNAL_KEYS.STORAGE, icon: 'scale' }),
+        unknownSignal({
+          key: DEVICE_SIGNAL_KEYS.RECORDING,
+          icon: 'camera',
+          category: 'drawer',
+        }),
+      ];
+    }
+
+    const usedPercent =
+      storage.usedBytes != null &&
+      storage.totalBytes != null &&
+      storage.totalBytes > 0
+        ? Math.round((storage.usedBytes / storage.totalBytes) * 100)
+        : null;
+
+    const recordingKey = storage.recorderActive
+      ? 'devices.signals.values.recording_on'
+      : storage.recordingEnabled
+        ? 'devices.signals.values.recording_idle'
+        : 'devices.signals.values.recording_off';
+
+    return [
+      usedPercent != null
+        ? percentSignal(
+            { key: DEVICE_SIGNAL_KEYS.STORAGE, icon: 'scale' },
+            usedPercent,
+          )
+        : unknownSignal({ key: DEVICE_SIGNAL_KEYS.STORAGE, icon: 'scale' }),
+      statusSignal(
+        {
+          key: DEVICE_SIGNAL_KEYS.RECORDING,
+          icon: 'camera',
+          category: 'drawer',
+        },
+        recordingKey,
+        false,
+      ),
+    ];
+  }
+
+  async getSnapshotBuffer(): Promise<Buffer> {
+    const buffer = await this.client.getBuffer(SNAPSHOT_PATH);
+    if (!isJpegBuffer(buffer)) {
+      throw new Error('Camera snapshot was empty');
+    }
+    this.markReachable();
+    if (this.deviceId !== 0) {
+      this.deps.presence.recordActivity(this.deviceId);
+    }
+    return buffer;
+  }
+
+  async captureSnapshot(options: {
+    timestamp: Date;
+    crop?: { left: number; top: number; width: number; height: number };
+    rotate?: number;
+  }) {
+    void options.timestamp;
+    const buffer = await this.getSnapshotBuffer();
+    const image = sharp(buffer);
+    const metadata = await image.metadata();
+
+    const pendingMedia = await this.deps.mediaManager.createPendingMedia(
+      'jpg',
+      {
+        height: metadata.height,
+        width: metadata.width,
+      },
+    );
+
+    let pipeline = sharp(buffer);
+    if (options.crop) {
+      const { left, top, width, height } = options.crop;
+      let absCrop = { left, top, width, height };
+      if (left <= 1 && top <= 1 && width <= 1 && height <= 1) {
+        absCrop = {
+          left: Math.round(left * (metadata.width ?? 0)),
+          top: Math.round(top * (metadata.height ?? 0)),
+          width: Math.round(width * (metadata.width ?? 0)),
+          height: Math.round(height * (metadata.height ?? 0)),
+        };
+      }
+      pipeline = pipeline.extract(absCrop);
+    }
+    if (options.rotate) {
+      pipeline = pipeline.rotate(options.rotate);
+    }
+    await pipeline.toFile(pendingMedia.path);
+    return pendingMedia;
   }
 
   async fetchRecording(options: {
@@ -118,34 +332,42 @@ export class ThinginoDeviceController
       rotate?: number;
     };
   }): Promise<RecordingResult> {
-    if (!this.recordingConfig) {
-      throw new Error('Thingino device has no recording config');
+    void options.eventType;
+    void options.transforms;
+
+    const startEpoch = Math.floor(options.startTime.getTime() / 1000);
+    const endEpoch = Math.floor(options.endTime.getTime() / 1000);
+    if (startEpoch >= endEpoch) {
+      throw new Error('Start time must be before end time');
     }
 
-    await this.ensureSshConnected();
+    const layout = await this.readRecordingLayout();
+    assertDefaultRecordingLayout(layout.filename, layout.devicePath);
+    if (!layout.mount) {
+      throw new Error('Camera recording mount is not set');
+    }
 
     const pendingMedia = await this.deps.mediaManager.createPendingMedia(
       'mp4',
       {},
     );
-
     const tempDir = path.join(
       os.tmpdir(),
       `thingino_${this.deviceId}_${Date.now()}`,
     );
 
     try {
-      const startEpoch = this.datetimeToEpoch(options.startTime);
-      const endEpoch = this.datetimeToEpoch(options.endTime);
-      if (startEpoch >= endEpoch) {
-        throw new Error('Start time must be before end time');
-      }
-
       await fs.mkdir(tempDir, { recursive: true });
 
-      const relevantFiles = await this.findRelevantFiles(
+      const duration = layout.durationSeconds ?? DEFAULT_CLIP_DURATION_SECONDS;
+      const relevantFiles = await this.listOverlappingFiles(
+        layout.mount,
+        layout.hostname,
         options.startTime,
         options.endTime,
+        duration,
+        layout.filename,
+        layout.devicePath,
       );
       if (relevantFiles.length === 0) {
         throw new Error(
@@ -153,21 +375,29 @@ export class ThinginoDeviceController
         );
       }
 
-      await this.downloadFiles(relevantFiles, tempDir);
-
+      const localNames = await this.downloadFiles(relevantFiles, tempDir);
       await this.processVideo(
         relevantFiles,
+        localNames,
         tempDir,
         pendingMedia.path,
         startEpoch,
         endEpoch,
       );
 
+      if (this.deviceId !== 0) {
+        this.deps.presence.recordActivity(this.deviceId);
+      }
+      this.markReachable();
+
       return {
         type: 'local',
         pendingMedia,
         mimeType: 'video/mp4',
       };
+    } catch (error) {
+      await pendingMedia.cleanup().catch(() => {});
+      throw error;
     } finally {
       try {
         await fs.rm(tempDir, { recursive: true, force: true });
@@ -177,211 +407,298 @@ export class ThinginoDeviceController
     }
   }
 
-  private async ensureSshConnected(): Promise<void> {
-    if (this.connectionPromise) {
-      return this.connectionPromise;
+  private async refreshStorage(): Promise<CachedStorage> {
+    const layout = await this.readRecordingLayout();
+    const runtimeStorage = await this.readRuntimeStorage();
+    const runtimeRecording = await this.readRuntimeRecording();
+
+    const cached: CachedStorage = {
+      recordingEnabled: layout.autostart,
+      recorderActive: runtimeRecording.active,
+      durationSeconds: layout.durationSeconds,
+      mount: layout.mount,
+      usedBytes: runtimeStorage.usedBytes,
+      totalBytes: runtimeStorage.totalBytes,
+    };
+    this.cachedStorage = cached;
+    this.status = 'online';
+    this.markReachable();
+    if (this.deviceId !== 0) {
+      this.deps.presence.recordActivity(this.deviceId);
     }
-    const cfg = this.recordingConfig!;
-    this.connectionPromise = this.ssh
-      .connect({
-        host: cfg.host,
-        username: cfg.sshUser,
-        privateKeyPath: cfg.privateKeyPath,
-        password: cfg.password,
-        keepaliveInterval: 30000,
-        readyTimeout: 10000,
-      })
-      .then(() => {
-        this.isSshConnected = true;
-        // node-ssh removes its 'error' listener on 'ready', so later keepalive
-        // timeouts (or other connection errors) are unhandled and crash the process.
-        // Attach a persistent handler so we log, clear state, and dispose.
-        const conn = this.ssh.connection;
-        if (conn) {
-          conn.on('error', (err: Error) => {
-            console.error(
-              `SSH connection error for Thingino device ${this.deviceId} (${cfg.host}):`,
-              err.message,
-            );
-            this.isSshConnected = false;
-            this.connectionPromise = null;
-            try {
-              this.ssh.dispose();
-            } catch {
-              /* ignore */
-            }
-          });
-        }
-      })
-      .catch((err) => {
-        this.connectionPromise = null;
-        throw err;
-      });
-    return this.connectionPromise;
+    return cached;
   }
 
-  private datetimeToEpoch(datetime: Date): number {
-    return Math.floor(datetime.getTime() / 1000);
+  private async readRecordingLayout(): Promise<RecordingLayout> {
+    const [device, recorder] = await Promise.all([
+      this.agentSetting('device'),
+      this.client.getJson(RECORD_TOOL_PATH),
+    ]);
+    const parsed = parseRecordTool(recorder);
+    return {
+      hostname: stringSetting(objectField(device, 'hostname')) || 'camera',
+      ...parsed,
+    };
   }
 
-  private filenameToEpoch(filename: string): number {
+  private async readRuntimeStorage(): Promise<{
+    usedBytes: number | null;
+    totalBytes: number | null;
+  }> {
+    const payload = await this.agentSetting('runtime/storage');
+    if (!payload || typeof payload !== 'object') {
+      return { usedBytes: null, totalBytes: null };
+    }
+    const record = payload as Record<string, unknown>;
+    const usedKib = numberSetting(record.used_kib);
+    const totalKib = numberSetting(record.total_kib);
+    return {
+      usedBytes:
+        usedKib != null
+          ? usedKib * 1024
+          : numberSetting(record.used ?? record.used_bytes ?? record.size_used),
+      totalBytes:
+        totalKib != null
+          ? totalKib * 1024
+          : numberSetting(record.total ?? record.total_bytes ?? record.size),
+    };
+  }
+
+  private async readRuntimeRecording(): Promise<RuntimeRecording> {
+    const payload = await this.agentSetting('runtime/recording');
+    if (typeof payload === 'boolean') {
+      return { active: payload };
+    }
+    if (typeof payload === 'string') {
+      return {
+        active:
+          payload === 'recording' || payload === 'active' || payload === 'on',
+      };
+    }
+    if (!payload || typeof payload !== 'object') return { active: false };
+    const record = payload as Record<string, unknown>;
+    const state = record.state ?? record.status ?? record.recording;
+    if (typeof state === 'boolean') return { active: state };
+    if (typeof state === 'string') {
+      return {
+        active: state === 'recording' || state === 'active' || state === 'on',
+      };
+    }
+    return { active: booleanSetting(record.active ?? record.enabled) };
+  }
+
+  private async listOverlappingFiles(
+    mount: string,
+    hostname: string,
+    start: Date,
+    end: Date,
+    clipDurationSeconds: number,
+    filename: string | null,
+    devicePath: string | null,
+  ): Promise<string[]> {
+    const kind = recordingLayoutKind(filename, devicePath);
+    const dirs =
+      kind === 'ciao-day'
+        ? dayDirectories(clipsRoot(mount, hostname), start, end, BUFFER_SECONDS)
+        : hourDirectories(
+            recordsRoot(mount, hostname),
+            start,
+            end,
+            BUFFER_SECONDS,
+          );
+    const listed: string[] = [];
+    for (const dir of dirs) {
+      listed.push(...(await this.listDirectoryFiles(dir)));
+    }
+    return filesOverlappingWindow(
+      listed,
+      start,
+      end,
+      clipDurationSeconds,
+      BUFFER_SECONDS,
+    );
+  }
+
+  private async listDirectoryFiles(directory: string): Promise<string[]> {
     try {
-      const datetimePart = path.basename(filename, '.mp4');
-      const year = parseInt(datetimePart.substring(0, 4), 10);
-      const month = parseInt(datetimePart.substring(4, 6), 10) - 1;
-      const day = parseInt(datetimePart.substring(6, 8), 10);
-      const hour = parseInt(datetimePart.substring(9, 11), 10);
-      const minute = parseInt(datetimePart.substring(11, 13), 10);
-      const second = parseInt(datetimePart.substring(13, 15), 10);
-      const date = new Date(year, month, day, hour, minute, second);
-      return Math.floor(date.getTime() / 1000);
-    } catch {
-      return 0;
-    }
-  }
-
-  private async findRelevantFiles(
-    startDateTime: Date,
-    endDateTime: Date,
-  ): Promise<string[]> {
-    const cfg = this.recordingConfig!;
-    const startEpoch = this.datetimeToEpoch(startDateTime);
-    const endEpoch = this.datetimeToEpoch(endDateTime);
-    const extendedStartEpoch = startEpoch - cfg.bufferSeconds;
-
-    const fileList = await this.getRemoteFileList(startDateTime, endDateTime);
-    const relevantFiles: string[] = [];
-
-    for (const filePath of fileList) {
-      if (!filePath) continue;
-      const fileStartEpoch = this.filenameToEpoch(filePath);
-      if (fileStartEpoch === 0) continue;
-      const fileEndEpoch = fileStartEpoch + cfg.clipDurationSeconds;
-      if (fileStartEpoch < endEpoch && fileEndEpoch > extendedStartEpoch) {
-        relevantFiles.push(filePath);
+      const payload = await this.client.getJson(FILE_MANAGER_PATH, {
+        cd: directory,
+      });
+      return parseFileManagerNames(payload).map((name) =>
+        joinListedFile(directory, name),
+      );
+    } catch (error) {
+      if (error instanceof ThinginoHttpError && error.status === 404) {
+        return [];
       }
+      throw error;
     }
-
-    return relevantFiles.sort();
   }
 
-  private async getRemoteFileList(
-    startDt: Date,
-    endDt: Date,
+  private async downloadFiles(
+    files: string[],
+    tempDir: string,
   ): Promise<string[]> {
-    const cfg = this.recordingConfig!;
-    const startEpoch = this.datetimeToEpoch(startDt);
-    const searchStartEpoch = startEpoch - cfg.bufferSeconds;
-    const searchStartDate = new Date(searchStartEpoch * 1000);
-    const endDate = new Date(this.datetimeToEpoch(endDt) * 1000);
-
-    const startHourDate = new Date(
-      searchStartDate.getFullYear(),
-      searchStartDate.getMonth(),
-      searchStartDate.getDate(),
-      searchStartDate.getHours(),
-    );
-    const endHourDate = new Date(
-      endDate.getFullYear(),
-      endDate.getMonth(),
-      endDate.getDate(),
-      endDate.getHours(),
-    );
-
-    const dirsToScan: string[] = [];
-    for (
-      let d = new Date(startHourDate.getTime());
-      d <= endHourDate;
-      d.setHours(d.getHours() + 1)
-    ) {
-      const dirPath = format(d, 'yyyyMMdd/HH');
-      dirsToScan.push(`${cfg.remotePath}/${dirPath}`);
-    }
-
-    const allFiles: string[] = [];
-    for (const dir of dirsToScan) {
-      try {
-        const result = await this.ssh.execCommand(
-          `[ -d "${dir}" ] && ls -1 "${dir}"/*.mp4 2>/dev/null || true`,
-        );
-        if (result.stdout.trim()) {
-          allFiles.push(...result.stdout.trim().split('\n').filter(Boolean));
-        }
-      } catch {
-        /* ignore missing dirs */
-      }
-    }
-
-    return allFiles;
-  }
-
-  private async downloadFiles(files: string[], tempDir: string): Promise<void> {
-    for (const file of files) {
-      const filename = path.basename(file);
-      const localPath = path.join(tempDir, filename);
-      await this.downloadFileAsStream(file, localPath);
+    const localNames: string[] = [];
+    for (const [index, file] of files.entries()) {
+      const localName = `seg-${String(index).padStart(3, '0')}.mp4`;
+      const localPath = path.join(tempDir, localName);
+      await this.client.downloadToFile(
+        FILE_MANAGER_PATH,
+        { dl: file },
+        localPath,
+      );
       const stats = await fs.stat(localPath);
       if (stats.size === 0) {
-        throw new Error(`Downloaded file is empty: ${filename}`);
+        throw new Error(`Downloaded file is empty: ${path.basename(file)}`);
       }
+      localNames.push(localName);
     }
-  }
-
-  private async downloadFileAsStream(
-    remotePath: string,
-    localPath: string,
-  ): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const localWriteStream = createWriteStream(localPath);
-      localWriteStream.on('error', (err) => {
-        reject(new Error(`Failed to write to ${localPath}: ${err.message}`));
-      });
-      localWriteStream.on('finish', () => {
-        localWriteStream.close((err) => (err ? reject(err) : resolve()));
-      });
-
-      this.ssh
-        .exec('cat', [remotePath], {
-          onStdout: (chunk: Buffer) => {
-            localWriteStream.write(chunk);
-          },
-        })
-        .then(() => {
-          localWriteStream.end();
-        })
-        .catch((err: Error) => {
-          localWriteStream.end();
-          reject(new Error(`Remote cat ${remotePath} failed: ${err.message}`));
-        });
-    });
+    return localNames;
   }
 
   private async processVideo(
     files: string[],
+    localNames: string[],
     tempDir: string,
     outputPath: string,
     startEpoch: number,
     endEpoch: number,
   ): Promise<void> {
-    const filelistPath = path.join(tempDir, 'filelist.txt');
-    const filelistContent = files
-      .map((file) => `file '${path.basename(file)}'`)
-      .join('\n');
-    await fs.writeFile(filelistPath, filelistContent);
+    // Thingino MP4s keep a running PTS, so container duration is the last
+    // timestamp rather than clip length. Concat-copy without a reset makes
+    // -ss/-t a no-op.
+    const normalized: string[] = [];
+    for (const name of localNames) {
+      const outName = `norm-${name}`;
+      await execa(
+        'ffmpeg',
+        [
+          '-y',
+          '-loglevel',
+          'warning',
+          '-i',
+          name,
+          '-c',
+          'copy',
+          '-bsf:v',
+          'setts=ts=PTS-STARTPTS',
+          '-bsf:a',
+          'setts=ts=PTS-STARTPTS',
+          outName,
+        ],
+        { cwd: tempDir },
+      );
+      normalized.push(outName);
+    }
 
-    const tempConcat = path.join(tempDir, 'temp_concat.mp4');
-    await execAsync(
-      `cd "${tempDir}" && ffmpeg -f concat -safe 0 -i "filelist.txt" -c copy "${path.basename(
-        tempConcat,
-      )}" -y -loglevel warning -fflags +genpts`,
+    const filelistPath = path.join(tempDir, 'filelist.txt');
+    await fs.writeFile(
+      filelistPath,
+      normalized.map((name) => `file '${name}'`).join('\n'),
     );
 
-    const firstFileStart = this.filenameToEpoch(files[0]);
-    const startTrim = Math.max(0, startEpoch - firstFileStart);
+    const startTrim = Math.max(0, startEpoch - filenameToEpoch(files[0]));
     const totalDuration = endEpoch - startEpoch;
-
-    const ffmpegCmd = `ffmpeg -i "${tempConcat}" -ss ${startTrim} -t ${totalDuration} -c:v copy -c:a copy "${path.resolve(outputPath)}" -y -loglevel warning`;
-
-    await execAsync(ffmpegCmd);
+    await execa(
+      'ffmpeg',
+      [
+        '-y',
+        '-loglevel',
+        'warning',
+        '-f',
+        'concat',
+        '-safe',
+        '0',
+        '-i',
+        'filelist.txt',
+        '-ss',
+        String(startTrim),
+        '-t',
+        String(totalDuration),
+        '-c',
+        'copy',
+        path.resolve(outputPath),
+      ],
+      { cwd: tempDir },
+    );
   }
+
+  private async agentSetting(subpath: string): Promise<unknown> {
+    const leaf = subpath.split('/').pop() ?? subpath;
+    try {
+      const payload = await this.client.getJson(this.client.agentPath(subpath));
+      return unwrapAgentValue(payload, leaf);
+    } catch (error) {
+      if (error instanceof ThinginoHttpError && error.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  }
+}
+
+function parseRecordTool(payload: unknown): Omit<RecordingLayout, 'hostname'> {
+  const root = unwrapRecordTool(payload);
+  const video = objectField(root, 'video');
+  const videoRecord =
+    video && typeof video === 'object' && !Array.isArray(video)
+      ? (video as Record<string, unknown>)
+      : {};
+  const mounts = objectField(root, 'mounts');
+  const listedMount =
+    Array.isArray(mounts) && typeof mounts[0] === 'string'
+      ? stringSetting(mounts[0])
+      : null;
+  // Ciao leaves video.mount empty and puts the card in data.mounts.
+  return {
+    mount: stringSetting(videoRecord.mount) ?? listedMount,
+    filename: stringSetting(videoRecord.filename),
+    devicePath: stringSetting(videoRecord.device_path),
+    durationSeconds: numberSetting(videoRecord.duration),
+    autostart: booleanSetting(videoRecord.autostart),
+  };
+}
+
+function unwrapRecordTool(payload: unknown): unknown {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return payload;
+  }
+  const record = payload as Record<string, unknown>;
+  if (record.data && typeof record.data === 'object') {
+    return record.data;
+  }
+  return payload;
+}
+
+function objectField(payload: unknown, key: string): unknown {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return null;
+  }
+  return (payload as Record<string, unknown>)[key];
+}
+
+function stringSetting(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim() !== '' && value !== 'null') {
+    return value;
+  }
+  return null;
+}
+
+function numberSetting(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function booleanSetting(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    return value === 'true' || value === '1' || value === 'on';
+  }
+  return false;
 }

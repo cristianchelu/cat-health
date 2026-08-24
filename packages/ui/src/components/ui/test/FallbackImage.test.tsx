@@ -73,6 +73,8 @@ describe('FallbackImage', () => {
     );
 
     const img = screen.getByRole('img', { name: 'Preview' });
+    Object.defineProperty(img, 'naturalWidth', { value: 640 });
+    Object.defineProperty(img, 'naturalHeight', { value: 480 });
     fireEvent.load(img);
     assert.equal(img.classList.contains('is-ready'), true);
 
@@ -87,5 +89,23 @@ describe('FallbackImage', () => {
     const nextImg = screen.getByRole('img', { name: 'Preview' });
     assert.equal(nextImg.getAttribute('src'), '/second-snapshot.jpg');
     assert.equal(nextImg.classList.contains('is-ready'), false);
+  });
+
+  it('swaps to the fallback when a 200 response is not a real image', async () => {
+    await renderWithProviders(
+      <FallbackImage
+        src="/empty-snapshot.jpg"
+        alt="Preview"
+        fallback={<span>Offline</span>}
+      />,
+    );
+
+    const img = screen.getByRole('img', { name: 'Preview' });
+    Object.defineProperty(img, 'naturalWidth', { value: 0 });
+    Object.defineProperty(img, 'naturalHeight', { value: 0 });
+    fireEvent.load(img);
+
+    assert.ok(screen.getByText('Offline'));
+    assert.equal(screen.queryByRole('img', { name: 'Preview' }), null);
   });
 });

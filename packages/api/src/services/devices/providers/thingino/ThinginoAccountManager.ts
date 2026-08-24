@@ -1,3 +1,4 @@
+import { Bonjour } from 'bonjour-service';
 import { requireWithSchema } from 'shared';
 import type {
   AccountManager,
@@ -11,6 +12,11 @@ import {
   ThinginoConfigSchema,
   ThinginoDeviceController,
 } from './ThinginoDeviceController.ts';
+import {
+  ThinginoHttpClient,
+  originFromBonjour,
+  probeThinginoOrigin,
+} from './ThinginoHttpClient.ts';
 
 export class ThinginoAccountManager implements AccountManager {
   readonly accountId: number;
@@ -25,7 +31,23 @@ export class ThinginoAccountManager implements AccountManager {
   }
 
   async initialize(): Promise<void> {
-    // Nothing to do for now
+    const devices = await this.deps.db
+      .selectFrom('device')
+      .selectAll()
+      .where('provider_account_id', '=', this.accountId)
+      .where('enabled', '=', 1)
+      .execute();
+
+    for (const device of devices) {
+      try {
+        this.instantiateDeviceController(device);
+      } catch (err) {
+        console.error(
+          `Failed to instantiate controller for device ${device.id}:`,
+          err,
+        );
+      }
+    }
   }
 
   async shutdown(): Promise<void> {
@@ -44,7 +66,31 @@ export class ThinginoAccountManager implements AccountManager {
   }
 
   async discoverDevices(): Promise<DiscoveredDevice[]> {
-    return [];
+    return new Promise((resolve) => {
+      const bonjour = new Bonjour();
+      const pending = new Map<string, DiscoveredDevice>();
+
+      const browser = bonjour.find({ type: 'http' }, (service) => {
+        const origin = originFromBonjour(service);
+        if (!origin) return;
+
+        const externalId = (service.host ?? '').replace(/\.$/, '') || origin;
+        if (pending.has(externalId)) return;
+
+        pending.set(externalId, {
+          externalId,
+          name: service.name || externalId,
+          type: 'camera',
+          config: { origin },
+        });
+      });
+
+      setTimeout(() => {
+        browser.stop();
+        bonjour.destroy();
+        void this.confirmDiscovered([...pending.values()]).then(resolve);
+      }, 3000);
+    });
   }
 
   async validateDeviceConfig(device: {
@@ -55,11 +101,16 @@ export class ThinginoAccountManager implements AccountManager {
       throw new Error(`Unsupported device type: ${device.type}`);
     }
 
-    requireWithSchema(
+    const config = requireWithSchema(
       ThinginoConfigSchema,
       device.config,
       'Thingino configuration',
     );
+    const client = new ThinginoHttpClient(
+      config.origin.replace(/\/+$/, ''),
+      config.token,
+    );
+    await client.getJson(client.agentPath('device'));
   }
 
   instantiateDeviceController(device: Device): DeviceController {
@@ -68,14 +119,31 @@ export class ThinginoAccountManager implements AccountManager {
       return existing;
     }
 
-    if (device.type === 'camera') {
-      const controller = new ThinginoDeviceController(device, this.deps);
-      this.controllers.set(device.id, controller);
-      return controller;
+    if (device.type !== 'camera') {
+      throw new Error(
+        `Unsupported device type for Thingino provider: ${device.type}`,
+      );
     }
 
-    throw new Error(
-      `Unsupported device type for Thingino provider: ${device.type}`,
-    );
+    const controller = new ThinginoDeviceController(device, this.deps);
+    this.controllers.set(device.id, controller);
+    controller.connect().catch((err) => {
+      console.error(`Failed to connect to device ${device.id}:`, err);
+    });
+    return controller;
+  }
+
+  private async confirmDiscovered(
+    candidates: DiscoveredDevice[],
+  ): Promise<DiscoveredDevice[]> {
+    const confirmed: DiscoveredDevice[] = [];
+    for (const candidate of candidates) {
+      const origin = candidate.config.origin;
+      if (typeof origin !== 'string') continue;
+      if (await probeThinginoOrigin(origin)) {
+        confirmed.push(candidate);
+      }
+    }
+    return confirmed;
   }
 }

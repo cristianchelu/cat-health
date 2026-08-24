@@ -37,6 +37,8 @@ export const DEVICE_SIGNAL_KEYS = {
   LITTER_REMAINING: 'litter_remaining',
   DEEP_CLEAN: 'deep_clean',
   VISITS_SINCE_CLEAN: 'visits_since_clean',
+  STORAGE: 'storage',
+  RECORDING: 'recording',
 } as const;
 
 /** Urgency of an informational signal. Backfills a slot, never alarms. */
@@ -119,6 +121,14 @@ const SCORE_TABLE: Record<string, ScoreRule> = {
     nowScore: 82,
     soonScore: 52,
     calm: { base: 30, slope: -0.25 },
+  },
+  [DEVICE_SIGNAL_KEYS.STORAGE]: {
+    direction: 'higher',
+    now: 95,
+    soon: 85,
+    nowScore: 72,
+    soonScore: 42,
+    calm: { base: 8, slope: 0.3 },
   },
   /* Severity is a ratio against the user's configured threshold. */
   [DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP]: {

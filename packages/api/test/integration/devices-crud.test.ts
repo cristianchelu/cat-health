@@ -193,6 +193,93 @@ describe('devices API CRUD', () => {
       }
     });
 
+    it('rejects a config patch when the provider cannot validate it', async () => {
+      const account = await insertProviderAccount(ctx.db, {
+        provider: 'thingino',
+        name: 'Thingino account',
+      });
+      const manager = createDeviceFriendlyAccountManager(account.id);
+      manager.validateDeviceConfig = async () => {
+        throw new Error('Camera HTTP 401');
+      };
+      const app = await createTestApp(ctx, {
+        integrationManager: createTestIntegrationManager(ctx.db, {
+          accountManagers: new Map([[account.id, manager]]),
+        }),
+      });
+
+      try {
+        const device = await insertDevice(ctx.db, {
+          provider_account_id: account.id,
+          name: 'Littercam',
+          type: 'camera',
+          external_id: 'littercam.local',
+          config: { origin: 'http://littercam.local', token: 'old-key' },
+        });
+
+        const patch = await app.inject({
+          method: 'PATCH',
+          url: `/api/devices/${device.id}`,
+          payload: {
+            name: 'Should not stick',
+            config: {
+              origin: 'http://littercam.local',
+              token: 'wrong-key',
+            },
+          },
+        });
+        assert.equal(patch.statusCode, 400);
+        assert.equal(patch.json().message, 'Camera HTTP 401');
+
+        const detail = await app.inject({
+          method: 'GET',
+          url: `/api/devices/${device.id}`,
+        });
+        assert.equal(detail.statusCode, 200);
+        assert.equal(detail.json().name, 'Littercam');
+      } finally {
+        await app.close();
+      }
+    });
+
+    it('does not re-validate an unchanged config on patch', async () => {
+      const account = await insertProviderAccount(ctx.db, {
+        provider: 'thingino',
+        name: 'Thingino account',
+      });
+      let calls = 0;
+      const manager = createDeviceFriendlyAccountManager(account.id);
+      manager.validateDeviceConfig = async () => {
+        calls += 1;
+      };
+      const app = await createTestApp(ctx, {
+        integrationManager: createTestIntegrationManager(ctx.db, {
+          accountManagers: new Map([[account.id, manager]]),
+        }),
+      });
+
+      try {
+        const device = await insertDevice(ctx.db, {
+          provider_account_id: account.id,
+          name: 'Littercam',
+          type: 'camera',
+          external_id: 'littercam.local',
+          config: { origin: 'http://littercam.local', token: 'kept-key' },
+        });
+
+        const patch = await app.inject({
+          method: 'PATCH',
+          url: `/api/devices/${device.id}`,
+          payload: { name: 'Hall camera' },
+        });
+        assert.equal(patch.statusCode, 200);
+        assert.equal(patch.json().name, 'Hall camera');
+        assert.equal(calls, 0);
+      } finally {
+        await app.close();
+      }
+    });
+
     it('lists remote pets when the account manager supports it', async () => {
       const account = await insertProviderAccount(ctx.db, {
         provider: 'surepet',

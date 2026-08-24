@@ -48,7 +48,14 @@ const UNTRANSLATED_RO = new Set([
   'settings.add_food',
   'settings.add_food_desc',
   'settings.add_food_title',
-  'settings.clip_duration_label',
+  'devices.signals.recording',
+  'devices.signals.storage',
+  'devices.signals.values.recording_idle',
+  'devices.signals.values.recording_off',
+  'devices.signals.values.recording_on',
+  'settings.camera_origin_label',
+  'settings.camera_origin_placeholder',
+  'settings.webui_api_key_label',
   'settings.edit_food_title',
   'settings.food_barcode_label',
   'settings.food_barcode_placeholder',
@@ -95,9 +102,6 @@ const UNTRANSLATED_RO = new Set([
   'settings.nutrient_unit_g',
   'settings.nutrient_unit_mg',
   'settings.nutrient_unit_percent',
-  'settings.remote_path_label',
-  'settings.ssh_key_path_label',
-  'settings.ssh_user_label',
 ]);
 
 /**

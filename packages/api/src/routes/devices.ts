@@ -30,6 +30,7 @@ import type { Device } from '../database/types/DeviceTable.ts';
 import type { ProviderAccount } from '../database/types/ProviderAccountTable.ts';
 import type {
   DeviceSignal,
+  DeviceType,
   GetDeviceResponseDTO,
   ProviderAccountDTO,
 } from 'shared';
@@ -114,6 +115,24 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
    * payload, which for ESPHome is its entire entity table. The grid renders
    * `signals`, so shipping state per row would be dead weight on every load.
    */
+
+  async function assertValidDeviceConfig(
+    accountId: number,
+    type: DeviceType,
+    config: unknown,
+  ): Promise<void> {
+    const manager = integrationManager.getAccountManager(accountId);
+    await manager?.validateDeviceConfig?.({ type, config });
+  }
+
+  function invalidDeviceConfigReply(reply: FastifyReply, error: unknown) {
+    return reply.code(400).send({
+      statusCode: 400,
+      error: 'Bad Request',
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   const mapDevice = async (
     device: DeviceWithProvider,
     { includeState = true }: { includeState?: boolean } = {},
@@ -125,7 +144,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       external_id: device.external_id,
       name: device.name,
       type: device.type,
-      config: parseJsonValue(device.config) ?? null,
+      config: parseJsonValue(device.config),
       enabled: Boolean(device.enabled),
       account_enabled: Boolean(device.account_enabled),
       created_at: new Date(device.created_at).toISOString(),
@@ -624,17 +643,19 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PostDeviceRequestSchema,
         response: {
           '200': GetDeviceResponseSchema,
+          '400': Http400ResponseSchema,
         },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const { name, type, provider_account_id, external_id, config } =
         request.body;
 
-      // Validate device config if supported by the provider
       const manager = integrationManager.getAccountManager(provider_account_id);
-      if (manager?.validateDeviceConfig) {
-        await manager.validateDeviceConfig({ type, config });
+      try {
+        await assertValidDeviceConfig(provider_account_id, type, config);
+      } catch (error) {
+        return invalidDeviceConfigReply(reply, error);
       }
 
       const result = await db
@@ -760,10 +781,12 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PatchDeviceRequestSchema,
         response: {
           '200': GetDeviceResponseSchema,
+          '400': Http400ResponseSchema,
+          '404': Http404ResponseSchema,
         },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const { id } = request.params;
       const updates = request.body;
 
@@ -780,7 +803,34 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         updateData.enabled = updates.enabled ? 1 : 0;
       }
       if (updates.config !== undefined) {
-        updateData.config = JSON.stringify(updates.config);
+        const existing = await db
+          .selectFrom('device')
+          .select('config')
+          .select('type')
+          .select('provider_account_id')
+          .where('id', '=', id)
+          .executeTakeFirst();
+        if (!existing) {
+          return reply.code(404).send({
+            statusCode: 404,
+            error: 'Not Found',
+            message: `Device ${id} not found`,
+          });
+        }
+        const previousConfig = parseJsonValue(existing.config);
+        const nextConfig = updates.config;
+        if (JSON.stringify(previousConfig) !== JSON.stringify(nextConfig)) {
+          try {
+            await assertValidDeviceConfig(
+              existing.provider_account_id,
+              existing.type,
+              nextConfig,
+            );
+          } catch (error) {
+            return invalidDeviceConfigReply(reply, error);
+          }
+        }
+        updateData.config = JSON.stringify(nextConfig);
       }
 
       await db
@@ -890,6 +940,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         }
 
         reply.header('Content-Type', 'image/jpeg');
+        reply.header('Cache-Control', 'no-store');
         return buffer;
       }
 

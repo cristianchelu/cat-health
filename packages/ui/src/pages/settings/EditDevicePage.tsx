@@ -6,6 +6,7 @@ import {
   useUpdateDevice,
   useDevices,
 } from '@/hooks/queries/deviceQueries';
+import { apiErrorMessage } from '@/api/apiClient';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/PageState';
 import {
@@ -41,10 +42,8 @@ interface DeviceFormValues {
   sourceDeviceId: string;
   promptTemplate: string;
   autoIdentify: boolean;
-  sshUser: string;
-  sshPrivateKeyPath: string;
-  remotePath: string;
-  clipDurationSeconds: number;
+  origin: string;
+  token: string;
 }
 
 const DEFAULT_FORM_VALUES: DeviceFormValues = {
@@ -56,10 +55,8 @@ const DEFAULT_FORM_VALUES: DeviceFormValues = {
   sourceDeviceId: '',
   promptTemplate: '',
   autoIdentify: true,
-  sshUser: '',
-  sshPrivateKeyPath: '',
-  remotePath: '',
-  clipDurationSeconds: 120,
+  origin: '',
+  token: '',
 };
 
 function deviceToFormValues(device: {
@@ -79,22 +76,15 @@ function deviceToFormValues(device: {
     sourceDeviceId: '',
     promptTemplate: '',
     autoIdentify: true,
-    sshUser: '',
-    sshPrivateKeyPath: '',
-    remotePath: '',
-    clipDurationSeconds: 120,
+    origin: '',
+    token: '',
   };
   if (!cfg) return base;
   if (device.type === 'camera' && device.provider === 'thingino') {
-    const rec = cfg.recording as Record<string, unknown> | undefined;
-    const ssh = rec?.ssh as Record<string, unknown> | undefined;
     return {
       ...base,
-      snapshotUrl: (cfg.snapshotUrl as string) || '',
-      sshUser: (ssh?.user as string) || '',
-      sshPrivateKeyPath: (ssh?.privateKeyPath as string) || '',
-      remotePath: (rec?.remotePath as string) || '',
-      clipDurationSeconds: (rec?.clipDurationSeconds as number) ?? 120,
+      origin: (cfg.origin as string) || '',
+      token: (cfg.token as string) || '',
     };
   }
   if (device.type === 'camera') {
@@ -154,17 +144,15 @@ const EditDevicePage: React.FC = () => {
       let config: Record<string, unknown> | undefined;
 
       if (device.type === 'camera' && device.provider === 'thingino') {
+        const {
+          snapshotUrl: _snapshotUrl,
+          recording: _recording,
+          ...rest
+        } = existingConfig;
         config = {
-          ...existingConfig,
-          snapshotUrl: data.snapshotUrl,
-          recording: {
-            ssh: {
-              user: data.sshUser,
-              privateKeyPath: data.sshPrivateKeyPath,
-            },
-            remotePath: data.remotePath,
-            clipDurationSeconds: data.clipDurationSeconds,
-          },
+          ...rest,
+          origin: data.origin,
+          token: data.token.trim(),
         };
       } else if (device.type === 'camera') {
         config = { ...existingConfig, snapshotUrl: data.snapshotUrl };
@@ -192,7 +180,7 @@ const EditDevicePage: React.FC = () => {
       back.go();
     } catch (err) {
       console.error(err);
-      setSubmitError(t('settings.edit_device_error'));
+      setSubmitError(apiErrorMessage(err, t('settings.edit_device_error')));
     }
   };
 
@@ -285,7 +273,7 @@ const EditDevicePage: React.FC = () => {
 
             <DeviceSummary externalId={device.external_id} />
 
-            {device.type === 'camera' && (
+            {device.type === 'camera' && device.provider !== 'thingino' && (
               <FormField label={t('settings.snapshot_url_label')}>
                 <Input
                   {...register('snapshotUrl')}
@@ -297,27 +285,18 @@ const EditDevicePage: React.FC = () => {
 
             {device.provider === 'thingino' && device.type === 'camera' && (
               <>
-                <FormField label={t('settings.ssh_user_label')}>
-                  <Input {...register('sshUser')} placeholder="root" />
-                </FormField>
-                <FormField label={t('settings.ssh_key_path_label')}>
+                <FormField label={t('settings.camera_origin_label')}>
                   <Input
-                    {...register('sshPrivateKeyPath')}
-                    placeholder="/path/to/key"
+                    {...register('origin', { required: true })}
+                    placeholder={t('settings.camera_origin_placeholder')}
+                    autoComplete="off"
                   />
                 </FormField>
-                <FormField label={t('settings.remote_path_label')}>
+                <FormField label={t('settings.webui_api_key_label')}>
                   <Input
-                    {...register('remotePath')}
-                    placeholder="/mnt/sd/recordings"
-                  />
-                </FormField>
-                <FormField label={t('settings.clip_duration_label')}>
-                  <Input
-                    type="number"
-                    {...register('clipDurationSeconds', {
-                      valueAsNumber: true,
-                    })}
+                    type="password"
+                    autoComplete="off"
+                    {...register('token')}
                   />
                 </FormField>
               </>

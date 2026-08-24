@@ -16,6 +16,7 @@ import {
   useUpdateProviderAccount,
   useDevices,
 } from '@/hooks/queries/deviceQueries';
+import { apiErrorMessage } from '@/api/apiClient';
 import { isRecord } from '@/lib/utils';
 import { useUnsavedBlocker } from '@/hooks/form';
 import { useBackNavigation } from '@/hooks/useBackNavigation';
@@ -381,7 +382,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
       exit();
     } catch (err) {
       console.error(err);
-      setServerError(t('settings.register_device_error'));
+      setServerError(apiErrorMessage(err, t('settings.register_device_error')));
     }
   };
 
