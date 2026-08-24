@@ -10,13 +10,10 @@ export function shouldBlockDeviceDetailsTabLeave(args: {
   cameraDirty: boolean;
   recognitionDirty: boolean;
   feederDirty: boolean;
-  overviewDirty: boolean;
 }): boolean {
   if (args.activeTab === args.nextTab) return false;
 
   switch (args.activeTab) {
-    case 'overview':
-      return args.overviewDirty;
     case 'camera':
       return args.cameraDirty;
     case 'recognition':

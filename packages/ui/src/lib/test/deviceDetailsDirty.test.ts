@@ -7,7 +7,6 @@ const clean = {
   cameraDirty: false,
   recognitionDirty: false,
   feederDirty: false,
-  overviewDirty: false,
 };
 
 describe('shouldBlockDeviceDetailsTabLeave', () => {
@@ -40,7 +39,6 @@ describe('shouldBlockDeviceDetailsTabLeave', () => {
         nextTab: 'overview',
         recognitionDirty: true,
         feederDirty: true,
-        overviewDirty: true,
       }),
       false,
     );
@@ -63,7 +61,6 @@ describe('shouldBlockDeviceDetailsTabLeave', () => {
         nextTab: 'camera',
         cameraDirty: true,
         feederDirty: true,
-        overviewDirty: true,
       }),
       false,
     );
@@ -86,22 +83,12 @@ describe('shouldBlockDeviceDetailsTabLeave', () => {
         nextTab: 'history',
         cameraDirty: true,
         recognitionDirty: true,
-        overviewDirty: true,
       }),
       false,
     );
   });
 
-  it('blocks leaving overview only when the overview draft is dirty', () => {
-    assert.equal(
-      shouldBlockDeviceDetailsTabLeave({
-        ...clean,
-        activeTab: 'overview',
-        nextTab: 'camera',
-        overviewDirty: true,
-      }),
-      true,
-    );
+  it('never blocks leaving overview', () => {
     assert.equal(
       shouldBlockDeviceDetailsTabLeave({
         ...clean,
@@ -124,7 +111,6 @@ describe('shouldBlockDeviceDetailsTabLeave', () => {
         cameraDirty: true,
         recognitionDirty: true,
         feederDirty: true,
-        overviewDirty: true,
       }),
       false,
     );

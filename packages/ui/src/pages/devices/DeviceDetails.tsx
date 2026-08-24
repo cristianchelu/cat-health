@@ -54,12 +54,11 @@ const DeviceDetails: React.FC = () => {
   const [pendingTab, setPendingTab] = React.useState<DeviceDetailsTabId | null>(
     null,
   );
-  const [overviewDirty, setOverviewDirty] = React.useState(false);
   const [cameraDirty, setCameraDirty] = React.useState(false);
   const [recognitionDirty, setRecognitionDirty] = React.useState(false);
   const [feederDirty, setFeederDirty] = React.useState(false);
   const { blockerOpen, onConfirmLeave, onCancelLeave } = useUnsavedBlocker(
-    overviewDirty || cameraDirty || recognitionDirty || feederDirty,
+    cameraDirty || recognitionDirty || feederDirty,
   );
 
   const {
@@ -112,7 +111,6 @@ const DeviceDetails: React.FC = () => {
         cameraDirty,
         recognitionDirty,
         feederDirty,
-        overviewDirty,
       })
     ) {
       setPendingTab(next);
@@ -166,10 +164,7 @@ const DeviceDetails: React.FC = () => {
         {visibleTabs.includes('overview') && (
           <TabsContent value="overview">
             <div className="device-content">
-              <ProviderDeviceView
-                device={device}
-                onDirtyChange={setOverviewDirty}
-              />
+              <ProviderDeviceView device={device} />
             </div>
           </TabsContent>
         )}
@@ -217,7 +212,6 @@ const DeviceDetails: React.FC = () => {
         onConfirm={() => {
           const nextTab = pendingTab;
           setPendingTab(null);
-          setOverviewDirty(false);
           setCameraDirty(false);
           setRecognitionDirty(false);
           setFeederDirty(false);
