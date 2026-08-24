@@ -33,3 +33,23 @@ describe('water_freshness scoring (fraction of interval remaining)', () => {
     assert.deepEqual(freshness(6 / 12), freshness(2.5 / 5));
   });
 });
+
+describe('storage scoring', () => {
+  const storage = (value: number) =>
+    scoreDeviceSignal({
+      key: DEVICE_SIGNAL_KEYS.STORAGE,
+      severity: { kind: 'percent', value },
+    });
+
+  it('is calm below the soon threshold', () => {
+    assert.equal(storage(50).tone, 'calm');
+  });
+
+  it('turns soon at 85 percent full', () => {
+    assert.equal(storage(85).tone, 'soon');
+  });
+
+  it('turns now at 95 percent full', () => {
+    assert.equal(storage(95).tone, 'now');
+  });
+});

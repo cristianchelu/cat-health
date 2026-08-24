@@ -280,6 +280,50 @@ describe('devices API CRUD', () => {
       }
     });
 
+    it('does not re-validate when the patched config serializes the same', async () => {
+      const account = await insertProviderAccount(ctx.db, {
+        provider: 'thingino',
+        name: 'Thingino account',
+      });
+      let calls = 0;
+      const manager = createDeviceFriendlyAccountManager(account.id);
+      manager.validateDeviceConfig = async () => {
+        calls += 1;
+      };
+      const app = await createTestApp(ctx, {
+        integrationManager: createTestIntegrationManager(ctx.db, {
+          accountManagers: new Map([[account.id, manager]]),
+        }),
+      });
+
+      try {
+        const device = await insertDevice(ctx.db, {
+          provider_account_id: account.id,
+          name: 'Littercam',
+          type: 'camera',
+          external_id: 'littercam.local',
+          config: { origin: 'http://littercam.local', token: 'kept-key' },
+        });
+
+        const patch = await app.inject({
+          method: 'PATCH',
+          url: `/api/devices/${device.id}`,
+          payload: {
+            name: 'Hall camera',
+            config: {
+              origin: 'http://littercam.local',
+              token: 'kept-key',
+            },
+          },
+        });
+        assert.equal(patch.statusCode, 200);
+        assert.equal(patch.json().name, 'Hall camera');
+        assert.equal(calls, 0);
+      } finally {
+        await app.close();
+      }
+    });
+
     it('lists remote pets when the account manager supports it', async () => {
       const account = await insertProviderAccount(ctx.db, {
         provider: 'surepet',

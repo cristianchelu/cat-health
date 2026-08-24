@@ -403,4 +403,57 @@ describe('ThinginoDeviceController', () => {
     assert.equal(deviceGets, 2);
     await controller.disconnect();
   });
+
+  it('refreshes storage when a missed camera comes back', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let deviceGets = 0;
+    let usedKib = 94;
+    const client = new ThinginoHttpClient(
+      'http://camera.local',
+      'secret-token',
+      async (input) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith('/device')) {
+          deviceGets += 1;
+          if (deviceGets === 1 || deviceGets >= 4) {
+            return jsonResponse({ hostname: 'littercam' });
+          }
+          return new Response('down', { status: 500 });
+        }
+        if (url.pathname.endsWith('/runtime/storage')) {
+          return jsonResponse({
+            used_kib: usedKib,
+            total_kib: 100,
+          });
+        }
+        return storageJson(url);
+      },
+    );
+    const controller = new ThinginoDeviceController(device, deps, client);
+    await controller.connect();
+    assert.equal(controller.getStatus(), 'online');
+
+    t.mock.timers.tick(10_000);
+    await new Promise((resolve) => setImmediate(resolve));
+    t.mock.timers.tick(10_000);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(controller.getStatus(), 'offline');
+
+    usedKib = 50;
+    t.mock.timers.tick(10_000);
+    for (let i = 0; i < 20; i++) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+
+    assert.equal(controller.getStatus(), 'online');
+    const storage = controller
+      .getSignals()
+      .find((signal) => signal.key === 'storage');
+    assert.equal(storage?.value.kind, 'percent');
+    assert.equal(
+      storage?.value.kind === 'percent' ? storage.value.value : null,
+      50,
+    );
+    await controller.disconnect();
+  });
 });
