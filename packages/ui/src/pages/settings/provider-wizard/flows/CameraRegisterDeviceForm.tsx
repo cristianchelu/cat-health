@@ -5,12 +5,11 @@ import { useAppForm } from '@/hooks/form';
 import { DefaultRegisterDeviceForm } from './DefaultRegisterDeviceForm';
 import { RegisterDeviceCard } from './shared/RegisterDeviceCard';
 import { generateLocalExternalId } from '../wizardUtils';
+import { getDeviceConfigModule } from './deviceConfigRegistry.ts';
+import type { DeviceFormValues } from './deviceConfigTypes.ts';
 import type { RegisterDeviceFormProps } from './types';
 
-interface CameraDirectFormValues {
-  name: string;
-  snapshotUrl: string;
-}
+const configModule = getDeviceConfigModule('camera');
 
 export const CameraRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = (
   props,
@@ -23,6 +22,7 @@ export const CameraRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = (
 
 const CameraDirectForm: React.FC<RegisterDeviceFormProps> = ({
   account,
+  existingDevices,
   isSubmitting,
   serverError,
   onSubmitDevice,
@@ -32,10 +32,16 @@ const CameraDirectForm: React.FC<RegisterDeviceFormProps> = ({
   const { t } = useTranslation();
   const {
     register,
+    control,
     handleSubmit,
     formState: { isDirty },
-  } = useAppForm<CameraDirectFormValues>({
-    defaultValues: { name: '', snapshotUrl: '' },
+  } = useAppForm<DeviceFormValues>({
+    defaultValues: {
+      name: '',
+      enabled: true,
+      visitAnnotationEnabled: false,
+      config: { ...configModule.defaultConfigValues },
+    },
   });
 
   React.useEffect(() => {
@@ -50,7 +56,7 @@ const CameraDirectForm: React.FC<RegisterDeviceFormProps> = ({
       name: data.name,
       type: 'camera',
       config: {
-        snapshotUrl: data.snapshotUrl,
+        ...configModule.toConfig(data.config, {}),
         visit_annotation_enabled: false,
       },
     });
@@ -79,14 +85,11 @@ const CameraDirectForm: React.FC<RegisterDeviceFormProps> = ({
               {...register('name', { required: true })}
             />
           </FormField>
-
-          <FormField label={t('settings.snapshot_url_label')}>
-            <Input
-              placeholder={t('settings.snapshot_url_placeholder')}
-              {...register('snapshotUrl', { required: true })}
-            />
-            <p className="help-text">{t('settings.snapshot_url_help')}</p>
-          </FormField>
+          <configModule.Fields
+            control={control}
+            mode="register"
+            existingDevices={existingDevices}
+          />
         </RegisterDeviceCard>
       </FormShell>
     </>

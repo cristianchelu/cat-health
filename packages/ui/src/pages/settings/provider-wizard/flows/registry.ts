@@ -5,7 +5,7 @@ import { InferenceRegisterDeviceForm } from './InferenceRegisterDeviceForm';
 import { CameraRegisterDeviceForm } from './CameraRegisterDeviceForm';
 import { EsphomeRegisterDeviceForm } from './EsphomeRegisterDeviceForm';
 import { SurePetRegisterDeviceForm } from './surepet/SurePetRegisterDeviceForm';
-import { ThinginoRegisterDeviceForm } from './ThinginoRegisterDeviceForm';
+import { ThinginoRegisterDeviceForm } from './thingino/ThinginoRegisterDeviceForm';
 
 const ALL_DEVICE_TYPES: readonly DeviceType[] = [
   'litterbox',

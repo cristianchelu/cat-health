@@ -2,16 +2,14 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormField, FormShell, Input } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form';
-import { RegisterDeviceCard } from './shared/RegisterDeviceCard';
-import { generateLocalExternalId } from '../wizardUtils';
+import { RegisterDeviceCard } from '../shared/RegisterDeviceCard';
+import { generateLocalExternalId } from '../../wizardUtils';
 import { getStringValue, isRecord } from '@/lib/utils';
-import type { RegisterDeviceFormProps } from './types';
+import { getDeviceConfigModule } from '../deviceConfigRegistry.ts';
+import type { DeviceFormValues } from '../deviceConfigTypes.ts';
+import type { RegisterDeviceFormProps } from '../types';
 
-interface ThinginoFormValues {
-  name: string;
-  origin: string;
-  token: string;
-}
+const configModule = getDeviceConfigModule('thingino');
 
 function prefillOrigin(prefill: RegisterDeviceFormProps['prefill']): string {
   if (!prefill || !isRecord(prefill.config)) return '';
@@ -21,6 +19,7 @@ function prefillOrigin(prefill: RegisterDeviceFormProps['prefill']): string {
 export const ThinginoRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
   account,
   prefill,
+  existingDevices,
   isSubmitting,
   serverError,
   onSubmitDevice,
@@ -30,13 +29,18 @@ export const ThinginoRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
   const { t } = useTranslation();
   const {
     register,
+    control,
     handleSubmit,
     formState: { isDirty },
-  } = useAppForm<ThinginoFormValues>({
+  } = useAppForm<DeviceFormValues>({
     defaultValues: {
       name: prefill?.name ?? '',
-      origin: prefillOrigin(prefill),
-      token: '',
+      enabled: true,
+      visitAnnotationEnabled: false,
+      config: {
+        ...configModule.defaultConfigValues,
+        origin: prefillOrigin(prefill),
+      },
     },
   });
 
@@ -46,14 +50,14 @@ export const ThinginoRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
   }, [isDirty, onDirtyChange]);
 
   const onSubmit = handleSubmit(async (data) => {
+    const existing = isRecord(prefill?.config) ? prefill.config : {};
     await onSubmitDevice({
       provider_account_id: account.id,
       external_id: prefill?.externalId ?? generateLocalExternalId('manual'),
       name: data.name,
       type: 'camera',
       config: {
-        origin: data.origin.trim(),
-        token: data.token.trim(),
+        ...configModule.toConfig(data.config, existing),
         visit_annotation_enabled: false,
       },
     });
@@ -82,22 +86,11 @@ export const ThinginoRegisterDeviceForm: React.FC<RegisterDeviceFormProps> = ({
               {...register('name', { required: true })}
             />
           </FormField>
-
-          <FormField label={t('settings.camera_origin_label')}>
-            <Input
-              placeholder={t('settings.camera_origin_placeholder')}
-              autoComplete="off"
-              {...register('origin', { required: true })}
-            />
-          </FormField>
-
-          <FormField label={t('settings.webui_api_key_label')}>
-            <Input
-              type="password"
-              autoComplete="off"
-              {...register('token', { required: true })}
-            />
-          </FormField>
+          <configModule.Fields
+            control={control}
+            mode="register"
+            existingDevices={existingDevices}
+          />
         </RegisterDeviceCard>
       </FormShell>
     </>
