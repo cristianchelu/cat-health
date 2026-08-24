@@ -286,9 +286,36 @@ export function originFromBonjour(service: {
   addresses?: string[];
 }): string | null {
   const hostname = service.host?.replace(/\.$/, '') ?? '';
-  const ipv4 = service.addresses?.find((addr) => addr.includes('.'));
-  const host = hostname || ipv4;
+  const ipv4 = service.addresses?.find(isIpv4);
+  const ipv6 = service.addresses?.find(isIpv6);
+  const host = hostname || ipv4 || (ipv6 ? bracketIpv6(ipv6) : '');
   if (!host) return null;
   const port = service.port ?? 80;
   return port === 80 ? `http://${host}` : `http://${host}:${port}`;
+}
+
+function isIpv4(addr: string): boolean {
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(addr);
+}
+
+function isIpv6(addr: string): boolean {
+  return addr.includes(':');
+}
+
+function bracketIpv6(addr: string): string {
+  const bare = addr.replace(/^\[|\]$/g, '');
+  return `[${bare}]`;
+}
+
+export async function confirmThinginoCandidates<
+  T extends { config: Record<string, unknown> },
+>(candidates: T[], fetchFn: typeof fetch = fetch): Promise<T[]> {
+  const settled = await Promise.all(
+    candidates.map(async (candidate) => {
+      const origin = candidate.config.origin;
+      if (typeof origin !== 'string') return null;
+      return (await probeThinginoOrigin(origin, fetchFn)) ? candidate : null;
+    }),
+  );
+  return settled.filter((row): row is T => row != null);
 }

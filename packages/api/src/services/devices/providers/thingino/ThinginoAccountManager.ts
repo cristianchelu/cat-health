@@ -15,7 +15,7 @@ import {
 import {
   ThinginoHttpClient,
   originFromBonjour,
-  probeThinginoOrigin,
+  confirmThinginoCandidates,
 } from './ThinginoHttpClient.ts';
 
 export class ThinginoAccountManager implements AccountManager {
@@ -88,7 +88,7 @@ export class ThinginoAccountManager implements AccountManager {
       setTimeout(() => {
         browser.stop();
         bonjour.destroy();
-        void this.confirmDiscovered([...pending.values()]).then(resolve);
+        void confirmThinginoCandidates([...pending.values()]).then(resolve);
       }, 3000);
     });
   }
@@ -131,19 +131,5 @@ export class ThinginoAccountManager implements AccountManager {
       console.error(`Failed to connect to device ${device.id}:`, err);
     });
     return controller;
-  }
-
-  private async confirmDiscovered(
-    candidates: DiscoveredDevice[],
-  ): Promise<DiscoveredDevice[]> {
-    const confirmed: DiscoveredDevice[] = [];
-    for (const candidate of candidates) {
-      const origin = candidate.config.origin;
-      if (typeof origin !== 'string') continue;
-      if (await probeThinginoOrigin(origin)) {
-        confirmed.push(candidate);
-      }
-    }
-    return confirmed;
   }
 }

@@ -7,6 +7,7 @@ import {
   originFromBonjour,
   parseFileManagerNames,
   probeThinginoOrigin,
+  confirmThinginoCandidates,
   unwrapAgentValue,
   parseCameraJson,
   isJpegBuffer,
@@ -102,6 +103,29 @@ describe('ThinginoHttpClient', () => {
 
     assert.equal(maxInFlight, 1);
   });
+
+  it('retries once when the first body is an empty CGI chunk', async () => {
+    let calls = 0;
+    const client = new ThinginoHttpClient(
+      'http://camera.local',
+      'secret-token',
+      async () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Response(
+            'Connection: close\r\nTransfer-Encoding: chunked\r\nContent-Type: application/json\r\n\r\n0\r\n\r\n',
+            { status: 200 },
+          );
+        }
+        return jsonResponse({ hostname: 'camera' });
+      },
+    );
+
+    assert.deepEqual(await client.getJson('/x/agent.cgi/api/v1/device'), {
+      hostname: 'camera',
+    });
+    assert.equal(calls, 2);
+  });
 });
 
 describe('probeThinginoOrigin', () => {
@@ -136,6 +160,49 @@ describe('originFromBonjour', () => {
       }),
       'http://littercam.local',
     );
+  });
+
+  it('brackets an IPv6 address when there is no hostname', () => {
+    assert.equal(
+      originFromBonjour({
+        host: '',
+        port: 80,
+        addresses: ['fe80::1'],
+      }),
+      'http://[fe80::1]',
+    );
+  });
+});
+
+describe('confirmThinginoCandidates', () => {
+  it('probes candidates in parallel and keeps only Thingino origins', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const confirmed = await confirmThinginoCandidates(
+      [
+        { config: { origin: 'http://printer.local' } },
+        { config: { origin: 'http://camera.local' } },
+        { config: { origin: 12 } },
+      ],
+      async (input) => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        inFlight -= 1;
+        const url = new URL(String(input));
+        if (url.hostname === 'camera.local') {
+          return new Response('{"error":"unauthorized"}', {
+            status: 401,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        return new Response('nope', { status: 404 });
+      },
+    );
+    assert.deepEqual(confirmed, [
+      { config: { origin: 'http://camera.local' } },
+    ]);
+    assert.equal(maxInFlight, 2);
   });
 });
 
