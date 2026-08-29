@@ -76,7 +76,7 @@ describe('account config registry', () => {
   });
 
   it('flags the surepet unofficial-access note', () => {
-    assert.equal(getAccountConfigModule('surepet').note?.variant, 'warn');
+    assert.equal(getAccountConfigModule('surepet').note?.tone, 'warning');
     assert.equal(getAccountConfigModule('inference').note, undefined);
   });
 });

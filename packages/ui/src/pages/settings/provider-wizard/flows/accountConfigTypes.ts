@@ -1,5 +1,6 @@
 import type * as React from 'react';
 import type { Control, FieldValues } from 'react-hook-form';
+import type { CalloutTone } from '@/components/ui/Callout';
 
 /**
  * Form shape shared by the connect step and the provider edit page.
@@ -50,5 +51,5 @@ export interface ProviderAccountConfigModule {
   /** Field block rendered inside the shared FormShell. Not a `<form>`. */
   Fields: React.FC<ProviderAccountFieldsProps>;
   /** Optional callout shown under the fields. */
-  note?: { i18nKey: string; variant: 'info' | 'warn' };
+  note?: { i18nKey: string; tone: CalloutTone };
 }

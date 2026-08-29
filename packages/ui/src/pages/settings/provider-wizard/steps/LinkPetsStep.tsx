@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Callout } from '@/components/ui/Callout';
-import { ProviderNote } from '@/pages/settings/components/ProviderNote';
 import { useTranslation } from 'react-i18next';
 import type { ProviderPetLink } from 'shared';
 import { FormActions } from '@/components/ui/form';
@@ -67,9 +66,9 @@ export const LinkPetsStep: React.FC<LinkPetsStepProps> = ({
         onBaselineResolved={rebase}
       />
 
-      <ProviderNote>{t('settings.pet_links_editable_later')}</ProviderNote>
+      <Callout tone="info">{t('settings.pet_links_editable_later')}</Callout>
 
-      {serverError && <Callout message={serverError} />}
+      {serverError && <Callout tone="error" message={serverError} />}
 
       {/*
        * Skipping is this step's dismiss: the account exists either way, and the

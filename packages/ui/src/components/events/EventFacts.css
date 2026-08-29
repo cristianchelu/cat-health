@@ -42,7 +42,14 @@
     /* The one sign here that means look closer, so it is the one tone that
        is not a domain colour. */
     &.tone-alert {
-      background-color: var(--color-error-light);
+      /* Mixed into the surface: `--color-error-light` is a wash in light and a
+         near-`--color-error` salmon in dark, where the icon all but vanished
+         into its own tint. */
+      background-color: color-mix(
+        in srgb,
+        var(--color-error) 12%,
+        var(--color-surface)
+      );
       color: var(--color-error);
     }
 

@@ -25,7 +25,7 @@ const surepetAccountConfig: ProviderAccountConfigModule = {
   toFormValues: surepetToFormValues,
   toConfig: surepetToConfig,
   Fields: SurePetAccountFields,
-  note: { i18nKey: 'settings.surepet_unofficial_note', variant: 'warn' },
+  note: { i18nKey: 'settings.surepet_unofficial_note', tone: 'warning' },
 };
 
 const inferenceAccountConfig: ProviderAccountConfigModule = {

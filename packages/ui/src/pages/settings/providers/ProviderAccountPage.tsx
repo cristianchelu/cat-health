@@ -42,7 +42,7 @@ import {
 } from '../provider-wizard/flows/accountConfigRegistry.ts';
 import type { ProviderAccountFormValues } from '../provider-wizard/flows/accountConfigTypes.ts';
 import { ProviderBrandTile } from './components/ProviderBrandTile';
-import { ProviderNote } from '@/pages/settings/components/ProviderNote';
+import { Callout } from '@/components/ui/Callout';
 import './ProviderAccountPage.css';
 
 const EMPTY_PET_LINKS: ProviderPetLink[] = [];
@@ -262,9 +262,9 @@ const ProviderAccountPage: React.FC = () => {
             <Fields control={control} mode="edit" />
 
             {configModule.note && (
-              <ProviderNote variant={configModule.note.variant}>
+              <Callout tone={configModule.note.tone}>
                 {t(configModule.note.i18nKey)}
-              </ProviderNote>
+              </Callout>
             )}
 
             <FormSwitch

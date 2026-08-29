@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ProviderNote } from '@/pages/settings/components/ProviderNote';
+import { Callout } from '@/components/ui/Callout';
 import type {
   ProviderAccountConfigModule,
   ProviderAccountFieldsProps,
@@ -21,7 +21,9 @@ import type {
 const GenericAccountFields: React.FC<ProviderAccountFieldsProps> = () => {
   const { t } = useTranslation();
 
-  return <ProviderNote>{t('settings.no_configurable_settings')}</ProviderNote>;
+  return (
+    <Callout tone="info">{t('settings.no_configurable_settings')}</Callout>
+  );
 };
 
 export const genericAccountConfig: ProviderAccountConfigModule = {

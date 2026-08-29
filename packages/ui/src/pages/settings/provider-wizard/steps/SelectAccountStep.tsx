@@ -13,7 +13,7 @@ import {
   type PickerGroup,
   type PickerOption,
 } from '../components/ProviderPickerList';
-import { ProviderNote } from '@/pages/settings/components/ProviderNote';
+import { Callout } from '@/components/ui/Callout';
 
 interface SelectAccountStepProps {
   accounts: ProviderAccountDTO[];
@@ -118,7 +118,7 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
         />
       )}
 
-      <ProviderNote className="provider-wizard-note">
+      <Callout tone="info" className="provider-wizard-note">
         {t('settings.provider_missing_hint')}{' '}
         <Link
           to="/settings/providers"
@@ -127,7 +127,7 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
         >
           {t('settings.providers')}
         </Link>
-      </ProviderNote>
+      </Callout>
 
       <div className="connect-provider-actions">
         <Button

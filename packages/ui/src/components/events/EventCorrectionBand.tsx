@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Sparkles, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import './EventCorrectionBand.css';
+import { Callout } from '@/components/ui/Callout';
 
 interface EventCorrectionBandProps {
   /**
@@ -26,6 +26,10 @@ interface EventCorrectionBandProps {
  * else on the surface is plain, inert reading. Answering either way is
  * terminal — the band never comes back, and a late correction goes through the
  * overflow menu instead.
+ *
+ * An `info` Callout, not a warning: a guess that wants confirming is a quiet
+ * aside on a reading surface. What the two variants change is the glyph — the
+ * sparkle for something concluded, the triangle for something it gave up on.
  */
 const EventCorrectionBand: React.FC<EventCorrectionBandProps> = ({
   variant,
@@ -38,52 +42,54 @@ const EventCorrectionBand: React.FC<EventCorrectionBandProps> = ({
   const { t } = useTranslation();
 
   return (
-    <div className="event-correction-band">
-      <span className="event-correction-band-glyph">
-        {variant === 'guess' ? (
-          <Sparkles aria-hidden />
+    <Callout
+      tone="info"
+      icon={
+        variant === 'guess' ? (
+          <Sparkles size={18} />
         ) : (
-          <TriangleAlert aria-hidden />
-        )}
-      </span>
-      <span className="event-correction-band-text">
-        {variant === 'assign' ? (
-          t('event_details.band_unassigned')
-        ) : (
-          <>
-            {t('event_details.band_matched_to')} <b>{subject}</b>
-            {basis ? ` ${basis}` : ''}
-          </>
-        )}
-      </span>
-      <span className="event-correction-band-actions">
-        {variant === 'guess' && (
+          <TriangleAlert size={18} />
+        )
+      }
+      actions={
+        <>
+          {variant === 'guess' && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onVerify}
+              disabled={isBusy}
+            >
+              <Check size={15} aria-hidden />
+              {t('event_details.looks_right')}
+            </Button>
+          )}
           <Button
             type="button"
-            variant="secondary"
+            variant="neutral"
             size="sm"
-            onClick={onVerify}
+            onClick={onFix}
             disabled={isBusy}
           >
-            <Check size={15} aria-hidden />
-            {t('event_details.looks_right')}
+            {/* One destination, one word for it. An unassigned event and a
+                wrongly-matched one are corrected on the same form, so calling
+                the button something else here only implied a second place to
+                go. */}
+            {t('event_details.fix')}
           </Button>
-        )}
-        <Button
-          type="button"
-          variant="neutral"
-          size="sm"
-          onClick={onFix}
-          disabled={isBusy}
-        >
-          {/* One destination, one word for it. An unassigned event and a
-              wrongly-matched one are corrected on the same form, so calling
-              the button something else here only implied a second place to
-              go. */}
-          {t('event_details.fix')}
-        </Button>
-      </span>
-    </div>
+        </>
+      }
+    >
+      {variant === 'assign' ? (
+        t('event_details.band_unassigned')
+      ) : (
+        <>
+          {t('event_details.band_matched_to')} <b>{subject}</b>
+          {basis ? ` ${basis}` : ''}
+        </>
+      )}
+    </Callout>
   );
 };
 

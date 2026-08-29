@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form';
 import { ProviderBrandTile } from '../../providers/components/ProviderBrandTile';
-import { ProviderNote } from '@/pages/settings/components/ProviderNote';
+import { Callout } from '@/components/ui/Callout';
 import {
   getProviderBrand,
   providerBrandLabel,
@@ -99,9 +99,9 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
             <Fields control={control} mode="connect" />
 
             {configModule.note && (
-              <ProviderNote variant={configModule.note.variant}>
+              <Callout tone={configModule.note.tone}>
                 {t(configModule.note.i18nKey)}
-              </ProviderNote>
+              </Callout>
             )}
 
             <FormInput

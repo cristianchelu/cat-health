@@ -1,20 +1,118 @@
+/*
+ * Tints are mixed into the surface rather than taken from the `--color-*-light`
+ * tokens, which are a pale wash in light and a saturated near-`--color-error`
+ * in dark: a band that whispered in one theme and shouted in the other. The
+ * body stays `--color-text` for the same reason — tone-coloured text on a
+ * tone-coloured wash was the pair that failed contrast at both ends.
+ */
 .callout {
-  padding: var(--space-sm);
-  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-lg);
   font-size: var(--text-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+
+  .callout-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .callout-icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    /* Optically on the first line's baseline box, not floating in the middle
+       of a paragraph. */
+    margin-top: 1px;
+  }
+
+  .callout-body {
+    flex: 1;
+    min-width: 0;
+    text-wrap: pretty;
+  }
+
+  .callout-actions {
+    flex: none;
+    display: flex;
+    gap: var(--space-xs);
+  }
+
+  /* The band is already the emphasis; a link inside it does not need a second
+     colour to be findable. */
+  a {
+    color: inherit;
+    font-weight: var(--font-semibold);
+  }
 
   &.error {
-    color: var(--color-error);
-    background-color: var(--color-error-light);
+    background-color: color-mix(
+      in srgb,
+      var(--color-error) 12%,
+      var(--color-surface)
+    );
+
+    .callout-icon {
+      color: var(--color-error);
+    }
   }
 
   &.warning {
-    color: var(--color-warning);
-    background-color: var(--color-warning-light);
+    background-color: color-mix(
+      in srgb,
+      var(--color-warning) 12%,
+      var(--color-surface)
+    );
+
+    .callout-icon {
+      color: var(--color-warning);
+    }
+  }
+
+  &.success {
+    background-color: color-mix(
+      in srgb,
+      var(--color-success) 12%,
+      var(--color-surface)
+    );
+
+    .callout-icon {
+      color: var(--color-success);
+    }
   }
 
   &.info {
-    color: var(--color-text);
-    background-color: var(--color-surface-muted);
+    background-color: color-mix(
+      in srgb,
+      var(--color-primary) 12%,
+      var(--color-surface)
+    );
+
+    .callout-icon {
+      color: var(--color-primary);
+    }
+  }
+
+  /*
+   * On a phone the band stacks and its answers go full width at touch height —
+   * the row cannot hold a sentence and two buttons at 390px without squeezing
+   * one of them to an ambiguous stub.
+   */
+  @media (max-width: 480px) {
+    flex-wrap: wrap;
+
+    .callout-actions {
+      flex: 1 0 100%;
+
+      > * {
+        flex: 1;
+      }
+    }
   }
 }

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { ScanSearch, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Callout } from '@/components/ui/Callout';
 import { RecognitionStateCard } from './RecognitionStateCard';
 import './RecognitionLockedState.css';
 
@@ -34,17 +35,19 @@ const RecognitionLockedState: React.FC<RecognitionLockedStateProps> = ({
         <Button onClick={onGoToCamera}>{ctaLabel}</Button>
       </RecognitionStateCard>
       {showProviderHint && (
-        <div className="recognition-provider-hint">
-          <span className="recognition-provider-hint-tile">
-            <Sparkles size={14} aria-hidden="true" />
-          </span>
-          <span className="recognition-provider-hint-text">{providerHint}</span>
-          {onGoToProvider && (
-            <Button variant="ghost" size="sm" onClick={onGoToProvider}>
-              {providerCtaLabel}
-            </Button>
-          )}
-        </div>
+        <Callout
+          tone="info"
+          icon={<Sparkles size={18} />}
+          actions={
+            onGoToProvider && (
+              <Button variant="ghost" size="sm" onClick={onGoToProvider}>
+                {providerCtaLabel}
+              </Button>
+            )
+          }
+        >
+          {providerHint}
+        </Callout>
       )}
     </div>
   );
