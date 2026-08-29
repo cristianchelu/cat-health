@@ -1,0 +1,66 @@
+/*
+ * The phone trigger of the adaptive picker.
+ *
+ * The desktop dropdown is `SelectMenu` and the page it opens is `SelectPage`;
+ * both are styled in their own files. All that is left here is the button that
+ * stands in for a `<select>` when the options live on a page instead.
+ *
+ * Shaped from the same tokens as `.select-menu-trigger` and `.select`, so a
+ * form row keeps its height across the breakpoint. Deliberately its own
+ * declarations rather than a borrowed class: those two are the skins of a
+ * `<select>` and a Radix trigger, and a third element quietly depending on them
+ * is how one of the three ends up unable to change.
+ */
+.adaptive-select {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+  height: var(--control-height-md);
+  padding: 0 var(--space-sm);
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-border-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -1px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  > svg {
+    flex: none;
+    color: var(--color-text-muted);
+  }
+
+  .adaptive-select-leading {
+    display: flex;
+    flex: none;
+    align-items: center;
+  }
+
+  .adaptive-select-value {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    .is-placeholder {
+      color: var(--color-text-muted);
+    }
+  }
+}

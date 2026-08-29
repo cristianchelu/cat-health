@@ -1,0 +1,48 @@
+/*
+ * A picker level inside a sheet: a back header and one column of rows.
+ *
+ * It fills the host surface rather than sitting on it — the drawer keeps the
+ * height it already had, and only its contents change.
+ */
+.select-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* Rows run edge to edge, so the page backs out of the dialog's padding and
+     puts it back on each row. */
+  margin: calc(var(--space-lg) * -1);
+
+  .select-page-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex: none;
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: var(--border-thin);
+  }
+
+  .select-page-title {
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+  }
+
+  .select-page-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    /* Rows run edge to edge and put the inline padding back themselves, so
+       their text lines up with the header above. */
+    --picker-row-inline: var(--space-lg);
+  }
+
+  .select-page-section {
+    padding: var(--space-md) var(--space-lg) var(--space-2xs);
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+}
