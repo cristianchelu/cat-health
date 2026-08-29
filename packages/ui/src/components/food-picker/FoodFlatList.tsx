@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import type { GetFoodDTO } from 'shared';
 import { cn } from '@/lib/utils';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { FoodPickerRow } from './FoodPickerRow';
+import { PickerList } from '@/components/ui/PickerList';
+import type { PickerOption } from '@/components/ui/pickerOptions';
 import { coarseFoodGroup, kcalPerKilogram } from './foodGroups';
 import './FoodFlatList.css';
 
@@ -44,44 +45,41 @@ const FoodFlatList: React.FC<FoodFlatListProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  if (foods.length === 0 && leadingRow == null) {
-    return (
-      <div className={cn('food-flat-list', className)} {...props}>
-        {emptyLabel != null && (
-          <p className="food-flat-list-empty">{emptyLabel}</p>
-        )}
-      </div>
-    );
-  }
+  /* Foods are the only food-shaped thing here; everything below is the list
+     every other picker in the app uses. */
+  const options: PickerOption[] = foods.map((food) => {
+    const density = kcalPerKilogram(food);
+    const group = coarseFoodGroup(food.food_type);
+    return {
+      value: String(food.id),
+      label: food.name,
+      subline: food.brand ?? undefined,
+      trailing: (
+        <>
+          {showTypeTags && (
+            <StatusPill className={cn('food-type-tag', group)}>
+              {t(`food_picker.group_${group}_short`)}
+            </StatusPill>
+          )}
+          {density != null && t('food_picker.kcal_per_kg', { value: density })}
+        </>
+      ),
+    };
+  });
 
   return (
-    <div className={cn('food-flat-list', className)} {...props}>
-      {leadingRow}
-      {foods.map((food) => {
-        const density = kcalPerKilogram(food);
-        const group = coarseFoodGroup(food.food_type);
-        return (
-          <FoodPickerRow
-            key={food.id}
-            title={food.name}
-            subtitle={food.brand ?? undefined}
-            selected={selectedFoodId === food.id}
-            onClick={() => onSelect(food)}
-            trailing={
-              <>
-                {showTypeTags && (
-                  <StatusPill className={cn('food-type-tag', group)}>
-                    {t(`food_picker.group_${group}_short`)}
-                  </StatusPill>
-                )}
-                {density != null &&
-                  t('food_picker.kcal_per_kg', { value: density })}
-              </>
-            }
-          />
-        );
-      })}
-    </div>
+    <PickerList
+      className={cn('food-flat-list', className)}
+      options={options}
+      value={selectedFoodId != null ? String(selectedFoodId) : undefined}
+      onSelect={(value) => {
+        const food = foods.find((f) => String(f.id) === value);
+        if (food) onSelect(food);
+      }}
+      leadingRow={leadingRow}
+      emptyLabel={emptyLabel}
+      {...props}
+    />
   );
 };
 

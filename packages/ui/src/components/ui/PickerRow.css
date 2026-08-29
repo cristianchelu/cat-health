@@ -4,7 +4,7 @@
  * A picker row is a list row, so it is sized and typed like one — which is
  * also what makes it a real touch target.
  */
-.food-picker-row {
+.picker-row {
   display: flex;
   align-items: center;
   gap: var(--space-md);
@@ -12,7 +12,7 @@
   /* The inline padding is a knob so a full-bleed list can put back exactly
      the padding its container backed out of, keeping text aligned with the
      heading above it. */
-  padding: var(--space-lg) var(--food-picker-row-inline, var(--space-lg));
+  padding: var(--space-lg) var(--picker-row-inline, var(--space-lg));
   border: none;
   background: none;
   color: inherit;
@@ -42,12 +42,19 @@
     outline-offset: -2px;
   }
 
-  .food-picker-row-body {
+  .picker-row-leading {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    color: var(--color-text-muted);
+  }
+
+  .picker-row-body {
     flex: 1;
     min-width: 0;
   }
 
-  .food-picker-row-title {
+  .picker-row-title {
     display: block;
     font-size: var(--text-base);
     font-weight: var(--font-medium);
@@ -57,7 +64,7 @@
     white-space: nowrap;
   }
 
-  .food-picker-row-subtitle {
+  .picker-row-subtitle {
     display: block;
     font-size: var(--text-sm);
     color: var(--color-text-muted);
@@ -67,7 +74,7 @@
     white-space: nowrap;
   }
 
-  .food-picker-row-trailing {
+  .picker-row-trailing {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
@@ -78,17 +85,17 @@
     white-space: nowrap;
   }
 
-  .food-picker-row-chevron {
+  .picker-row-chevron {
     flex-shrink: 0;
     color: var(--color-text-subtle);
   }
 
-  .food-picker-row-check {
+  .picker-row-check {
     flex-shrink: 0;
     color: var(--color-primary);
   }
 
-  &.muted .food-picker-row-title {
+  &.muted .picker-row-title {
     font-weight: var(--font-normal);
     color: var(--color-text-light);
   }
@@ -96,21 +103,21 @@
   &.selected {
     background-color: var(--color-surface-highlight);
 
-    .food-picker-row-title {
+    .picker-row-title {
       color: var(--color-primary-dark);
     }
   }
 
   @media (max-width: 767px) {
     gap: var(--space-sm);
-    padding: var(--space-md) var(--food-picker-row-inline, var(--space-md));
+    padding: var(--space-md) var(--picker-row-inline, var(--space-md));
 
-    .food-picker-row-title {
+    .picker-row-title {
       font-size: var(--text-sm);
     }
 
-    .food-picker-row-subtitle,
-    .food-picker-row-trailing {
+    .picker-row-subtitle,
+    .picker-row-trailing {
       font-size: var(--text-xs);
     }
   }

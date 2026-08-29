@@ -1,0 +1,29 @@
+/*
+ * The column every picker is made of. It owns the space between rows and the
+ * nothing-here line; the rows own themselves.
+ */
+.picker-list {
+  display: flex;
+  flex-direction: column;
+
+  .picker-list-empty {
+    margin: 0;
+    padding: var(--space-lg);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  /*
+   * A heading is a landmark inside the list, not a row: quieter than the rows
+   * it introduces, and it never takes the separator they draw between them.
+   */
+  .picker-list-heading {
+    padding: var(--space-md) var(--picker-row-inline, var(--space-lg))
+      var(--space-2xs);
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+}

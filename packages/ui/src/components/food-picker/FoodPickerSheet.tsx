@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { GetFoodDTO } from 'shared';
 import { PickerSheet } from '@/components/ui/PickerSheet';
 import { FoodBrowseLevel } from './FoodBrowseLevel';
-import { FoodPickerRow } from './FoodPickerRow';
+import { PickerRow } from '@/components/ui/PickerRow';
 import {
   buildFoodBrowseTree,
   findBrand,
@@ -108,7 +108,7 @@ const FoodPickerSheet: React.FC<FoodPickerSheetProps> = ({
           step.kind === 'root' ? (
             /* Unlinking is a choice about this bowl, so it sits among the
                choices rather than behind a clear button. */
-            <FoodPickerRow
+            <PickerRow
               title={noneLabel}
               subtitle={noneHint}
               muted

@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import type { GetFoodDTO } from 'shared';
 
 import { FoodFlatList } from '../FoodFlatList.tsx';
-import { FoodPickerRow } from '../FoodPickerRow.tsx';
+import { PickerRow } from '@/components/ui/PickerRow';
 import { renderWithProviders } from '@/test/render.tsx';
 
 afterEach(() => {
@@ -106,7 +106,7 @@ describe('FoodFlatList', () => {
         foods={FOODS}
         onSelect={() => {}}
         leadingRow={
-          <FoodPickerRow title="Not linked" subtitle="Don't attribute" muted />
+          <PickerRow title="Not linked" subtitle="Don't attribute" muted />
         }
       />,
     );

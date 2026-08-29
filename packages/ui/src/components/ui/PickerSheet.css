@@ -15,7 +15,7 @@
 
   /* Only lists get the floor: the steps that size to their own content —
      an amount, a camera — would just gain dead space under the button. */
-  &:has(.food-picker-row) {
+  &:has(.picker-row) {
     min-height: var(--picker-sheet-floor);
   }
 
@@ -80,9 +80,9 @@
        backs out of the dialog's padding and the rows put it back, so
        separators reach both edges while the text stays aligned with the
        header above. */
-    &:has(.food-picker-row) {
+    &:has(.picker-row) {
       padding-inline: 0;
-      --food-picker-row-inline: var(--space-lg);
+      --picker-row-inline: var(--space-lg);
     }
   }
 
@@ -91,8 +91,8 @@
       font-size: var(--text-lg);
     }
 
-    .picker-sheet-body:has(.food-picker-row) {
-      --food-picker-row-inline: var(--space-md);
+    .picker-sheet-body:has(.picker-row) {
+      --picker-row-inline: var(--space-md);
     }
   }
 }

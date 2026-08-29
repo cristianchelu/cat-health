@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { MetaLine } from '@/components/ui/MetaLine';
 import { LoadingState } from '@/components/ui/PageState';
 import { FoodBrowseLevel } from '@/components/food-picker/FoodBrowseLevel';
-import { FoodPickerRow } from '@/components/food-picker/FoodPickerRow';
+import { PickerRow } from '@/components/ui/PickerRow';
 import {
   intakeFoodType,
   kcalPerKilogram,
@@ -265,7 +265,7 @@ const LogFoodSheet: React.FC<LogFoodSheetProps> = ({
                 const food = foodsById.get(row.foodId);
                 if (!food) return null;
                 return (
-                  <FoodPickerRow
+                  <PickerRow
                     key={row.foodId}
                     title={food.name}
                     subtitle={

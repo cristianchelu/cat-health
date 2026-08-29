@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { GetFoodDTO } from 'shared';
 import { FoodFlatList } from './FoodFlatList';
-import { FoodPickerRow } from './FoodPickerRow';
+import { PickerList } from '@/components/ui/PickerList';
 import {
   NO_BRAND,
   findBrand,
@@ -55,23 +55,24 @@ const FoodBrowseLevel: React.FC<FoodBrowseLevelProps> = ({
   if (step.kind === 'brands') {
     const node = findGroup(tree, step.group);
     return (
-      <div className="food-browse-level">
-        {leading}
-        {node?.brands.map((brand) => (
-          <FoodPickerRow
-            key={brand.brand || NO_BRAND}
-            title={
-              brand.brand === NO_BRAND ? t('food_picker.no_brand') : brand.brand
-            }
-            muted={brand.brand === NO_BRAND}
-            trailing={brand.foods.length}
-            chevron="forward"
-            onClick={() =>
-              onPush({ kind: 'foods', group: step.group, brand: brand.brand })
-            }
-          />
-        ))}
-      </div>
+      <PickerList
+        leadingRow={leading}
+        options={(node?.brands ?? []).map((brand) => ({
+          value: brand.brand || NO_BRAND,
+          label:
+            brand.brand === NO_BRAND ? t('food_picker.no_brand') : brand.brand,
+          muted: brand.brand === NO_BRAND,
+          trailing: brand.foods.length,
+          chevron: 'forward' as const,
+        }))}
+        onSelect={(value) =>
+          onPush({
+            kind: 'foods',
+            group: step.group,
+            brand: value === NO_BRAND ? NO_BRAND : value,
+          })
+        }
+      />
     );
   }
 
@@ -90,18 +91,21 @@ const FoodBrowseLevel: React.FC<FoodBrowseLevelProps> = ({
   }
 
   return (
-    <div className="food-browse-level">
-      {leading}
-      {tree.map((node) => (
-        <FoodPickerRow
-          key={node.group}
-          title={t(`food_picker.group_${node.group}`)}
-          trailing={node.foodCount}
-          chevron="forward"
-          onClick={() => onPush(stepForGroup(tree, node.group))}
-        />
-      ))}
-    </div>
+    <PickerList
+      leadingRow={leading}
+      options={tree.map((node) => ({
+        value: node.group,
+        label: t(`food_picker.group_${node.group}`),
+        trailing: node.foodCount,
+        chevron: 'forward' as const,
+      }))}
+      onSelect={(value) => {
+        /* The list speaks in strings; the group union is recovered from the
+           tree that produced the option rather than asserted. */
+        const node = tree.find((n) => n.group === value);
+        if (node) onPush(stepForGroup(tree, node.group));
+      }}
+    />
   );
 };
 
