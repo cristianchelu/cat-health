@@ -323,6 +323,64 @@ describe('events API mutations', () => {
     assert.deepEqual(await ids('human'), [byHuman.id]);
   });
 
+  it('writes, overwrites and clears the event note', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Noted Cat' });
+    const event = await insertLitterboxEvent(ctx.db, { pet_id: pet.id });
+
+    const fresh = await app.inject({
+      method: 'GET',
+      url: `/api/events/${event.id}`,
+    });
+    assert.equal(fresh.json().note, null);
+    assert.equal(fresh.json().note_updated_at, null);
+
+    const write = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${event.id}`,
+      payload: { note: 'Litter changed this morning.' },
+    });
+    assert.equal(write.statusCode, 200);
+    assert.equal(write.json().note, 'Litter changed this morning.');
+    // The line under the note is only honest if the timestamp lands with it.
+    assert.ok(write.json().note_updated_at);
+
+    const overwrite = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${event.id}`,
+      payload: { note: 'Heavier scoop than usual.' },
+    });
+    assert.equal(overwrite.json().note, 'Heavier scoop than usual.');
+
+    // Emptied text is the same intent as a clear, and takes the timestamp
+    // with it rather than leaving an authored-at line over nothing.
+    const clear = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${event.id}`,
+      payload: { note: '' },
+    });
+    assert.equal(clear.json().note, null);
+    assert.equal(clear.json().note_updated_at, null);
+  });
+
+  it('leaves the note alone on a patch that does not mention it', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Kept Note Cat' });
+    const event = await insertLitterboxEvent(ctx.db, { pet_id: pet.id });
+
+    await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${event.id}`,
+      payload: { note: 'Watch this one.' },
+    });
+    const patched = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${event.id}`,
+      payload: { human_verified: true },
+    });
+
+    assert.equal(patched.json().human_verified, true);
+    assert.equal(patched.json().note, 'Watch this one.');
+  });
+
   it('returns an empty media list for events without attachments', async () => {
     const pet = await insertPet(ctx.db, { name: 'Media Cat' });
     const event = await insertLitterboxEvent(ctx.db, { pet_id: pet.id });

@@ -76,6 +76,8 @@ function visit(
   return {
     id,
     parent_event_id: null,
+    note: null,
+    note_updated_at: null,
     pet_id: petId,
     caused_by: petId == null ? 'unknown' : 'pet',
     attributed_by: petId == null ? null : 'weight',
@@ -97,6 +99,8 @@ const UNVERIFIED = visit(102, { eliminationType: 'defecation', hour: 9 });
 const MAINTENANCE: GetEventListItemDTO = {
   id: 103,
   parent_event_id: null,
+  note: null,
+  note_updated_at: null,
   pet_id: null,
   caused_by: 'human',
   attributed_by: 'manual',

@@ -105,6 +105,8 @@ function intake(
   return {
     id: nextId++,
     parent_event_id: null,
+    note: null,
+    note_updated_at: null,
     pet_id: 1,
     caused_by: 'pet',
     attributed_by: 'manual',

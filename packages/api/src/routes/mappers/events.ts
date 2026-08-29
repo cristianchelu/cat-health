@@ -38,6 +38,8 @@ interface EventRow {
   data: unknown;
   raw_data: Buffer | null;
   human_verified: boolean;
+  note: string | null;
+  note_updated_at: Date | null;
 }
 
 /**
@@ -62,6 +64,8 @@ export function serializeEventListRow(
     timestamp: row.timestamp.toISOString(),
     data: eventDataToDto(data),
     human_verified: row.human_verified,
+    note: row.note,
+    note_updated_at: row.note_updated_at?.toISOString() ?? null,
   };
 }
 

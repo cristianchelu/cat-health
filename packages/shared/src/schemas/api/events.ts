@@ -14,6 +14,9 @@ import {
  */
 export const LITTERBOX_SAMPLE_HZ = 10;
 
+/** Longest note the API accepts. A paragraph about one visit, not a journal. */
+export const EVENT_NOTE_MAX_LENGTH = 2000;
+
 /**
  * One row from server `StateAnalyzer` periods, persisted on the event as `data.segments`.
  * Sample indices `start` / `end` align with the weight array; convert to seconds with the
@@ -82,6 +85,17 @@ const GetEventFieldsSchema = Type.Object({
   data: EventDataSchema,
   raw_data: Type.Union([Type.Null(), Type.Array(Type.Number())]),
   human_verified: Type.Boolean(),
+  /**
+   * The owner's free-text note, or null. The one field on an event surface
+   * that is neither measured nor guessed, so it is edited in place rather
+   * than through the correction form.
+   */
+  note: Type.Union([Type.String(), Type.Null()]),
+  /** When `note` was last written; null whenever `note` is. */
+  note_updated_at: Type.Union([
+    Type.String({ format: 'date-time' }),
+    Type.Null(),
+  ]),
 });
 
 export const GetEventSchema = GetEventFieldsSchema;
@@ -119,12 +133,21 @@ export const PostEventRequestSchema = Type.Intersect([
     'raw_data',
     'caused_by',
     'attributed_by',
+    'note',
+    'note_updated_at',
   ]),
   Type.Object({
     timestamp: Type.Optional(Type.String({ format: 'date-time' })),
     /** Omit to let `pet_id` speak: a pet if present, otherwise unresolved. */
     caused_by: Type.Optional(EventCauseSchema),
     attributed_by: Type.Optional(EventAttributionSourceSchema),
+    /** `note_updated_at` is never accepted from a client — the server stamps it. */
+    note: Type.Optional(
+      Type.Union([
+        Type.String({ maxLength: EVENT_NOTE_MAX_LENGTH }),
+        Type.Null(),
+      ]),
+    ),
   }),
 ]);
 export type PostEventRequestDTO = Static<typeof PostEventRequestSchema>;
@@ -139,6 +162,18 @@ export const PatchEventRequestSchema = Type.Object({
   attributed_by: Type.Optional(EventAttributionSourceSchema),
   data: Type.Optional(EventDataSchema),
   human_verified: Type.Optional(Type.Boolean()),
+  /**
+   * Write or clear the note. An empty string clears it, same as `null` — the
+   * UI's "delete everything you typed and save" is the same intent as the
+   * clear action, and one stored representation keeps `note_updated_at`
+   * honest.
+   */
+  note: Type.Optional(
+    Type.Union([
+      Type.String({ maxLength: EVENT_NOTE_MAX_LENGTH }),
+      Type.Null(),
+    ]),
+  ),
 });
 export type PatchEventRequestDTO = Static<typeof PatchEventRequestSchema>;
 

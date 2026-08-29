@@ -26,6 +26,16 @@ export type EventTable<TData = EventData> = {
   data: TData;
   raw_data: Buffer | null;
   human_verified: boolean;
+  /**
+   * The owner's free-text note about this event, or null when none was left.
+   * One per event — re-editing overwrites, clearing drops back to null.
+   *
+   * `Generated` because the column has no NOT NULL and no default: insert
+   * sites that have no note simply omit both columns.
+   */
+  note: Generated<string | null>;
+  /** When the note was last written; null whenever `note` is. */
+  note_updated_at: Generated<Date | null>;
 };
 
 export type Event<TData = EventData> = Selectable<EventTable<TData>>;

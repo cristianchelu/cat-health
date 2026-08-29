@@ -502,6 +502,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         parent_event_id,
         timestamp: bodyTimestamp,
         human_verified: bodyHumanVerified,
+        note,
       } = request.body;
 
       // Anything posted through the API is someone entering it by hand unless
@@ -561,6 +562,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           data: storedEventData,
           raw_data: null,
           human_verified: humanVerified,
+          ...(note ? { note, note_updated_at: eventTimestamp } : {}),
         })
         .returningAll()
         .executeTakeFirstOrThrow();
@@ -768,7 +770,22 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         });
       }
 
-      const { data: patchEventData, human_verified, attributed_by } = body;
+      const {
+        data: patchEventData,
+        human_verified,
+        attributed_by,
+        note,
+      } = body;
+
+      // A note and its timestamp move together: an empty string is the same
+      // intent as null (the owner cleared it), and a cleared note must not
+      // leave a "You · 10:02 AM" line behind with nothing above it.
+      const noteUpdate =
+        note === undefined
+          ? undefined
+          : note
+            ? { note, note_updated_at: new Date() }
+            : { note: null, note_updated_at: null };
 
       // `attributed_by` on its own restates how we know something the body is
       // not otherwise changing, so it applies without a full re-decision.
@@ -785,6 +802,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           ...(patchEventData !== undefined
             ? { data: eventDataFromDto(patchEventData) }
             : {}),
+          ...(noteUpdate ?? {}),
         })
         .where('id', '=', eventId)
         .returningAll()

@@ -81,6 +81,8 @@ const WATER_EVENT: GetEventListItemDTO = {
     excluded_amount: 5,
   },
   human_verified: false,
+  note: null,
+  note_updated_at: null,
 };
 
 const LITTERBOX_EVENT: GetEventListItemDTO = {
@@ -100,6 +102,8 @@ const LITTERBOX_EVENT: GetEventListItemDTO = {
     segments: [{ state: 'occupied', start: 0, end: 3 }],
   },
   human_verified: false,
+  note: null,
+  note_updated_at: null,
 };
 
 function eventById(id: number): GetEventListItemDTO {
