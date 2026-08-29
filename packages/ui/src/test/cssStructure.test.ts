@@ -48,6 +48,13 @@ const MULTI_ROOT_BY_DESIGN = new Map<string, string>([
     '`DialogPortal` renders the overlay beside the content, not around it.',
   ],
   [
+    path.join('components', 'ui', 'SelectMenu.css'),
+    '`SelectPrimitive.Portal` puts the listbox at the end of <body> while the ' +
+      'trigger stays in the form row, so neither half contains the other. ' +
+      '`Popover.css` and `DropdownMenu.css` need no entry: they skin only the ' +
+      'portalled half and leave the trigger to the caller.',
+  ],
+  [
     path.join('components', 'ui', 'PageMainAction.css'),
     'The desktop header link and the phone FAB mount at different points; the ' +
       'FAB is portalled into a zero-height slot at the bottom of the page.',

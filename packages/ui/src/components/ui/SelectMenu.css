@@ -1,0 +1,267 @@
+/*
+ * Two roots, because Radix mounts the two halves in different places: the
+ * trigger stays in the form row, and `SelectPrimitive.Portal` puts the listbox
+ * at the end of <body> so it can escape any `overflow: hidden` between it and
+ * the page. Same structural fact as `Dialog.css`; recorded in
+ * `MULTI_ROOT_BY_DESIGN` in `src/test/cssStructure.test.ts`.
+ */
+
+/*
+ * The closed control. Deliberately the same box as `.select` in
+ * `form/Select.css` — same control height, border, corner and focus ring — so
+ * that a rich picker and a plain one in the same form row are level and read as
+ * the same kind of thing. It differs only in being a flex button, because it
+ * holds an optional avatar and its own chevron.
+ */
+.select-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+  min-height: var(--control-height-md);
+  padding: var(--space-2xs) var(--space-sm);
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: var(--line-height-normal);
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--color-primary) 20%, transparent);
+  }
+
+  &.error {
+    border-color: var(--color-error);
+
+    &:focus-visible {
+      border-color: var(--color-error);
+      box-shadow: 0 0 0 3px
+        color-mix(in srgb, var(--color-error) 20%, transparent);
+    }
+  }
+
+  &:disabled {
+    background-color: var(--color-surface-muted);
+    color: var(--color-text-light);
+    cursor: not-allowed;
+  }
+
+  /* Size variants, matching `.select` step for step. */
+  &.sm {
+    min-height: var(--control-height-sm);
+    padding: var(--space-3xs) var(--space-sm);
+    font-size: var(--text-xs);
+  }
+
+  &.md {
+    min-height: var(--control-height-md);
+    padding: var(--space-2xs) var(--space-sm);
+    font-size: var(--text-sm);
+  }
+
+  &.lg {
+    min-height: var(--control-height-lg);
+    padding: var(--space-xs) var(--space-md);
+    font-size: var(--text-base);
+  }
+
+  .select-menu-trigger-leading {
+    display: flex;
+    flex: none;
+    align-items: center;
+  }
+
+  /*
+   * The label takes the slack and truncates; the chevron never moves. A pet
+   * name plus a breed can outgrow a narrow column, and a control that grows a
+   * horizontal scrollbar instead of an ellipsis drags the whole row with it.
+   */
+  .select-menu-trigger-value {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .select-menu-trigger-icon {
+    display: flex;
+    flex: none;
+    align-items: center;
+    color: var(--color-text-muted);
+  }
+
+  /* Radix marks the placeholder so it can be greyed like a native one. */
+  &[data-placeholder] .select-menu-trigger-value {
+    color: var(--color-text-muted);
+  }
+}
+
+/*
+ * The open list. Same surface as `.dropdown-menu` and `.popover` — the three
+ * are one family and differ only in what they hold.
+ */
+.select-menu-content {
+  /*
+   * Above the dialog it may have been opened from. The listbox portals to
+   * <body>, so it is a sibling of `.dialog-content` rather than a child of it,
+   * and any value below `--z-index-modal` (1050) renders it *behind* the
+   * surface that owns it — invisible, not merely wrong.
+   */
+  z-index: var(--z-index-popover);
+
+  /*
+   * Radix publishes the trigger's width as a custom property, but this app
+   * checks that every `var()` names a token declared in its own CSS, so the
+   * width is a floor set here instead of a match set there. A rich row wants
+   * more room than a phone-width trigger gives it anyway.
+   */
+  min-width: 240px;
+  max-width: min(24rem, calc(100vw - var(--space-lg) * 2));
+  /* Radix caps the height against the viewport; this stops a long list from
+     filling a tall screen edge to edge. */
+  max-height: 22rem;
+  /* Column flex so the viewport, and not the panel, is what scrolls — the
+     scroll buttons have to stay pinned to the panel's edges. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: var(--space-3xs);
+  border: var(--border-thin);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-xl);
+  animation: select-menu-in var(--transition-fast) ease-out;
+
+  .select-menu-viewport {
+    /* `min-height: 0` is what lets a flex child shrink below its content and
+       scroll instead of pushing the panel past its max-height. */
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* Radix shows these only when the list actually overflows. */
+  .select-menu-scroll {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--space-md);
+    color: var(--color-text-muted);
+    cursor: default;
+  }
+
+  .select-menu-label {
+    padding: var(--space-xs) var(--space-sm) var(--space-2xs);
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /*
+   * A row is `[picture] [label over subline] [check]`. Row height comes from
+   * the content rather than a fixed value, so a group of plain options stays
+   * compact and only the rows that earn two lines take two lines.
+   */
+  .select-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    user-select: none;
+    outline: none;
+
+    .select-menu-item-leading {
+      display: flex;
+      flex: none;
+      align-items: center;
+      color: var(--color-text-muted);
+    }
+
+    .select-menu-item-body {
+      display: flex;
+      flex: 1 1 auto;
+      min-width: 0;
+      flex-direction: column;
+      gap: var(--space-3xs);
+      overflow: hidden;
+    }
+
+    .select-menu-item-subline {
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+      font-weight: var(--font-normal);
+      line-height: var(--line-height-tight);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /*
+     * The check is the only mark of selection, so it holds its column whether
+     * or not it is drawn — otherwise every row shifts as the choice moves.
+     */
+    .select-menu-item-check {
+      display: flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      color: var(--color-primary);
+    }
+
+    /* Keyboard and pointer highlight are one state in Radix, as in the menu. */
+    &[data-highlighted] {
+      background-color: var(--color-surface-muted);
+    }
+
+    &[data-disabled] {
+      color: var(--color-text-muted);
+      cursor: not-allowed;
+
+      .select-menu-item-leading {
+        opacity: 0.6;
+      }
+    }
+  }
+
+  .select-menu-separator {
+    height: 1px;
+    margin: var(--space-3xs) calc(var(--space-2xs) * -1);
+    background-color: var(--color-border);
+  }
+}
+
+@keyframes select-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .select-menu-content {
+    animation: none;
+  }
+}

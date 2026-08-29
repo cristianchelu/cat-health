@@ -1,0 +1,57 @@
+/*
+ * The anchored panel skin.
+ *
+ * Deliberately the same surface as `.dropdown-menu` and `.select-menu-content`
+ * — border, corner, shadow and stacking are the family's, and only the padding
+ * differs: a menu's rows pad themselves, a popover's arbitrary content cannot.
+ *
+ * Geometry belongs to the primitive: Radix portals the content to the body and
+ * places it against whichever edge survived collision detection, so there is no
+ * positioning here.
+ */
+.popover {
+  /*
+   * Above the dialog it may have been opened from. The content portals to
+   * <body>, so it is a sibling of `.dialog-content` rather than a child of it,
+   * and any value below `--z-index-modal` (1050) renders it *behind* the
+   * surface that owns it — invisible, not merely wrong.
+   */
+  z-index: var(--z-index-popover);
+
+  min-width: 200px;
+  max-width: min(22rem, calc(100vw - var(--space-lg) * 2));
+  padding: var(--space-md);
+  border: var(--border-thin);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-xl);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: var(--line-height-normal);
+  animation: popover-in var(--transition-fast) ease-out;
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  .popover-arrow {
+    fill: var(--color-surface);
+  }
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover {
+    animation: none;
+  }
+}

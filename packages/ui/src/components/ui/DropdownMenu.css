@@ -1,0 +1,82 @@
+/*
+ * The overflow menu skin. Geometry and dismissal belong to the primitive;
+ * what lives here is the surface, the row rhythm, and the one destructive
+ * tone a menu is allowed.
+ *
+ * The surface itself — border, corner, shadow, stacking, entry — is shared
+ * verbatim with `.popover` and `.select-menu-content`. Change one and change
+ * all three, or they stop reading as the same app.
+ */
+.dropdown-menu {
+  min-width: 200px;
+  padding: var(--space-3xs);
+  border: var(--border-thin);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-xl);
+  /* Above the dialog it is opened from: the menu portals to <body>, so a
+     value below `--z-index-modal` (1050) puts it behind the surface that owns
+     it — invisible, not merely wrong. */
+  z-index: var(--z-index-popover);
+  animation: dropdown-menu-in var(--transition-fast) ease-out;
+
+  .dropdown-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text);
+    cursor: pointer;
+    user-select: none;
+    outline: none;
+
+    > svg {
+      flex: none;
+      color: var(--color-text-muted);
+    }
+
+    &[data-highlighted] {
+      background-color: var(--color-surface-muted);
+    }
+
+    &[data-disabled] {
+      color: var(--color-text-muted);
+      cursor: not-allowed;
+
+      > svg {
+        opacity: 0.6;
+      }
+    }
+
+    &.danger,
+    &.danger > svg {
+      color: var(--color-error);
+    }
+  }
+
+  .dropdown-menu-separator {
+    height: 1px;
+    margin: var(--space-3xs) calc(var(--space-2xs) * -1);
+    background-color: var(--color-border);
+  }
+}
+
+@keyframes dropdown-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-menu {
+    animation: none;
+  }
+}
