@@ -26,6 +26,7 @@ import { isBarcodeScanSupported } from '@/lib/barcodeScan';
 import { AmountStep } from './AmountStep';
 import { FoodScanStep } from './FoodScanStep';
 import {
+  browseStepKey,
   buildFoodBrowseTree,
   findBrand,
   findGroup,
@@ -65,7 +66,7 @@ const LogFoodSheet: React.FC<LogFoodSheetProps> = ({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { formatDate } = useFormatters();
-  const { data: foods = [], isLoading: isLoadingFoods } = useFoods();
+  const { data: foods = [], isLoading: isLoadingFoods } = useFoods(isOpen);
   const { data: recentEvents } = useRecentFoodIntakes(petId, isOpen);
   const { data: foodTrends } = usePetFoodTrends(petId, 7);
 
@@ -75,6 +76,13 @@ const LogFoodSheet: React.FC<LogFoodSheetProps> = ({
     | { kind: 'scan' };
   const [stack, setStack] = React.useState<LadderStep[]>([{ kind: 'root' }]);
   const step = stack[stack.length - 1];
+
+  /* Always from the top. The sheet outlives its own close now — it has to, to
+     have something to slide away — so reopening must not resume a ladder
+     walked an hour ago. */
+  React.useEffect(() => {
+    if (isOpen) setStack([{ kind: 'root' }]);
+  }, [isOpen]);
 
   const tree = React.useMemo(() => buildFoodBrowseTree(foods), [foods]);
   const foodsById = React.useMemo(
@@ -295,6 +303,15 @@ const LogFoodSheet: React.FC<LogFoodSheetProps> = ({
     );
   })();
 
+  /* Loading and empty states render under the top step's own key, so they
+     swap in place rather than sliding — they are not navigation. */
+  const pageKey =
+    step.kind === 'amount'
+      ? `amount:${step.foodId}`
+      : step.kind === 'scan'
+        ? 'scan'
+        : browseStepKey(step);
+
   return (
     <PickerSheet
       open={isOpen}
@@ -303,6 +320,8 @@ const LogFoodSheet: React.FC<LogFoodSheetProps> = ({
       title={header.title}
       subtitle={header.subtitle}
       onBack={back}
+      pageKey={pageKey}
+      pageDepth={stack.length - 1}
       action={
         /* Only at the top of the ladder: deeper in, the choice the scan
            would make has already been made. */

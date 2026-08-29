@@ -34,6 +34,21 @@
     position: relative;
   }
 
+  /*
+   * In the drawer the clip is an object resting on the surface rather than the
+   * top of it. Full-bleed, it runs straight into the grabber — two things
+   * claiming the same edge, and the one you are meant to pull looks like it
+   * belongs to the video. Inset and cornered, the grabber gets its own strip
+   * back. The centered dialog keeps the bleed: it has no grabber to collide
+   * with, and its own rounded corner already frames the clip.
+   */
+  &.sheet-inner .event-details-stage {
+    width: auto;
+    margin: var(--space-xs) var(--space-md) 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
   /* Loading, and "no media" — a line on the black stage, not a card. */
   .event-details-stage-note {
     display: flex;
@@ -176,9 +191,11 @@
 
 /*
  * Docked to the bottom edge on a phone, where the header actions and the
- * band both need touch room.
+ * band both need touch room. The app has one breakpoint: this used to stop at
+ * 480px, which left 481–767px docked full-width with its content still capped
+ * at the narrower width.
  */
-@media (max-width: 480px) {
+@media (max-width: 767px) {
   .event-details-modal {
     max-width: none;
 

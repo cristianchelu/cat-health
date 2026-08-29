@@ -5,6 +5,7 @@ import { PickerSheet } from '@/components/ui/PickerSheet';
 import { FoodBrowseLevel } from './FoodBrowseLevel';
 import { PickerRow } from '@/components/ui/PickerRow';
 import {
+  browseStepKey,
   buildFoodBrowseTree,
   findBrand,
   findGroup,
@@ -96,6 +97,8 @@ const FoodPickerSheet: React.FC<FoodPickerSheetProps> = ({
       title={header.heading}
       subtitle={header.sub ?? undefined}
       onBack={back}
+      pageKey={browseStepKey(step)}
+      pageDepth={stack.length - 1}
     >
       <FoodBrowseLevel
         step={step}

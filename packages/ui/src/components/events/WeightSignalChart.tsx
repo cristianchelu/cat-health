@@ -562,6 +562,9 @@ const WeightSignalChartInner = React.forwardRef<
           isInteractive && 'interactive',
           className,
         )}
+        /* Pan, zoom and the bout handles own every pointer here; a phone
+           sheet around it must not claim the vertical ones. */
+        data-vaul-no-drag=""
         ref={ref}
         {...props}
       >

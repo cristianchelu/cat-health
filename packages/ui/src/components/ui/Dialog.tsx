@@ -28,48 +28,28 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     showCloseButton?: boolean;
-    /**
-     * `center` is the default centered modal; `sheet` docks the dialog to
-     * the bottom edge on phone widths and stays centered on desktop.
-     */
-    placement?: 'center' | 'sheet';
   }
->(
-  (
-    {
-      className,
-      children,
-      showCloseButton = true,
-      placement = 'center',
-      ...props
-    },
-    ref,
-  ) => {
-    const { t } = useTranslation();
-    return (
-      <DialogPortal>
-        <DialogOverlay />
-        <DialogPrimitive.Content
-          ref={ref}
-          className={cn(
-            'dialog-content',
-            placement === 'sheet' && 'dialog-content-sheet',
-            className,
-          )}
-          {...props}
-        >
-          {children}
-          {showCloseButton && (
-            <DialogPrimitive.Close className="dialog-close">
-              <X size={24} />
-              <span className="sr-only">{t('common.close')}</span>
-            </DialogPrimitive.Close>
-          )}
-        </DialogPrimitive.Content>
-      </DialogPortal>
-    );
-  },
-);
+>(({ className, children, showCloseButton = true, ...props }, ref) => {
+  const { t } = useTranslation();
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn('dialog-content', className)}
+        {...props}
+      >
+        {children}
+        {showCloseButton && (
+          <DialogPrimitive.Close className="dialog-close">
+            <X size={24} />
+            <span className="sr-only">{t('common.close')}</span>
+          </DialogPrimitive.Close>
+        )}
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  );
+});
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 /** Use inside Dialog content when `showCloseButton={false}` on DialogContent (e.g. custom placement). */

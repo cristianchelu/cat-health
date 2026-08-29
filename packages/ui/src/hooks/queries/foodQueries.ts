@@ -8,10 +8,19 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PostFoodRequestDTO, PatchFoodRequestDTO } from 'shared';
 
-export function useFoods() {
+/**
+ * The food library.
+ *
+ * `enabled` exists for the surfaces that stay mounted while closed — a sheet
+ * has to be on screen to animate off it — so that holding one costs no fetch
+ * until it opens. React Query keeps serving the cache once disabled, so the
+ * list does not blank out on the way out.
+ */
+export function useFoods(enabled = true) {
   return useQuery({
     queryKey: ['foods'],
     queryFn: () => getFoods(),
+    enabled,
   });
 }
 

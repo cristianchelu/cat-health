@@ -122,6 +122,21 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
   const openCompartment =
     compartments.find((row) => row.id === pickerCompartment) ?? null;
 
+  /*
+   * The picker stays mounted while it closes — a sheet needs to be on screen
+   * to animate off it — so the compartment it was opened for outlives the
+   * selection by the length of that exit. Only the id is held: the row itself
+   * is re-derived, so a draft edit mid-animation cannot show stale copy.
+   */
+  const [shownCompartmentId, setShownCompartmentId] = React.useState<
+    string | null
+  >(pickerCompartment);
+  if (pickerCompartment != null && pickerCompartment !== shownCompartmentId) {
+    setShownCompartmentId(pickerCompartment);
+  }
+  const shownCompartment =
+    compartments.find((row) => row.id === shownCompartmentId) ?? null;
+
   const compartmentLabel = (
     compartment: (typeof compartments)[number],
   ): string =>
@@ -285,17 +300,17 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
       </FormShell>
 
       {/* Outside the form: the picker fills a field, it does not submit one. */}
-      {openCompartment && (
+      {shownCompartment && (
         <FoodPickerSheet
-          open
+          open={openCompartment !== null}
           onOpenChange={(next) => !next && setPickerCompartment(null)}
-          title={compartmentLabel(openCompartment)}
+          title={compartmentLabel(shownCompartment)}
           foods={foods}
-          selectedFoodId={draft.foodAssignments[openCompartment.id] ?? null}
+          selectedFoodId={draft.foodAssignments[shownCompartment.id] ?? null}
           noneLabel={t('devices.feeder.food_compartment_unlinked')}
           noneHint={t('devices.feeder.food_compartment_none_desc')}
           onPick={(foodId) =>
-            handleCompartmentChange(openCompartment.id, foodId)
+            handleCompartmentChange(shownCompartment.id, foodId)
           }
         />
       )}

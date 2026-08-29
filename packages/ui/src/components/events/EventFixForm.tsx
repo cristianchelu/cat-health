@@ -24,6 +24,7 @@ import Avatar from '@/components/ui/Avatar';
 import { Switch } from '@/components/ui/Switch';
 import { AdaptiveSelect } from '@/components/ui/AdaptiveSelect';
 import { SelectPage, type PickerOption } from '@/components/ui/SelectPage';
+import { SheetPages } from '@/components/ui/SheetPages';
 import { Button } from '@/components/ui/Button';
 import { FormActions, FormError, FormField, Input } from '@/components/ui/form';
 import { usePets } from '@/hooks/queries/petQueries';
@@ -287,175 +288,179 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
 
   return (
     <div className="event-fix-form">
-      {pickerLevel ? (
-        <SelectPage
-          title={pickerLevel.title}
-          options={pickerLevel.options}
-          value={pickerLevel.value}
-          onBack={() => setPicker(null)}
-          onSelect={(next) => {
-            pickerLevel.onSelect(next);
-            setPicker(null);
-          }}
-        />
-      ) : (
-        <>
-          <div className="event-fix-header">
-            <DialogTitle className="event-fix-title">{t(titleKey)}</DialogTitle>
-            <DialogDescription className="event-fix-subtitle">
-              {formatDateTime(new Date(event.timestamp))}
-            </DialogDescription>
-          </div>
-
-          <div className="event-fix-body">
-            <FormField label={t('event_details.fix_cat_label')}>
-              <AdaptiveSelect
-                value={attribution}
-                onValueChange={setAttribution}
-                options={attributionOptions}
-                label={t('event_details.fix_cat_label')}
-                disabled={isBusy}
-                onOpenPage={() => setPicker('cat')}
-              />
-            </FormField>
-
-            {isLitterbox && (
-              <>
-                {/* Five plain words would be served fine by a native
-                    `<select>` — but the cat above it opens a page, and one
-                    form that speaks two interaction languages a few pixels
-                    apart reads as two products. */}
-                <FormField label={t('event_details.fix_type_label')}>
-                  <AdaptiveSelect
-                    value={eliminationType}
-                    onValueChange={(next) => {
-                      const parsed = parseLitterboxUseEliminationType(next);
-                      if (parsed) setEliminationType(parsed);
-                    }}
-                    options={typeOptions}
-                    label={t('event_details.fix_type_label')}
-                    disabled={isBusy}
-                    onOpenPage={() => setPicker('type')}
-                  />
-                </FormField>
-
-                <FormField label={t('event_details.fix_weight_label')}>
-                  <div className="event-fix-weight">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min={MIN_WEIGHT_G / 1000}
-                      max={MAX_WEIGHT_G / 1000}
-                      value={weightKg}
-                      disabled={isBusy}
-                      aria-label={t('event_details.fix_weight_label')}
-                      onChange={(e) => setWeightKg(e.target.value)}
-                    />
-                    <span className="event-fix-weight-unit">kg</span>
-                    {/*
-                     * One slot, two jobs. Untouched, it is the bin: clearing
-                     * the field *is* the removal, so the control that does it
-                     * belongs on the field rather than in a section further
-                     * down with other questions in between.
-                     *
-                     * Edited — binned or typed over — it becomes the way back
-                     * to the stored reading. The target is always the stored
-                     * value rather than whatever was in the field a moment
-                     * ago, which is both what you actually want back and what
-                     * makes leaving by this route return the form to rest:
-                     * the follow-up below keys off the same comparison and
-                     * stands down with it.
-                     */}
-                    {weightChanged ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        icon
-                        disabled={isBusy}
-                        title={undoWeightLabel}
-                        aria-label={undoWeightLabel}
-                        onClick={() => setWeightKg(baselineWeight)}
-                      >
-                        <Undo2 size={16} aria-hidden />
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        icon
-                        className="event-fix-weight-remove"
-                        disabled={isBusy || weightRemoved}
-                        title={t('event_details.remove_weight')}
-                        aria-label={t('event_details.remove_weight')}
-                        onClick={() => setWeightKg('')}
-                      >
-                        <Trash2 size={16} aria-hidden />
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* What removing costs, said only once it is what will
-                      happen. */}
-                  {weightRemoved && (
-                    <p className="event-fix-weight-note">
-                      {t('event_details.remove_weight_hint')}
-                    </p>
-                  )}
-
-                  {/*
-                   * Re-analysis is a consequence, not a standing field. It
-                   * exists only once the weight actually changed, and sits
-                   * with the field that caused it: cats are told apart by
-                   * weight, so this one edit can re-identify every later
-                   * visit on the device. A cat, type or straining fix never
-                   * feeds identification and never raises it.
-                   */}
-                  {weightChanged && event.device_id != null && (
-                    <div className="event-fix-followup">
-                      <Switch
-                        id="event-fix-reanalyze"
-                        checked={reanalyze}
-                        disabled={isBusy}
-                        onCheckedChange={setReanalyze}
-                      />
-                      <label htmlFor="event-fix-reanalyze">
-                        {t('event_details.reanalyze_later_visits')}
-                        <small>
-                          {t('event_details.reanalyze_later_visits_hint')}
-                        </small>
-                      </label>
-                    </div>
-                  )}
-                </FormField>
-
-                <div className="event-fix-switch-row">
-                  <label htmlFor="event-fix-straining">
-                    {t('event_details.straining_observed')}
-                  </label>
-                  <Switch
-                    id="event-fix-straining"
-                    checked={straining}
-                    disabled={isBusy}
-                    onCheckedChange={setStraining}
-                  />
-                </div>
-              </>
-            )}
-
-            <FormError message={error} />
-          </div>
-
-          <FormActions
-            className="event-fix-actions"
-            onCancel={onClose}
-            cancelLabel={t('common.cancel')}
-            submitLabel={t('common.save')}
-            isSubmitting={isBusy}
-            submitType="button"
-            onSubmitClick={() => void handleSave()}
+      <SheetPages page={picker ?? 'form'} depth={picker ? 1 : 0}>
+        {pickerLevel ? (
+          <SelectPage
+            title={pickerLevel.title}
+            options={pickerLevel.options}
+            value={pickerLevel.value}
+            onBack={() => setPicker(null)}
+            onSelect={(next) => {
+              pickerLevel.onSelect(next);
+              setPicker(null);
+            }}
           />
-        </>
-      )}
+        ) : (
+          <div className="event-fix-form-main">
+            <div className="event-fix-header">
+              <DialogTitle className="event-fix-title">
+                {t(titleKey)}
+              </DialogTitle>
+              <DialogDescription className="event-fix-subtitle">
+                {formatDateTime(new Date(event.timestamp))}
+              </DialogDescription>
+            </div>
+
+            <div className="event-fix-body">
+              <FormField label={t('event_details.fix_cat_label')}>
+                <AdaptiveSelect
+                  value={attribution}
+                  onValueChange={setAttribution}
+                  options={attributionOptions}
+                  label={t('event_details.fix_cat_label')}
+                  disabled={isBusy}
+                  onOpenPage={() => setPicker('cat')}
+                />
+              </FormField>
+
+              {isLitterbox && (
+                <>
+                  {/* Five plain words would be served fine by a native
+                      `<select>` — but the cat above it opens a page, and one
+                      form that speaks two interaction languages a few pixels
+                      apart reads as two products. */}
+                  <FormField label={t('event_details.fix_type_label')}>
+                    <AdaptiveSelect
+                      value={eliminationType}
+                      onValueChange={(next) => {
+                        const parsed = parseLitterboxUseEliminationType(next);
+                        if (parsed) setEliminationType(parsed);
+                      }}
+                      options={typeOptions}
+                      label={t('event_details.fix_type_label')}
+                      disabled={isBusy}
+                      onOpenPage={() => setPicker('type')}
+                    />
+                  </FormField>
+
+                  <FormField label={t('event_details.fix_weight_label')}>
+                    <div className="event-fix-weight">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min={MIN_WEIGHT_G / 1000}
+                        max={MAX_WEIGHT_G / 1000}
+                        value={weightKg}
+                        disabled={isBusy}
+                        aria-label={t('event_details.fix_weight_label')}
+                        onChange={(e) => setWeightKg(e.target.value)}
+                      />
+                      <span className="event-fix-weight-unit">kg</span>
+                      {/*
+                       * One slot, two jobs. Untouched, it is the bin: clearing
+                       * the field *is* the removal, so the control that does it
+                       * belongs on the field rather than in a section further
+                       * down with other questions in between.
+                       *
+                       * Edited — binned or typed over — it becomes the way back
+                       * to the stored reading. The target is always the stored
+                       * value rather than whatever was in the field a moment
+                       * ago, which is both what you actually want back and what
+                       * makes leaving by this route return the form to rest:
+                       * the follow-up below keys off the same comparison and
+                       * stands down with it.
+                       */}
+                      {weightChanged ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          icon
+                          disabled={isBusy}
+                          title={undoWeightLabel}
+                          aria-label={undoWeightLabel}
+                          onClick={() => setWeightKg(baselineWeight)}
+                        >
+                          <Undo2 size={16} aria-hidden />
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          icon
+                          className="event-fix-weight-remove"
+                          disabled={isBusy || weightRemoved}
+                          title={t('event_details.remove_weight')}
+                          aria-label={t('event_details.remove_weight')}
+                          onClick={() => setWeightKg('')}
+                        >
+                          <Trash2 size={16} aria-hidden />
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* What removing costs, said only once it is what will
+                        happen. */}
+                    {weightRemoved && (
+                      <p className="event-fix-weight-note">
+                        {t('event_details.remove_weight_hint')}
+                      </p>
+                    )}
+
+                    {/*
+                     * Re-analysis is a consequence, not a standing field. It
+                     * exists only once the weight actually changed, and sits
+                     * with the field that caused it: cats are told apart by
+                     * weight, so this one edit can re-identify every later
+                     * visit on the device. A cat, type or straining fix never
+                     * feeds identification and never raises it.
+                     */}
+                    {weightChanged && event.device_id != null && (
+                      <div className="event-fix-followup">
+                        <Switch
+                          id="event-fix-reanalyze"
+                          checked={reanalyze}
+                          disabled={isBusy}
+                          onCheckedChange={setReanalyze}
+                        />
+                        <label htmlFor="event-fix-reanalyze">
+                          {t('event_details.reanalyze_later_visits')}
+                          <small>
+                            {t('event_details.reanalyze_later_visits_hint')}
+                          </small>
+                        </label>
+                      </div>
+                    )}
+                  </FormField>
+
+                  <div className="event-fix-switch-row">
+                    <label htmlFor="event-fix-straining">
+                      {t('event_details.straining_observed')}
+                    </label>
+                    <Switch
+                      id="event-fix-straining"
+                      checked={straining}
+                      disabled={isBusy}
+                      onCheckedChange={setStraining}
+                    />
+                  </div>
+                </>
+              )}
+
+              <FormError message={error} />
+            </div>
+
+            <FormActions
+              className="event-fix-actions"
+              onCancel={onClose}
+              cancelLabel={t('common.cancel')}
+              submitLabel={t('common.save')}
+              isSubmitting={isBusy}
+              submitType="button"
+              onSubmitClick={() => void handleSave()}
+            />
+          </div>
+        )}
+      </SheetPages>
     </div>
   );
 };

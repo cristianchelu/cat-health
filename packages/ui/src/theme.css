@@ -44,6 +44,9 @@
   --color-shadow: rgba(15, 23, 42, 0.08);
   --color-shadow-dark: rgba(15, 23, 42, 0.16);
 
+  /* Dimming layer behind modal surfaces, over the backdrop blur. */
+  --color-scrim: rgba(15, 23, 42, 0.32);
+
   /** Litterbox Colors **/
   --color-litterbox-urination: rgb(255, 193, 7);
   --color-litterbox-defecation: rgb(121, 85, 72);
@@ -333,6 +336,8 @@
     /* Shadow Colors */
     --color-shadow: rgba(0, 0, 0, 0.3);
     --color-shadow-dark: rgba(0, 0, 0, 0.5);
+
+    --color-scrim: rgba(0, 0, 0, 0.55);
 
     /* Charts (dark) - rich and vibrant */
     --color-chart-bg: var(--color-surface);

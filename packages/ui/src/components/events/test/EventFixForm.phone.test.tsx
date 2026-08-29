@@ -1,0 +1,119 @@
+import assert from 'node:assert/strict';
+import { afterEach, describe, it } from 'node:test';
+import { act, cleanup, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  createDefaultSettingsResponse,
+  type GetEventListItemDTO,
+  type GetPetResponseDTO,
+} from 'shared';
+
+import EventFixForm from '../EventFixForm.tsx';
+import { Dialog, DialogContent } from '@/components/ui/Dialog.tsx';
+import RegionalPreferencesProvider from '@/contexts/RegionalPreferencesProvider';
+import { MOBILE_QUERY } from '@/lib/breakpoints.ts';
+import { resetMediaMatches, setMediaMatches } from '@/test/matchMedia.ts';
+import { renderWithProviders } from '@/test/render.tsx';
+
+/*
+ * The phone half of the fix form: `AdaptiveSelect` only offers a page at phone
+ * widths, so this ladder — form → picker level → back — is unreachable from
+ * every other test in the suite, which all run the desktop branch.
+ *
+ * vaul is deliberately not in the picture: the drawer is a `Sheet` concern,
+ * and what is under test is the page swap inside whatever hosts it.
+ */
+
+const queryClients: QueryClient[] = [];
+
+afterEach(() => {
+  cleanup();
+  resetMediaMatches();
+  for (const client of queryClients.splice(0)) client.clear();
+});
+
+const PETS: GetPetResponseDTO[] = [
+  { id: 1, name: 'Luna', breed: 'Ragdoll', birth_date: null, is_away: false },
+  { id: 2, name: 'Jazz', breed: 'Bengal', birth_date: null, is_away: false },
+];
+
+const GUESSED_VISIT: GetEventListItemDTO = {
+  parent_event_id: null,
+  note: null,
+  note_updated_at: null,
+  id: 21,
+  pet_id: 1,
+  caused_by: 'pet',
+  attributed_by: 'weight',
+  device_id: 3,
+  timestamp: '2026-08-20T10:30:00.000Z',
+  data: {
+    type: 'litterbox_use',
+    duration: 45,
+    elimination_weight: 30,
+    elimination_type: 'urination',
+    straining: false,
+  },
+  human_verified: false,
+};
+
+async function renderPhoneFixForm() {
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: Infinity, staleTime: Infinity },
+      mutations: { retry: false, gcTime: 0 },
+    },
+  });
+  queryClients.push(client);
+  client.setQueryData(['pets'], PETS);
+  client.setQueryData(['settings'], createDefaultSettingsResponse());
+
+  return renderWithProviders(
+    <QueryClientProvider client={client}>
+      <RegionalPreferencesProvider>
+        <Dialog open>
+          <DialogContent showCloseButton={false}>
+            <EventFixForm
+              event={GUESSED_VISIT}
+              eventChildren={[]}
+              mode="fix"
+              onClose={() => {}}
+            />
+          </DialogContent>
+        </Dialog>
+      </RegionalPreferencesProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe('EventFixForm on a phone', () => {
+  it('takes the whole surface for a picker level, and comes back with the answer', async () => {
+    act(() => {
+      setMediaMatches(MOBILE_QUERY, true);
+    });
+    const user = userEvent.setup();
+    await renderPhoneFixForm();
+
+    /* The phone anchor: a button that opens a page, not a listbox. */
+    const trigger = screen.getByRole('button', { name: /Cat/ });
+    assert.equal(trigger.getAttribute('aria-haspopup'), 'dialog');
+    assert.match(trigger.textContent ?? '', /Luna/);
+
+    await user.click(trigger);
+
+    /* The level replaced the form rather than opening a second sheet over
+       it — under reduced motion (the test default) that swap is synchronous,
+       exactly as the plain conditional it replaced was. */
+    const level = screen.getByRole('radiogroup', { name: /Cat/ });
+    assert.equal(screen.queryByRole('button', { name: /^Save/ }), null);
+
+    await user.click(within(level).getByRole('radio', { name: /Jazz/ }));
+
+    assert.equal(screen.queryByRole('radiogroup'), null);
+    assert.match(
+      screen.getByRole('button', { name: /Cat/ }).textContent ?? '',
+      /Jazz/,
+    );
+  });
+});

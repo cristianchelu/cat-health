@@ -209,6 +209,8 @@ const TimelapsePlayer: React.FC<TimelapsePlayerProps> = ({
                   'timelapse-player-track',
                   isScrubbing && 'scrubbing',
                 )}
+                /* Scrubbing inside a phone sheet is not a drawer drag. */
+                data-vaul-no-drag=""
                 role="slider"
                 tabIndex={0}
                 aria-label={t('event_details.timelapse_seek')}

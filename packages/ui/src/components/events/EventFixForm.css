@@ -7,30 +7,36 @@
  * follow-up under it.
  */
 .event-fix-form {
+  /* A passive frame around the pages: each level owns its own padding and its
+     own scroller, because during a slide both are mounted at once and a
+     scrollbar on this shared box would belong to neither. */
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  /* The host surface has no padding of its own — the media runs to its edges —
-     so the form brings the dialog padding it used to inherit. */
-  padding: var(--space-lg);
-  /*
-   * The whole surface scrolls, commit row included. Pinning Cancel/Save to the
-   * bottom would make it a sticky action bar, which `Form Actions - Spec.md`
-   * rejects on every platform: the row belongs to the form and moves with it.
-   * It also cost real estate on a phone at exactly the moment the form was
-   * tallest, hiding the fields it was supposed to commit.
-   */
   min-height: 0;
-  overflow-y: auto;
 
-  /*
-   * A picker level is the exception: its header stays put while its rows
-   * scroll, the way every other sheet in the app behaves. Two nested scrollers
-   * would fight over the gesture, so the outer one stands down.
-   */
-  &:has(.select-page) {
-    overflow: hidden;
+  /* `SelectPage` backs out of a padded host by --space-lg; its host is now the
+     sibling page rather than this frame, and the negative margin would poke
+     outside the box the slide clips against. */
+  .select-page {
+    margin: 0;
+  }
+
+  .event-fix-form-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    /* The host surface has no padding of its own — the media runs to its
+       edges — so the form brings the dialog padding it used to inherit. */
     padding: var(--space-lg);
+    /*
+     * The whole page scrolls, commit row included. Pinning Cancel/Save to the
+     * bottom would make it a sticky action bar, which `Form Actions - Spec.md`
+     * rejects on every platform: the row belongs to the form and moves with it.
+     * It also cost real estate on a phone at exactly the moment the form was
+     * tallest, hiding the fields it was supposed to commit.
+     */
+    min-height: 0;
+    overflow-y: auto;
   }
 
   /* Title and timestamp are one block, so the dialog's own gap sits below

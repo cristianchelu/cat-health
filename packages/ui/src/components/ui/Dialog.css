@@ -1,7 +1,22 @@
+/*
+ * The entrance the centered dialog has always named and never had — the
+ * keyframes were referenced but never written, so `animation` resolved to
+ * nothing.
+ */
+@keyframes contentShow {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.98);
+  }
+}
+
 .dialog-overlay {
   position: fixed;
   inset: 0;
   z-index: var(--z-index-modal);
+  /* Dim first, blur second: blur alone leaves a bright page legible behind
+     the surface that is supposed to have taken over. */
+  background-color: var(--color-scrim);
   backdrop-filter: blur(4px);
 }
 
@@ -19,30 +34,21 @@
   padding: var(--space-lg);
   box-shadow: var(--shadow-lg);
   /* A modal is a raised card, so it carries the card's corner. It also has
-     to: the same dialog docks as a sheet at phone widths with --radius-2xl
-     on its top corners, and one component should not change how round it is
-     on the way across a breakpoint. */
+     to: `Sheet` swaps this surface for a docked drawer at phone widths with
+     --radius-2xl on its top corners, and one surface should not change how
+     round it is on the way across a breakpoint. */
   border-radius: var(--radius-2xl);
-  animation: contentShow var(--transition-fast) ease-out;
+  /* The token already carries its easing (`150ms ease`); a second timing
+     function after it makes the shorthand invalid and the whole declaration
+     is dropped — which is how this animation stayed dead even once the
+     keyframes below existed. */
+  animation: contentShow var(--transition-fast);
   max-height: calc(100vh - var(--space-lg) * 2);
   max-height: calc(100dvh - var(--space-lg) * 2);
   overflow: hidden;
 
-  /* Bottom-sheet placement: docked to the bottom edge on phone widths,
-     identical to the centered dialog on desktop. */
-  &.dialog-content-sheet {
-    @media (max-width: 767px) {
-      top: auto;
-      bottom: 0;
-      left: 0;
-      transform: none;
-      width: 100%;
-      max-width: none;
-      max-height: 85vh;
-      max-height: 85dvh;
-      border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
-      animation: none;
-    }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
   }
 
   .dialog-close {

@@ -48,6 +48,13 @@ const MULTI_ROOT_BY_DESIGN = new Map<string, string>([
     '`DialogPortal` renders the overlay beside the content, not around it.',
   ],
   [
+    path.join('components', 'ui', 'Sheet.css'),
+    'vaul renders the overlay beside the content, not around it. The padded ' +
+      'inner box is a third root for a second reason: written as a nested ' +
+      'rule it would outweigh the consumer class that lands on the same ' +
+      'element, so its parent is spelled `:where(.sheet-content)`.',
+  ],
+  [
     path.join('components', 'ui', 'SelectMenu.css'),
     '`SelectPrimitive.Portal` puts the listbox at the end of <body> while the ' +
       'trigger stays in the form row, so neither half contains the other. ' +

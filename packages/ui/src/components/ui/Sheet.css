@@ -1,0 +1,76 @@
+/*
+ * The phone drawer's own frame. vaul supplies the gesture, the transform and
+ * the enter/exit keyframes and nothing else — where the sheet sits, how big it
+ * is and what it is made of are all ours.
+ *
+ * Its timing is vaul's: 0.5s, hardcoded, for the keyframes and for the inline
+ * transition it writes when a drag springs back or carries on out — and also
+ * for the JS timers that gate dragging just after opening. Overriding only the
+ * CSS half would leave the library counting to a number the sheet no longer
+ * moves to, so the whole thing stays at vaul's pace.
+ */
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-index-modal);
+  background-color: var(--color-scrim);
+  backdrop-filter: blur(4px);
+}
+
+.sheet-content {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: var(--z-index-modal);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  max-height: 85dvh;
+  /* Real, not inherited: vaul's overdrag overscan is a `::after` painted with
+     `background: inherit`, and a transparent one shows the page through the
+     rubber band. */
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  /* The same corner as the card/dialog family — see `Dialog.css`. */
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  outline: none;
+
+  /* vaul's injected CSS supplies the pill geometry and its 44px hit area;
+     this supplies the colour and the breathing room above it. */
+  .sheet-handle {
+    flex: none;
+    margin-block: var(--space-xs) 0;
+    background-color: var(--color-border-hover);
+  }
+}
+
+/*
+ * Mirrors `.dialog-content`'s box, so consumer CSS written against the docked
+ * dialog keeps meaning one component later: same padding, same gap, and the
+ * consumer's own class lands here.
+ *
+ * `:where()` on the parent is what makes that true rather than merely stated.
+ * `.dialog-content` weighs one class, so a consumer class on the same element
+ * ties with it and wins on source order; nesting this plainly under
+ * `.sheet-content` weighed two, and silently beat every consumer's `display`
+ * and `gap` on phones while desktop kept theirs.
+ */
+:where(.sheet-content) .sheet-inner {
+  display: grid;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The one place `!important` earns its keep: vaul writes the drag and
+     spring-back transition straight onto the element's `style`, and a stated
+     preference for no motion has no other way to reach it. */
+  .sheet-overlay,
+  .sheet-content {
+    animation: none !important;
+    transition: none !important;
+  }
+}

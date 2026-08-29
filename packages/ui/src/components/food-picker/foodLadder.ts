@@ -37,6 +37,23 @@ export type BrowseStep =
   | { kind: 'brands'; group: CoarseFoodGroup }
   | { kind: 'foods'; group: CoarseFoodGroup; brand: string };
 
+/**
+ * Stable identity for a browse level, for `SheetPages`.
+ *
+ * A brand name containing ':' could in theory collide two keys, which merely
+ * suppresses one slide; nothing breaks.
+ */
+export function browseStepKey(step: BrowseStep): string {
+  switch (step.kind) {
+    case 'root':
+      return 'root';
+    case 'brands':
+      return `brands:${step.group}`;
+    case 'foods':
+      return `foods:${step.group}:${step.brand}`;
+  }
+}
+
 export function isFlatMode(foods: readonly GetFoodDTO[]): boolean {
   return foods.length <= FLAT_LIST_MAX_FOODS;
 }

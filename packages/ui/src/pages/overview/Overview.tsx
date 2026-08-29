@@ -185,16 +185,21 @@ const Overview: React.FC = () => {
           label={t('overview.log_food')}
         />
       ) : null}
-      {selectedEvent ? (
-        <EventDetailsModal
-          isOpen
-          event={selectedEvent}
-          onClose={handleCloseModal}
-        />
-      ) : null}
-      {selectedPet && showFoodModal ? (
+      {/*
+       * Mounted whether or not they are open, because a drawer has to be on
+       * screen to animate off it. Unmounting on close — which is what these
+       * two used to do — cut the exit dead: drag past the dismiss point or tap
+       * the scrim, and the sheet vanished mid-gesture instead of following the
+       * thumb down.
+       */}
+      <EventDetailsModal
+        isOpen={selectedEvent !== null}
+        event={selectedEvent}
+        onClose={handleCloseModal}
+      />
+      {selectedPet ? (
         <LogFoodSheet
-          isOpen
+          isOpen={showFoodModal}
           onClose={() => setShowFoodModal(false)}
           petId={selectedPet.id}
           petName={selectedPet.name}

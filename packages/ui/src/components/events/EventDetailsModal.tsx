@@ -26,7 +26,9 @@ import {
   useDeleteEvent,
   invalidateQueriesAfterEventPatch,
 } from '@/hooks/queries/eventQueries';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
+import { DialogTitle } from '@/components/ui/Dialog';
+import { Sheet } from '@/components/ui/Sheet';
+import { SheetPages } from '@/components/ui/SheetPages';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -100,9 +102,17 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const { data: pets } = usePets();
   const { data: devices } = useDevices();
 
+  /*
+   * The host clears its selection the moment the drawer closes, but the drawer
+   * still has an exit animation to play and needs something to play it with.
+   * Hold the last event on screen until it is off.
+   */
+  const [shownEvent, setShownEvent] = React.useState(event);
+  if (event && event !== shownEvent) setShownEvent(event);
+
   const { data: media, isLoading: isLoadingMedia } = useEventMedia(
-    event?.id ?? 0,
-    isOpen && event !== null,
+    shownEvent?.id ?? 0,
+    isOpen && shownEvent !== null,
   );
   const { mutateAsync: updateEvent, isPending: isUpdating } = useUpdateEvent();
   const { mutate: deleteEventMutation, isPending: isDeleting } =
@@ -110,7 +120,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const { mutate: runAnalyze, isPending: isAnalyzing } =
     useAnalyzeLitterboxEvent();
 
-  const eventId = event?.id;
+  const eventId = shownEvent?.id;
   const { data: eventFromServer } = useQuery({
     queryKey: ['event', eventId ?? 0],
     queryFn: () => getEventById(eventId!),
@@ -127,7 +137,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const [showDiscardConfirm, setShowDiscardConfirm] = React.useState(false);
 
   /** Prefer React Query payload so the modal stays in sync after mutations (e.g. reanalyze) while `event` from parent state may be stale. */
-  const displayEvent = event ? (eventFromServer ?? event) : null;
+  const displayEvent = shownEvent ? (eventFromServer ?? shownEvent) : null;
   const children =
     eventFromServer && 'children' in eventFromServer
       ? eventFromServer.children
@@ -143,13 +153,28 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     displayEvent?.data?.type === 'litterbox_use' &&
     (decodedRawData?.weights?.length ?? 0) > 0;
 
-  React.useEffect(() => {
-    setShowDeleteConfirm(false);
-    setReidentifyOnDelete(false);
-    setFixMode(null);
-    setIsNoteDirty(false);
-    setShowDiscardConfirm(false);
-  }, [event?.id]);
+  /*
+   * Every visit starts on the read surface with nothing carried over from the
+   * last one — reset on arrival, never on the way out. On the way out the
+   * drawer is still sliding, and clearing `fixMode` there would have it walk
+   * back down its own ladder in full view. An effect would be a frame too
+   * late for the same reason, so this is the render-phase pattern
+   * `SheetPages` uses.
+   */
+  const [visit, setVisit] = React.useState({
+    open: isOpen,
+    id: event?.id ?? null,
+  });
+  if (isOpen !== visit.open || (isOpen && (event?.id ?? null) !== visit.id)) {
+    setVisit({ open: isOpen, id: event?.id ?? null });
+    if (isOpen) {
+      setShowDeleteConfirm(false);
+      setReidentifyOnDelete(false);
+      setFixMode(null);
+      setIsNoteDirty(false);
+      setShowDiscardConfirm(false);
+    }
+  }
 
   const hasMedia = Boolean(media?.length);
 
@@ -175,7 +200,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   const downloadMediaPath = imageFrames[0]?.file_path ?? media?.[0]?.file_path;
 
-  if (!event || !displayEvent) {
+  if (!shownEvent || !displayEvent) {
     return null;
   }
 
@@ -283,10 +308,16 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const handleDeleteConfirm = async () => {
     const deviceId = displayEvent.device_id;
     const after = displayEvent.timestamp;
+    const shouldReidentify = reidentifyOnDelete;
 
     deleteEventMutation(displayEvent.id, {
       onSuccess: async () => {
-        if (reidentifyOnDelete && deviceId != null) {
+        /* The drawer outlives its own close now, so this dialog is no longer
+           swept away with it — and a confirm left open over a deleted event
+           offers to delete it a second time. */
+        setShowDeleteConfirm(false);
+        setReidentifyOnDelete(false);
+        if (shouldReidentify && deviceId != null) {
           await reidentifyLitterboxVisits(deviceId, after);
           invalidateQueriesAfterEventPatch(queryClient);
           await queryClient.invalidateQueries({
@@ -302,21 +333,28 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent
-          className="event-details-modal"
-          placement="sheet"
-          showCloseButton={false}
-          onEscapeKeyDown={(escape) => {
-            /* One rung at a time: out of a picker, then out of the form, and
-               only from the read surface does Escape close the drawer. */
-            if (fixBackRef.current?.()) escape.preventDefault();
-            else if (fixMode) {
-              escape.preventDefault();
-              setFixMode(null);
-            }
-          }}
-        >
+      <Sheet
+        open={isOpen}
+        onOpenChange={(open) => !open && handleClose()}
+        /* Phone: an unsaved note takes the drag, the scrim and Escape off the
+           table — vaul cannot be vetoed after the fact, so the guard has to be
+           declared up front. The X button still routes to the discard
+           dialog. */
+        dismissible={canDiscardCleanly}
+        className="event-details-modal"
+        onEscapeKeyDown={(escape) => {
+          /* One rung at a time: out of a picker, then out of the form, and
+             only from the read surface does Escape close the drawer. */
+          if (fixBackRef.current?.()) escape.preventDefault();
+          else if (fixMode) {
+            escape.preventDefault();
+            setFixMode(null);
+          }
+        }}
+      >
+        {/* The whole surface travels, stage included: it is one page turning
+            into another, not a panel swapped under a fixed header. */}
+        <SheetPages page={fixMode ?? 'read'} depth={fixMode ? 1 : 0}>
           {fixMode ? (
             <EventFixForm
               event={displayEvent}
@@ -349,7 +387,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   )}
                   {!isLoadingMedia && !hasMedia && (
                     /* The camera tab's own glyph for "nothing to show", and
-                       nothing else: the empty stage is the message. */
+                         nothing else: the empty stage is the message. */
                     <div
                       className="event-details-stage-note"
                       title={t('event_details.no_recording')}
@@ -379,7 +417,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                         </div>
                       )}
                       {videoItems.map((m) => (
-                        <div key={m.id} className="event-details-media-video">
+                        <div
+                          key={m.id}
+                          className="event-details-media-video"
+                          /* Native video controls scrub horizontally but are
+                               neither a scroller nor a form control, so the
+                               drawer would otherwise win the gesture. */
+                          data-vaul-no-drag=""
+                        >
                           <video controls src={`api/media/${m.file_path}`} />
                         </div>
                       ))}
@@ -394,8 +439,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     <DialogTitle className="event-details-title">
                       {title}
                       {/* The timeline's own verified glyph, sized to the line
-                          it sits on — a settled event is a quiet fact, not an
-                          announcement. */}
+                            it sits on — a settled event is a quiet fact, not an
+                            announcement. */}
                       {correction.kind === 'settled' && (
                         <span
                           className="event-details-verified"
@@ -525,8 +570,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               </div>
             </>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetPages>
+      </Sheet>
 
       <DiscardUnsavedDialog
         open={showDiscardConfirm}

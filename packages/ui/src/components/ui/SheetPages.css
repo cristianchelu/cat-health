@@ -1,0 +1,39 @@
+/*
+ * Two pages in one box while one of them is leaving. Layout only: the motion
+ * itself is inline from TS, because the settle timer needs the same numbers.
+ *
+ * The flex-column + `min-height: 0` chain on both the container and each slot
+ * is load-bearing twice: it keeps a consumer's own scroller working one level
+ * deeper than it was written for, and it is what makes "release the height and
+ * measure" return a value already clamped to the sheet.
+ */
+.sheet-pages {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+
+  /* Only while sliding: a page half off the edge must not be reachable, and
+     the height animation must not be scrolled against. */
+  &.is-animating {
+    overflow: hidden;
+  }
+
+  .sheet-pages-slot {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    /* Focused programmatically so a screen reader starts at the new page's
+       own title; it is not a control and should not look like one. */
+    outline: none;
+
+    /* Out of flow, so the container measures the arriving page alone. */
+    &[data-state='leaving'] {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+  }
+}

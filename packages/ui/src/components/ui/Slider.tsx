@@ -158,6 +158,9 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
       <div
         className={cn('slider', disabled && 'disabled', className)}
         ref={ref}
+        /* Inside a phone sheet, the vertical half of this gesture is the
+           coarse/fine mode switch — the drawer must not read it as a drag. */
+        data-vaul-no-drag=""
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}

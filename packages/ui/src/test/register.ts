@@ -1,6 +1,8 @@
 import { register } from 'node:module';
 import { JSDOM } from 'jsdom';
 
+import { installMatchMedia } from './matchMedia';
+
 register('./css-hooks.mjs', import.meta.url);
 
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
@@ -80,20 +82,7 @@ if (typeof window.ResizeObserver !== 'function') {
 }
 copyProp('ResizeObserver');
 
-if (typeof window.matchMedia !== 'function') {
-  window.matchMedia = ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener() {},
-    removeListener() {},
-    addEventListener() {},
-    removeEventListener() {},
-    dispatchEvent() {
-      return false;
-    },
-  })) as typeof window.matchMedia;
-}
+installMatchMedia(window);
 copyProp('matchMedia');
 
 // Radix Dialog / focus-trap expect these on Element (missing in jsdom).
