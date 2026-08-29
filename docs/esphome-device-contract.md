@@ -61,7 +61,19 @@ device config's `filterIntervalDays` for the filter bar.
 | `unfiltered_weight`  | sensor, g     | for visit tracking | Raw scale stream during activity.   |
 | `activity`           | binary_sensor | for visit tracking | High while a visit is in progress.  |
 | `litter_remaining`   | sensor, kg    | no                 | Litter left in the box.             |
+| `litter_level`       | sensor, %     | no                 | The same litter as a share of full. |
+| `full_litter_weight` | number, kg    | for the litter row | Capacity, as the owner sets it.     |
 | `visits_since_clean` | sensor        | no                 | Visit count since last scoop.       |
+
+The litter row is a composite: `litter_remaining` is the reading, because
+litter is bought and refilled by weight, while `litter_level` draws the bar and
+sets the urgency band, because a band in kilograms would mean something
+different in every box. That share only exists against a capacity, so the row
+is shown **only while `full_litter_weight` is set** — an ESPHome number nobody
+has typed into publishes `0`, and a `0` here is read as unset, not as a box
+that holds nothing. Firmware with a capacity but no `litter_level` still gets
+both, divided server-side; the server also falls back to the device config's
+`litterFullKg` when the firmware exposes no number at all.
 
 ### Maintenance schedule (deep clean / full litter change)
 

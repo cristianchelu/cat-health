@@ -43,7 +43,12 @@ export const ESPHomeConfigSchema = Type.Object({
    * there is no default: unset means waste is reported without an urgency band.
    */
   wasteThresholdG: Type.Optional(Type.Number({ minimum: 1 })),
-  /** Kilograms of litter a full box holds, which a litter-level bar needs. */
+  /**
+   * Kilograms of litter a full box holds, which the litter row needs before it
+   * can be shown at all. A fallback: firmware exposing a `full_litter_weight`
+   * number states its own capacity and that answer wins, since it is the one
+   * the box also derives its published percentage from.
+   */
   litterFullKg: Type.Optional(Type.Number({ minimum: 0.1 })),
 });
 export type ESPHomeConfig = Static<typeof ESPHomeConfigSchema>;

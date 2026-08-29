@@ -133,17 +133,25 @@ export function measureSignal(
     decimals?: number;
     /** Drawn against this maximum when the provider knows one. */
     full?: number;
+    /**
+     * The bar's fraction stated outright, 0..1, for a device that reports its
+     * level as well as its weight. Wins over `full`: the device divided
+     * against the capacity it holds, and re-deriving the same fraction from a
+     * rounded reading would only disagree with it.
+     */
+    fill?: number;
     severity?: DeviceSignal['severity'];
   } = {},
 ): DeviceSignal {
-  const { unit, decimals, full, severity } = options;
+  const { unit, decimals, full, fill, severity } = options;
+  const fraction = fill ?? (full && full > 0 ? value / full : undefined);
   return {
     key,
     label_key: labelKeyFor(key, labelKey),
     value: { kind: 'number', value, unit, decimals },
     display:
-      full && full > 0
-        ? { kind: 'bar', fill: clampFill(value / full) }
+      fraction !== undefined
+        ? { kind: 'bar', fill: clampFill(fraction) }
         : { kind: 'none' },
     icon,
     category,

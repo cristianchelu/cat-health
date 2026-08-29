@@ -211,7 +211,8 @@ describe('rankDeviceSignals', () => {
       signal(DEVICE_SIGNAL_KEYS.LITTER_REMAINING, {
         icon: 'litter',
         value: { kind: 'number', value: 5.2, unit: 'kg' },
-        severity: { kind: 'absolute', value: 5.2 },
+        display: { kind: 'bar', fill: 0.87 },
+        severity: { kind: 'percent', value: 87 },
       }),
       days(DEVICE_SIGNAL_KEYS.DEEP_CLEAN, 2),
     ]);
@@ -226,7 +227,8 @@ describe('rankDeviceSignals', () => {
       signal(DEVICE_SIGNAL_KEYS.LITTER_REMAINING, {
         icon: 'litter',
         value: { kind: 'number', value: 5.1, unit: 'kg' },
-        severity: { kind: 'absolute', value: 5.1 },
+        display: { kind: 'bar', fill: 0.85 },
+        severity: { kind: 'percent', value: 85 },
       }),
       days(DEVICE_SIGNAL_KEYS.DEEP_CLEAN, 2),
     ]);

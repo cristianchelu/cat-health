@@ -139,14 +139,20 @@ const SCORE_TABLE: Record<string, ScoreRule> = {
     soonScore: 50,
     calm: { base: 0, slope: 30 },
   },
-  /** Kilograms of litter left in the box. */
+  /*
+   * Percent of a full box rather than kilograms left, so one band fits every
+   * box: a full load is whatever its owner pours in, and 1.5 kg is a
+   * comfortable depth in one box and nearly bare in another. The percentage
+   * exists only once that full weight is known, and until it is the provider
+   * emits no litter signal at all.
+   */
   [DEVICE_SIGNAL_KEYS.LITTER_REMAINING]: {
     direction: 'lower',
-    now: 1,
-    soon: 2,
+    now: 10,
+    soon: 25,
     nowScore: 78,
     soonScore: 48,
-    calm: { base: 28, slope: -3 },
+    calm: { base: 28, slope: -0.28 },
   },
   [DEVICE_SIGNAL_KEYS.DEEP_CLEAN]: {
     direction: 'lower',

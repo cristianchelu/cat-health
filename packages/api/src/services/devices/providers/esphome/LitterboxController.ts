@@ -27,8 +27,19 @@ const SENSORS = {
   UNFILTERED_WEIGHT: 'unfiltered_weight',
   WASTE_WEIGHT: 'waste_weight',
   LITTER_REMAINING: 'litter_remaining',
+  LITTER_LEVEL: 'litter_level',
+  LITTER_FULL: 'full_litter_weight',
   VISITS: 'visits_since_clean',
 } as const;
+
+/**
+ * A capacity is an answer only while it is positive. An ESPHome number nobody
+ * has typed into publishes its protobuf default, so an unset full-litter
+ * weight arrives as a perfectly finite 0 — which is a placeholder, not a box
+ * that holds nothing.
+ */
+const capacity = (value: number | null | undefined): number | null =>
+  typeof value === 'number' && value > 0 ? value : null;
 
 interface RawMeasurement {
   timestamp: Date;
@@ -313,8 +324,27 @@ export class LitterboxController extends BaseESPHomeController {
       );
     }
 
+    /*
+     * Kilograms alone say nothing: 1.5 kg is a comfortable load in a shallow
+     * box and nearly bare in a deep one. Only the owner knows which, and they
+     * say so by typing a full weight into the box. Until they do, the card has
+     * no litter row at all — a bar drawn against a guessed capacity, and an
+     * urgency band read off it, would both be inventions, and the row would
+     * hold the gauge against the counters that are actually anchored.
+     */
+    const litterFullKg =
+      capacity(this.sensorNumber(SENSORS.LITTER_FULL)) ??
+      capacity(this.config.litterFullKg);
     const litterRemainingKg = this.sensorNumber(SENSORS.LITTER_REMAINING);
-    if (litterRemainingKg !== null) {
+    if (litterRemainingKg !== null && litterFullKg !== null) {
+      /* Composite, as the waste row is: the value is the weight, since that is
+       * what a bag of litter is sold and refilled in, while the bar and the
+       * urgency band read the percentage the box derives from its own
+       * capacity. Firmware that reports no percentage still gets both, divided
+       * here. */
+      const litterLevelPercent =
+        this.sensorNumber(SENSORS.LITTER_LEVEL) ??
+        (litterRemainingKg / litterFullKg) * 100;
       signals.push(
         measureSignal(
           { key: DEVICE_SIGNAL_KEYS.LITTER_REMAINING, icon: 'litter' },
@@ -322,8 +352,8 @@ export class LitterboxController extends BaseESPHomeController {
           {
             unit: 'kg',
             decimals: 1,
-            full: this.config.litterFullKg,
-            severity: { kind: 'absolute', value: litterRemainingKg },
+            fill: litterLevelPercent / 100,
+            severity: { kind: 'percent', value: litterLevelPercent },
           },
         ),
       );
