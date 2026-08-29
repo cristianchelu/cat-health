@@ -1,0 +1,68 @@
+/*
+ * The one question the surface asks.
+ *
+ * Tinted, not bordered: it is a quiet aside on a reading surface, not a
+ * warning. The `assign` case shares the same block — what changes is the
+ * glyph and that there is only one answer to give.
+ */
+.event-correction-band {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-primary-lightest);
+
+  .event-correction-band-glyph {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface);
+    color: var(--color-primary);
+
+    > svg {
+      width: 15px;
+      height: 15px;
+    }
+  }
+
+  .event-correction-band-text {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--text-sm);
+    line-height: var(--line-height-normal);
+    color: var(--color-text-light);
+    text-wrap: pretty;
+
+    > b {
+      font-weight: var(--font-semibold);
+      color: var(--color-text);
+    }
+  }
+
+  .event-correction-band-actions {
+    flex: none;
+    display: flex;
+    gap: var(--space-xs);
+  }
+
+  /*
+   * On a phone the band stacks and the two answers go full width at touch
+   * height — the row cannot hold a sentence and two buttons at 390px without
+   * squeezing one of them to an ambiguous stub.
+   */
+  @media (max-width: 480px) {
+    flex-wrap: wrap;
+
+    .event-correction-band-actions {
+      flex: 1 0 100%;
+
+      > * {
+        flex: 1;
+      }
+    }
+  }
+}

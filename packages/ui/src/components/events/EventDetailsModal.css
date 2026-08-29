@@ -1,52 +1,30 @@
 /*
  * One event, opened from a timeline.
  *
- * The dialog is two stacked halves: a fixed 16:9 stage carrying either the
- * media or the weight chart, and the form below it that says who the event
- * belongs to and what it was.
+ * A stage on top when there is something to watch — the clip, or the signal
+ * behind the reading — and below it the surface: a sentence, the readings, the
+ * one question, the note. The stage is optional in a way it was not before: an
+ * event with no clip and no signal starts at its own headline rather than
+ * opening on an empty black box.
  */
 .event-details-modal {
   padding: 0 !important;
   gap: 0;
   overflow: hidden;
-  max-width: 400px;
+  max-width: 480px;
   background-color: var(--color-surface);
-
-  /* Square and flush with the tab strip, where the dialog's own floating
-     close would sit on top of the tabs. */
-  .event-details-tab-close {
-    flex: 0 0 auto;
-    align-self: stretch;
-    width: auto;
-    aspect-ratio: 1;
-    min-width: var(--space-3xl);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-    padding: 0;
-    border: none;
-    border-left: var(--border-thin);
-    border-radius: 0;
-    background: transparent;
-    color: var(--color-text-muted);
-    font: inherit;
-    cursor: pointer;
-    transition: var(--transition-fast);
-
-    &:hover {
-      color: var(--color-text);
-      background-color: var(--color-surface);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--color-primary);
-      outline-offset: -2px;
-    }
-  }
+  /*
+   * Column rather than the kit's grid: the stage is optional, so a fixed track
+   * list would put the surface in the wrong row whenever there is no clip. As
+   * flex items the stage simply holds its size and the reading takes the rest —
+   * and takes it as a scroll region, since the dialog clips at its max-height.
+   */
+  display: flex;
+  flex-direction: column;
 
   /* Both panels land here, so the dialog does not resize when you switch. */
   .event-details-stage {
+    flex: none;
     width: 100%;
     aspect-ratio: 16 / 9;
     background-color: #000;
@@ -112,156 +90,100 @@
     width: 100%;
   }
 
-  .event-details-body {
-    padding: var(--space-lg);
+  .event-details-surface {
+    padding: var(--space-md) var(--space-lg) var(--space-lg);
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    gap: var(--space-md);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .event-details-header {
     display: flex;
-    justify-content: space-between;
     align-items: flex-start;
+    gap: var(--space-sm);
   }
 
   .event-details-identity {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2xs);
+    flex: 1;
+    min-width: 0;
   }
 
+  /*
+   * Names the kind of event, nothing more. It used to be a sentence naming the
+   * cat, which a long enough name overflowed and which asked every translation
+   * to carry English subject-verb grammar.
+   */
   .event-details-title {
-    font-size: var(--text-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    font-size: var(--text-base);
     font-weight: var(--font-bold);
+    line-height: var(--line-height-tight);
     color: var(--color-text);
     margin: 0;
   }
 
-  .event-details-time {
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
-  }
-
-  .event-details-actions {
+  /* Sized to the line it sits on, so it reads as part of the title rather
+     than a second object beside it. */
+  .event-details-verified {
     display: flex;
-    gap: var(--space-xs);
-  }
+    flex: none;
+    color: var(--color-primary);
+    line-height: 0;
 
-  /* Attribution and event type: a label on the left, its control on the
-     right, on a tinted block. The two blocks are the same block. */
-  .event-details-section {
-    background-color: var(--color-surface-muted);
-    padding: var(--space-md);
-    border-radius: var(--radius-md);
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-sm);
-  }
-
-  /* Amber, because these two are what a visit is usually opened to correct.
-     The icon inherits it — lucide strokes `currentColor`. */
-  .event-details-section-label {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--text-xs);
-    font-weight: var(--font-medium);
-    color: var(--color-warning);
-  }
-
-  .event-details-control {
-    width: auto;
-    min-width: 150px;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-  }
-
-  .event-details-select {
-    width: 100%;
-    background-color: var(--color-surface);
-    border-color: var(--color-border);
-    padding-top: var(--space-2xs);
-    padding-bottom: var(--space-2xs);
-    height: auto;
-    font-size: var(--text-sm);
-  }
-
-  .event-details-straining {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--space-xs);
-    font-size: var(--text-xs);
-    font-weight: var(--font-medium);
-    color: var(--color-text-muted);
-    cursor: pointer;
-
-    /*
-     * The label dims with its box. `Checkbox` already dims itself, but it
-     * cannot reach the text beside it, and this file must not reach into it.
-     */
-    &.is-disabled {
-      cursor: not-allowed;
-      opacity: 0.7;
+    > svg {
+      width: 1em;
+      height: 1em;
     }
-  }
-
-  .event-details-extra {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
   }
 
   /*
-   * What the sensor measured: short label/value pairs on one wrapping line.
-   * Deliberately not `DetailMetricRow` — that is a bordered card with a
-   * display-sized figure, and three of them would bury a 42ml drink.
+   * When, where, and what the machine took it to be — restated in the band
+   * below where it is correctable, and pilled here once it is settled.
    */
-  .event-details-facts {
+  .event-details-meta {
     display: flex;
     flex-wrap: wrap;
-    justify-content: flex-start;
     align-items: center;
-    column-gap: var(--space-lg);
-    row-gap: var(--space-xs);
-    width: 100%;
-    font-size: var(--text-sm);
+    gap: var(--space-3xs) var(--space-2xs);
+    margin-top: var(--space-3xs);
+    font-size: var(--text-xs);
     color: var(--color-text-muted);
-  }
 
-  .event-details-fact {
-    flex: 0 1 auto;
-    display: inline-flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: var(--space-3xs);
-    min-width: 0;
-    line-height: var(--line-height-normal);
+    > span + span::before {
+      content: '·';
+      margin-right: var(--space-2xs);
+    }
 
-    > svg {
-      flex-shrink: 0;
-      width: 14px;
-      height: 14px;
-      opacity: 0.7;
-      color: var(--color-text-muted);
+    /* The pill is its own object, not another clause of the sentence. */
+    .status-pill + span::before,
+    > span + .status-pill::before {
+      content: none;
     }
   }
 
-  .event-details-fact-label {
-    flex-shrink: 0;
-    font-size: inherit;
-    color: var(--color-text-muted);
+  .event-details-actions {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
   }
+}
 
-  .event-details-fact-value {
-    font-size: inherit;
-    font-weight: var(--font-medium);
-    color: var(--color-text);
-    font-variant-numeric: tabular-nums;
+/*
+ * Docked to the bottom edge on a phone, where the header actions and the
+ * band both need touch room.
+ */
+@media (max-width: 480px) {
+  .event-details-modal {
+    max-width: none;
+
+    .event-details-surface {
+      padding: var(--space-md) var(--space-md) var(--space-xl);
+    }
   }
 }

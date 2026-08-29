@@ -1,0 +1,102 @@
+/*
+ * What the sensors measured, as a wrapping row of iconed readings.
+ *
+ * The glyph is not decoration: it is what lets the eye find "the weight one"
+ * without reading the labels, and it carries the same domain tint the timeline
+ * uses so a water fact looks like water wherever you meet it.
+ */
+.event-facts {
+  /*
+   * Two per row, never more. A wrapping flex row re-flowed every time a fact
+   * appeared or vanished — straining, a removed weight — so the same event
+   * read differently from one visit to the next. A fixed pair of columns holds
+   * the shape and gives each reading room for its glyph.
+   */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md) var(--space-lg);
+  align-items: center;
+
+  .event-fact {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+  }
+
+  /* Circles, because one of these is a cat's face and a face in a rounded
+     square would be the odd one out. */
+  .event-fact-glyph {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+
+    > svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* The one sign here that means look closer, so it is the one tone that
+       is not a domain colour. */
+    &.tone-alert {
+      background-color: var(--color-error-light);
+      color: var(--color-error);
+    }
+
+    /* The glyph is already an image — a tint behind a face is just a ring of
+       colour around it. */
+    &.tone-identity {
+      background: none;
+
+      > * {
+        width: 40px;
+        height: 40px;
+      }
+    }
+
+    /* The default, and what nearly every reading is: a shape to find the
+       value by, not a colour to read anything into. */
+    &.tone-neutral {
+      background-color: var(--color-surface-muted);
+      color: var(--color-text-light);
+    }
+  }
+
+  .event-fact-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+
+    > b {
+      font-size: var(--text-base);
+      font-weight: var(--font-bold);
+      line-height: var(--line-height-tight);
+      color: var(--color-text);
+      font-variant-numeric: tabular-nums;
+
+      /* A removed reading states its absence rather than vanishing — but it
+         is not a number, so it does not get a number's weight. */
+      &.is-absent {
+        font-weight: var(--font-medium);
+        color: var(--color-text-muted);
+      }
+
+      > small {
+        margin-left: 2px;
+        font-size: var(--text-xs);
+        font-weight: var(--font-normal);
+        color: var(--color-text-light);
+      }
+    }
+
+    > span {
+      font-size: var(--text-xs);
+      line-height: var(--line-height-tight);
+      color: var(--color-text-muted);
+    }
+  }
+}

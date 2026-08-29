@@ -1,9 +1,24 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  BadgeCheck,
+  Cat,
+  Download,
+  ImageOff,
+  VideoOff,
+  MoreVertical,
+  Pencil,
+  Sparkles,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { type EventDataDTO, type GetEventListItemDTO } from 'shared';
+
 import { getEventById } from '@/api/pets';
 import { reidentifyLitterboxVisits } from '@/api/devices';
 import { usePets } from '@/hooks/queries/petQueries';
+import { useDevices } from '@/hooks/queries/deviceQueries';
 import {
   useAnalyzeLitterboxEvent,
   useEventMedia,
@@ -11,67 +26,38 @@ import {
   useDeleteEvent,
   invalidateQueriesAfterEventPatch,
 } from '@/hooks/queries/eventQueries';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/Dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import { cn } from '@/lib/utils';
+import Avatar from '@/components/ui/Avatar';
 import { FallbackImage } from '@/components/ui/FallbackImage';
-import {
-  Checkbox,
-  FormActions,
-  FormInlineDiscard,
-  FormShell,
-  Select,
-} from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/form';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { useDraftForm } from '@/hooks/form';
-import {
-  attributionFromEvent,
-  attributionFromSelectValue,
-  attributionToPatch,
-  attributionSelectOptions,
-  attributionSelectValue,
-  causeLabelKey,
-} from '@/lib/eventAttribution';
-import {
-  deriveLitterboxSampleRateHz,
-  parseLitterboxUseEliminationType,
-  type EventDataDTO,
-  type GetEventListItemDTO,
-  type LitterboxAnalysisStatePeriod,
-  type LitterboxUseEliminationType,
-} from 'shared';
-import WeightSignalChart from './WeightSignalChart';
-import WaterSignalChart from './WaterSignalChart';
+import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
+import { causeLabelKey } from '@/lib/eventAttribution';
+import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+
 import TimelapsePlayer from './TimelapsePlayer';
 import { buildTimelapseTimeline } from './buildTimelapseTimeline';
 import { decodeLitterboxRawData } from './decodeLitterboxRawData';
-import { decodeWaterRawData } from './decodeWaterRawData';
-import { analyzeWaterSegments } from './analyzeWaterSegments';
-import LitterboxWeightBlock from './LitterboxWeightBlock';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
-import './EventDetailsModal.css';
+import EventFacts from './EventFacts';
+import { buildEventFacts } from './buildEventFacts';
+import EventCorrectionBand from './EventCorrectionBand';
+import EventNoteField from './EventNoteField';
+import EventFixForm from './EventFixForm';
 import {
-  Trash2,
-  Download,
-  Info,
-  Image,
-  ImageOff,
-  Activity,
-  Sparkles,
-  Timer,
-  GlassWater,
-  DropletOff,
-  X,
-} from 'lucide-react';
-
-const EMPTY_LITTERBOX_SEGMENT_PERIODS: LitterboxAnalysisStatePeriod[] = [];
+  deriveEventCorrection,
+  isPetEvent,
+  showsFixInMenu,
+} from './eventCorrection';
+import './EventDetailsModal.css';
 
 /** Event variants that carry a duration (seconds). */
 function getEventDurationSeconds(data: EventDataDTO): number | undefined {
@@ -91,89 +77,18 @@ interface EventDetailsModalProps {
   onClose: () => void;
 }
 
-/** One measured fact: an icon, what it is, and what it read. */
-const Fact: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}> = ({ icon, label, value }) => (
-  <span className="event-details-fact">
-    {icon}
-    <span className="event-details-fact-label">{label}</span>
-    <span className="event-details-fact-value">{value}</span>
-  </span>
-);
-
-const WaterIntakeDetails: React.FC<{ event: GetEventListItemDTO }> = ({
-  event,
-}) => {
-  const { t } = useTranslation();
-  if (event.data.type !== 'water_intake') return null;
-  const data = event.data;
-  const hasFiltering = data.excluded_amount != null && data.excluded_amount > 0;
-  return (
-    <div className="event-details-facts">
-      {data.duration != null && (
-        <Fact
-          icon={<Timer aria-hidden />}
-          label={t('event_details.duration_label')}
-          value={t('event_details.duration_value', { seconds: data.duration })}
-        />
-      )}
-      {data.amount != null && (
-        <Fact
-          icon={<GlassWater aria-hidden />}
-          label={t('event_details.amount_label')}
-          value={t('event_details.amount_value', { amount: data.amount })}
-        />
-      )}
-      {hasFiltering && (
-        <Fact
-          icon={<DropletOff aria-hidden />}
-          label={t('event_details.water_spilled_label')}
-          value={t('event_details.water_spilled_amount', {
-            amount: data.excluded_amount,
-          })}
-        />
-      )}
-    </div>
-  );
-};
-
-const EventDetailsRenderer: React.FC<{ event: GetEventListItemDTO }> = ({
-  event,
-}) => {
-  const { t } = useTranslation();
-  switch (event.data.type) {
-    case 'water_intake':
-      return <WaterIntakeDetails event={event} />;
-    default:
-      return (
-        <p className="text-muted">{t('event_details.no_additional_details')}</p>
-      );
-  }
-};
-
-function getEventTitle(
-  event: GetEventListItemDTO,
-  t: (key: string) => string,
-): string {
-  switch (event.data?.type) {
-    case 'water_intake':
-      return t('event_details.water_intake');
-    case 'litterbox_use':
-      return t('event_details.litterbox_usage');
-    case 'litterbox_maintenance':
-      return t('event_details.litterbox_maintenance');
-    case 'device_connectivity':
-      return t('event_details.device_connectivity');
-    case 'pet_presence':
-      return t('event_details.pet_presence');
-    default:
-      return t('event_details.event_detected');
-  }
-}
-
+/**
+ * One event, read.
+ *
+ * The surface is a sentence, the readings behind it, and — only where the
+ * machine guessed — one band that asks once whether the guess was right. Every
+ * correction goes through the fix form; nothing else on the body is
+ * interactive, and nothing here commits on its own.
+ *
+ * Three affordance tiers read straight off the header: a band means the
+ * machine guessed, Edit means you authored it, and neither means the hardware
+ * knew (a microchip is not a guess).
+ */
 const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   event,
   isOpen,
@@ -183,26 +98,13 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const { formatDateTime } = useFormatters();
   const queryClient = useQueryClient();
   const { data: pets } = usePets();
+  const { data: devices } = useDevices();
 
-  const eliminationTypeOptions: {
-    value: LitterboxUseEliminationType;
-    label: string;
-  }[] = [
-    { value: 'urination', label: t('overview.urination') },
-    { value: 'defecation', label: t('overview.defecation') },
-    { value: 'both', label: t('overview.both') },
-    { value: 'no_elimination', label: t('overview.no_elimination') },
-    { value: 'unknown', label: t('common.unknown') },
-  ];
   const { data: media, isLoading: isLoadingMedia } = useEventMedia(
     event?.id ?? 0,
     isOpen && event !== null,
   );
-  const {
-    mutate: updateEvent,
-    isPending: isUpdating,
-    error: updateError,
-  } = useUpdateEvent();
+  const { mutateAsync: updateEvent, isPending: isUpdating } = useUpdateEvent();
   const { mutate: deleteEventMutation, isPending: isDeleting } =
     useDeleteEvent();
   const { mutate: runAnalyze, isPending: isAnalyzing } =
@@ -215,33 +117,21 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     enabled: Boolean(isOpen && eventId),
   });
 
-  const [activeTab, setActiveTab] = React.useState<'media' | 'analysis'>(
-    'media',
-  );
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [reidentifyOnDelete, setReidentifyOnDelete] = React.useState(false);
+  const [fixMode, setFixMode] = React.useState<'fix' | 'edit' | null>(null);
+  /* Set by the fix level so Escape steps back one rung of the ladder — out of
+     a picker, then out of the form — rather than dropping the whole drawer. */
+  const fixBackRef = React.useRef<(() => boolean) | null>(null);
+  const [isNoteDirty, setIsNoteDirty] = React.useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = React.useState(false);
 
   /** Prefer React Query payload so the modal stays in sync after mutations (e.g. reanalyze) while `event` from parent state may be stale. */
   const displayEvent = event ? (eventFromServer ?? event) : null;
-  const draftBaseline = React.useMemo(
-    () => ({
-      pet: displayEvent
-        ? attributionFromEvent(displayEvent)
-        : { petId: null, causedBy: 'unknown' as const },
-      eliminationType:
-        displayEvent?.data?.type === 'litterbox_use'
-          ? (displayEvent.data.elimination_type ?? 'unknown')
-          : 'unknown',
-      straining:
-        displayEvent?.data?.type === 'litterbox_use'
-          ? (displayEvent.data.straining ?? false)
-          : false,
-    }),
-    [displayEvent],
-  );
-  const draftBaselineKey = `${displayEvent?.id ?? 'new'}|${attributionSelectValue(draftBaseline.pet)}|${draftBaseline.eliminationType}|${draftBaseline.straining}`;
-  const { draft, patchDraft, isDirty, requestDiscard, discardConfirm } =
-    useDraftForm(draftBaseline, { baselineKey: draftBaselineKey });
+  const children =
+    eventFromServer && 'children' in eventFromServer
+      ? eventFromServer.children
+      : undefined;
 
   /** `event` is a list row without `raw_data`; only the detail fetch carries the signal. */
   const decodedRawData = React.useMemo(() => {
@@ -249,42 +139,16 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     return decodeLitterboxRawData(eventFromServer?.raw_data);
   }, [displayEvent, eventFromServer]);
 
-  const decodedWaterData = React.useMemo(() => {
-    if (displayEvent?.data?.type !== 'water_intake') return null;
-    return decodeWaterRawData(eventFromServer?.raw_data);
-  }, [displayEvent, eventFromServer]);
-
-  // Check if event has analysis data
-  const hasAnalysisData =
-    (displayEvent?.data?.type === 'litterbox_use' &&
-      (decodedRawData?.weights?.length ?? 0) > 0) ||
-    (displayEvent?.data?.type === 'water_intake' &&
-      (decodedWaterData?.weights?.length ?? 0) > 0);
-
-  const litterboxData =
-    displayEvent?.data?.type === 'litterbox_use' ? displayEvent.data : null;
-
-  const segmentPeriods: LitterboxAnalysisStatePeriod[] | null | undefined =
-    litterboxData?.segments;
-
-  const waterPeriods = React.useMemo(() => {
-    const w = decodedWaterData?.weights;
-    if (!w?.length) return [];
-    return analyzeWaterSegments(w);
-  }, [decodedWaterData]);
-
   const hasLitterboxChartWeights =
     displayEvent?.data?.type === 'litterbox_use' &&
     (decodedRawData?.weights?.length ?? 0) > 0;
 
-  const hasWaterChartWeights =
-    displayEvent?.data?.type === 'water_intake' &&
-    (decodedWaterData?.weights?.length ?? 0) > 0;
-
   React.useEffect(() => {
-    setActiveTab('media');
     setShowDeleteConfirm(false);
     setReidentifyOnDelete(false);
+    setFixMode(null);
+    setIsNoteDirty(false);
+    setShowDiscardConfirm(false);
   }, [event?.id]);
 
   const hasMedia = Boolean(media?.length);
@@ -299,11 +163,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     const timelapse =
       images.length > 1 || images.some((m) => m.relation === 'timelapse');
 
-    return {
-      imageFrames: images,
-      videoItems: videos,
-      hasTimelapse: timelapse,
-    };
+    return { imageFrames: images, videoItems: videos, hasTimelapse: timelapse };
   }, [media]);
 
   const timelapseTimeline = React.useMemo(() => {
@@ -319,65 +179,108 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     return null;
   }
 
-  const handlePetChange = (e: React.ChangeEvent<HTMLSelectElement>) =>
-    patchDraft({ pet: attributionFromSelectValue(e.target.value) });
+  const pet =
+    displayEvent.pet_id != null
+      ? pets?.find((p) => p.id === displayEvent.pet_id)
+      : undefined;
+  const device =
+    displayEvent.device_id != null
+      ? devices?.find((d) => d.id === displayEvent.device_id)
+      : undefined;
 
-  const handleEliminationTypeChange = (
-    e: React.ChangeEvent<HTMLSelectElement>,
-  ) => {
-    const parsed = parseLitterboxUseEliminationType(e.target.value);
-    if (!parsed) return;
-    patchDraft({
-      eliminationType: parsed,
+  const correction = deriveEventCorrection(displayEvent);
+
+  /*
+   * A camera on the device is what makes a missing clip worth showing. With
+   * one, an empty stage is a failure — the recording that should exist does
+   * not. Without one there was never going to be a clip, so the surface simply
+   * starts at the title.
+   *
+   * Gating on the camera rather than on the fetch is also what stops the flash:
+   * keying the stage off `isLoadingMedia` painted a black box on every event
+   * and then tore it down a moment later.
+   */
+  const hasCamera = device?.camera_link != null;
+  const showsStage = hasCamera || hasMedia;
+
+  /**
+   * Who the event is about. A settled non-pet cause is a subject too — naming
+   * the robot vacuum is the whole point of having the cause.
+   */
+  const subject =
+    displayEvent.caused_by === 'pet'
+      ? (pet?.name ?? t(causeLabelKey('pet')))
+      : displayEvent.caused_by === 'unknown'
+        ? null
+        : t(causeLabelKey(displayEvent.caused_by));
+
+  /*
+   * The title names the kind of event and nothing else. It used to be a
+   * sentence — "Jazz used the litter box" — which reads well until the cat is
+   * called Sir Thomas The Stinky, and which asks every translation to carry
+   * English subject-verb grammar. The cat moved to where every other fact
+   * about the event already lives.
+   */
+  const title = t(`event_details.title_${displayEvent.data.type}`);
+
+  /* One glyph either way — a person settled it. Which way they settled it is
+     the badge's name, not a second mark. */
+  const settledLabelKey =
+    correction.kind === 'settled' && correction.how === 'fixed'
+      ? 'event_details.fixed_by_you'
+      : 'event_details.verified_by_you';
+
+  const facts = buildEventFacts({ event: displayEvent, children, t });
+
+  /*
+   * The subject is a reading like any other, so it takes a slot rather than
+   * the headline — its glyph is the cat's own face, which is a better label
+   * than any word for it.
+   */
+  if (isPetEvent(displayEvent.data.type)) {
+    facts.unshift({
+      key: 'subject',
+      tone:
+        subject && displayEvent.caused_by === 'pet' ? 'identity' : 'neutral',
+      glyph:
+        displayEvent.caused_by === 'pet' ? (
+          <Avatar
+            size="sm"
+            src={pet?.avatar_url}
+            alt=""
+            fallbackIcon={<Cat size={16} aria-hidden />}
+          />
+        ) : (
+          <Cat aria-hidden />
+        ),
+      value: subject ?? t('event_details.fact_cat_unidentified'),
+      label: t('event_details.fact_cat'),
     });
+  }
+
+  /** The band is on screen, so it owns the restatement of what was guessed. */
+  const isAsking = correction.kind === 'guess' || correction.kind === 'assign';
+
+  const canDiscardCleanly = !isNoteDirty;
+  const handleClose = () => {
+    if (canDiscardCleanly) onClose();
+    else setShowDiscardConfirm(true);
   };
 
-  const handleStrainingChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    patchDraft({ straining: e.target.checked });
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isDirty) return;
-    const litterboxData =
-      displayEvent.data.type === 'litterbox_use'
-        ? {
-            ...displayEvent.data,
-            elimination_type: draft.eliminationType,
-            straining: draft.straining,
-            ...(draft.eliminationType !==
-              (displayEvent.data.elimination_type ?? 'unknown') && {
-              segments: null,
-            }),
-          }
-        : undefined;
-
-    updateEvent({
+  const handleVerify = () => {
+    void updateEvent({
       eventId: displayEvent.id,
-      data: {
-        ...attributionToPatch(draft.pet),
-        ...(litterboxData && { data: litterboxData }),
-        human_verified: true,
-      },
+      data: { human_verified: true },
+    }).catch(() => {
+      // Nothing was recorded, so the band simply stays and can be answered
+      // again — there is no half-verified state to explain.
     });
   };
 
-  const petOptions = attributionSelectOptions(pets, {
-    unknown: t('common.unknown'),
-    cause: (cause) => t(causeLabelKey(cause)),
-  });
-
-  const handleDeleteClick = () => {
-    setShowDeleteConfirm(true);
-    setReidentifyOnDelete(false);
-  };
-
-  const handleDeleteCancel = () => {
-    setShowDeleteConfirm(false);
-    setReidentifyOnDelete(false);
-  };
+  const handleSaveNote = (note: string) =>
+    updateEvent({ eventId: displayEvent.id, data: { note } });
 
   const handleDeleteConfirm = async () => {
-    if (!displayEvent) return;
     const deviceId = displayEvent.device_id;
     const after = displayEvent.timestamp;
 
@@ -395,253 +298,246 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     });
   };
 
-  const handleClose = () => requestDiscard(onClose);
+  const menuHasFix = showsFixInMenu(displayEvent, correction);
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent
           className="event-details-modal"
-          showCloseButton={!hasAnalysisData}
+          placement="sheet"
+          showCloseButton={false}
+          onEscapeKeyDown={(escape) => {
+            /* One rung at a time: out of a picker, then out of the form, and
+               only from the read surface does Escape close the drawer. */
+            if (fixBackRef.current?.()) escape.preventDefault();
+            else if (fixMode) {
+              escape.preventDefault();
+              setFixMode(null);
+            }
+          }}
         >
-          <Tabs
-            variant="bar"
-            value={activeTab}
-            onValueChange={(value) =>
-              setActiveTab(value as 'media' | 'analysis')
-            }
-          >
-            {/* The strip exists only when there is a second panel to reach.
-                Without it the dialog keeps its own floating close. */}
-            {hasAnalysisData && (
-              <TabsList>
-                <TabsTrigger value="media">
-                  <Image size={16} aria-hidden />
-                  {t('event_details.media')}
-                </TabsTrigger>
-                <TabsTrigger value="analysis">
-                  <Activity size={16} aria-hidden />
-                  {t('event_details.analysis')}
-                </TabsTrigger>
-                {/* Square, flush with the strip — the dialog's floating close
-                    would sit on top of the tabs. */}
-                <DialogClose
-                  type="button"
-                  className="event-details-tab-close"
-                  aria-label={t('common.close')}
-                  title={t('common.close')}
-                >
-                  <X size={18} aria-hidden />
-                </DialogClose>
-              </TabsList>
-            )}
-
-            <TabsContent value="media" className="event-details-stage">
-              {isLoadingMedia && (
-                <div className="event-details-stage-note">
-                  <Spinner size={24} />
-                </div>
-              )}
-              {!isLoadingMedia && !hasMedia && (
-                <div className="event-details-stage-note">
-                  <p>{t('event_details.no_media_available')}</p>
-                </div>
-              )}
-              {!isLoadingMedia && hasMedia && (
-                <div className="event-details-media-stack">
-                  {timelapseTimeline && (
-                    <TimelapsePlayer
-                      frames={timelapseTimeline.frames}
-                      durationSec={timelapseTimeline.durationSec}
-                      intervalSec={timelapseTimeline.intervalSec}
-                      alt={t('event_details.event_media_alt')}
-                    />
-                  )}
-                  {imageFrames.length === 1 && !hasTimelapse && (
-                    <div className="event-details-media-still">
-                      <FallbackImage
-                        src={`api/media/${imageFrames[0].file_path}`}
-                        alt={t('event_details.event_media_alt')}
-                        fit="contain"
-                        fallback={<ImageOff size={24} aria-hidden="true" />}
-                      />
+          {fixMode ? (
+            <EventFixForm
+              event={displayEvent}
+              eventChildren={children}
+              mode={fixMode}
+              onClose={() => setFixMode(null)}
+              registerBack={(back) => {
+                fixBackRef.current = back;
+              }}
+            />
+          ) : (
+            <>
+              {/*
+               * Media only. The signal chart used to share this space behind a
+               * Media|Analysis tab strip, which read as chrome bolted onto the top
+               * of the sheet — worse on a phone, where it sat where the grabber
+               * belongs. The signal is not lost, just homeless: it wants a surface
+               * of its own rather than half of this one, and that is a design
+               * still to be made.
+               *
+               * No clip means no stage at all: the surface starts at the headline
+               * rather than opening on an empty black box.
+               */}
+              {showsStage && (
+                <div className="event-details-stage">
+                  {isLoadingMedia && (
+                    <div className="event-details-stage-note">
+                      <Spinner size={24} />
                     </div>
                   )}
-                  {videoItems.map((m) => (
-                    <div key={m.id} className="event-details-media-video">
-                      <video controls src={`api/media/${m.file_path}`} />
+                  {!isLoadingMedia && !hasMedia && (
+                    /* The camera tab's own glyph for "nothing to show", and
+                       nothing else: the empty stage is the message. */
+                    <div
+                      className="event-details-stage-note"
+                      title={t('event_details.no_recording')}
+                      aria-label={t('event_details.no_recording')}
+                    >
+                      <VideoOff size={28} aria-hidden="true" />
                     </div>
-                  ))}
+                  )}
+                  {!isLoadingMedia && hasMedia && (
+                    <div className="event-details-media-stack">
+                      {timelapseTimeline && (
+                        <TimelapsePlayer
+                          frames={timelapseTimeline.frames}
+                          durationSec={timelapseTimeline.durationSec}
+                          intervalSec={timelapseTimeline.intervalSec}
+                          alt={t('event_details.event_media_alt')}
+                        />
+                      )}
+                      {imageFrames.length === 1 && !hasTimelapse && (
+                        <div className="event-details-media-still">
+                          <FallbackImage
+                            src={`api/media/${imageFrames[0].file_path}`}
+                            alt={t('event_details.event_media_alt')}
+                            fit="contain"
+                            fallback={<ImageOff size={24} aria-hidden="true" />}
+                          />
+                        </div>
+                      )}
+                      {videoItems.map((m) => (
+                        <div key={m.id} className="event-details-media-video">
+                          <video controls src={`api/media/${m.file_path}`} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
-            </TabsContent>
 
-            <TabsContent value="analysis" className="event-details-stage">
-              {hasLitterboxChartWeights && decodedRawData && (
-                <div className="event-details-chart">
-                  <WeightSignalChart
-                    className="event-details-chart-signal"
-                    weights={decodedRawData.weights}
-                    sampleRate={deriveLitterboxSampleRateHz(
-                      decodedRawData,
-                      litterboxData?.duration,
+              <div className="event-details-surface">
+                <div className="event-details-header">
+                  <div className="event-details-identity">
+                    <DialogTitle className="event-details-title">
+                      {title}
+                      {/* The timeline's own verified glyph, sized to the line
+                          it sits on — a settled event is a quiet fact, not an
+                          announcement. */}
+                      {correction.kind === 'settled' && (
+                        <span
+                          className="event-details-verified"
+                          title={t(settledLabelKey)}
+                          aria-label={t(settledLabelKey)}
+                        >
+                          <BadgeCheck aria-hidden />
+                        </span>
+                      )}
+                    </DialogTitle>
+                    <div className="event-details-meta">
+                      <span>
+                        {formatDateTime(new Date(displayEvent.timestamp))}
+                      </span>
+                      {device && <span>{device.name}</span>}
+                    </div>
+                  </div>
+
+                  <div className="event-details-actions">
+                    {/* You logged it, so nothing was guessed — Edit, not Fix. */}
+                    {correction.kind === 'manual' && (
+                      <Button
+                        type="button"
+                        variant="neutral"
+                        size="sm"
+                        onClick={() => setFixMode('edit')}
+                      >
+                        <Pencil size={15} aria-hidden />
+                        {t('common.edit')}
+                      </Button>
                     )}
-                    periods={segmentPeriods ?? EMPTY_LITTERBOX_SEGMENT_PERIODS}
-                  />
-                </div>
-              )}
-              {hasWaterChartWeights && decodedWaterData && (
-                <WaterSignalChart
-                  weights={decodedWaterData.weights}
-                  periods={waterPeriods}
-                />
-              )}
-            </TabsContent>
-          </Tabs>
-
-          <FormShell
-            className="event-details-body"
-            onSubmit={handleSave}
-            error={updateError instanceof Error ? updateError.message : null}
-            actionsSlot={
-              discardConfirm.open ? (
-                <FormInlineDiscard
-                  keepLabel={t('common.keep_editing')}
-                  discardLabel={t('common.discard')}
-                  onKeepEditing={discardConfirm.onCancel}
-                  onDiscard={discardConfirm.onConfirm}
-                  disabled={isUpdating}
-                />
-              ) : (
-                <FormActions
-                  onCancel={handleClose}
-                  cancelLabel={t('common.cancel')}
-                  submitLabel={t('common.save')}
-                  isSubmitting={isUpdating}
-                  submitDisabled={!isDirty}
-                />
-              )
-            }
-          >
-            <div className="event-details-header">
-              <div className="event-details-identity">
-                <DialogTitle className="event-details-title">
-                  {getEventTitle(displayEvent, t)}
-                </DialogTitle>
-                <span className="event-details-time">
-                  {displayEvent.timestamp
-                    ? formatDateTime(new Date(displayEvent.timestamp))
-                    : ''}
-                </span>
-              </div>
-              <div className="event-details-actions">
-                {hasLitterboxChartWeights && (
-                  <>
-                    {/* TODO: Hide for devices with visit annotation off — needs device context on the event (or similar) without an extra device fetch. */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          icon
+                          title={t('event_details.more_actions')}
+                          aria-label={t('event_details.more_actions')}
+                        >
+                          <MoreVertical size={18} aria-hidden />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {menuHasFix && (
+                          <DropdownMenuItem onSelect={() => setFixMode('fix')}>
+                            <Pencil size={15} aria-hidden />
+                            {t('event_details.fix')}
+                          </DropdownMenuItem>
+                        )}
+                        {hasLitterboxChartWeights && (
+                          /* TODO: Hide for devices with visit annotation off — needs device context on the event (or similar) without an extra device fetch. */
+                          <DropdownMenuItem
+                            disabled={isAnalyzing}
+                            onSelect={() => runAnalyze(displayEvent.id)}
+                          >
+                            <Sparkles size={15} aria-hidden />
+                            {t('event_details.analyze')}
+                          </DropdownMenuItem>
+                        )}
+                        {hasMedia && downloadMediaPath && (
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              const link = document.createElement('a');
+                              link.href = `api/media/${downloadMediaPath}`;
+                              link.download =
+                                downloadMediaPath.split('/').pop() || 'media';
+                              link.click();
+                            }}
+                          >
+                            <Download size={15} aria-hidden />
+                            {t('event_details.download_media')}
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          tone="danger"
+                          disabled={isDeleting}
+                          onSelect={() => {
+                            setShowDeleteConfirm(true);
+                            setReidentifyOnDelete(false);
+                          }}
+                        >
+                          <Trash2 size={15} aria-hidden />
+                          {t('event_details.delete_event')}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button
                       type="button"
                       variant="ghost"
                       icon
-                      title={t('event_details.analyze')}
-                      aria-label={t('event_details.analyze')}
-                      onClick={() => runAnalyze(displayEvent.id)}
-                      disabled={isAnalyzing}
+                      onClick={handleClose}
+                      title={t('common.close')}
+                      aria-label={t('common.close')}
                     >
-                      {isAnalyzing ? (
-                        <Spinner size={20} />
-                      ) : (
-                        <Sparkles size={20} aria-hidden />
-                      )}
+                      <X size={18} aria-hidden />
                     </Button>
-                  </>
-                )}
-                <Button
-                  variant="ghost"
-                  icon
-                  title={t('event_details.delete_event')}
-                  onClick={handleDeleteClick}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? <Spinner size={20} /> : <Trash2 size={20} />}
-                </Button>
-                {hasMedia && downloadMediaPath && (
-                  <Button
-                    variant="ghost"
-                    icon
-                    title={t('event_details.download_media')}
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = `api/media/${downloadMediaPath}`;
-                      link.download =
-                        downloadMediaPath.split('/').pop() || 'media';
-                      link.click();
-                    }}
-                  >
-                    <Download size={20} />
-                  </Button>
-                )}
-              </div>
-            </div>
+                  </div>
+                </div>
 
-            <div className="event-details-section">
-              <div className="event-details-section-label">
-                <Info size={14} aria-hidden />
-                <span>{t('event_details.pet_identification')}</span>
-              </div>
-              <div className="event-details-control">
-                <Select
-                  options={petOptions}
-                  value={attributionSelectValue(draft.pet)}
-                  onChange={handlePetChange}
-                  className="event-details-select"
-                  disabled={isUpdating}
+                <EventFacts facts={facts} />
+
+                {isAsking && (
+                  <EventCorrectionBand
+                    variant={correction.kind}
+                    subject={subject ?? undefined}
+                    basis={
+                      displayEvent.attributed_by
+                        ? t(
+                            `event_details.band_basis_${displayEvent.attributed_by}`,
+                          )
+                        : undefined
+                    }
+                    isBusy={isUpdating}
+                    onVerify={handleVerify}
+                    onFix={() => setFixMode('fix')}
+                  />
+                )}
+
+                <EventNoteField
+                  note={displayEvent.note}
+                  noteUpdatedAt={displayEvent.note_updated_at}
+                  onSave={handleSaveNote}
+                  onDirtyChange={setIsNoteDirty}
                 />
               </div>
-            </div>
-
-            {displayEvent.data?.type === 'litterbox_use' && (
-              <LitterboxWeightBlock parentEvent={displayEvent} />
-            )}
-
-            {displayEvent.data?.type === 'litterbox_use' && (
-              <div className="event-details-section">
-                <div className="event-details-section-label">
-                  <Info size={14} aria-hidden />
-                  <span>{t('event_details.event_type')}</span>
-                </div>
-                <div className="event-details-control">
-                  <Select
-                    options={eliminationTypeOptions}
-                    value={draft.eliminationType}
-                    onChange={handleEliminationTypeChange}
-                    className="event-details-select"
-                    disabled={isUpdating}
-                  />
-                  <label
-                    className={cn(
-                      'event-details-straining',
-                      isUpdating && 'is-disabled',
-                    )}
-                    htmlFor="event-details-straining"
-                  >
-                    <span>{t('annotation.straining')}</span>
-                    <Checkbox
-                      id="event-details-straining"
-                      checked={draft.straining}
-                      onChange={handleStrainingChange}
-                      disabled={isUpdating}
-                    />
-                  </label>
-                </div>
-              </div>
-            )}
-
-            <div className="event-details-extra">
-              <EventDetailsRenderer event={displayEvent} />
-            </div>
-          </FormShell>
+            </>
+          )}
         </DialogContent>
       </Dialog>
+
+      <DiscardUnsavedDialog
+        open={showDiscardConfirm}
+        onConfirm={() => {
+          setShowDiscardConfirm(false);
+          setIsNoteDirty(false);
+          onClose();
+        }}
+        onCancel={() => setShowDiscardConfirm(false)}
+      />
+
       <ConfirmDialog
         open={showDeleteConfirm}
         title={t('event_details.delete_visit')}
@@ -651,7 +547,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         variant="danger"
         isConfirming={isDeleting}
         onConfirm={() => void handleDeleteConfirm()}
-        onCancel={handleDeleteCancel}
+        onCancel={() => {
+          setShowDeleteConfirm(false);
+          setReidentifyOnDelete(false);
+        }}
       >
         <Checkbox
           checked={reidentifyOnDelete}
