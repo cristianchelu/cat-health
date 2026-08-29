@@ -27,6 +27,7 @@ function device(
   return {
     id: DEVICE_ID,
     provider_account_id: 1,
+    camera_link: null,
     provider: 'esphome',
     external_id: 'ext-1',
     name: 'Hall litterbox',

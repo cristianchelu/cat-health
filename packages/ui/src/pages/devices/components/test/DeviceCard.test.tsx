@@ -59,6 +59,7 @@ function device(overrides: Partial<DeviceListItemDTO> = {}): DeviceListItemDTO {
   return {
     id: 5,
     provider_account_id: 1,
+    camera_link: null,
     provider: 'surepet',
     external_id: 'fountain-5',
     name: 'Kitchen fountain',

@@ -196,7 +196,15 @@ export const GetDeviceResponseSchema = Type.Object({
       Type.Array(Type.Object({ id: Type.Number(), file_path: Type.String() })),
     ),
   ),
-  camera_link: Type.Optional(DeviceCameraLinkSchema),
+  /**
+   * The camera this device records through, or `null` when it has none.
+   *
+   * Required and nullable rather than optional: optional means "may be
+   * absent", which a handler satisfies by simply forgetting the join — and
+   * that is exactly what happened, silently, for every device the list route
+   * returned. Nullable makes the compiler ask every route what the answer is.
+   */
+  camera_link: Type.Union([DeviceCameraLinkSchema, Type.Null()]),
   created_at: Type.String(),
   updated_at: Type.String(),
 });

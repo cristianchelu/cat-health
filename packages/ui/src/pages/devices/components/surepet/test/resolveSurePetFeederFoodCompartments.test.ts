@@ -8,6 +8,7 @@ function feeder(state: unknown): GetDeviceResponseDTO {
   return {
     id: 1,
     provider_account_id: 1,
+    camera_link: null,
     provider: 'surepet',
     external_id: 'feeder-1',
     name: 'Kitchen feeder',

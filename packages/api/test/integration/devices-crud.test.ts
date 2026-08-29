@@ -425,7 +425,9 @@ describe('devices API CRUD', () => {
           url: `/api/devices/${litterbox.id}/camera`,
         });
         assert.equal(del.statusCode, 200);
-        assert.equal(del.json().camera_link, undefined);
+        /* Null, not absent: the field is always answered now, so "no camera"
+           is a value rather than a missing key. */
+        assert.equal(del.json().camera_link, null);
 
         const patchMissing = await app.inject({
           method: 'PATCH',

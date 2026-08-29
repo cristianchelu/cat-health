@@ -133,6 +133,26 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     });
   }
 
+  /**
+   * A stored camera link on the wire, or `null` when the device has none.
+   *
+   * `config` is nullable in the database but absent-or-object on the wire, so
+   * the null has to be dropped here — passing it straight through produced a
+   * device that failed its own response schema, which the previously optional
+   * `camera_link` hid by not looking.
+   */
+  const toCameraLink = (row: {
+    camera_id: number | null;
+    camera_config: unknown;
+  }): GetDeviceResponseDTO['camera_link'] => {
+    if (!row.camera_id) return null;
+    const config =
+      typeof row.camera_config === 'string'
+        ? JSON.parse(row.camera_config)
+        : row.camera_config;
+    return { camera_id: row.camera_id, ...(config ? { config } : {}) };
+  };
+
   const mapDevice = async (
     device: DeviceWithProvider,
     { includeState = true }: { includeState?: boolean } = {},
@@ -147,6 +167,9 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       config: parseJsonValue(device.config),
       enabled: Boolean(device.enabled),
       account_enabled: Boolean(device.account_enabled),
+      /* No link unless a caller joined one and says otherwise. Stated here so
+         every route answers the question rather than skipping it. */
+      camera_link: null,
       created_at: new Date(device.created_at).toISOString(),
       updated_at: new Date(device.updated_at).toISOString(),
       last_seen: device.last_seen
@@ -621,12 +644,25 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           'device.provider_account_id',
           'provider_account.id',
         )
+        // The camera link travels with the row, as it does on GET /:id. It was
+        // missing here only by omission, and the DTO declaring it optional made
+        // that look deliberate: a caller reading `camera_link` off a listed
+        // device got `undefined` for a device that plainly has one.
+        .leftJoin('device_camera', 'device.id', 'device_camera.device_id')
         .selectAll('device')
         .select('provider_account.provider as provider')
         .select('provider_account.enabled as account_enabled')
+        .select([
+          'device_camera.camera_id as camera_id',
+          'device_camera.config as camera_config',
+        ])
         .execute();
       const mapped = await Promise.all(
-        devices.map((d) => mapDevice(d, { includeState: false })),
+        devices.map(async (d) => {
+          const device = await mapDevice(d, { includeState: false });
+          device.camera_link = toCameraLink(d);
+          return device;
+        }),
       );
       await Promise.all([
         enrichReferenceMedia(mapped),
@@ -727,15 +763,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .executeTakeFirst();
       if (!device) throw new Error('Device not found');
       const mapped = await mapDevice(device);
-      if (device.camera_id) {
-        mapped.camera_link = {
-          camera_id: device.camera_id,
-          config:
-            typeof device.camera_config === 'string'
-              ? JSON.parse(device.camera_config)
-              : device.camera_config,
-        };
-      }
+      mapped.camera_link = toCameraLink(device);
       await Promise.all([
         enrichReferenceMedia([mapped]),
         enrichLitterboxDeposits([mapped]),
@@ -863,15 +891,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       if (!device) throw new Error('Device not found');
 
       const mapped = await mapDevice(device);
-      if (device.camera_id) {
-        mapped.camera_link = {
-          camera_id: device.camera_id,
-          config:
-            typeof device.camera_config === 'string'
-              ? JSON.parse(device.camera_config)
-              : device.camera_config,
-        };
-      }
+      mapped.camera_link = toCameraLink(device);
 
       await enrichReferenceMedia([mapped]);
       return mapped;

@@ -29,6 +29,7 @@ function device(overrides: Partial<DeviceListItemDTO>): DeviceListItemDTO {
   return {
     id: 1,
     provider_account_id: 1,
+    camera_link: null,
     provider: 'esphome',
     external_id: 'ext-1',
     name: 'Device',
