@@ -1,100 +1,43 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
-import {
-  type GetEventChildDTO,
-  type GetEventListItemDTO,
-  type GetEventWithChildrenDTO,
-} from 'shared';
 import { Button } from '@/components/ui/Button';
 import { Checkbox, FormActions } from '@/components/ui/form';
-import { addEvent } from '@/api/pets';
-import { reidentifyLitterboxVisits } from '@/api/devices';
 import {
-  invalidateQueriesAfterEventPatch,
-  useDeleteEvent,
-  useUpdateEvent,
-} from '@/hooks/queries/eventQueries';
+  gramsToKgDisplay,
+  gramsToKgInput,
+  MAX_WEIGHT_G,
+  MIN_WEIGHT_G,
+  parseKgInput,
+  useLitterboxWeightEdit,
+  WeightOutOfRangeError,
+  type LitterboxWeightParentEvent,
+} from './useLitterboxWeightEdit';
 import './LitterboxWeightBlock.css';
 
-const MIN_WEIGHT_G = 500;
-const MAX_WEIGHT_G = 20_000;
-
-type ParentEvent =
-  | GetEventWithChildrenDTO
-  | (GetEventListItemDTO & { children?: GetEventChildDTO[] });
-
-function findWeightChild(parent: ParentEvent): GetEventChildDTO | undefined {
-  return parent.children?.find(
-    (child) => child.data.type === 'weight_measurement',
-  );
-}
-
-function gramsToKgDisplay(grams: number): string {
-  return `${(grams / 1000).toFixed(2)} kg`;
-}
-
-function parseKgInput(value: string): number | null {
-  const trimmed = value.trim();
-  if (trimmed === '') return null;
-  const kg = Number.parseFloat(trimmed);
-  if (!Number.isFinite(kg)) return null;
-  return Math.round(kg * 1000);
-}
-
 export interface LitterboxWeightBlockProps {
-  parentEvent: ParentEvent;
+  parentEvent: LitterboxWeightParentEvent;
 }
 
+/**
+ * The visit's cat weight, read and corrected in place.
+ *
+ * Kept for the annotation workspace, where the weight sits beside the signal
+ * being annotated. The event details surface reaches the same edit through its
+ * one fix form instead — see `EventFixDialog`.
+ */
 const LitterboxWeightBlock = ({ parentEvent }: LitterboxWeightBlockProps) => {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const { mutateAsync: updateEvent, isPending: isUpdating } = useUpdateEvent();
-  const { mutateAsync: deleteEvent, isPending: isDeleting } = useDeleteEvent();
-
-  const weightChild = findWeightChild(parentEvent);
-  const weightGrams =
-    weightChild?.data.type === 'weight_measurement'
-      ? weightChild.data.weight
-      : null;
+  const { weightGrams, saveWeight, isSaving } =
+    useLitterboxWeightEdit(parentEvent);
 
   const [isEditing, setIsEditing] = React.useState(false);
   const [draftKg, setDraftKg] = React.useState('');
   const [reidentifyAfterSave, setReidentifyAfterSave] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const isSaving = isUpdating || isDeleting;
-
-  const refreshAfterChange = React.useCallback(async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ['event', parentEvent.id],
-    });
-    invalidateQueriesAfterEventPatch(queryClient);
-    if (parentEvent.pet_id != null) {
-      await queryClient.invalidateQueries({
-        queryKey: ['weightTrends', parentEvent.pet_id],
-      });
-    }
-  }, [parentEvent.id, parentEvent.pet_id, queryClient]);
-
-  const runReidentifyIfNeeded = React.useCallback(async () => {
-    if (!reidentifyAfterSave || parentEvent.device_id == null) return;
-    await reidentifyLitterboxVisits(
-      parentEvent.device_id,
-      parentEvent.timestamp,
-    );
-    invalidateQueriesAfterEventPatch(queryClient);
-    await queryClient.invalidateQueries({ queryKey: ['litterboxTrends'] });
-  }, [
-    parentEvent.device_id,
-    parentEvent.timestamp,
-    queryClient,
-    reidentifyAfterSave,
-  ]);
-
   const startEdit = () => {
-    setDraftKg(weightGrams != null ? (weightGrams / 1000).toFixed(2) : '');
+    setDraftKg(weightGrams != null ? gramsToKgInput(weightGrams) : '');
     setReidentifyAfterSave(false);
     setError(null);
     setIsEditing(true);
@@ -107,40 +50,17 @@ const LitterboxWeightBlock = ({ parentEvent }: LitterboxWeightBlockProps) => {
 
   const handleSave = async () => {
     setError(null);
-    const grams = parseKgInput(draftKg);
-
     try {
-      if (grams === null) {
-        if (weightChild) {
-          await deleteEvent(weightChild.id);
-        }
-      } else if (grams < MIN_WEIGHT_G || grams > MAX_WEIGHT_G) {
-        setError(t('event_details.weight_out_of_range'));
-        return;
-      } else if (weightChild) {
-        await updateEvent({
-          eventId: weightChild.id,
-          data: {
-            data: { type: 'weight_measurement', weight: grams },
-            human_verified: true,
-          },
-        });
-      } else {
-        await addEvent({
-          parent_event_id: parentEvent.id,
-          pet_id: parentEvent.pet_id,
-          device_id: parentEvent.device_id,
-          timestamp: parentEvent.timestamp,
-          data: { type: 'weight_measurement', weight: grams },
-          human_verified: true,
-        });
-      }
-
-      await runReidentifyIfNeeded();
-      await refreshAfterChange();
+      await saveWeight(parseKgInput(draftKg), {
+        reidentify: reidentifyAfterSave,
+      });
       setIsEditing(false);
-    } catch {
-      setError(t('event_details.weight_save_failed'));
+    } catch (e) {
+      setError(
+        e instanceof WeightOutOfRangeError
+          ? t('event_details.weight_out_of_range')
+          : t('event_details.weight_save_failed'),
+      );
     }
   };
 
