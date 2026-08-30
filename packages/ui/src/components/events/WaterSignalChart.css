@@ -1,27 +1,9 @@
+/*
+ * Trace and key, stacked. The recess, the line colour and the band geometry
+ * are `SignalTrace`'s; what is left here is the column the two sit in.
+ */
 .water-signal-chart {
-  position: relative;
-  width: 100%;
-  height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--color-signal-surface);
-
-  svg {
-    flex: 1;
-    width: 100%;
-    min-height: 0;
-    background: var(--color-signal-surface);
-  }
-
-  .chart-duration {
-    position: absolute;
-    top: var(--space-xs);
-    right: var(--space-xs);
-    font-size: var(--text-xs);
-    color: var(--color-text-muted);
-    background: var(--color-surface);
-    padding: var(--space-3xs) var(--space-xs);
-    border-radius: var(--radius-sm);
-    opacity: 0.8;
-  }
+  width: 100%;
 }

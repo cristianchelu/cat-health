@@ -7,6 +7,7 @@ import {
 } from '@/components/charts/ChartLegend';
 import { createPath } from '@/components/charts/path';
 import { downsample } from '@/components/charts/downsample';
+import { paddedRange } from '@/components/charts/range';
 import type { LitterboxAnalysisStatePeriod as StatePeriod } from 'shared';
 import type { LitterboxBoutAnnotation } from '@/types/litterbox';
 
@@ -73,19 +74,6 @@ function boutTimeToSampleRange(
   const a = clamp(Math.floor(tStartS * sampleRate), 0, last);
   const b = clamp(Math.ceil(tEndS * sampleRate), 0, last);
   return { start: Math.min(a, b), end: Math.max(a, b) };
-}
-
-/** Single pass; avoid Math.min/max(...arr) on large arrays (re-renders per pointer frame during drag). */
-function arrayMinMax(arr: number[]): { min: number; max: number } {
-  if (arr.length === 0) return { min: 0, max: 0 };
-  let min = arr[0]!;
-  let max = arr[0]!;
-  for (let i = 1; i < arr.length; i++) {
-    const v = arr[i]!;
-    if (v < min) min = v;
-    if (v > max) max = v;
-  }
-  return { min, max };
 }
 
 type DragMode =
@@ -196,15 +184,10 @@ const WeightSignalChartInner = React.forwardRef<
     );
     const scaleFactor = weights.length / displayWeights.length;
 
-    const { paddedMin, paddedMax } = React.useMemo(() => {
-      const { min: minWeight, max: maxWeight } = arrayMinMax(weights);
-      const range = maxWeight - minWeight || 1;
-      const padding = range * 0.1;
-      return {
-        paddedMin: minWeight - padding,
-        paddedMax: maxWeight + padding,
-      };
-    }, [weights]);
+    const { min: paddedMin, max: paddedMax } = React.useMemo(
+      () => paddedRange(weights),
+      [weights],
+    );
 
     const chartHeight = SVG_HEIGHT;
     const svgHeight = isInteractive ? SVG_HEIGHT + AXIS_HEIGHT : SVG_HEIGHT;
