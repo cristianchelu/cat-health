@@ -204,6 +204,18 @@ These are the rules that keep chrome from drifting between routes. Each one exis
 
 ### Component Architecture
 
+#### Composition over extension
+
+**Strong preference: compose. Do not extend, and never duplicate.** When something needs to do more, the answer is another part composed alongside the existing ones — not a prop that switches what the component _is_, and not a second component that copies the first one's machinery in order to add one mark to it.
+
+The test: a prop that changes what a component **looks like** is fine — `ChartLegend`'s `bar` / `inline` resolves to a class and nothing else. A prop that changes what a component is **made of** — adding structure, handlers, or whole regions — is the wrong shape.
+
+The shape to reach for: the parent owns the shared machinery (the scale, the layout, the measuring, the state) and publishes it through context; every mark, field, or panel is a child that asks for what it needs and draws itself. Adding a capability is then an import and a child declaration, and the parent never learns what the new thing is. `components/charts/Trace.tsx` + `TraceLayers.tsx` + `traceScale.ts` is the worked example.
+
+**Do not cite this codebase as precedent for the opposite.** Most of it predates this rule. "The neighbouring component does it this way" is a **finding, not a justification** — treat what you find as work to flag and migrate, not as a pattern to copy. Known open case: `WeightSignalChart` gates **27 sites** off one `isInteractive` flag — axis strip, playhead, pointer handlers, bout shading, μ/σ overlays — which is two components wearing one name. Expect more; the shape to spot is a boolean or `mode` prop guarding whole regions, and two files carrying the same scaling/measuring code.
+
+When you meet one: migrate it if you are already editing that file, and say so. If the migration is genuinely a separate change — `WeightSignalChart`'s pointer math depends on its letterboxed `meet` viewBox, so folding it in moves the coordinate system with drag behaviour riding on it — flag it explicitly in your summary instead of quietly extending it further. **Never add a new branch to a flag that is already the problem.**
+
 #### TypeScript Component Pattern
 
 ```tsx
