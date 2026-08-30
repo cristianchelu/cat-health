@@ -8,6 +8,7 @@
     width: var(--space-sm);
     height: var(--space-sm);
     border-radius: var(--radius-full);
+    /* Only a tone the palette does not know falls back to the muted dot. */
     background-color: var(--color-surface-muted);
 
     /* The litterbox domain colours, shared with the elimination charts. */
