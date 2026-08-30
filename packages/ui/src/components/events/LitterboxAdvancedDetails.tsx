@@ -1,45 +1,24 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  deriveLitterboxSampleRateHz,
-  type LitterboxAnalysisStatePeriod,
-  type LitterboxUseEventDataDTO,
-} from 'shared';
+import type { LitterboxUseEventDataDTO } from 'shared';
 
 import { ChartLegend } from '@/components/charts/ChartLegend';
 import { Trace } from '@/components/charts/Trace';
-import {
-  TraceBands,
-  TraceLine,
-  type TraceBand,
-} from '@/components/charts/TraceLayers';
+import { TraceBands, TraceLine } from '@/components/charts/TraceLayers';
 import { ReadoutGrid } from '@/components/ui/ReadoutGrid';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 
 import type { DecodedLitterboxRawData } from './decodeLitterboxRawData';
-import { formatSigmaG, trimmedSliceMeanSigma } from './litterboxPeriodStats';
+import { formatSigmaG } from './litterboxPeriodStats';
 import { formatClock } from './advancedDetailsFormat';
-
-/** The shipped palette; the same four names the analyzer emits. */
-const STATE_COLORS: Record<string, string> = {
-  entering: 'var(--color-signal-entering)',
-  occupied: 'var(--color-signal-occupied)',
-  eliminating: 'var(--color-signal-eliminating)',
-  gap: 'var(--color-signal-gap)',
-};
-
-const STATE_LABEL_KEYS: Record<string, string> = {
-  entering: 'event_details.legend_entering',
-  occupied: 'event_details.legend_occupied',
-  eliminating: 'event_details.legend_eliminating',
-  gap: 'event_details.legend_gap',
-};
-
-const ELIMINATION_LABEL_KEYS: Record<string, string> = {
-  urination: 'overview.urination',
-  defecation: 'overview.defecation',
-};
+import {
+  buildLitterboxAdvancedModel,
+  ELIMINATION_LABEL_KEYS,
+  LITTERBOX_STATE_COLORS,
+  LITTERBOX_STATE_LABEL_KEYS,
+} from './litterboxAdvancedModel';
+import { SegmentTable, type SegmentTableRow } from './SegmentTable';
 
 export interface LitterboxAdvancedDetailsProps {
   data: LitterboxUseEventDataDTO;
@@ -49,10 +28,10 @@ export interface LitterboxAdvancedDetailsProps {
 /**
  * A visit as the load cell saw it: the trace, and the analyzer's sections.
  *
- * The table is the payoff. σ is what the device thresholds to tell urination
- * from defecation, so the eliminating row carries both the number and the
- * verdict it produced — the arrow is the classifier's answer written next to
- * its input.
+ * The container half — it turns the model's numbers into words and hands them
+ * to the views. The table is the payoff: σ is what the device thresholds to
+ * tell urination from defecation, so the eliminating row carries both the
+ * number and the verdict it produced.
  *
  * The threshold itself is deliberately not drawn. It lives on the API's
  * `StateAnalyzer` as a per-device setting that never reaches the event, so any
@@ -66,32 +45,38 @@ const LitterboxAdvancedDetails: React.FC<LitterboxAdvancedDetailsProps> = ({
   const { t } = useTranslation();
   const { formatNumber } = useFormatters();
 
-  const weights = decoded.weights;
-  /* v2 blobs carry per-sample offsets, so the real rate is ~7.3 Hz on the
-     hardware rather than the nominal 10 the legacy path assumed. */
-  const sampleRateHz = deriveLitterboxSampleRateHz(decoded, data.duration);
-  /* Stable across renders so the bands below are not rebuilt on every one —
-     an absent `segments` is a fresh literal each time otherwise. */
-  const segments = React.useMemo<LitterboxAnalysisStatePeriod[]>(
-    () => data.segments ?? [],
-    [data.segments],
+  const model = React.useMemo(
+    () => buildLitterboxAdvancedModel(data, decoded),
+    [data, decoded],
   );
 
-  const bands = React.useMemo<TraceBand[]>(
-    () =>
-      segments.map((segment, i) => ({
-        key: `${segment.state}-${i}`,
-        start: segment.start,
-        end: segment.end,
-        color: STATE_COLORS[segment.state] ?? 'transparent',
-      })),
-    [segments],
-  );
+  const sigmaGrams = (value: number | null) =>
+    value == null
+      ? '—'
+      : t('event_details.advanced_grams', { value: formatSigmaG(value) });
+  const wholeGrams = (value: number | null) =>
+    value == null
+      ? '—'
+      : t('event_details.advanced_grams', {
+          value: formatNumber(Math.round(value)),
+        });
 
-  const grams = (value: number) =>
-    t('event_details.advanced_grams', {
-      value: formatNumber(Math.round(value)),
-    });
+  const rows: SegmentTableRow[] = model.sections.map((section) => ({
+    key: section.key,
+    color: section.color,
+    name: t(
+      LITTERBOX_STATE_LABEL_KEYS[section.state] ??
+        'event_details.advanced_section',
+    ),
+    note:
+      section.eliminationType == null
+        ? undefined
+        : t('event_details.advanced_classified_as', {
+            value: t(ELIMINATION_LABEL_KEYS[section.eliminationType]),
+          }),
+    length: formatClock(section.lengthSeconds),
+    spread: sigmaGrams(section.sigma),
+  }));
 
   return (
     <>
@@ -99,24 +84,24 @@ const LitterboxAdvancedDetails: React.FC<LitterboxAdvancedDetailsProps> = ({
         <SectionLabel
           aside={[
             t('event_details.advanced_samples', {
-              value: formatNumber(weights.length),
+              value: formatNumber(model.weights.length),
             }),
             t('event_details.advanced_sample_rate', {
-              value: sampleRateHz.toFixed(1),
+              value: model.sampleRateHz.toFixed(1),
             }),
           ].join(' · ')}
         >
           {t('event_details.advanced_weight_signal')}
         </SectionLabel>
-        <Trace values={weights}>
-          <TraceBands bands={bands} />
+        <Trace values={model.weights}>
+          <TraceBands bands={model.bands} />
           <TraceLine />
         </Trace>
         <ChartLegend
           variant="inline"
-          items={Object.keys(STATE_COLORS).map((state) => ({
-            tone: STATE_COLORS[state],
-            label: t(STATE_LABEL_KEYS[state]),
+          items={Object.keys(LITTERBOX_STATE_COLORS).map((state) => ({
+            tone: LITTERBOX_STATE_COLORS[state],
+            label: t(LITTERBOX_STATE_LABEL_KEYS[state]),
           }))}
         />
         <ReadoutGrid
@@ -124,99 +109,35 @@ const LitterboxAdvancedDetails: React.FC<LitterboxAdvancedDetailsProps> = ({
             {
               key: 'length',
               label: t('event_details.advanced_length'),
-              value: formatClock(data.duration),
+              value: formatClock(model.durationSeconds),
             },
             {
               key: 'start-weight',
               label: t('event_details.advanced_start_weight'),
-              value: weights.length > 0 ? grams(weights[0]) : '—',
+              value: wholeGrams(model.startWeight),
             },
             {
               key: 'end-weight',
               label: t('event_details.advanced_end_weight'),
-              value:
-                weights.length > 0 ? grams(weights[weights.length - 1]) : '—',
+              value: wholeGrams(model.endWeight),
             },
           ]}
         />
       </section>
 
-      {segments.length > 0 && (
+      {rows.length > 0 && (
         <section className="event-advanced-section">
           <SectionLabel>
             {t('event_details.advanced_detected_sections')}
           </SectionLabel>
-          {/*
-           * A real table: four columns of one kind of thing each, which is
-           * what a screen reader needs to read the σ back against the section
-           * it belongs to. Only this page has one, so its skin stays here.
-           */}
-          <table className="segment-table">
-            <thead>
-              <tr>
-                <th scope="col">
-                  <span className="sr-only">
-                    {t('event_details.advanced_section')}
-                  </span>
-                </th>
-                <th scope="col">{t('event_details.advanced_section')}</th>
-                <th scope="col">{t('event_details.advanced_length')}</th>
-                <th scope="col">{t('event_details.advanced_sigma_load')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {segments.map((segment, i) => {
-                const stats = trimmedSliceMeanSigma(
-                  weights,
-                  segment.start,
-                  segment.end,
-                );
-                const eliminationKey =
-                  segment.elimination_type == null
-                    ? null
-                    : ELIMINATION_LABEL_KEYS[segment.elimination_type];
-                return (
-                  <tr key={`${segment.state}-${i}`}>
-                    <td>
-                      <span
-                        className="segment-table-swatch"
-                        style={{
-                          background:
-                            STATE_COLORS[segment.state] ?? 'transparent',
-                        }}
-                        aria-hidden="true"
-                      />
-                    </td>
-                    <th scope="row">
-                      {t(
-                        STATE_LABEL_KEYS[segment.state] ??
-                          'event_details.advanced_section',
-                      )}
-                      {eliminationKey != null && (
-                        <small>
-                          {t('event_details.advanced_classified_as', {
-                            value: t(eliminationKey),
-                          })}
-                        </small>
-                      )}
-                    </th>
-                    <td className="segment-table-number">
-                      {formatClock(
-                        (segment.end - segment.start) / sampleRateHz,
-                      )}
-                    </td>
-                    <td className="segment-table-number quiet">
-                      {stats == null
-                        ? '—'
-                        : t('event_details.advanced_grams', {
-                            value: formatSigmaG(stats.sigma),
-                          })}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <SegmentTable
+            columns={{
+              name: t('event_details.advanced_section'),
+              length: t('event_details.advanced_length'),
+              spread: t('event_details.advanced_sigma_load'),
+            }}
+            rows={rows}
+          />
         </section>
       )}
     </>

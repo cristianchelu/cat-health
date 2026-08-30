@@ -1,8 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  analyzeWaterRates,
-  analyzeWaterSegments,
   DRINKING_RATE_MAX_ML_PER_MIN,
   type WaterIntakeEventDataDTO,
 } from 'shared';
@@ -17,9 +15,7 @@ import {
   TraceMarker,
   TraceRule,
   TraceRuleLabel,
-  type TraceBand,
 } from '@/components/charts/TraceLayers';
-import { zeroAnchoredRange } from '@/components/charts/range';
 import { ReadoutGrid } from '@/components/ui/ReadoutGrid';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
@@ -27,6 +23,7 @@ import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import type { DecodedWaterRawData } from './decodeWaterRawData';
 import WaterSignalChart from './WaterSignalChart';
 import { formatClock } from './advancedDetailsFormat';
+import { buildWaterAdvancedModel } from './waterAdvancedModel';
 
 /** Both tracks share a height so the same second sits at the same x on each. */
 const TRACK_HEIGHT = 88;
@@ -34,11 +31,6 @@ const TRACK_HEIGHT = 88;
 export interface WaterAdvancedDetailsProps {
   data: WaterIntakeEventDataDTO;
   decoded: DecodedWaterRawData;
-}
-
-interface RatePeak {
-  value: number;
-  index: number;
 }
 
 /**
@@ -58,75 +50,21 @@ const WaterAdvancedDetails: React.FC<WaterAdvancedDetailsProps> = ({
   const { t } = useTranslation();
   const { formatNumber } = useFormatters();
 
-  const weights = decoded.weights;
-  const periods = React.useMemo(() => analyzeWaterSegments(weights), [weights]);
-  const series = React.useMemo(() => analyzeWaterRates(weights), [weights]);
-  const rates = series.rates;
-
-  const durationSeconds =
-    data.duration ??
-    (series.sampleRateHz > 0 ? weights.length / series.sampleRateHz : 0);
-
-  /*
-   * Read off the periods rather than off the whole series: the mean of every
-   * sample would be an average over the stretches the analyzer already threw
-   * away, which is the opposite of what "mean intake" means.
-   */
-  const stats = React.useMemo(() => {
-    const drinking: RatePeak = { value: 0, index: -1 };
-    const excluded: RatePeak = { value: 0, index: -1 };
-    let sum = 0;
-    let count = 0;
-    for (const period of periods) {
-      if (period.state === 'noise') continue;
-      const peak = period.state === 'drinking' ? drinking : excluded;
-      for (let i = period.start; i < period.end && i < rates.length; i++) {
-        const rate = rates[i];
-        if (period.state === 'drinking') {
-          sum += rate;
-          count += 1;
-        }
-        if (rate > peak.value) {
-          peak.value = rate;
-          peak.index = i;
-        }
-      }
-    }
-    return { drinking, excluded, mean: count > 0 ? sum / count : 0 };
-  }, [periods, rates]);
-
-  const spillBands = React.useMemo<TraceBand[]>(
-    () =>
-      periods
-        .filter((period) => period.state === 'spill')
-        .map((period, i) => ({
-          key: `spill-${i}`,
-          start: period.start,
-          end: period.end,
-          color: 'var(--color-signal-spill)',
-        })),
-    [periods],
+  const model = React.useMemo(
+    () => buildWaterAdvancedModel(data, decoded.weights),
+    [data, decoded],
   );
 
-  const mlPerMin = React.useCallback(
-    (value: number) =>
-      t('event_details.advanced_ml_per_min', {
-        value: formatNumber(Math.round(value)),
-      }),
-    [t, formatNumber],
-  );
-
-  /* Read against zero, and with the ceiling on screen whether or not the cat
-     ever came near it — a threshold outside the box classifies nothing. */
-  const rateDomain = React.useMemo(
-    () => zeroAnchoredRange(rates, [DRINKING_RATE_MAX_ML_PER_MIN]),
-    [rates],
-  );
-
-  const grams = (value: number) =>
-    t('event_details.advanced_grams', {
+  const mlPerMin = (value: number) =>
+    t('event_details.advanced_ml_per_min', {
       value: formatNumber(Math.round(value)),
     });
+  const grams = (value: number | null) =>
+    value == null
+      ? '—'
+      : t('event_details.advanced_grams', {
+          value: formatNumber(Math.round(value)),
+        });
 
   return (
     <>
@@ -134,18 +72,18 @@ const WaterAdvancedDetails: React.FC<WaterAdvancedDetailsProps> = ({
         <SectionLabel
           aside={[
             t('event_details.advanced_samples', {
-              value: formatNumber(weights.length),
+              value: formatNumber(model.weights.length),
             }),
             t('event_details.advanced_smoothing_ema', {
-              value: series.emaSpan,
+              value: model.emaSpan,
             }),
           ].join(' · ')}
         >
           {t('event_details.advanced_bowl_load')}
         </SectionLabel>
         <WaterSignalChart
-          weights={weights}
-          periods={periods}
+          weights={model.weights}
+          periods={model.periods}
           legendVariant="inline"
           height={TRACK_HEIGHT}
         />
@@ -154,18 +92,17 @@ const WaterAdvancedDetails: React.FC<WaterAdvancedDetailsProps> = ({
             {
               key: 'length',
               label: t('event_details.advanced_length'),
-              value: formatClock(durationSeconds),
+              value: formatClock(model.durationSeconds),
             },
             {
               key: 'start-weight',
               label: t('event_details.advanced_start_weight'),
-              value: weights.length > 0 ? grams(weights[0]) : '—',
+              value: grams(model.startWeight),
             },
             {
               key: 'end-weight',
               label: t('event_details.advanced_end_weight'),
-              value:
-                weights.length > 0 ? grams(weights[weights.length - 1]) : '—',
+              value: grams(model.endWeight),
             },
           ]}
         />
@@ -174,38 +111,38 @@ const WaterAdvancedDetails: React.FC<WaterAdvancedDetailsProps> = ({
       <section className="event-advanced-section">
         <SectionLabel
           aside={t('event_details.advanced_rate_window', {
-            value: series.windowSeconds,
+            value: model.windowSeconds,
           })}
         >
           {t('event_details.advanced_intake_rate')}
         </SectionLabel>
         <Trace
-          values={rates}
-          domain={rateDomain}
+          values={model.rates}
+          domain={model.rateDomain}
           height={TRACK_HEIGHT}
           overlay={
             <>
               <TraceRuleLabel value={DRINKING_RATE_MAX_ML_PER_MIN}>
                 {mlPerMin(DRINKING_RATE_MAX_ML_PER_MIN)}
               </TraceRuleLabel>
-              {stats.drinking.index >= 0 && (
-                <TraceMarker index={stats.drinking.index}>
-                  {mlPerMin(stats.drinking.value)}
+              {model.peakIntake.index >= 0 && (
+                <TraceMarker index={model.peakIntake.index}>
+                  {mlPerMin(model.peakIntake.value)}
                 </TraceMarker>
               )}
-              {stats.excluded.index >= 0 && (
-                <TraceMarker index={stats.excluded.index} tone="alert">
-                  {mlPerMin(stats.excluded.value)}
+              {model.peakExcluded.index >= 0 && (
+                <TraceMarker index={model.peakExcluded.index} tone="alert">
+                  {mlPerMin(model.peakExcluded.value)}
                 </TraceMarker>
               )}
               <TraceAxis
                 start={formatClock(0)}
-                end={formatClock(durationSeconds)}
+                end={formatClock(model.durationSeconds)}
               />
             </>
           }
         >
-          <TraceBands bands={spillBands} />
+          <TraceBands bands={model.spillBands} />
           <TraceRule value={0} tone="var(--color-border)" dashed={false} />
           <TraceRule value={DRINKING_RATE_MAX_ML_PER_MIN} />
           <TraceArea tone="var(--color-water)" />
@@ -229,18 +166,18 @@ const WaterAdvancedDetails: React.FC<WaterAdvancedDetailsProps> = ({
             {
               key: 'peak-intake',
               label: t('event_details.advanced_peak_intake'),
-              value: mlPerMin(stats.drinking.value),
+              value: mlPerMin(model.peakIntake.value),
             },
             {
               key: 'mean-rate',
               label: t('event_details.advanced_mean_rate'),
-              value: mlPerMin(stats.mean),
+              value: mlPerMin(model.meanIntake),
             },
             {
               key: 'excluded',
               label: t('event_details.advanced_excluded'),
               value: t('event_details.advanced_millilitres', {
-                value: formatNumber(data.excluded_amount ?? 0),
+                value: formatNumber(model.excludedMl),
               }),
             },
           ]}

@@ -216,6 +216,17 @@ The shape to reach for: the parent owns the shared machinery (the scale, the lay
 
 When you meet one: migrate it if you are already editing that file, and say so. If the migration is genuinely a separate change — `WeightSignalChart`'s pointer math depends on its letterboxed `meet` viewBox, so folding it in moves the coordinate system with drag behaviour riding on it — flag it explicitly in your summary instead of quietly extending it further. **Never add a new branch to a flag that is already the problem.**
 
+#### Dumb views, logic in the container
+
+**A component that renders should not also decide.** Split every non-trivial surface in two:
+
+- **The view** — props in, markup out. No fetching, no analysis, no `useMemo` over domain data, ideally no `t()`. It takes values that are already resolved and already formatted, so it can be read, reused, and rendered in a test without a provider stack. `ReadoutGrid`, `SectionLabel`, `ChartLegend`, `SheetPageHeader` and every `TraceLayers` layer are this.
+- **The container** — the wrapper that does the deciding: hooks, queries, domain math, i18n, formatting. It owns the _what_, composes dumb views for the _how_, and is the only half that knows the domain.
+
+Pure domain math leaves React entirely, into a plain module beside the component (`litterboxPeriodStats.ts`, `analyzeWaterSegments.ts`, `buildEventFacts.tsx` → `EventFacts.tsx`). Prefer returning **domain values** (numbers, indices, token names) and formatting in the container — a model that has to be handed a `t` to be tested is harder to test than one that returns numbers.
+
+The smell: a component file that imports an analyzer _and_ declares markup. If you are reaching for `useMemo` to derive a reading inside a component that also renders it, the derivation belongs one level out.
+
 #### TypeScript Component Pattern
 
 ```tsx
