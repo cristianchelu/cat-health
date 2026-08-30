@@ -613,7 +613,7 @@ describe('EventDetailsModal', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add a note…' }));
     await user.type(screen.getByRole('textbox', { name: 'Note' }), 'Half a th');
-    await user.click(screen.getByRole('button', { name: 'Close' }));
+    await user.keyboard('{Escape}');
 
     assert.equal(closed, 0);
     await user.click(screen.getByRole('button', { name: 'Discard' }));

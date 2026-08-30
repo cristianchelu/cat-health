@@ -11,7 +11,6 @@ import {
   Pencil,
   Sparkles,
   Trash2,
-  X,
 } from 'lucide-react';
 import { type EventDataDTO, type GetEventListItemDTO } from 'shared';
 
@@ -336,10 +335,17 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       <Sheet
         open={isOpen}
         onOpenChange={(open) => !open && handleClose()}
-        /* Phone: an unsaved note takes the drag, the scrim and Escape off the
-           table — vaul cannot be vetoed after the fact, so the guard has to be
-           declared up front. The X button still routes to the discard
-           dialog. */
+        /*
+         * Phone: an unsaved note takes the drag and the scrim off the table —
+         * vaul cannot be vetoed after the fact, so the guard has to be
+         * declared up front rather than answered when it fires.
+         *
+         * That leaves no way out of the drawer while a note is open, which is
+         * the point: the way out is the note's own Cancel, which is on screen
+         * beside the text it would throw away and names what it discards.
+         * Desktop keeps Escape and the scrim, which Radix does let us veto, so
+         * both still route to the discard dialog.
+         */
         dismissible={canDiscardCleanly}
         className="event-details-modal"
         onEscapeKeyDown={(escape) => {
@@ -529,16 +535,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      icon
-                      onClick={handleClose}
-                      title={t('common.close')}
-                      aria-label={t('common.close')}
-                    >
-                      <X size={18} aria-hidden />
-                    </Button>
                   </div>
                 </div>
 
