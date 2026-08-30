@@ -12,6 +12,7 @@ import { buildApp, registerProductionSpa } from './app.ts';
 import { EventBus } from './services/devices/EventBus.ts';
 import { IntegrationManager } from './services/devices/IntegrationManager.ts';
 import { EventMediaCoordinator } from './services/media/EventMediaCoordinator.ts';
+import { RecognitionService } from './services/recognition/RecognitionService.ts';
 import { ESPHomeProvider } from './services/devices/providers/esphome/ESPHomeProvider.ts';
 import { CameraProvider } from './services/devices/providers/camera/CameraProvider.ts';
 import { InferenceProvider } from './services/devices/providers/inference/InferenceProvider.ts';
@@ -45,7 +46,12 @@ const eventMediaCoordinator = new EventMediaCoordinator(
 );
 await eventMediaCoordinator.initialize();
 
-const app = await buildApp({ db, integrationManager });
+// After the coordinator: recognition reacts to the `media_ready` the
+// coordinator publishes, so it has nothing to hear until that is running.
+const recognitionService = new RecognitionService(db, eventBus);
+await recognitionService.initialize();
+
+const app = await buildApp({ db, integrationManager, recognitionService });
 
 if (!isDev) {
   await registerProductionSpa(app);

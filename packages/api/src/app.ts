@@ -16,17 +16,20 @@ import deviceRoutes from './routes/devices.ts';
 import foodRoutes from './routes/foods.ts';
 import settingsRoutes from './routes/settings.ts';
 import type { DeviceIntegrationContext } from './services/devices/types.ts';
+import type { RecognitionService } from './services/recognition/RecognitionService.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
     db: Kysely<Database>;
     integrationManager: DeviceIntegrationContext;
+    recognitionService: RecognitionService;
   }
 }
 
 export interface BuildAppOptions {
   db: Kysely<Database>;
   integrationManager?: DeviceIntegrationContext;
+  recognitionService?: RecognitionService;
   logger?: boolean;
 }
 
@@ -44,6 +47,7 @@ function getCorsAllowedOrigins(): Set<string> {
 export async function buildApp({
   db,
   integrationManager,
+  recognitionService,
   logger = true,
 }: BuildAppOptions) {
   const fastify = Fastify({
@@ -54,6 +58,9 @@ export async function buildApp({
   fastify.decorate('db', db);
   if (integrationManager) {
     fastify.decorate('integrationManager', integrationManager);
+  }
+  if (recognitionService) {
+    fastify.decorate('recognitionService', recognitionService);
   }
 
   const corsAllowedOrigins = getCorsAllowedOrigins();

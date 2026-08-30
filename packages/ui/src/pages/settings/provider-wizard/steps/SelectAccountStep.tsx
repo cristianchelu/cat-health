@@ -8,6 +8,7 @@ import { useProviders, useDevices } from '@/hooks/queries/deviceQueries';
 import { backState } from '@/lib/navigationBack';
 import { countDevicesByAccount } from '../../providers/providerListUtils.ts';
 import { getProviderBrand } from '../flows/providerBrandRegistry.ts';
+import { providerRegistersDevices } from '../wizardPlan.ts';
 import {
   ProviderPickerList,
   type PickerGroup,
@@ -63,12 +64,14 @@ export const SelectAccountStep: React.FC<SelectAccountStepProps> = ({
 
   /*
    * An account whose provider isn't registered has no manager behind it, so
-   * discovery would fail outright. Nothing about it is actionable here, so it
-   * stays out of the list.
+   * discovery would fail outright, and one whose provider registers no devices
+   * has nothing for this wizard to add. Neither is actionable here, so they
+   * stay out of the list.
    */
-  const known = accounts.filter((account) =>
-    providers.some((p) => p.name === account.provider),
-  );
+  const known = accounts.filter((account) => {
+    const provider = providers.find((p) => p.name === account.provider);
+    return provider != null && providerRegistersDevices(provider.capabilities);
+  });
   /*
    * A disabled account is listed but not selectable. Hiding it would leave a
    * user whose only account is switched off in front of an empty picker with

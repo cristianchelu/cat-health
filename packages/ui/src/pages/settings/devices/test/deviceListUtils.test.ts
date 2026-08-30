@@ -28,7 +28,6 @@ const TYPE_LABELS: Record<DeviceType, string> = {
   water_fountain: 'Water Fountain',
   feeder: 'Feeder',
   camera: 'Camera',
-  pet_recognizer: 'Pet Recognizer',
 };
 
 /** Mirrors the brand registry: the slug and the label are not the same string. */

@@ -6,12 +6,6 @@ import {
   cameraToConfig,
   cameraToFormValues,
 } from './camera/cameraDeviceConfig.ts';
-import { InferenceDeviceFields } from './inference/InferenceDeviceFields.tsx';
-import {
-  inferenceDefaultDeviceConfigValues,
-  inferenceDeviceToConfig,
-  inferenceDeviceToFormValues,
-} from './inference/inferenceDeviceConfig.ts';
 import { ThinginoDeviceFields } from './thingino/ThinginoDeviceFields.tsx';
 import {
   thinginoDefaultConfigValues,
@@ -33,13 +27,6 @@ const cameraDeviceConfig: DeviceConfigModule = {
   Fields: CameraDeviceFields,
 };
 
-const inferenceDeviceConfig: DeviceConfigModule = {
-  defaultConfigValues: inferenceDefaultDeviceConfigValues,
-  toFormValues: inferenceDeviceToFormValues,
-  toConfig: inferenceDeviceToConfig,
-  Fields: InferenceDeviceFields,
-};
-
 const thinginoDeviceConfig: DeviceConfigModule = {
   defaultConfigValues: thinginoDefaultConfigValues,
   toFormValues: thinginoToFormValues,
@@ -49,7 +36,6 @@ const thinginoDeviceConfig: DeviceConfigModule = {
 
 const DEVICE_CONFIG_MODULES: Record<string, DeviceConfigModule> = {
   camera: cameraDeviceConfig,
-  inference: inferenceDeviceConfig,
   thingino: thinginoDeviceConfig,
 };
 

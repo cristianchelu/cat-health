@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 
-import { recordIdentification } from '../../src/services/devices/providers/inference/PetRecognizerController.ts';
-import type { PetIdentificationResult } from '../../src/services/devices/providers/inference/PetRecognizerController.ts';
+import { recordIdentification } from '../../src/services/recognition/identification.ts';
+import type { PetIdentificationResult } from '../../src/services/recognition/identification.ts';
 import { insertLitterboxEvent, insertPet } from '../helpers/fixtures.ts';
 import {
   createTestDb,

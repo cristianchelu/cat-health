@@ -84,6 +84,21 @@ export function buildWizardPlan(
 }
 
 /**
+ * Whether a provider can register devices of its own at all.
+ *
+ * An inference account is a credential recognition is billed against — it owns
+ * no hardware, so offering it in the add-device wizard walks the user to a
+ * register step with nothing to register. Absent means "allow": a provider that
+ * has not declared its types has not declared that it has none.
+ */
+export function providerRegistersDevices(
+  capabilities: ProviderCapabilities | undefined,
+): boolean {
+  const types = capabilities?.supported_device_types;
+  return types === undefined || types.length > 0;
+}
+
+/**
  * The step that follows choosing an account in `add-device`.
  *
  * Branches on the same capability the plan does, so navigation can never skip a
@@ -128,7 +143,9 @@ export function initialAddDeviceState(
 
   const seeded = accounts.find((account) => account.id === accountId);
   if (!seeded?.enabled) return { step: 'pick' };
-  if (!providers.some((p) => p.name === seeded.provider)) {
+  const provider = providers.find((p) => p.name === seeded.provider);
+  if (!provider) return { step: 'pick' };
+  if (!providerRegistersDevices(provider.capabilities)) {
     return { step: 'pick' };
   }
 

@@ -12,10 +12,13 @@ import {
 } from '../helpers/accountManagerDoubles.ts';
 import {
   insertDevice,
+  insertDeviceRecognition,
   insertLitterboxEvent,
   insertProviderAccount,
 } from '../helpers/fixtures.ts';
 import { createTestIntegrationManager } from '../helpers/integrationManager.ts';
+import { EventBus } from '../../src/services/devices/EventBus.ts';
+import { RecognitionService } from '../../src/services/recognition/RecognitionService.ts';
 import {
   createTestApp,
   createTestDb,
@@ -258,13 +261,13 @@ describe('devices on a disabled provider account', () => {
   });
 });
 
-describe('routes that need a live controller', () => {
+describe('routes that need a live controller, and routes that need recognition', () => {
   let ctx: TestDbContext;
   let app: FastifyInstance;
   let camera: Device;
-  let recognizer: Device;
+  let watched: Device;
   let orphanedCamera: Device;
-  let orphanedRecognizer: Device;
+  let orphanedWatched: Device;
 
   before(async () => {
     ctx = await createTestDb();
@@ -272,6 +275,7 @@ describe('routes that need a live controller', () => {
     const account = await insertProviderAccount(ctx.db, {
       provider: 'inference',
       name: 'Inference account',
+      config: { api_key: 'k', base_url: 'http://inference.local' },
     });
     camera = await insertDevice(ctx.db, {
       provider_account_id: account.id,
@@ -280,12 +284,12 @@ describe('routes that need a live controller', () => {
       external_id: 'cam-disabled',
       enabled: 0,
     });
-    recognizer = await insertDevice(ctx.db, {
+    watched = await insertDevice(ctx.db, {
       provider_account_id: account.id,
-      name: 'Retired recognizer',
-      type: 'pet_recognizer',
-      external_id: 'rec-disabled',
-      enabled: 0,
+      name: 'Hall fountain',
+      type: 'water_fountain',
+      external_id: 'wf-watched',
+      enabled: 1,
     });
 
     // No manager is registered for it, the way a disabled account never
@@ -294,6 +298,7 @@ describe('routes that need a live controller', () => {
       provider: 'inference',
       name: 'Retired inference account',
       enabled: 0,
+      config: { api_key: 'k', base_url: 'http://inference.local' },
     });
     orphanedCamera = await insertDevice(ctx.db, {
       provider_account_id: offAccount.id,
@@ -302,19 +307,25 @@ describe('routes that need a live controller', () => {
       external_id: 'cam-orphan',
       enabled: 1,
     });
-    orphanedRecognizer = await insertDevice(ctx.db, {
+    orphanedWatched = await insertDevice(ctx.db, {
       provider_account_id: offAccount.id,
-      name: 'Orphaned recognizer',
-      type: 'pet_recognizer',
-      external_id: 'rec-orphan',
+      name: 'Orphaned fountain',
+      type: 'water_fountain',
+      external_id: 'wf-orphan',
       enabled: 1,
     });
+
+    await insertDeviceRecognition(ctx.db, watched.id, account.id);
+    await insertDeviceRecognition(ctx.db, orphanedWatched.id, offAccount.id);
 
     const spy = createSpyAccountManager(account.id);
     app = await createTestApp(ctx, {
       integrationManager: createTestIntegrationManager(ctx.db, {
         accountManagers: new Map([[account.id, spy.manager]]),
       }),
+      recognitionService: new RecognitionService(ctx.db, new EventBus(), () =>
+        Promise.reject(new Error('the model must never be reached here')),
+      ),
     });
   });
 
@@ -323,8 +334,6 @@ describe('routes that need a live controller', () => {
     await destroyTestDb(ctx);
   });
 
-  // Both routes fail on a missing controller, so without a distinct answer a
-  // disabled device reads as a misconfiguration.
   it('says a snapshot failed because the camera is disabled', async () => {
     const res = await app.inject({
       method: 'GET',
@@ -335,10 +344,12 @@ describe('routes that need a live controller', () => {
     assert.match((res.json() as { message: string }).message, /disabled/i);
   });
 
-  it('says test-identify failed because the recognizer is disabled', async () => {
+  // Recognition is an attachment now, so "can this device be identified from"
+  // is answered by the row and its account — not by a controller being live.
+  it('says test-identify failed because the account is switched off', async () => {
     const res = await app.inject({
       method: 'POST',
-      url: `/api/devices/${recognizer.id}/test-identify`,
+      url: `/api/devices/${orphanedWatched.id}/test-identify`,
       payload: { media_id: 1 },
     });
 
@@ -346,8 +357,6 @@ describe('routes that need a live controller', () => {
     assert.match((res.json() as { message: string }).message, /disabled/i);
   });
 
-  // The account switch makes a device exactly as unreachable as its own does,
-  // so it has to read the same way at the routes too.
   it('says the same when it is the account that is switched off', async () => {
     const snapshot = await app.inject({
       method: 'GET',
@@ -355,14 +364,6 @@ describe('routes that need a live controller', () => {
     });
     assert.equal(snapshot.statusCode, 400);
     assert.match((snapshot.json() as { message: string }).message, /disabled/i);
-
-    const identify = await app.inject({
-      method: 'POST',
-      url: `/api/devices/${orphanedRecognizer.id}/test-identify`,
-      payload: { media_id: 1 },
-    });
-    assert.equal(identify.statusCode, 400);
-    assert.match((identify.json() as { message: string }).message, /disabled/i);
   });
 
   it('answers 404 for a device that does not exist', async () => {
@@ -375,6 +376,15 @@ describe('routes that need a live controller', () => {
     const identify = await app.inject({
       method: 'POST',
       url: '/api/devices/999999/test-identify',
+      payload: { media_id: 1 },
+    });
+    assert.equal(identify.statusCode, 404);
+  });
+
+  it('answers 404 for a device with no recognition configured', async () => {
+    const identify = await app.inject({
+      method: 'POST',
+      url: `/api/devices/${camera.id}/test-identify`,
       payload: { media_id: 1 },
     });
     assert.equal(identify.statusCode, 404);

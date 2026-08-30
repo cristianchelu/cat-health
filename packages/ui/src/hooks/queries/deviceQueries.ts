@@ -15,7 +15,9 @@ import {
   linkDeviceCamera,
   updateDeviceCameraConfig,
   unlinkDeviceCamera,
-  assignDeviceRecognizer,
+  linkDeviceRecognition,
+  updateDeviceRecognitionConfig,
+  unlinkDeviceRecognition,
 } from '@/api/devices';
 import { deleteEvent, updateEvent } from '@/api/pets';
 import {
@@ -31,6 +33,8 @@ import type {
   PostDeviceRequestDTO,
   PatchDeviceRequestDTO,
   PutDeviceCameraRequestDTO,
+  PutDeviceRecognitionRequestDTO,
+  PatchDeviceRecognitionRequestDTO,
   PatchDeviceCameraRequestDTO,
   GetEventsResponseDTO,
 } from 'shared';
@@ -237,15 +241,36 @@ export function useUpdateDeviceCameraConfig(deviceId: number) {
   });
 }
 
-export function useAssignDeviceRecognizer(deviceId: number) {
+export function useLinkDeviceRecognition(deviceId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (recognizerId: number) =>
-      assignDeviceRecognizer(deviceId, recognizerId),
-    // A swap rewrites other recognizers' configs too, and a failed swap may
-    // still have changed nothing visible locally — refetch either way.
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['device'] });
+    mutationFn: (data: PutDeviceRecognitionRequestDTO) =>
+      linkDeviceRecognition(deviceId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+    },
+  });
+}
+
+export function useUpdateDeviceRecognitionConfig(deviceId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PatchDeviceRecognitionRequestDTO) =>
+      updateDeviceRecognitionConfig(deviceId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+    },
+  });
+}
+
+export function useUnlinkDeviceRecognition(deviceId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => unlinkDeviceRecognition(deviceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
       queryClient.invalidateQueries({ queryKey: ['devices'] });
     },
   });

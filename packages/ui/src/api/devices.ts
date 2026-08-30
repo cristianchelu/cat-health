@@ -13,7 +13,8 @@ import type {
   GetProvidersResponseDTO,
   PutDeviceCameraRequestDTO,
   PatchDeviceCameraRequestDTO,
-  PutDeviceRecognizerRequestDTO,
+  PutDeviceRecognitionRequestDTO,
+  PatchDeviceRecognitionRequestDTO,
   PostDeviceTestIdentifyRequestDTO,
   PostDeviceTestIdentifyResponseDTO,
   ReidentifyLitterboxVisitsResponseDTO,
@@ -168,14 +169,31 @@ export async function unlinkDeviceCamera(deviceId: number) {
   return data;
 }
 
-export async function assignDeviceRecognizer(
+export async function linkDeviceRecognition(
   deviceId: number,
-  recognizerId: number,
+  input: PutDeviceRecognitionRequestDTO,
 ) {
-  const input: PutDeviceRecognizerRequestDTO = { recognizer_id: recognizerId };
   const { data } = await apiClient.put<GetDeviceResponseDTO>(
-    `/devices/${deviceId}/recognizer`,
+    `/devices/${deviceId}/recognition`,
     input,
+  );
+  return data;
+}
+
+export async function updateDeviceRecognitionConfig(
+  deviceId: number,
+  input: PatchDeviceRecognitionRequestDTO,
+) {
+  const { data } = await apiClient.patch<GetDeviceResponseDTO>(
+    `/devices/${deviceId}/recognition`,
+    input,
+  );
+  return data;
+}
+
+export async function unlinkDeviceRecognition(deviceId: number) {
+  const { data } = await apiClient.delete<GetDeviceResponseDTO>(
+    `/devices/${deviceId}/recognition`,
   );
   return data;
 }

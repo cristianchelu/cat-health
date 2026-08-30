@@ -34,7 +34,7 @@ function makeQueryClient() {
   return client;
 }
 
-/** TestRecognitionModal mounts whenever a recognizer is selected and needs RQ. */
+/** TestRecognitionModal mounts whenever recognition is saved and needs RQ. */
 function withQueryClient(ui: ReactElement, client = makeQueryClient()) {
   return <QueryClientProvider client={client}>{ui}</QueryClientProvider>;
 }
@@ -48,17 +48,25 @@ function baseProps(
       lockedCta: 'Set up camera',
       providerHint: 'No AI provider yet.',
       providerCta: 'Connect a provider',
-      emptyTitle: 'No recognizer set up for this camera yet.',
-      emptyCta: 'Add device',
+      noAccountTitle: 'No AI provider connected yet.',
+      noAccountCta: 'Connect a provider',
       autoIdentifyLabel: 'Auto-identify',
       autoIdentifyHint: 'Automatically attribute visits to the recognized pet.',
-      modelTitle: 'Model',
-      modelSubtitle: 'Recognizer running on this camera',
-      modelNoneTitle: 'No recognizer selected',
-      modelChangeLabel: 'Change',
-      modelSettingsLabel: 'Recognizer settings',
-      pickerTitle: 'Choose a recognizer',
-      pickerEmpty: 'No other recognizers available.',
+      accountTitle: 'Provider account',
+      accountSubtitle: 'Which account pays for recognition here',
+      accountNoneSelected: 'No account selected',
+      accountChangeLabel: 'Change',
+      accountPickerTitle: 'Choose an account',
+      accountPickerEmpty: 'No accounts available.',
+      accountNoneLabel: 'None',
+      modelLabel: 'Model',
+      modelPlaceholder: 'e.g. google/gemma-4-31b-it',
+      modelHint:
+        "Leave empty to use the app's default (google/gemma-4-31b-it).",
+      promptLabel: 'Scene prompt',
+      promptHint: 'Scene context sent with every frame.',
+      promptPlaceholder:
+        'Example: This camera watches a pet water fountain in a hallway.',
       trainedPetsTitle: 'Known cats',
       trainedPetsSubtitle:
         'Reference images. Exclude pets that never use this device.',
@@ -72,14 +80,16 @@ function baseProps(
     onGoToCamera: () => {},
     showProviderHint: false,
     onGoToProvider: () => {},
-    onAddDevice: () => {},
-    sourceDeviceId: 1,
-    selectedRecognizerId: undefined,
-    selectedRecognizerName: undefined,
-    selectedRecognizerModel: undefined,
-    recognizerOptions: [],
-    onSelectRecognizer: () => {},
-    onOpenRecognizerSettings: () => {},
+    deviceId: 1,
+    accountOptions: [],
+    selectedAccountId: null,
+    selectedAccountName: undefined,
+    onSelectAccount: () => {},
+    hasSavedRecognition: false,
+    model: '',
+    onModelChange: () => {},
+    promptTemplate: '',
+    onPromptTemplateChange: () => {},
     autoIdentify: false,
     onToggleAutoIdentify: () => {},
     pets: [],
@@ -101,13 +111,14 @@ function readyProps(
 ): RecognitionTabViewProps {
   return baseProps({
     gate: 'ready',
-    selectedRecognizerId: 10,
-    selectedRecognizerName: 'Living Room',
-    selectedRecognizerModel: 'google/gemma-3-27b-it',
-    recognizerOptions: [
-      { id: 10, name: 'Living Room', model: 'google/gemma-3-27b-it' },
-      { id: 20, name: 'Spare Room Recognizer', model: 'google/gemma-4-31b-it' },
+    selectedAccountId: 10,
+    selectedAccountName: 'OpenRouter',
+    hasSavedRecognition: true,
+    accountOptions: [
+      { id: 10, name: 'OpenRouter', description: 'Inference' },
+      { id: 20, name: 'Spare key', description: 'Inference' },
     ],
+    promptTemplate: 'the hallway fountain',
     ...overrides,
   });
 }
@@ -198,78 +209,51 @@ describe('RecognitionTabView', () => {
     assert.equal(clicked, true);
   });
 
-  it('shows the empty state with an add-device CTA when there are no recognizers', async () => {
+  it('shows the no-account state with a connect CTA when nothing can pay for a call', async () => {
     await renderWithProviders(
-      <RecognitionTabView {...baseProps({ gate: 'empty' })} />,
+      <RecognitionTabView {...baseProps({ gate: 'no_account' })} />,
     );
 
-    assert.ok(screen.getByText('No recognizer set up for this camera yet.'));
-    assert.ok(screen.getByRole('button', { name: 'Add device' }));
+    assert.ok(screen.getByText('No AI provider connected yet.'));
+    assert.ok(screen.getByRole('button', { name: 'Connect a provider' }));
   });
 
-  it('calls onAddDevice from the empty-state CTA', async () => {
+  it('calls onGoToProvider from the no-account CTA', async () => {
     const user = userEvent.setup();
     let clicked = false;
 
     await renderWithProviders(
       <RecognitionTabView
         {...baseProps({
-          gate: 'empty',
-          onAddDevice: () => {
+          gate: 'no_account',
+          onGoToProvider: () => {
             clicked = true;
           },
         })}
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Add device' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Connect a provider' }),
+    );
     assert.equal(clicked, true);
   });
 
-  it('does not show the locked or empty state once a recognizer is configured', async () => {
+  it('does not show the locked or no-account state once an account is picked', async () => {
     await renderWithProviders(
       withQueryClient(
         <RecognitionTabView
-          {...readyProps({ selectedRecognizerName: 'Kitchen Recognizer' })}
+          {...readyProps({ selectedAccountName: 'Kitchen key' })}
         />,
       ),
     );
 
     assert.equal(screen.queryByText('Recognition needs a camera'), null);
-    assert.equal(
-      screen.queryByText('No recognizer set up for this camera yet.'),
-      null,
-    );
-    assert.ok(screen.getByText('Kitchen Recognizer'));
+    assert.equal(screen.queryByText('No AI provider connected yet.'), null);
+    assert.ok(screen.getByText('Kitchen key'));
   });
 
-  it('shows Change when multiple recognizers exist, even if only one is linked', async () => {
-    await renderWithProviders(
-      withQueryClient(<RecognitionTabView {...readyProps()} />),
-    );
-
-    assert.ok(screen.getByRole('button', { name: 'Change' }));
-    assert.ok(screen.getByRole('button', { name: 'Recognizer settings' }));
-  });
-
-  it('hides Change when only one recognizer exists, but still offers settings', async () => {
-    await renderWithProviders(
-      withQueryClient(
-        <RecognitionTabView
-          {...readyProps({
-            recognizerOptions: [
-              { id: 10, name: 'Living Room', model: 'google/gemma-3-27b-it' },
-            ],
-          })}
-        />,
-      ),
-    );
-
-    assert.equal(screen.queryByRole('button', { name: 'Change' }), null);
-    assert.ok(screen.getByRole('button', { name: 'Recognizer settings' }));
-  });
-
-  it('opens the recognizer picker from Change', async () => {
+  it('opens the account picker from Change', async () => {
     const user = userEvent.setup();
 
     await renderWithProviders(
@@ -277,19 +261,19 @@ describe('RecognitionTabView', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Change' }));
-    assert.ok(screen.getByText('Choose a recognizer'));
-    assert.ok(screen.getByText('Spare Room Recognizer'));
+    assert.ok(screen.getByText('Choose an account'));
+    assert.ok(screen.getByText('Spare key'));
   });
 
-  it('forwards the picked recognizer id and closes the picker', async () => {
+  it('forwards the picked account id and closes the picker', async () => {
     const user = userEvent.setup();
-    let selectedId: number | undefined;
+    let selectedId: number | null | undefined;
 
     await renderWithProviders(
       withQueryClient(
         <RecognitionTabView
           {...readyProps({
-            onSelectRecognizer: (id) => {
+            onSelectAccount: (id) => {
               selectedId = id;
             },
           })}
@@ -298,36 +282,52 @@ describe('RecognitionTabView', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Change' }));
-    await user.click(
-      screen.getByRole('button', { name: /Spare Room Recognizer/ }),
-    );
+    await user.click(screen.getByRole('radio', { name: /Spare key/ }));
 
     assert.equal(selectedId, 20);
     await waitFor(() =>
-      assert.equal(screen.queryByText('Choose a recognizer'), null),
+      assert.equal(screen.queryByText('Choose an account'), null),
     );
   });
 
-  it('calls onOpenRecognizerSettings for the linked recognizer', async () => {
+  it('offers no settings pencil — the account is edited under Providers', async () => {
+    await renderWithProviders(
+      withQueryClient(<RecognitionTabView {...readyProps()} />),
+    );
+
+    assert.equal(screen.queryByRole('button', { name: /settings/i }), null);
+  });
+
+  it('edits the model and the scene prompt', async () => {
     const user = userEvent.setup();
-    let openedId: number | undefined;
+    const models: string[] = [];
+    const prompts: string[] = [];
 
     await renderWithProviders(
       withQueryClient(
         <RecognitionTabView
           {...readyProps({
-            onOpenRecognizerSettings: (id) => {
-              openedId = id;
-            },
+            model: '',
+            promptTemplate: '',
+            onModelChange: (value) => models.push(value),
+            onPromptTemplateChange: (value) => prompts.push(value),
           })}
         />,
       ),
     );
 
-    await user.click(
-      screen.getByRole('button', { name: 'Recognizer settings' }),
+    // Empty is not blank: the field names the default it will fall back to.
+    const modelInput = screen.getByLabelText('Model');
+    assert.equal(
+      modelInput.getAttribute('placeholder'),
+      'e.g. google/gemma-4-31b-it',
     );
-    assert.equal(openedId, 10);
+
+    await user.type(modelInput, 'x');
+    assert.deepEqual(models, ['x']);
+
+    await user.type(screen.getByLabelText('Scene prompt'), 'y');
+    assert.deepEqual(prompts, ['y']);
   });
 
   it('renders the ready-but-unlinked state with a none-selected row and only the picker path', async () => {
@@ -335,51 +335,35 @@ describe('RecognitionTabView', () => {
       <RecognitionTabView
         {...baseProps({
           gate: 'ready',
-          recognizerOptions: [
-            {
-              id: 20,
-              name: 'Spare Room Recognizer',
-              model: 'google/gemma-4-31b-it',
-            },
-          ],
+          accountOptions: [{ id: 20, name: 'Spare key' }],
         })}
       />,
     );
 
-    assert.ok(screen.getByText('No recognizer selected'));
+    assert.ok(screen.getByText('No account selected'));
     assert.ok(screen.getByRole('button', { name: 'Change' }));
-    assert.equal(
-      screen.queryByRole('button', { name: 'Recognizer settings' }),
-      null,
-    );
     assert.equal(
       screen.queryByRole('checkbox', { name: 'Auto-identify' }),
       null,
     );
+    assert.equal(screen.queryByLabelText('Model'), null);
     assert.equal(screen.queryByText('Known cats'), null);
-    assert.equal(screen.queryByRole('button', { name: 'Save' }), null);
     assert.equal(
       screen.queryByRole('button', { name: 'Test Recognition' }),
       null,
     );
   });
 
-  it('lets the unlinked state assign a recognizer through the picker', async () => {
+  it('lets the unlinked state pick an account through the picker', async () => {
     const user = userEvent.setup();
-    let selectedId: number | undefined;
+    let selectedId: number | null | undefined;
 
     await renderWithProviders(
       <RecognitionTabView
         {...baseProps({
           gate: 'ready',
-          recognizerOptions: [
-            {
-              id: 20,
-              name: 'Spare Room Recognizer',
-              model: 'google/gemma-4-31b-it',
-            },
-          ],
-          onSelectRecognizer: (id) => {
+          accountOptions: [{ id: 20, name: 'Spare key' }],
+          onSelectAccount: (id) => {
             selectedId = id;
           },
         })}
@@ -387,10 +371,31 @@ describe('RecognitionTabView', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Change' }));
-    await user.click(
-      screen.getByRole('button', { name: /Spare Room Recognizer/ }),
-    );
+    await user.click(screen.getByRole('radio', { name: /Spare key/ }));
     assert.equal(selectedId, 20);
+  });
+
+  it('offers Test Recognition only once the attachment is saved', async () => {
+    const client = makeQueryClient();
+    const { rerender } = await renderWithProviders(
+      withQueryClient(
+        <RecognitionTabView {...readyProps({ hasSavedRecognition: false })} />,
+        client,
+      ),
+    );
+    // A drafted account has nothing on the server to run the test against.
+    assert.equal(
+      screen.queryByRole('button', { name: 'Test Recognition' }),
+      null,
+    );
+
+    rerender(
+      withQueryClient(
+        <RecognitionTabView {...readyProps({ hasSavedRecognition: true })} />,
+        client,
+      ),
+    );
+    assert.ok(screen.getByRole('button', { name: 'Test Recognition' }));
   });
 
   it('forwards the auto-identify toggle', async () => {

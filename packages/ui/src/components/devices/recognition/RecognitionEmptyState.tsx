@@ -6,22 +6,23 @@ import { RecognitionStateCard } from './RecognitionStateCard';
 interface RecognitionEmptyStateProps {
   title: string;
   ctaLabel: string;
-  onAddDevice: () => void;
+  onConnectProvider: () => void;
 }
 
 /**
- * Rendered when a camera is linked but no pet recognizer exists in the
- * account yet. Registration always happens through the inference device
- * wizard — this tab never auto-creates one.
+ * Rendered when a camera is linked but no account can pay for a vision call —
+ * either none is connected or the only one is switched off. Connecting an
+ * account happens in Providers; recognition itself is configured here once one
+ * exists.
  */
 const RecognitionEmptyState: React.FC<RecognitionEmptyStateProps> = ({
   title,
   ctaLabel,
-  onAddDevice,
+  onConnectProvider,
 }) => {
   return (
     <RecognitionStateCard icon={<Sparkles size={20} />} title={title}>
-      <Button onClick={onAddDevice}>{ctaLabel}</Button>
+      <Button onClick={onConnectProvider}>{ctaLabel}</Button>
     </RecognitionStateCard>
   );
 };

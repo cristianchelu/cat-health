@@ -13,6 +13,7 @@ import {
   getVisualStep,
   initialAddDeviceState,
   planHasStep,
+  providerRegistersDevices,
   sourceKey,
   stepAfterAccountPick,
 } from '../wizardPlan.ts';
@@ -25,7 +26,13 @@ const DISCOVERY_AND_LINKING: ProviderCapabilities = {
 
 const SKIP_DISCOVERY: ProviderCapabilities = {
   skip_discovery: true,
-  supported_device_types: ['pet_recognizer'],
+  supported_device_types: ['camera'],
+};
+
+/** An account that is a credential, not a source of hardware. */
+const REGISTERS_NOTHING: ProviderCapabilities = {
+  supported_device_types: [],
+  supports_recognition: true,
 };
 
 const DISCOVERY_ONLY: ProviderCapabilities = {
@@ -262,7 +269,25 @@ describe('getBackTargetLabelKey', () => {
 const PROVIDERS: ProviderInfoDTO[] = [
   { name: 'surepet', internal: false, capabilities: DISCOVERY_AND_LINKING },
   { name: 'esphome', internal: true, capabilities: SKIP_DISCOVERY },
+  { name: 'inference', internal: false, capabilities: REGISTERS_NOTHING },
 ];
+
+describe('providerRegistersDevices', () => {
+  it('rejects a provider that declares no device types', () => {
+    assert.equal(providerRegistersDevices(REGISTERS_NOTHING), false);
+  });
+
+  it('accepts a provider that declares some', () => {
+    assert.equal(providerRegistersDevices(DISCOVERY_AND_LINKING), true);
+  });
+
+  it('allows a provider that has declared nothing either way', () => {
+    // Absent is not the same as empty: a provider that never listed its types
+    // has not said it has none, and hiding it would be a silent regression.
+    assert.equal(providerRegistersDevices({}), true);
+    assert.equal(providerRegistersDevices(undefined), true);
+  });
+});
 
 const account = (
   overrides: Partial<ProviderAccountDTO>,
@@ -314,6 +339,7 @@ describe('initialAddDeviceState', () => {
     account({ id: 2, provider: 'esphome', internal: true }),
     account({ id: 3, enabled: false }),
     account({ id: 4, provider: 'legacy' }),
+    account({ id: 5, provider: 'inference' }),
   ];
 
   it('opens on the picker when no account was named', () => {
@@ -336,12 +362,14 @@ describe('initialAddDeviceState', () => {
 
   it('falls back to the picker for an account it must not honour', () => {
     // Each of these would strand the user on a step that can never resolve:
-    // an id that matches nothing, a switched-off account, and an account
-    // whose provider has no manager behind it.
+    // an id that matches nothing, a switched-off account, an account whose
+    // provider has no manager behind it, and one whose provider registers no
+    // devices at all.
     const rejected = { step: 'pick' };
     assert.deepEqual(initialAddDeviceState(99, accounts, PROVIDERS), rejected);
     assert.deepEqual(initialAddDeviceState(3, accounts, PROVIDERS), rejected);
     assert.deepEqual(initialAddDeviceState(4, accounts, PROVIDERS), rejected);
+    assert.deepEqual(initialAddDeviceState(5, accounts, PROVIDERS), rejected);
   });
 
   it('falls back to the picker before the lists have loaded', () => {

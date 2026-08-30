@@ -73,6 +73,7 @@ function feeder(): GetDeviceResponseDTO {
     id: 7,
     provider_account_id: 1,
     camera_link: null,
+    recognition: null,
     provider: 'surepet',
     external_id: 'feeder-7',
     name: 'Kitchen feeder',

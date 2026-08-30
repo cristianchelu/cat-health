@@ -11,6 +11,7 @@ import type { MediaTable } from './types/MediaTable.ts';
 import type { MediaLinkTable } from './types/MediaLinkTable.ts';
 import type { ProviderAccountTable } from './types/ProviderAccountTable.ts';
 import type { DeviceCameraTable } from './types/DeviceCameraTable.ts';
+import type { DeviceRecognitionTable } from './types/DeviceRecognitionTable.ts';
 import type { FoodTable } from './types/FoodTable.ts';
 import type { AppSettingTable } from './types/AppSettingTable.ts';
 
@@ -22,6 +23,7 @@ export interface Database {
   media_link: MediaLinkTable;
   provider_account: ProviderAccountTable;
   device_camera: DeviceCameraTable;
+  device_recognition: DeviceRecognitionTable;
   food: FoodTable;
   app_setting: AppSettingTable;
 }

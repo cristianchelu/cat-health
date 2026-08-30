@@ -22,6 +22,7 @@ export async function wipeDomainData(db: Kysely<Database>): Promise<void> {
 
   await db.deleteFrom('event').execute();
   await db.deleteFrom('device_camera').execute();
+  await db.deleteFrom('device_recognition').execute();
   await db.deleteFrom('device').execute();
   await db.deleteFrom('media_link').execute();
   await db.deleteFrom('media').execute();

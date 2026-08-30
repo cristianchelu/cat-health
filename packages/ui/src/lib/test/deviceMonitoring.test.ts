@@ -28,9 +28,8 @@ function rosterDevice(
 }
 
 describe('isMonitoringDevice', () => {
-  it('returns false for camera and pet_recognizer', () => {
+  it('returns false for camera', () => {
     assert.equal(isMonitoringDevice(device('camera')), false);
-    assert.equal(isMonitoringDevice(device('pet_recognizer')), false);
   });
 
   it('returns true for litterbox, feeder, and water_fountain', () => {
@@ -47,7 +46,7 @@ describe('filterMonitoringDevices', () => {
 
   it('returns an empty array when every device is excluded', () => {
     assert.deepEqual(
-      filterMonitoringDevices([device('camera'), device('pet_recognizer')]),
+      filterMonitoringDevices([device('camera'), device('camera')]),
       [],
     );
   });
@@ -57,7 +56,6 @@ describe('filterMonitoringDevices', () => {
       device('litterbox'),
       device('camera'),
       device('feeder'),
-      device('pet_recognizer'),
       device('water_fountain'),
     ];
 
@@ -73,7 +71,6 @@ describe('filterMonitoringDevices', () => {
       device('water_fountain'),
       device('camera'),
       device('feeder'),
-      device('pet_recognizer'),
       device('litterbox'),
     ];
 
@@ -137,7 +134,6 @@ describe('isRosterDevice', () => {
 
   it('still drops infrastructure device types that are fully enabled', () => {
     assert.equal(isRosterDevice(rosterDevice('camera')), false);
-    assert.equal(isRosterDevice(rosterDevice('pet_recognizer')), false);
   });
 });
 
@@ -181,8 +177,7 @@ describe('partitionRoster', () => {
     // A hidden camera is not a device you switched off, so it cannot be the
     // reason the roster is empty.
     assert.equal(
-      partitionRoster([rosterDevice('camera'), rosterDevice('pet_recognizer')])
-        .emptyReason,
+      partitionRoster([rosterDevice('camera')]).emptyReason,
       'none-owned',
     );
   });

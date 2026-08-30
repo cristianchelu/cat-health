@@ -22,6 +22,10 @@ import type {
   NewDevice,
 } from '../../src/database/types/DeviceTable.ts';
 import type { Food, NewFood } from '../../src/database/types/FoodTable.ts';
+import type {
+  DeviceRecognition,
+  DeviceRecognitionConfig,
+} from '../../src/database/types/DeviceRecognitionTable.ts';
 
 type PetSeed = Partial<Pick<NewPet, 'name' | 'breed' | 'birth_date'>>;
 
@@ -205,6 +209,29 @@ export async function insertDevice(
       enabled: seed.enabled ?? 1,
       created_at: now,
       updated_at: now,
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
+
+export async function insertDeviceRecognition(
+  db: Kysely<Database>,
+  deviceId: number,
+  accountId: number,
+  config: Partial<DeviceRecognitionConfig> = {},
+): Promise<DeviceRecognition> {
+  return db
+    .insertInto('device_recognition')
+    .values({
+      device_id: deviceId,
+      account_id: accountId,
+      config: {
+        model: config.model ?? null,
+        prompt_template: config.prompt_template ?? 'a test scene',
+        auto_identify: config.auto_identify ?? true,
+        reference_images: config.reference_images ?? {},
+        ...(config.ignored_pets ? { ignored_pets: config.ignored_pets } : {}),
+      },
     })
     .returningAll()
     .executeTakeFirstOrThrow();

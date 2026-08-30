@@ -21,8 +21,8 @@ import './TestRecognitionModal.css';
 interface TestRecognitionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** The observed device: both the source of the test frames and what carries the recognition. */
   deviceId: number;
-  sourceDeviceId: number;
 }
 
 interface TestResult {
@@ -38,7 +38,6 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
   isOpen,
   onClose,
   deviceId,
-  sourceDeviceId,
 }) => {
   const { t } = useTranslation();
   const [testResults, setTestResults] = React.useState<Map<number, TestResult>>(
@@ -102,12 +101,12 @@ const TestRecognitionModal: React.FC<TestRecognitionModalProps> = ({
 
   // Fetch all verified event media from source device (all pets)
   const { data: allMedia, isLoading } = useQuery({
-    queryKey: ['testRecognitionMedia', sourceDeviceId],
+    queryKey: ['testRecognitionMedia', deviceId],
     queryFn: async () => {
       const { data: eventsResponse } =
         await apiClient.get<GetEventsResponseDTO>('/events', {
           params: {
-            device_id: sourceDeviceId,
+            device_id: deviceId,
             human_verified: true,
             limit: 100,
           },

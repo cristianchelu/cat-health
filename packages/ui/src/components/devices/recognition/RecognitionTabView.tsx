@@ -1,10 +1,16 @@
 import * as React from 'react';
-import { Cpu, PawPrint, Pencil, Sparkles } from 'lucide-react';
+import { Cpu, PawPrint, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { FormShell, LabeledSwitchField } from '@/components/ui/form';
+import {
+  FormShell,
+  Input,
+  LabeledSwitchField,
+  Textarea,
+} from '@/components/ui/form';
+import { FormField, useFormFieldA11y } from '@/components/ui/form/FormField';
 import {
   CardList,
   CardListContent,
@@ -12,13 +18,13 @@ import {
 } from '@/components/ui/CardList';
 import ReferenceImagePicker from '@/components/devices/ReferenceImagePicker';
 import TestRecognitionModal from '@/components/devices/TestRecognitionModal';
-import type { RecognitionGate } from '@/lib/petRecognizerDraft';
+import type { RecognitionGate } from '@/lib/recognitionConfig';
 import { RecognitionLockedState } from './RecognitionLockedState';
 import { RecognitionEmptyState } from './RecognitionEmptyState';
 import {
-  RecognizerPicker,
-  type RecognizerPickerOption,
-} from './RecognizerPicker';
+  RecognitionAccountPicker,
+  type RecognitionAccountOption,
+} from './RecognitionAccountPicker';
 import { TrainedPetsEditor, type TrainedPetRow } from './TrainedPetsEditor';
 import './RecognitionTabView.css';
 
@@ -27,17 +33,23 @@ interface RecognitionTabViewCopy {
   lockedCta: string;
   providerHint: string;
   providerCta: string;
-  emptyTitle: string;
-  emptyCta: string;
+  noAccountTitle: string;
+  noAccountCta: string;
   autoIdentifyLabel: string;
   autoIdentifyHint: string;
-  modelTitle: string;
-  modelSubtitle: string;
-  modelNoneTitle: string;
-  modelChangeLabel: string;
-  modelSettingsLabel: string;
-  pickerTitle: string;
-  pickerEmpty: string;
+  accountTitle: string;
+  accountSubtitle: string;
+  accountNoneSelected: string;
+  accountChangeLabel: string;
+  accountPickerTitle: string;
+  accountPickerEmpty: string;
+  accountNoneLabel: string;
+  modelLabel: string;
+  modelPlaceholder: string;
+  modelHint: string;
+  promptLabel: string;
+  promptHint: string;
+  promptPlaceholder: string;
   trainedPetsTitle: string;
   trainedPetsSubtitle: string;
   trainedPetsEmpty: string;
@@ -54,15 +66,20 @@ interface RecognitionTabViewProps {
   onGoToCamera: () => void;
   showProviderHint: boolean;
   onGoToProvider: () => void;
-  onAddDevice: () => void;
 
-  sourceDeviceId: number;
-  selectedRecognizerId?: number;
-  selectedRecognizerName?: string;
-  selectedRecognizerModel?: string;
-  recognizerOptions: RecognizerPickerOption[];
-  onSelectRecognizer: (id: number) => void;
-  onOpenRecognizerSettings: (id: number) => void;
+  /** The observed device — what reference images are picked from, and what Test Recognition runs against. */
+  deviceId: number;
+  accountOptions: RecognitionAccountOption[];
+  selectedAccountId: number | null;
+  selectedAccountName?: string;
+  onSelectAccount: (id: number | null) => void;
+  /** True once the device actually has a stored attachment, not merely a drafted one. */
+  hasSavedRecognition: boolean;
+
+  model: string;
+  onModelChange: (value: string) => void;
+  promptTemplate: string;
+  onPromptTemplateChange: (value: string) => void;
 
   autoIdentify: boolean;
   onToggleAutoIdentify: (checked: boolean) => void;
@@ -89,9 +106,9 @@ interface RecognitionTabViewProps {
 
 /**
  * Pure presentation for the device details Recognition tab. All data comes
- * from props; the `RecognitionTab` container owns queries, mutations, and the draft.
- * Owns only UI-local state (which row is expanded, which dialog is open) —
- * nothing here survives a remount and none of it is business data.
+ * from props; the `RecognitionTab` container owns queries, mutations, and the
+ * draft. Owns only UI-local state (which row is expanded, which dialog is
+ * open) — nothing here survives a remount and none of it is business data.
  */
 const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
   copy,
@@ -99,14 +116,16 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
   onGoToCamera,
   showProviderHint,
   onGoToProvider,
-  onAddDevice,
-  sourceDeviceId,
-  selectedRecognizerId,
-  selectedRecognizerName,
-  selectedRecognizerModel,
-  recognizerOptions,
-  onSelectRecognizer,
-  onOpenRecognizerSettings,
+  deviceId,
+  accountOptions,
+  selectedAccountId,
+  selectedAccountName,
+  onSelectAccount,
+  hasSavedRecognition,
+  model,
+  onModelChange,
+  promptTemplate,
+  onPromptTemplateChange,
   autoIdentify,
   onToggleAutoIdentify,
   pets,
@@ -121,14 +140,16 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
   discardConfirm,
   disabled,
 }) => {
-  const [recognizerPickerOpen, setRecognizerPickerOpen] = React.useState(false);
+  const [accountPickerOpen, setAccountPickerOpen] = React.useState(false);
   const [expandedPetId, setExpandedPetId] = React.useState<number | null>(null);
   const [imagePickerPetId, setImagePickerPetId] = React.useState<number | null>(
     null,
   );
   const [testModalOpen, setTestModalOpen] = React.useState(false);
+  const modelField = useFormFieldA11y(undefined, true);
+  const promptField = useFormFieldA11y(undefined, true);
 
-  const hasLinkedRecognizer = selectedRecognizerId != null;
+  const hasAccount = selectedAccountId != null;
   const imagePickerPet =
     imagePickerPetId != null
       ? pets.find((pet) => pet.id === imagePickerPetId)
@@ -150,13 +171,13 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
     );
   }
 
-  if (gate === 'empty') {
+  if (gate === 'no_account') {
     return (
       <div className="recognition-tab-view">
         <RecognitionEmptyState
-          title={copy.emptyTitle}
-          ctaLabel={copy.emptyCta}
-          onAddDevice={onAddDevice}
+          title={copy.noAccountTitle}
+          ctaLabel={copy.noAccountCta}
+          onConnectProvider={onGoToProvider}
         />
       </div>
     );
@@ -168,97 +189,112 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
         className="recognition-tab-form"
         onSubmit={onSubmit}
         error={saveFailed ? copy.saveError : null}
-        actions={
-          hasLinkedRecognizer
-            ? {
-                onCancel,
-                cancelLabel: copy.cancelLabel,
-                submitLabel: copy.saveLabel,
-                isSubmitting: isSaving,
-                submitDisabled: !isDirty,
-              }
-            : undefined
-        }
+        actions={{
+          onCancel,
+          cancelLabel: copy.cancelLabel,
+          submitLabel: copy.saveLabel,
+          isSubmitting: isSaving,
+          submitDisabled: !isDirty,
+        }}
       >
         <SectionHeader
           size="compact"
           className="first"
           icon={<Cpu aria-hidden="true" />}
-          subtitle={copy.modelSubtitle}
+          subtitle={copy.accountSubtitle}
         >
-          {copy.modelTitle}
+          {copy.accountTitle}
         </SectionHeader>
         <Card className="recognition-tab-card">
           <CardContent>
             <div className="recognition-model-stack">
-              {hasLinkedRecognizer && (
-                <div className="auto-identify-field">
-                  <LabeledSwitchField
-                    checked={autoIdentify}
-                    onCheckedChange={onToggleAutoIdentify}
-                    enabledLabel={copy.autoIdentifyLabel}
-                    disabledLabel={copy.autoIdentifyLabel}
-                    disabled={disabled}
-                  />
-                  <p className="auto-identify-hint">{copy.autoIdentifyHint}</p>
-                </div>
-              )}
               <CardList variant="bare">
                 <CardListItem
                   icon={<Cpu aria-hidden="true" />}
-                  iconTone={hasLinkedRecognizer ? 'primary' : 'muted'}
+                  iconTone={hasAccount ? 'primary' : 'muted'}
                   trailing={
                     <div className="recognition-model-row-actions">
-                      {(hasLinkedRecognizer
-                        ? recognizerOptions.length > 1
-                        : recognizerOptions.length > 0) && (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setRecognizerPickerOpen(true)}
-                          disabled={disabled}
-                        >
-                          {copy.modelChangeLabel}
-                        </Button>
-                      )}
-                      {selectedRecognizerId != null && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          icon
-                          onClick={() =>
-                            onOpenRecognizerSettings(selectedRecognizerId)
-                          }
-                          aria-label={copy.modelSettingsLabel}
-                          title={copy.modelSettingsLabel}
-                          disabled={disabled}
-                        >
-                          <Pencil aria-hidden="true" />
-                        </Button>
-                      )}
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setAccountPickerOpen(true)}
+                        disabled={disabled}
+                      >
+                        {copy.accountChangeLabel}
+                      </Button>
                     </div>
                   }
                 >
                   <CardListContent
                     title={
-                      hasLinkedRecognizer
-                        ? selectedRecognizerName
-                        : copy.modelNoneTitle
-                    }
-                    description={
-                      hasLinkedRecognizer ? selectedRecognizerModel : undefined
+                      hasAccount
+                        ? selectedAccountName
+                        : copy.accountNoneSelected
                     }
                   />
                 </CardListItem>
               </CardList>
+
+              {hasAccount && (
+                <>
+                  <div className="auto-identify-field">
+                    <LabeledSwitchField
+                      checked={autoIdentify}
+                      onCheckedChange={onToggleAutoIdentify}
+                      enabledLabel={copy.autoIdentifyLabel}
+                      disabledLabel={copy.autoIdentifyLabel}
+                      disabled={disabled}
+                    />
+                    <p className="auto-identify-hint">
+                      {copy.autoIdentifyHint}
+                    </p>
+                  </div>
+
+                  <FormField
+                    label={copy.modelLabel}
+                    description={copy.modelHint}
+                    htmlFor={modelField.inputId}
+                    descriptionId={modelField.descriptionId}
+                  >
+                    <Input
+                      id={modelField.inputId}
+                      aria-describedby={modelField.descriptionId}
+                      value={model}
+                      placeholder={copy.modelPlaceholder}
+                      onChange={(event) => onModelChange(event.target.value)}
+                      disabled={disabled}
+                    />
+                  </FormField>
+
+                  <FormField
+                    label={copy.promptLabel}
+                    description={copy.promptHint}
+                    htmlFor={promptField.inputId}
+                    descriptionId={promptField.descriptionId}
+                  >
+                    <Textarea
+                      id={promptField.inputId}
+                      aria-describedby={promptField.descriptionId}
+                      rows={8}
+                      value={promptTemplate}
+                      placeholder={copy.promptPlaceholder}
+                      onChange={(event) =>
+                        onPromptTemplateChange(event.target.value)
+                      }
+                      disabled={disabled}
+                    />
+                  </FormField>
+                </>
+              )}
+
               {/*
-               * A card-local tool, not a commit: it runs the recognizer named
-               * in the row above against a live frame and writes nothing, so it
-               * sits at the point of use rather than in the form's Save row.
+               * A card-local tool, not a commit: it runs the saved attachment
+               * against a live frame and writes nothing, so it sits at the
+               * point of use rather than in the form's Save row. Gated on the
+               * *saved* link, since that is what the server reads.
                */}
-              {hasLinkedRecognizer && (
+              {hasSavedRecognition && (
                 <div className="recognition-card-tools">
                   <Button
                     type="button"
@@ -276,7 +312,7 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
           </CardContent>
         </Card>
 
-        {hasLinkedRecognizer && (
+        {hasAccount && (
           <>
             <SectionHeader
               size="compact"
@@ -307,17 +343,18 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
         )}
       </FormShell>
 
-      <RecognizerPicker
-        open={recognizerPickerOpen}
-        onOpenChange={setRecognizerPickerOpen}
-        title={copy.pickerTitle}
-        recognizers={recognizerOptions}
-        selectedId={selectedRecognizerId}
+      <RecognitionAccountPicker
+        open={accountPickerOpen}
+        onOpenChange={setAccountPickerOpen}
+        title={copy.accountPickerTitle}
+        accounts={accountOptions}
+        selectedId={selectedAccountId}
         onSelect={(id) => {
-          setRecognizerPickerOpen(false);
-          onSelectRecognizer(id);
+          setAccountPickerOpen(false);
+          onSelectAccount(id);
         }}
-        emptyLabel={copy.pickerEmpty}
+        noneLabel={copy.accountNoneLabel}
+        emptyLabel={copy.accountPickerEmpty}
       />
 
       {imagePickerPetId != null && (
@@ -325,7 +362,7 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
           isOpen
           onClose={() => setImagePickerPetId(null)}
           petId={imagePickerPetId}
-          sourceDeviceId={sourceDeviceId}
+          sourceDeviceId={deviceId}
           excludeMediaIds={imagePickerPet?.referenceImageIds}
           onSelect={(mediaIds) => {
             onConfirmAddImages(imagePickerPetId, mediaIds);
@@ -334,12 +371,11 @@ const RecognitionTabView: React.FC<RecognitionTabViewProps> = ({
         />
       )}
 
-      {selectedRecognizerId != null && (
+      {hasSavedRecognition && (
         <TestRecognitionModal
           isOpen={testModalOpen}
           onClose={() => setTestModalOpen(false)}
-          deviceId={selectedRecognizerId}
-          sourceDeviceId={sourceDeviceId}
+          deviceId={deviceId}
         />
       )}
 

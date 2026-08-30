@@ -1,6 +1,10 @@
 import { Type, type Static } from '@fastify/type-provider-typebox';
 import { DeviceTypeSchema } from '../../constants/devices.ts';
 import { ProviderCapabilitiesSchema } from './integrations.ts';
+import {
+  DeviceRecognitionConfigSchema,
+  DeviceRecognitionLinkSchema,
+} from './inference.ts';
 import { EventCauseSchema } from './events.ts';
 import { DeviceSignalSchema } from './deviceSignals.ts';
 
@@ -205,6 +209,12 @@ export const GetDeviceResponseSchema = Type.Object({
    * returned. Nullable makes the compiler ask every route what the answer is.
    */
   camera_link: Type.Union([DeviceCameraLinkSchema, Type.Null()]),
+  /**
+   * The recognition attachment this device is watched by, or `null` when it
+   * has none. Required and nullable for the same reason `camera_link` is: an
+   * optional field is satisfied by a handler that simply forgets the join.
+   */
+  recognition: Type.Union([DeviceRecognitionLinkSchema, Type.Null()]),
   created_at: Type.String(),
   updated_at: Type.String(),
 });
@@ -222,11 +232,16 @@ export type PatchDeviceCameraRequestDTO = Static<
   typeof PatchDeviceCameraRequestSchema
 >;
 
-export const PutDeviceRecognizerRequestSchema = Type.Object({
-  recognizer_id: Type.Number(),
+export const PutDeviceRecognitionRequestSchema = DeviceRecognitionLinkSchema;
+export type PutDeviceRecognitionRequestDTO = Static<
+  typeof PutDeviceRecognitionRequestSchema
+>;
+
+export const PatchDeviceRecognitionRequestSchema = Type.Object({
+  config: DeviceRecognitionConfigSchema,
 });
-export type PutDeviceRecognizerRequestDTO = Static<
-  typeof PutDeviceRecognizerRequestSchema
+export type PatchDeviceRecognitionRequestDTO = Static<
+  typeof PatchDeviceRecognitionRequestSchema
 >;
 
 /**

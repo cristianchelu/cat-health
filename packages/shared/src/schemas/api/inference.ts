@@ -9,10 +9,26 @@ export type InferenceAccountConfig = Static<
   typeof InferenceAccountConfigSchema
 >;
 
-// Pet Recognizer Device Config
-export const PetRecognizerConfigSchema = Type.Object({
-  model: Type.String(),
-  source_device_id: Type.Number(),
+// Per-device recognition attachment
+
+export const DeviceRecognitionConfigSchema = Type.Object({
+  /**
+   * `null` means "whatever the app ships as its default" — not "no model".
+   *
+   * Null first, and it has to stay that way: this schema validates a request
+   * body, and Fastify's ajv runs with `coerceTypes`, which happily satisfies a
+   * leading `String` branch by turning `null` into `''`. Ordered this way the
+   * null survives, and an empty string coerces to null — which is the same
+   * thing the form means by leaving the field blank.
+   */
+  model: Type.Union([Type.Null(), Type.String()]),
+  /**
+   * Scene context and nothing else — what this camera looks at, so the model
+   * can tell the animals apart from the surroundings. May be empty. The
+   * candidate list and the output contract are code's to own: an earlier shape
+   * had this field interpolate a `{{reference_images}}` placeholder, which put
+   * a piece of the contract in user config where deleting a line broke it.
+   */
   prompt_template: Type.String(),
   auto_identify: Type.Boolean(),
   reference_images: Type.Record(Type.String(), Type.Array(Type.Number())),
@@ -34,29 +50,18 @@ export const PetRecognizerConfigSchema = Type.Object({
    */
   ignored_pets: Type.Optional(Type.Array(Type.Number())),
 });
-export type PetRecognizerConfig = Static<typeof PetRecognizerConfigSchema>;
-
-// Request/Response schemas for adding reference images
-export const AddReferenceImageRequestSchema = Type.Object({
-  pet_id: Type.Number(),
-  media_id: Type.Number(),
-});
-export type AddReferenceImageRequest = Static<
-  typeof AddReferenceImageRequestSchema
+export type DeviceRecognitionConfigDTO = Static<
+  typeof DeviceRecognitionConfigSchema
 >;
 
-export const RemoveReferenceImageRequestSchema = Type.Object({
-  pet_id: Type.Number(),
-  media_id: Type.Number(),
+/**
+ * What a device's recognition attachment holds: which inference account pays
+ * for the call, and the scene config that call is made with.
+ */
+export const DeviceRecognitionLinkSchema = Type.Object({
+  account_id: Type.Number(),
+  config: DeviceRecognitionConfigSchema,
 });
-export type RemoveReferenceImageRequest = Static<
-  typeof RemoveReferenceImageRequestSchema
->;
-
-// Candidate images query params
-export const GetCandidateImagesQuerySchema = Type.Object({
-  pet_id: Type.Number(),
-});
-export type GetCandidateImagesQuery = Static<
-  typeof GetCandidateImagesQuerySchema
+export type DeviceRecognitionLinkDTO = Static<
+  typeof DeviceRecognitionLinkSchema
 >;

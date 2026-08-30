@@ -7,6 +7,12 @@ export const ProviderCapabilitiesSchema = Type.Object({
   skip_discovery: Type.Optional(Type.Boolean()),
   allows_direct_registration: Type.Optional(Type.Boolean()),
   supported_device_types: Type.Optional(Type.Array(DeviceTypeSchema)),
+  /**
+   * The provider can answer a vision prompt, so its accounts may be attached to
+   * a device's recognition. Separate from `supported_device_types`: a provider
+   * can offer this without registering any device of its own.
+   */
+  supports_recognition: Type.Optional(Type.Boolean()),
 });
 export type ProviderCapabilities = Static<typeof ProviderCapabilitiesSchema>;
 

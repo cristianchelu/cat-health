@@ -7,10 +7,10 @@ export {
   type RecognitionEmptyStateProps,
 } from './RecognitionEmptyState';
 export {
-  RecognizerPicker,
-  type RecognizerPickerProps,
-  type RecognizerPickerOption,
-} from './RecognizerPicker';
+  RecognitionAccountPicker,
+  type RecognitionAccountPickerProps,
+  type RecognitionAccountOption,
+} from './RecognitionAccountPicker';
 export {
   TrainedPetsEditor,
   type TrainedPetsEditorProps,

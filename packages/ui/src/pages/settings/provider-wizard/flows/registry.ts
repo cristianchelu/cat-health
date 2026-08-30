@@ -1,7 +1,6 @@
 import type { DeviceType } from 'shared';
 import type { AddDeviceFlow } from './types';
 import { DefaultRegisterDeviceForm } from './DefaultRegisterDeviceForm';
-import { InferenceRegisterDeviceForm } from './InferenceRegisterDeviceForm';
 import { CameraRegisterDeviceForm } from './CameraRegisterDeviceForm';
 import { EsphomeRegisterDeviceForm } from './EsphomeRegisterDeviceForm';
 import { SurePetRegisterDeviceForm } from './surepet/SurePetRegisterDeviceForm';
@@ -12,22 +11,11 @@ const ALL_DEVICE_TYPES: readonly DeviceType[] = [
   'feeder',
   'water_fountain',
   'camera',
-  'pet_recognizer',
 ];
 
 const defaultFlow: AddDeviceFlow = {
   supportedTypes: ALL_DEVICE_TYPES,
   RegisterDeviceForm: DefaultRegisterDeviceForm,
-};
-
-/*
- * Whether discovery is skipped is not decided here: it comes from the API's
- * `skip_discovery` capability, which is what both the step plan and navigation
- * read. A local copy could only ever disagree with it.
- */
-const inferenceFlow: AddDeviceFlow = {
-  supportedTypes: ['pet_recognizer'],
-  RegisterDeviceForm: InferenceRegisterDeviceForm,
 };
 
 const cameraFlow: AddDeviceFlow = {
@@ -67,7 +55,6 @@ const thinginoFlow: AddDeviceFlow = {
 };
 
 const PROVIDER_FLOWS: Record<string, AddDeviceFlow> = {
-  inference: inferenceFlow,
   camera: cameraFlow,
   thingino: thinginoFlow,
   esphome: esphomeFlow,

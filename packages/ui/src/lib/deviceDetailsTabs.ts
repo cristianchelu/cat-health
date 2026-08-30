@@ -7,7 +7,6 @@ export type DeviceDetailsTabId =
   | 'history'
   | 'camera'
   | 'recognition'
-  | 'reference-images'
   | 'settings';
 
 const OVERVIEW_HISTORY: DeviceDetailsTabId[] = ['overview', 'history'];
@@ -17,10 +16,6 @@ const ACTIVITY_PEER_TABS: DeviceDetailsTabId[] = ['camera', 'recognition'];
 export function getDeviceDetailsTabs(device: {
   type: DeviceType;
 }): DeviceDetailsTabId[] {
-  if (device.type === 'pet_recognizer') {
-    return [...OVERVIEW_HISTORY, 'reference-images'];
-  }
-
   if (device.type === 'camera') {
     return [...OVERVIEW_HISTORY];
   }

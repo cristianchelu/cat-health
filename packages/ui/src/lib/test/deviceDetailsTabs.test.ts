@@ -37,14 +37,6 @@ describe('getDeviceDetailsTabs', () => {
     ]);
   });
 
-  it('returns reference-images for pet_recognizer without peer or settings tabs', () => {
-    assert.deepEqual(tabs('pet_recognizer'), [
-      'overview',
-      'history',
-      'reference-images',
-    ]);
-  });
-
   it('returns overview and history only for camera', () => {
     assert.deepEqual(tabs('camera'), ['overview', 'history']);
   });

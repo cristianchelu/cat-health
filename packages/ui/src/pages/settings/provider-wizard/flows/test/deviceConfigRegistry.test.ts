@@ -2,11 +2,10 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { getDeviceConfigModule } from '../deviceConfigRegistry.ts';
-import { DEFAULT_MODEL } from '../inference/inferenceDeviceConfig.ts';
 
 describe('device config registry', () => {
   it('resolves providers that have device settings', () => {
-    for (const provider of ['camera', 'inference', 'thingino']) {
+    for (const provider of ['camera', 'thingino']) {
       assert.ok(getDeviceConfigModule(provider).Fields);
       assert.notEqual(
         getDeviceConfigModule(provider),
@@ -69,22 +68,6 @@ describe('device config registry', () => {
     );
   });
 
-  it('keeps recognizer reference images across a settings save', () => {
-    const module = getDeviceConfigModule('inference');
-    const next = module.toConfig(
-      {
-        source_device_id: '4',
-        model: DEFAULT_MODEL,
-        prompt_template: 'the hallway',
-        auto_identify: true,
-      },
-      { reference_images: { 1: 'a.jpg' }, visit_annotation_enabled: true },
-    );
-    assert.deepEqual(next.reference_images, { 1: 'a.jpg' });
-    assert.equal(next.source_device_id, 4);
-    assert.equal(next.visit_annotation_enabled, undefined);
-  });
-
   it('opens devices that predate config validation', () => {
     const thingino = getDeviceConfigModule('thingino');
     assert.deepEqual(thingino.toFormValues({ origin: 'http://cam.local' }), {
@@ -94,7 +77,7 @@ describe('device config registry', () => {
   });
 
   it('tolerates junk config for every module', () => {
-    for (const provider of ['camera', 'inference', 'thingino', 'esphome']) {
+    for (const provider of ['camera', 'thingino', 'esphome']) {
       const module = getDeviceConfigModule(provider);
       for (const junk of [null, undefined, 42, [], 'nope']) {
         assert.doesNotThrow(() => module.toFormValues(junk));

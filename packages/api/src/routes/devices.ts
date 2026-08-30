@@ -19,13 +19,14 @@ import {
   GetProvidersResponseSchema,
   PutDeviceCameraRequestSchema,
   PatchDeviceCameraRequestSchema,
-  PutDeviceRecognizerRequestSchema,
+  PutDeviceRecognitionRequestSchema,
+  PatchDeviceRecognitionRequestSchema,
   PostDeviceTestIdentifyRequestSchema,
   PostDeviceTestIdentifyResponseSchema,
   ReidentifyLitterboxVisitsQuerySchema,
   ReidentifyLitterboxVisitsResponseSchema,
 } from 'shared';
-import { DEVICE_SIGNAL_KEYS, getNumberValue, isRecord } from 'shared';
+import { DEVICE_SIGNAL_KEYS, isRecord } from 'shared';
 import type { Device } from '../database/types/DeviceTable.ts';
 import type { ProviderAccount } from '../database/types/ProviderAccountTable.ts';
 import type {
@@ -153,6 +154,23 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     return { camera_id: row.camera_id, ...(config ? { config } : {}) };
   };
 
+  /**
+   * A stored recognition attachment on the wire, or `null` when the device has
+   * none. `config` is NOT NULL in the database, so unlike the camera link there
+   * is no absent-config case to fold away here.
+   */
+  const toRecognitionLink = (row: {
+    recognition_account_id: number | null;
+    recognition_config: unknown;
+  }): GetDeviceResponseDTO['recognition'] => {
+    if (!row.recognition_account_id) return null;
+    const config =
+      typeof row.recognition_config === 'string'
+        ? JSON.parse(row.recognition_config)
+        : row.recognition_config;
+    return { account_id: row.recognition_account_id, config };
+  };
+
   const mapDevice = async (
     device: DeviceWithProvider,
     { includeState = true }: { includeState?: boolean } = {},
@@ -170,6 +188,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       /* No link unless a caller joined one and says otherwise. Stated here so
          every route answers the question rather than skipping it. */
       camera_link: null,
+      recognition: null,
       created_at: new Date(device.created_at).toISOString(),
       updated_at: new Date(device.updated_at).toISOString(),
       last_seen: device.last_seen
@@ -230,20 +249,19 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   };
 
   /**
-   * Resolve reference_images IDs to { id, file_path } for pet_recognizer
-   * devices. Mutates `mapped.reference_media` in place.
+   * Resolve reference_images IDs to { id, file_path } for devices that carry a
+   * recognition attachment. Mutates `mapped.reference_media` in place.
    */
   async function enrichReferenceMedia(devices: GetDeviceResponseDTO[]) {
     const allIds: number[] = [];
-    const petRecognizers: Array<{
+    const watched: Array<{
       mapped: GetDeviceResponseDTO;
       refImages: Record<string, number[]>;
     }> = [];
 
     for (const mapped of devices) {
-      if (mapped.type !== 'pet_recognizer') continue;
-      const config = mapped.config;
-      const refImages = isRecord(config) ? config.reference_images : undefined;
+      if (mapped.recognition == null) continue;
+      const refImages = mapped.recognition.config.reference_images;
       if (!isRecord(refImages)) continue;
 
       const ids = Object.values(refImages).flatMap((value) =>
@@ -267,7 +285,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           normalizedRefImages[petId] = mediaIds;
         }
       }
-      petRecognizers.push({ mapped, refImages: normalizedRefImages });
+      watched.push({ mapped, refImages: normalizedRefImages });
     }
 
     if (allIds.length === 0) return;
@@ -281,7 +299,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
     const mediaById = new Map(mediaRows.map((m) => [m.id, m]));
 
-    for (const { mapped, refImages } of petRecognizers) {
+    for (const { mapped, refImages } of watched) {
       const referenceMedia: Record<
         string,
         Array<{ id: number; file_path: string }>
@@ -649,18 +667,26 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         // that look deliberate: a caller reading `camera_link` off a listed
         // device got `undefined` for a device that plainly has one.
         .leftJoin('device_camera', 'device.id', 'device_camera.device_id')
+        .leftJoin(
+          'device_recognition',
+          'device.id',
+          'device_recognition.device_id',
+        )
         .selectAll('device')
         .select('provider_account.provider as provider')
         .select('provider_account.enabled as account_enabled')
         .select([
           'device_camera.camera_id as camera_id',
           'device_camera.config as camera_config',
+          'device_recognition.account_id as recognition_account_id',
+          'device_recognition.config as recognition_config',
         ])
         .execute();
       const mapped = await Promise.all(
         devices.map(async (d) => {
           const device = await mapDevice(d, { includeState: false });
           device.camera_link = toCameraLink(d);
+          device.recognition = toRecognitionLink(d);
           return device;
         }),
       );
@@ -752,18 +778,26 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           'provider_account.id',
         )
         .leftJoin('device_camera', 'device.id', 'device_camera.device_id')
+        .leftJoin(
+          'device_recognition',
+          'device.id',
+          'device_recognition.device_id',
+        )
         .selectAll('device')
         .select('provider_account.provider as provider')
         .select('provider_account.enabled as account_enabled')
         .select([
           'device_camera.camera_id as camera_id',
           'device_camera.config as camera_config',
+          'device_recognition.account_id as recognition_account_id',
+          'device_recognition.config as recognition_config',
         ])
         .where('device.id', '=', id)
         .executeTakeFirst();
       if (!device) throw new Error('Device not found');
       const mapped = await mapDevice(device);
       mapped.camera_link = toCameraLink(device);
+      mapped.recognition = toRecognitionLink(device);
       await Promise.all([
         enrichReferenceMedia([mapped]),
         enrichLitterboxDeposits([mapped]),
@@ -878,12 +912,19 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           'provider_account.id',
         )
         .leftJoin('device_camera', 'device.id', 'device_camera.device_id')
+        .leftJoin(
+          'device_recognition',
+          'device.id',
+          'device_recognition.device_id',
+        )
         .selectAll('device')
         .select('provider_account.provider as provider')
         .select('provider_account.enabled as account_enabled')
         .select([
           'device_camera.camera_id as camera_id',
           'device_camera.config as camera_config',
+          'device_recognition.account_id as recognition_account_id',
+          'device_recognition.config as recognition_config',
         ])
         .where('device.id', '=', id)
         .executeTakeFirst();
@@ -892,6 +933,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const mapped = await mapDevice(device);
       mapped.camera_link = toCameraLink(device);
+      mapped.recognition = toRecognitionLink(device);
 
       await enrichReferenceMedia([mapped]);
       return mapped;
@@ -915,21 +957,27 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const { id: deviceId } = request.params;
       const { media_id } = request.body;
 
-      const resolved = await integrationManager.resolveLiveController(deviceId);
-      if (!resolved.ok) {
-        return sendControllerFailure(reply, deviceId, resolved.reason);
+      const outcome = await fastify.recognitionService.testIdentify(
+        deviceId,
+        media_id,
+      );
+
+      if (!outcome.ok) {
+        if (outcome.reason === 'no_recognition') {
+          return reply.code(404).send({
+            statusCode: 404,
+            error: 'Not Found',
+            message: `Device ${deviceId} has no recognition configured`,
+          });
+        }
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: `Device ${deviceId} recognition is disabled: its provider account is switched off`,
+        });
       }
 
-      const { controller } = resolved;
-      if (
-        !('identifyPetFromMedia' in controller) ||
-        typeof controller.identifyPetFromMedia !== 'function'
-      ) {
-        throw new Error('Device is not a pet recognizer');
-      }
-
-      const result = await controller.identifyPetFromMedia(media_id);
-      return result;
+      return outcome.result;
     },
   );
 
@@ -1077,21 +1125,14 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     },
   );
 
-  // --- Device Recognizer Link ---
+  // --- Device Recognition Attachment ---
 
-  /**
-   * Atomically point recognizer R at target device T. The recognizer that
-   * previously served T (if any) inherits R's old source so both keep a valid
-   * assignment — unless R's old source was T itself (two recognizers claiming
-   * the same target), in which case the other recognizer is left unassigned so
-   * exactly one recognizer ends up on T.
-   */
   fastify.put(
-    '/:id/recognizer',
+    '/:id/recognition',
     {
       schema: {
         params: GetDeviceParamsSchema,
-        body: PutDeviceRecognizerRequestSchema,
+        body: PutDeviceRecognitionRequestSchema,
         response: {
           '200': GetDeviceResponseSchema,
           '400': Http400ResponseSchema,
@@ -1101,14 +1142,14 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     },
     async (request, reply) => {
       const { id } = request.params;
-      const { recognizer_id } = request.body;
+      const { account_id, config } = request.body;
 
-      const target = await db
+      const device = await db
         .selectFrom('device')
         .select('id')
         .where('id', '=', id)
         .executeTakeFirst();
-      if (!target) {
+      if (!device) {
         return reply.code(404).send({
           statusCode: 404,
           error: 'Not Found',
@@ -1116,102 +1157,108 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         });
       }
 
-      const recognizer = await db
-        .selectFrom('device')
-        .select(['id', 'type'])
-        .where('id', '=', recognizer_id)
+      const account = await db
+        .selectFrom('provider_account')
+        .select(['id', 'provider'])
+        .where('id', '=', account_id)
         .executeTakeFirst();
-      if (!recognizer) {
+      if (!account) {
         return reply.code(404).send({
           statusCode: 404,
           error: 'Not Found',
-          message: `Device ${recognizer_id} not found`,
+          message: `Provider account ${account_id} not found`,
         });
       }
-      if (recognizer.type !== 'pet_recognizer') {
+
+      /* On the capability, never the provider name (AGENTS.md): a second
+         provider that can answer a vision prompt should work here without this
+         route learning its name. */
+      const provider = integrationManager
+        .getProviders()
+        .find((p) => p.name === account.provider);
+      if (!provider?.capabilities.supports_recognition) {
         return reply.code(400).send({
           statusCode: 400,
           error: 'Bad Request',
-          message: `Device ${recognizer_id} is not a pet recognizer`,
+          message: `Provider ${account.provider} does not support recognition`,
         });
       }
 
-      // Read-modify-write of every affected config happens inside one
-      // transaction (better-sqlite3 serializes it), so a failed write leaves
-      // no half-swapped pair.
-      const changedIds = await db.transaction().execute(async (trx) => {
-        const recognizers = await trx
-          .selectFrom('device')
-          .select(['id', 'config'])
-          .where('type', '=', 'pet_recognizer')
+      await db.transaction().execute(async (trx) => {
+        await trx
+          .deleteFrom('device_recognition')
+          .where('device_id', '=', id)
           .execute();
 
-        const nextRow = recognizers.find((row) => row.id === recognizer_id);
-        if (!nextRow) throw new Error(`Device ${recognizer_id} not found`);
-
-        const nextConfig = asConfigRecord(parseJsonValue(nextRow.config)) ?? {};
-        const previousSource = getNumberValue(nextConfig, 'source_device_id');
-
-        const incumbents = recognizers.filter((row) => {
-          if (row.id === recognizer_id) return false;
-          const config = asConfigRecord(parseJsonValue(row.config));
-          return (
-            config !== null && getNumberValue(config, 'source_device_id') === id
-          );
-        });
-
-        const updates: Array<{
-          id: number;
-          config: Record<string, unknown>;
-        }> = [];
-
-        incumbents.forEach((incumbent, index) => {
-          const config = asConfigRecord(parseJsonValue(incumbent.config)) ?? {};
-          // Only the first incumbent can inherit R's vacated source; handing
-          // it to several would recreate the duplicate one hop away. And when
-          // that vacated source is T itself (or nothing), the incumbent is
-          // unassigned instead of having T written back into it.
-          const inherits =
-            index === 0 &&
-            previousSource !== undefined &&
-            previousSource !== id;
-          if (inherits) {
-            updates.push({
-              id: incumbent.id,
-              config: { ...config, source_device_id: previousSource },
-            });
-          } else {
-            const unassigned = { ...config };
-            delete unassigned.source_device_id;
-            updates.push({ id: incumbent.id, config: unassigned });
-          }
-        });
-
-        if (previousSource !== id) {
-          updates.push({
-            id: recognizer_id,
-            config: { ...nextConfig, source_device_id: id },
-          });
-        }
-
-        const now = Date.now();
-        for (const update of updates) {
-          await trx
-            .updateTable('device')
-            .set({ config: update.config, updated_at: now })
-            .where('id', '=', update.id)
-            .execute();
-        }
-
-        return updates.map((update) => update.id);
+        await trx
+          .insertInto('device_recognition')
+          .values({ device_id: id, account_id, config })
+          .execute();
       });
 
-      await Promise.all(
-        changedIds.map((deviceId) =>
-          integrationManager.invalidateDeviceController(deviceId),
-        ),
-      );
+      return fastify
+        .inject({ method: 'GET', url: `/api/devices/${id}` })
+        .then((r) => JSON.parse(r.payload));
+    },
+  );
 
+  fastify.patch(
+    '/:id/recognition',
+    {
+      schema: {
+        params: GetDeviceParamsSchema,
+        body: PatchDeviceRecognitionRequestSchema,
+        response: {
+          '200': GetDeviceResponseSchema,
+          '404': Http404ResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { config } = request.body;
+
+      const existing = await db
+        .selectFrom('device_recognition')
+        .select('device_id')
+        .where('device_id', '=', id)
+        .executeTakeFirst();
+      if (!existing) {
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Recognition link not found',
+        });
+      }
+
+      await db
+        .updateTable('device_recognition')
+        .set({ config })
+        .where('device_id', '=', id)
+        .execute();
+
+      return fastify
+        .inject({ method: 'GET', url: `/api/devices/${id}` })
+        .then((r) => JSON.parse(r.payload));
+    },
+  );
+
+  fastify.delete(
+    '/:id/recognition',
+    {
+      schema: {
+        params: GetDeviceParamsSchema,
+        response: {
+          '200': GetDeviceResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params;
+      await db
+        .deleteFrom('device_recognition')
+        .where('device_id', '=', id)
+        .execute();
       return fastify
         .inject({ method: 'GET', url: `/api/devices/${id}` })
         .then((r) => JSON.parse(r.payload));

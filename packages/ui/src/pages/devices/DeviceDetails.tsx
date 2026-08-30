@@ -1,14 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import {
-  Camera,
-  Clock,
-  LayoutGrid,
-  ScanSearch,
-  Settings,
-  Sparkles,
-} from 'lucide-react';
+import { Camera, Clock, LayoutGrid, ScanSearch, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
@@ -25,7 +18,6 @@ import { ProviderDeviceView } from './components/ProviderDeviceView';
 import { DeviceTimeline } from './components/DeviceTimeline';
 import CameraTab from './components/CameraTab';
 import FeederSettingsTab from './components/FeederSettingsTab';
-import ReferenceImagesTab from './components/ReferenceImagesTab';
 import RecognitionTab from './components/RecognitionTab';
 import './DeviceDetails.css';
 import { useDevice } from '@/hooks/queries/deviceQueries';
@@ -36,7 +28,6 @@ const TAB_ICONS: Record<DeviceDetailsTabId, React.ReactNode> = {
   history: <Clock size={15} aria-hidden="true" />,
   camera: <Camera size={15} aria-hidden="true" />,
   recognition: <ScanSearch size={15} aria-hidden="true" />,
-  'reference-images': <Sparkles size={15} aria-hidden="true" />,
   settings: <Settings size={15} aria-hidden="true" />,
 };
 
@@ -129,8 +120,6 @@ const DeviceDetails: React.FC = () => {
         return t('devices.tab_camera');
       case 'recognition':
         return t('devices.tab_recognition');
-      case 'reference-images':
-        return t('pet_recognizer.tab_label');
       case 'settings':
         return t('devices.tab_settings');
     }
@@ -189,11 +178,6 @@ const DeviceDetails: React.FC = () => {
                 onGoToCamera={() => handleTabChange('camera')}
               />
             </div>
-          </TabsContent>
-        )}
-        {visibleTabs.includes('reference-images') && (
-          <TabsContent value="reference-images">
-            <ReferenceImagesTab device={device} />
           </TabsContent>
         )}
         {visibleTabs.includes('settings') && (

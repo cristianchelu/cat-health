@@ -56,7 +56,10 @@ describe('devices API', () => {
         true,
       );
       assert.ok(byName.has('inference'));
-      assert.equal(byName.get('inference')?.capabilities.skip_discovery, true);
+      assert.equal(
+        byName.get('inference')?.capabilities.supports_recognition,
+        true,
+      );
     });
   });
 

@@ -1,56 +1,39 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import type {
-  DeviceListItemDTO,
-  GetDeviceResponseDTO,
-  PetRecognizerConfig,
-} from 'shared';
+import { DEFAULT_RECOGNIZER_MODEL, type GetDeviceResponseDTO } from 'shared';
 import {
   addDraftReferenceImages,
-  buildRecognizerConfigPatch,
-  draftFromRecognizerConfig,
+  draftFromRecognitionLink,
   isPetWatched,
-  parsePetRecognizerConfig,
-  recognitionDraftEqual,
+  listRecognitionAccounts,
+  recognitionConfigEqual,
   removeDraftReferenceImage,
   resolveRecognitionGate,
+  resolveRecognitionSaveAction,
   setPetWatched,
-  type RecognitionDraft,
-} from '@/lib/petRecognizerDraft';
-import {
-  listPetRecognizers,
-  resolveRecognizersForDevice,
-} from '@/lib/resolveRecognizersForDevice';
-import { backState } from '@/lib/navigationBack';
+} from '@/lib/recognitionConfig';
 import { useDraftForm } from '@/hooks/form';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import {
-  useAssignDeviceRecognizer,
-  useDevices,
+  getProviderBrand,
+  providerBrandLabel,
+} from '@/pages/settings/provider-wizard/flows/providerBrandRegistry.ts';
+import {
+  useLinkDeviceRecognition,
   useProviderAccounts,
-  useUpdateDevice,
+  useProviders,
+  useUnlinkDeviceRecognition,
+  useUpdateDeviceRecognitionConfig,
 } from '@/hooks/queries/deviceQueries';
 import {
   RecognitionTabView,
+  type RecognitionAccountOption,
   type RecognitionTabViewProps,
-  type RecognizerPickerOption,
   type TrainedPetRow,
 } from '@/components/devices/recognition';
 
-const ADD_DEVICE_ROUTE = '/settings/devices/new';
 const ADD_PROVIDER_ROUTE = '/settings/providers/new';
-
-const EMPTY_DRAFT: RecognitionDraft = {
-  autoIdentify: false,
-  ignoredPets: [],
-  referenceImages: {},
-};
-
-interface RecognizerEntry {
-  device: DeviceListItemDTO;
-  config: PetRecognizerConfig;
-}
 
 interface RecognitionTabProps {
   device: GetDeviceResponseDTO;
@@ -58,16 +41,12 @@ interface RecognitionTabProps {
   onGoToCamera: () => void;
 }
 
-function toRecognizerEntry(device: DeviceListItemDTO): RecognizerEntry | null {
-  const config = parsePetRecognizerConfig(device.config);
-  if (!config) return null;
-  return { device, config };
-}
-
 /**
- * Wires the Recognition tab: the recognizer linked to this device (at most
- * one), the Change picker over every recognizer in the account, config draft,
- * and reference-image edits. RecognitionTabView stays presentational.
+ * Wires the Recognition tab: which account pays for the call, the scene config
+ * drafted against it, and reference-image edits. Everything it edits belongs to
+ * *this* device — the tab no longer reaches into a second device's config the
+ * way the recognizer-device model forced it to. RecognitionTabView stays
+ * presentational.
  */
 const RecognitionTab: React.FC<RecognitionTabProps> = ({
   device,
@@ -76,46 +55,41 @@ const RecognitionTab: React.FC<RecognitionTabProps> = ({
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { data: allDevices } = useDevices();
   const { pets } = usePetContext();
   const { data: accounts } = useProviderAccounts();
+  const { data: providers } = useProviders();
 
-  const hasInferenceAccount = React.useMemo(
-    () => (accounts ?? []).some((account) => account.provider === 'inference'),
-    [accounts],
-  );
+  const linkMutation = useLinkDeviceRecognition(device.id);
+  const unlinkMutation = useUnlinkDeviceRecognition(device.id);
+  const updateConfigMutation = useUpdateDeviceRecognitionConfig(device.id);
 
-  const allRecognizerEntries = React.useMemo<RecognizerEntry[]>(() => {
-    const entries: RecognizerEntry[] = [];
-    for (const recognizer of listPetRecognizers(allDevices ?? [])) {
-      const entry = toRecognizerEntry(recognizer);
-      if (entry) entries.push(entry);
+  /*
+   * Offerable accounts, plus the linked one even when it has been switched
+   * off — the same rule `listCameraCandidates` applies, so a stale link stays
+   * visible and unlinkable rather than vanishing behind an empty picker.
+   */
+  const linkedAccountId = device.recognition?.account_id;
+  const availableAccounts = React.useMemo(() => {
+    const offerable = listRecognitionAccounts(accounts ?? [], providers ?? []);
+    if (linkedAccountId == null) return offerable;
+    if (offerable.some((account) => account.id === linkedAccountId)) {
+      return offerable;
     }
-    return entries;
-  }, [allDevices]);
-
-  const linkedEntry = React.useMemo(() => {
-    const linked = resolveRecognizersForDevice(device.id, allDevices ?? []);
-    for (const recognizer of linked) {
-      const entry = toRecognizerEntry(recognizer);
-      if (entry) return entry;
-    }
-    return undefined;
-  }, [allDevices, device.id]);
+    const linked = (accounts ?? []).find(
+      (account) => account.id === linkedAccountId,
+    );
+    return linked ? [...offerable, linked] : offerable;
+  }, [accounts, providers, linkedAccountId]);
 
   const hasCameraLink = device.camera_link != null;
   const gate = resolveRecognitionGate({
     hasCameraLink,
-    recognizerCount: allRecognizerEntries.length,
+    accountCount: availableAccounts.length,
   });
 
-  const baselineConfig = linkedEntry?.config;
-  const baselineKey = linkedEntry
-    ? `${linkedEntry.device.id}:${JSON.stringify(linkedEntry.config)}`
-    : 'none';
+  const baselineKey = JSON.stringify(device.recognition ?? null);
   const baseline = React.useMemo(
-    () =>
-      baselineConfig ? draftFromRecognizerConfig(baselineConfig) : EMPTY_DRAFT,
+    () => draftFromRecognitionLink(device.recognition),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- baselineKey drives sync
     [baselineKey],
   );
@@ -126,32 +100,17 @@ const RecognitionTab: React.FC<RecognitionTabProps> = ({
     patchDraft,
     isDirty,
     commit,
-    requestDiscard,
     requestReset,
     discardConfirm,
   } = useDraftForm(baseline, {
     baselineKey,
-    isEqual: recognitionDraftEqual,
+    isEqual: recognitionConfigEqual,
   });
 
   React.useEffect(() => {
     onDirtyChange?.(isDirty);
     return () => onDirtyChange?.(false);
   }, [isDirty, onDirtyChange]);
-
-  const updateDeviceMutation = useUpdateDevice(linkedEntry?.device.id ?? 0);
-
-  const assignRecognizerMutation = useAssignDeviceRecognizer(device.id);
-
-  const handleSelectRecognizer = (id: number) => {
-    requestDiscard(() => {
-      assignRecognizerMutation.mutate(id);
-    });
-  };
-
-  const handleToggleAutoIdentify = (checked: boolean) => {
-    patchDraft({ autoIdentify: checked });
-  };
 
   const handleToggleWatched = (petId: number, watched: boolean) => {
     setDraft((current) => ({
@@ -170,27 +129,45 @@ const RecognitionTab: React.FC<RecognitionTabProps> = ({
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!isDirty || !linkedEntry || !baselineConfig) return;
-    const patch = buildRecognizerConfigPatch(baselineConfig, draft);
-    updateDeviceMutation.mutate(
-      { config: patch },
+    const action = resolveRecognitionSaveAction(baseline, draft);
+    if (action.type === 'none') return;
+
+    if (action.type === 'unlink') {
+      unlinkMutation.mutate(undefined, { onSuccess: () => commit() });
+      return;
+    }
+
+    if (action.type === 'link') {
+      linkMutation.mutate(
+        { account_id: action.accountId, config: action.config },
+        { onSuccess: () => commit() },
+      );
+      return;
+    }
+
+    updateConfigMutation.mutate(
+      { config: action.config },
       { onSuccess: () => commit() },
     );
   };
 
-  const recognizerOptions: RecognizerPickerOption[] = allRecognizerEntries.map(
-    (entry) => ({
-      id: entry.device.id,
-      name: entry.device.name,
-      model: entry.config.model,
+  const accountOptions: RecognitionAccountOption[] = availableAccounts.map(
+    (account) => ({
+      id: account.id,
+      name: account.name,
+      description: providerBrandLabel(getProviderBrand(account.provider), t),
     }),
   );
+
+  const selectedAccountName = availableAccounts.find(
+    (account) => account.id === draft.accountId,
+  )?.name;
 
   const petRows: TrainedPetRow[] = pets.map((pet) => {
     const petKey = String(pet.id);
     const watched = isPetWatched(draft.ignoredPets, pet.id);
     const referenceIds = draft.referenceImages[petKey] ?? [];
-    const media = linkedEntry?.device.reference_media?.[petKey] ?? [];
+    const media = device.reference_media?.[petKey] ?? [];
     const mediaById = new Map(media.map((item) => [item.id, item]));
     const thumbs = referenceIds
       .map((id) => mediaById.get(id))
@@ -220,8 +197,14 @@ const RecognitionTab: React.FC<RecognitionTabProps> = ({
     };
   });
 
-  const isBusy =
-    updateDeviceMutation.isPending || assignRecognizerMutation.isPending;
+  const isSaving =
+    linkMutation.isPending ||
+    unlinkMutation.isPending ||
+    updateConfigMutation.isPending;
+  const saveFailed =
+    linkMutation.isError ||
+    unlinkMutation.isError ||
+    updateConfigMutation.isError;
 
   const viewProps: RecognitionTabViewProps = {
     copy: {
@@ -229,17 +212,31 @@ const RecognitionTab: React.FC<RecognitionTabProps> = ({
       lockedCta: t('recognition.locked_cta'),
       providerHint: t('recognition.provider_hint'),
       providerCta: t('recognition.provider_cta'),
-      emptyTitle: t('recognition.empty_title'),
-      emptyCta: t('settings.add_device'),
+      noAccountTitle: t('recognition.no_account_title'),
+      noAccountCta: t('recognition.no_account_cta'),
       autoIdentifyLabel: t('recognition.auto_identify_label'),
       autoIdentifyHint: t('recognition.auto_identify_hint'),
-      modelTitle: t('recognition.model_title'),
-      modelSubtitle: t('recognition.model_subtitle'),
-      modelNoneTitle: t('recognition.model_none_selected'),
-      modelChangeLabel: t('camera_link.change_source'),
-      modelSettingsLabel: t('recognition.model_settings'),
-      pickerTitle: t('recognition.picker_title'),
-      pickerEmpty: t('recognition.picker_empty'),
+      accountTitle: t('recognition.account_title'),
+      accountSubtitle: t('recognition.account_subtitle'),
+      accountNoneSelected: t('recognition.account_none_selected'),
+      accountChangeLabel: t('camera_link.change_source'),
+      accountPickerTitle: t('recognition.account_picker_title'),
+      accountPickerEmpty: t('recognition.account_picker_empty'),
+      accountNoneLabel: t('camera_link.none_source'),
+      modelLabel: t('recognition.model_label'),
+      modelPlaceholder: t('recognition.model_placeholder', {
+        model: DEFAULT_RECOGNIZER_MODEL,
+      }),
+      /* The default is *named* here, not in the placeholder: the field above
+         taught "placeholder = what an empty field means", and the scene
+         textarea below shows an example — naming the default in prose keeps
+         both placeholders reading as examples. */
+      modelHint: t('recognition.model_hint', {
+        model: DEFAULT_RECOGNIZER_MODEL,
+      }),
+      promptLabel: t('recognition.prompt_label'),
+      promptHint: t('recognition.prompt_hint'),
+      promptPlaceholder: t('recognition.prompt_placeholder'),
       trainedPetsTitle: t('recognition.trained_pets_title'),
       trainedPetsSubtitle: t('recognition.trained_pets_subtitle'),
       trainedPetsEmpty: t('recognition.trained_pets_empty'),
@@ -250,24 +247,23 @@ const RecognitionTab: React.FC<RecognitionTabProps> = ({
     },
     gate,
     onGoToCamera,
-    showProviderHint: !hasInferenceAccount,
+    showProviderHint: availableAccounts.length === 0,
     onGoToProvider: () => navigate(ADD_PROVIDER_ROUTE),
-    onAddDevice: () => navigate(ADD_DEVICE_ROUTE),
 
-    sourceDeviceId: device.id,
-    selectedRecognizerId: linkedEntry?.device.id,
-    selectedRecognizerName: linkedEntry?.device.name,
-    selectedRecognizerModel: linkedEntry?.config.model,
-    recognizerOptions,
-    onSelectRecognizer: handleSelectRecognizer,
-    onOpenRecognizerSettings: (id) => {
-      navigate(`/settings/devices/${id}`, {
-        state: backState(`/devices/${device.id}`, device.name),
-      });
-    },
+    deviceId: device.id,
+    accountOptions,
+    selectedAccountId: draft.accountId,
+    selectedAccountName,
+    onSelectAccount: (id) => patchDraft({ accountId: id }),
+    hasSavedRecognition: device.recognition != null,
+
+    model: draft.model,
+    onModelChange: (value) => patchDraft({ model: value }),
+    promptTemplate: draft.promptTemplate,
+    onPromptTemplateChange: (value) => patchDraft({ promptTemplate: value }),
 
     autoIdentify: draft.autoIdentify,
-    onToggleAutoIdentify: handleToggleAutoIdentify,
+    onToggleAutoIdentify: (checked) => patchDraft({ autoIdentify: checked }),
 
     pets: petRows,
     onToggleWatched: handleToggleWatched,
@@ -277,12 +273,11 @@ const RecognitionTab: React.FC<RecognitionTabProps> = ({
     onSubmit: handleSubmit,
     onCancel: requestReset,
     isDirty,
-    isSaving: isBusy,
-    saveFailed:
-      updateDeviceMutation.isError || assignRecognizerMutation.isError,
+    isSaving,
+    saveFailed,
 
     discardConfirm,
-    disabled: isBusy,
+    disabled: isSaving,
   };
 
   return <RecognitionTabView {...viewProps} />;
