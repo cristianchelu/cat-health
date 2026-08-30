@@ -200,6 +200,30 @@ describe('rankDeviceSignals', () => {
     assert.equal(slots.meta[0]?.signal.key, DEVICE_SIGNAL_KEYS.LAST_REFRESHED);
   });
 
+  it('leads a calm litterbox with the waste in it', () => {
+    /* Nothing here warrants a warning: a third of a scoop's worth of waste,
+     * half a box of litter, a deep clean three weeks out. The one line worth
+     * reading is still the one saying the box has been used. */
+    const slots = rankDeviceSignals([
+      signal(DEVICE_SIGNAL_KEYS.LITTER_REMAINING, {
+        icon: 'litter',
+        value: { kind: 'number', value: 3.8, unit: 'kg' },
+        display: { kind: 'bar', fill: 0.55 },
+        severity: { kind: 'percent', value: 55 },
+      }),
+      days(DEVICE_SIGNAL_KEYS.DEEP_CLEAN, 22),
+      signal(DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP, {
+        icon: 'waste',
+        value: { kind: 'number', value: 51, unit: 'g' },
+        display: { kind: 'pips', of: 8, pips: ['urination'] },
+        severity: { kind: 'ratio', value: 0.34 },
+      }),
+    ]);
+
+    assert.equal(slots.gauge?.signal.key, DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP);
+    assert.equal(slots.attention, null);
+  });
+
   it('re-ranks when a scoop empties the deposit counter', () => {
     const beforeScoop = rankDeviceSignals([
       signal(DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP, {

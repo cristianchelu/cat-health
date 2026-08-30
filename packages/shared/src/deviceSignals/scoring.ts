@@ -18,6 +18,10 @@ import type {
  * `waste_since_scoop` scores against `device.config.waste_threshold_g`; a
  * device without one reports its weight and takes no urgency band, since a
  * fixed scoop-now weight would be an uncited health band.
+ *
+ * Where a signal sits inside `calm` is a question of interest, not of alarm.
+ * A counter that reads zero when there is nothing to report can hold most of
+ * the calm range while still warning only at its own threshold.
  */
 
 export const DEVICE_SIGNAL_KEYS = {
@@ -61,6 +65,14 @@ interface ScoreRule {
   soonScore: number;
   /** Calm urgency is `base + slope * value`, clamped to [0, CALM_CEILING]. */
   calm: { base: number; slope: number };
+  /**
+   * Urgency when the counter reads zero, for an accumulation whose zero means
+   * "nothing there". Such a counter starts its calm band near the top rather
+   * than ramping into it from the bottom, and this is the reading carved out
+   * of that: an empty box has nothing to say, and without the carve-out it
+   * would say it loudly.
+   */
+  emptyScore?: number;
 }
 
 const SCORE_TABLE: Record<string, ScoreRule> = {
@@ -130,14 +142,24 @@ const SCORE_TABLE: Record<string, ScoreRule> = {
     soonScore: 42,
     calm: { base: 8, slope: 0.3 },
   },
-  /* Severity is a ratio against the user's configured threshold. */
+  /*
+   * Severity is a ratio against the user's configured threshold.
+   *
+   * Its calm band starts high, just under `soon`: waste in the box is what
+   * the box is for, and a single deposit is a thing its owner will deal with
+   * today, while the counters around it — litter at half, a deep clean three
+   * weeks out — are slow drains nobody acts on this morning. So anything in
+   * the box leads the card well before there is enough to warn about, and the
+   * ramp across the band still orders two dirty boxes by how dirty they are.
+   */
   [DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP]: {
     direction: 'higher',
     now: 1,
     soon: 0.75,
     nowScore: 80,
     soonScore: 50,
-    calm: { base: 0, slope: 30 },
+    calm: { base: 36, slope: 10 },
+    emptyScore: BACKFILL_URGENCY,
   },
   /*
    * Percent of a full box rather than kilograms left, so one band fits every
@@ -234,6 +256,10 @@ export function scoreDeviceSignal(signal: {
       tone: 'soon',
       urgency: clamp(soonScore + depth * BAND_RAMP, 0, 100),
     };
+  }
+
+  if (rule.emptyScore !== undefined && value <= 0) {
+    return { tone: 'calm', urgency: rule.emptyScore };
   }
 
   return {
