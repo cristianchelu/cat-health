@@ -3,11 +3,12 @@
   flex-direction: column;
   gap: var(--space-2xs);
 
+  /* Spacing comes from the container's gap alone: a margin here too would
+     double the distance between the label and its own description. */
   .form-field__label {
     font-size: var(--text-sm);
     font-weight: var(--font-medium);
     color: var(--color-text);
-    margin-bottom: var(--space-2xs);
   }
 
   .form-field__required {
