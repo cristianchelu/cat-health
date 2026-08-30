@@ -73,7 +73,6 @@ const EventAdvancedDetails: React.FC<EventAdvancedDetailsProps> = ({
   return (
     <div className="event-advanced-details">
       <SheetPageHeader
-        className="event-advanced-header"
         title={t('event_details.advanced_details')}
         subtitle={subtitle}
         onBack={onBack}

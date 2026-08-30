@@ -1,30 +1,28 @@
 /*
  * The advanced rung of the event drawer.
  *
- * A page inside the sheet, so it brings the same insets the read surface does
- * — its left edge has to land where the title above it landed, or walking in
- * and back out reads as the surface shifting sideways.
+ * The drawer takes the dialog's own padding off so the media stage can run to
+ * the edges, which leaves a page with no media above it sitting hard against
+ * the sheet. So this brings that padding back: the box `PickerSheet` gets for
+ * free — `lg` all round, `md` between the header and the scroller — because a
+ * sheet you walked into should not be measured differently for being this one.
+ *
+ * The sides also match the read surface, so walking in and back out does not
+ * read as the surface shifting.
  */
 .event-advanced-details {
   display: flex;
   flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
   min-height: 0;
 
-  /*
-   * Tighter than the body's inset: the back button is an icon button with its
-   * own padding, so matching the text inset here would push its glyph a step
-   * further in than everything under it.
-   */
-  .event-advanced-header {
-    padding: var(--space-2xs) var(--space-sm) var(--space-xs);
-  }
-
-  /* The whole page scrolls, the same way the read surface does. */
+  /* The whole page scrolls, the same way the read surface does. The header
+     stays put above it. */
   .event-advanced-body {
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
-    padding: var(--space-xs) var(--space-lg) var(--space-lg);
     min-height: 0;
     overflow-y: auto;
   }
@@ -37,10 +35,9 @@
   }
 }
 
+/* The read surface's own phone inset, plus thumb room under the last row. */
 @media (max-width: 767px) {
   .event-advanced-details {
-    .event-advanced-body {
-      padding: var(--space-xs) var(--space-md) var(--space-xl);
-    }
+    padding: var(--space-lg) var(--space-md) var(--space-xl);
   }
 }
