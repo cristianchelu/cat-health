@@ -7,7 +7,12 @@ import {
 } from 'shared';
 
 import { ChartLegend } from '@/components/charts/ChartLegend';
-import { SignalTrace, type SignalBand } from '@/components/charts/SignalTrace';
+import { Trace } from '@/components/charts/Trace';
+import {
+  TraceBands,
+  TraceLine,
+  type TraceBand,
+} from '@/components/charts/TraceLayers';
 import { ReadoutGrid } from '@/components/ui/ReadoutGrid';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
@@ -72,7 +77,7 @@ const LitterboxAdvancedDetails: React.FC<LitterboxAdvancedDetailsProps> = ({
     [data.segments],
   );
 
-  const bands = React.useMemo<SignalBand[]>(
+  const bands = React.useMemo<TraceBand[]>(
     () =>
       segments.map((segment, i) => ({
         key: `${segment.state}-${i}`,
@@ -103,7 +108,10 @@ const LitterboxAdvancedDetails: React.FC<LitterboxAdvancedDetailsProps> = ({
         >
           {t('event_details.advanced_weight_signal')}
         </SectionLabel>
-        <SignalTrace values={weights} bands={bands} />
+        <Trace values={weights}>
+          <TraceBands bands={bands} />
+          <TraceLine />
+        </Trace>
         <ChartLegend
           variant="inline"
           items={Object.keys(STATE_COLORS).map((state) => ({

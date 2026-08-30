@@ -2,7 +2,12 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { ChartLegend } from '@/components/charts/ChartLegend';
-import { SignalTrace, type SignalBand } from '@/components/charts/SignalTrace';
+import { Trace } from '@/components/charts/Trace';
+import {
+  TraceBands,
+  TraceLine,
+  type TraceBand,
+} from '@/components/charts/TraceLayers';
 import type { WaterPeriod } from './analyzeWaterSegments';
 
 import './WaterSignalChart.css';
@@ -13,7 +18,7 @@ interface WaterSignalChartProps extends React.ComponentProps<'div'> {
   periods: WaterPeriod[];
   /** `inline` for a trace on a page among other things; see `ChartLegend`. */
   legendVariant?: 'bar' | 'inline';
-  /** Passed through to `SignalTrace`; the page decides how tall a track is. */
+  /** Passed through to the trace; the page decides how tall a track is. */
   height?: number;
 }
 
@@ -56,7 +61,7 @@ const WaterSignalChart = React.forwardRef<
 
     const smoothed = React.useMemo(() => emaSmooth(weights), [weights]);
 
-    const bands = React.useMemo<SignalBand[]>(
+    const bands = React.useMemo<TraceBand[]>(
       () =>
         periods.map((period, i) => ({
           key: `${period.state}-${i}`,
@@ -69,7 +74,10 @@ const WaterSignalChart = React.forwardRef<
 
     return (
       <div className={cn('water-signal-chart', className)} ref={ref} {...props}>
-        <SignalTrace values={smoothed} bands={bands} height={height} />
+        <Trace values={smoothed} height={height}>
+          <TraceBands bands={bands} />
+          <TraceLine />
+        </Trace>
         <ChartLegend
           variant={legendVariant}
           items={[

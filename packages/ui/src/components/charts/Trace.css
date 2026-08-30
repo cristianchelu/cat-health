@@ -1,35 +1,47 @@
 /*
- * A rate track. The recess it sits in comes from `.signal-trace`, which this
- * wears alongside; what is here is the layer of labels over the box.
+ * A trace sits in a recess: a signal is something read off the device, not
+ * another card the page is made of.
+ *
+ * The layers drawn on it are positioned entirely from the scale, so what is
+ * left here is the well itself and the type of the few layers that carry
+ * words.
  */
-.rate-trace {
-  /* The overlay is positioned against this, and the trace's own recess is
-     already `position: relative`. */
-  .rate-trace-overlay {
+.trace {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-signal-surface);
+
+  svg {
+    display: block;
+    width: 100%;
+  }
+
+  /*
+   * The undistorted half of the box. The SVG under it is stretched to the
+   * container, so anything with words in it is placed here instead — in
+   * percentages over the same geometry, and in the page's own type.
+   */
+  .trace-overlay {
     position: absolute;
     inset: 0;
-    /* Labels annotate the trace; nothing here is a target. */
+    /* Layers annotate the trace; nothing here is a target. */
     pointer-events: none;
     font-size: var(--text-2xs);
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
 
-  /*
-   * Under its own rule, hard against the leading edge. Under rather than over
-   * because the box is only ever padded a tenth above whichever is higher, the
-   * peak or the rule — so a ceiling nobody reached sits within a few pixels of
-   * the top, and a label written above it would be clipped away by the recess.
-   * The leading edge is where it cannot land on the peak it is read against.
-   */
-  .rate-trace-rule-label {
+  /* Hard against the leading edge, where it cannot land on the peak the rule
+     exists to be read against. */
+  .trace-rule-label {
     position: absolute;
     inset-inline-start: var(--space-2xs);
     transform: translateY(2px);
     color: var(--color-text-muted);
   }
 
-  .rate-trace-marker {
+  .trace-marker {
     position: absolute;
     display: flex;
     align-items: center;
@@ -43,8 +55,6 @@
       flex-direction: row;
     }
 
-    /* Past halfway the label would run out of the box, so it is written back
-       toward the middle instead. */
     &.leading {
       flex-direction: row-reverse;
       transform: translate(-100%, -50%);
@@ -55,7 +65,7 @@
     }
   }
 
-  .rate-trace-marker-dot {
+  .trace-marker-dot {
     width: 6px;
     height: 6px;
     flex: none;
@@ -66,12 +76,11 @@
     margin-inline: -3px;
   }
 
-  .rate-trace-marker-label {
+  .trace-marker-label {
     white-space: nowrap;
   }
 
-  /* The two ends of the window the track covers, on the floor of the box. */
-  .rate-trace-axis {
+  .trace-axis {
     position: absolute;
     bottom: var(--space-2xs);
     color: var(--color-text-muted);

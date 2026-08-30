@@ -8,12 +8,18 @@ import {
 } from 'shared';
 
 import { ChartLegend } from '@/components/charts/ChartLegend';
+import { Trace } from '@/components/charts/Trace';
 import {
-  RateTrace,
-  type RateMarker,
-  type RateRule,
-} from '@/components/charts/RateTrace';
-import type { SignalBand } from '@/components/charts/SignalTrace';
+  TraceArea,
+  TraceAxis,
+  TraceBands,
+  TraceLine,
+  TraceMarker,
+  TraceRule,
+  TraceRuleLabel,
+  type TraceBand,
+} from '@/components/charts/TraceLayers';
+import { zeroAnchoredRange } from '@/components/charts/range';
 import { ReadoutGrid } from '@/components/ui/ReadoutGrid';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
@@ -89,7 +95,7 @@ const WaterAdvancedDetails: React.FC<WaterAdvancedDetailsProps> = ({
     return { drinking, excluded, mean: count > 0 ? sum / count : 0 };
   }, [periods, rates]);
 
-  const spillBands = React.useMemo<SignalBand[]>(
+  const spillBands = React.useMemo<TraceBand[]>(
     () =>
       periods
         .filter((period) => period.state === 'spill')
@@ -110,36 +116,12 @@ const WaterAdvancedDetails: React.FC<WaterAdvancedDetailsProps> = ({
     [t, formatNumber],
   );
 
-  const rules = React.useMemo<RateRule[]>(
-    () => [
-      {
-        key: 'ceiling',
-        value: DRINKING_RATE_MAX_ML_PER_MIN,
-        label: mlPerMin(DRINKING_RATE_MAX_ML_PER_MIN),
-      },
-    ],
-    [mlPerMin],
+  /* Read against zero, and with the ceiling on screen whether or not the cat
+     ever came near it — a threshold outside the box classifies nothing. */
+  const rateDomain = React.useMemo(
+    () => zeroAnchoredRange(rates, [DRINKING_RATE_MAX_ML_PER_MIN]),
+    [rates],
   );
-
-  const markers = React.useMemo<RateMarker[]>(() => {
-    const out: RateMarker[] = [];
-    if (stats.drinking.index >= 0) {
-      out.push({
-        key: 'peak-intake',
-        index: stats.drinking.index,
-        label: mlPerMin(stats.drinking.value),
-      });
-    }
-    if (stats.excluded.index >= 0) {
-      out.push({
-        key: 'peak-excluded',
-        index: stats.excluded.index,
-        label: mlPerMin(stats.excluded.value),
-        tone: 'alert',
-      });
-    }
-    return out;
-  }, [stats, mlPerMin]);
 
   const grams = (value: number) =>
     t('event_details.advanced_grams', {
@@ -197,15 +179,38 @@ const WaterAdvancedDetails: React.FC<WaterAdvancedDetailsProps> = ({
         >
           {t('event_details.advanced_intake_rate')}
         </SectionLabel>
-        <RateTrace
+        <Trace
           values={rates}
-          bands={spillBands}
-          rules={rules}
-          markers={markers}
-          axisStart={formatClock(0)}
-          axisEnd={formatClock(durationSeconds)}
+          domain={rateDomain}
           height={TRACK_HEIGHT}
-        />
+          overlay={
+            <>
+              <TraceRuleLabel value={DRINKING_RATE_MAX_ML_PER_MIN}>
+                {mlPerMin(DRINKING_RATE_MAX_ML_PER_MIN)}
+              </TraceRuleLabel>
+              {stats.drinking.index >= 0 && (
+                <TraceMarker index={stats.drinking.index}>
+                  {mlPerMin(stats.drinking.value)}
+                </TraceMarker>
+              )}
+              {stats.excluded.index >= 0 && (
+                <TraceMarker index={stats.excluded.index} tone="alert">
+                  {mlPerMin(stats.excluded.value)}
+                </TraceMarker>
+              )}
+              <TraceAxis
+                start={formatClock(0)}
+                end={formatClock(durationSeconds)}
+              />
+            </>
+          }
+        >
+          <TraceBands bands={spillBands} />
+          <TraceRule value={0} tone="var(--color-border)" dashed={false} />
+          <TraceRule value={DRINKING_RATE_MAX_ML_PER_MIN} />
+          <TraceArea tone="var(--color-water)" />
+          <TraceLine tone="var(--color-water)" strokeWidth={2} />
+        </Trace>
         <ChartLegend
           variant="inline"
           items={[

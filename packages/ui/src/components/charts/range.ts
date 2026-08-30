@@ -32,3 +32,26 @@ export function paddedRange(values: number[]): PaddedRange {
   const padding = (max - min || 1) * 0.1;
   return { min: min - padding, max: max + padding };
 }
+
+/**
+ * The vertical extent for a signal read against zero rather than against
+ * itself — a rate, a delta, anything whose distance from nothing is the
+ * reading.
+ *
+ * `include` is for values that must be on screen even when the samples never
+ * reach them: a threshold the trace is judged by is meaningless if it sits
+ * outside the box. A series that never goes negative rests its floor exactly
+ * on zero, which is where the eye expects it; one that does gets room under
+ * it, or the dip is drawn along an edge and reads as clipped.
+ */
+export function zeroAnchoredRange(
+  values: number[],
+  include: readonly number[] = [],
+): PaddedRange {
+  const { min, max } = arrayMinMax(values);
+  const lo = Math.min(0, min);
+  let hi = Math.max(0, max);
+  for (const value of include) hi = Math.max(hi, value);
+  const padding = (hi - lo || 1) * 0.1;
+  return { min: lo < 0 ? lo - padding : 0, max: hi + padding };
+}
