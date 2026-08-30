@@ -100,20 +100,9 @@
   /* Attached to the field that raised it, under the control rather than level
      with it — it is a consequence of that input, not the next question. */
   .event-fix-followup {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-sm);
     margin-top: var(--space-sm);
-    padding-top: var(--space-sm);
-    border-top: var(--border-thin);
 
-    /* The switch is a fixed-size control beside flowing text; without this it
-       is treated as shrinkable and collapses into a blob. */
-    > :first-child {
-      flex: none;
-    }
-
-    > label {
+    label {
       font-size: var(--text-sm);
       font-weight: var(--font-medium);
       color: var(--color-text);

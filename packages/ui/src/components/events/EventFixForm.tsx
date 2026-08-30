@@ -22,6 +22,7 @@ import {
 import { DialogDescription, DialogTitle } from '@/components/ui/Dialog';
 import Avatar from '@/components/ui/Avatar';
 import { Switch } from '@/components/ui/Switch';
+import { Callout } from '@/components/ui/Callout';
 import { AdaptiveSelect } from '@/components/ui/AdaptiveSelect';
 import { SelectPage, type PickerOption } from '@/components/ui/SelectPage';
 import { SheetPages } from '@/components/ui/SheetPages';
@@ -415,20 +416,25 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
                      * feeds identification and never raises it.
                      */}
                     {weightChanged && event.device_id != null && (
-                      <div className="event-fix-followup">
-                        <Switch
-                          id="event-fix-reanalyze"
-                          checked={reanalyze}
-                          disabled={isBusy}
-                          onCheckedChange={setReanalyze}
-                        />
+                      <Callout
+                        tone="info"
+                        className="event-fix-followup"
+                        control={
+                          <Switch
+                            id="event-fix-reanalyze"
+                            checked={reanalyze}
+                            disabled={isBusy}
+                            onCheckedChange={setReanalyze}
+                          />
+                        }
+                      >
                         <label htmlFor="event-fix-reanalyze">
                           {t('event_details.reanalyze_later_visits')}
                           <small>
                             {t('event_details.reanalyze_later_visits_hint')}
                           </small>
                         </label>
-                      </div>
+                      </Callout>
                     )}
                   </FormField>
 

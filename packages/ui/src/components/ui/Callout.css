@@ -32,6 +32,15 @@
     margin-top: 1px;
   }
 
+  /* Sized by whatever control it holds; it only has to keep its place on the
+     first line rather than stretch down a paragraph. */
+  .callout-control {
+    flex: none;
+    display: flex;
+    align-items: center;
+    align-self: flex-start;
+  }
+
   .callout-body {
     flex: 1;
     min-width: 0;

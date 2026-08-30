@@ -14,6 +14,12 @@ interface CalloutProps extends React.ComponentProps<'div'> {
    * sparkle on a machine's guess, say. The tone still picks the tint.
    */
   icon?: React.ReactNode;
+  /**
+   * A control in the glyph's place, for a band that is answered rather than
+   * read — the switch on a follow-up. Unlike `icon` it is not hidden from
+   * assistive tech, so it must be a real, labelled control.
+   */
+  control?: React.ReactNode;
   /** Buttons that answer the callout, on the trailing edge. */
   actions?: React.ReactNode;
 }
@@ -42,7 +48,16 @@ const TONE_GLYPHS: Record<CalloutTone, React.ReactNode> = {
 
 const Callout = React.forwardRef<HTMLDivElement, CalloutProps>(
   (
-    { tone = 'error', message, icon, actions, className, children, ...props },
+    {
+      tone = 'error',
+      message,
+      icon,
+      control,
+      actions,
+      className,
+      children,
+      ...props
+    },
     ref,
   ) => {
     const content = message ?? children;
@@ -55,14 +70,19 @@ const Callout = React.forwardRef<HTMLDivElement, CalloutProps>(
         role={tone === 'error' ? 'alert' : undefined}
         {...props}
       >
-        {/* Icon and sentence are one block so the glyph can sit on the first
-            line of a paragraph while the buttons stay centred on the row.
-            Hidden here rather than on each glyph: the sentence beside it
-            already says what the icon says. */}
+        {/* Lead and sentence are one block so the glyph sits on the first line
+            of a paragraph while the buttons stay centred on the row. The glyph
+            is hidden here rather than on each icon, since the sentence beside
+            it already says what it says — a `control` is not, because you are
+            meant to reach it. */}
         <span className="callout-main">
-          <span className="callout-icon" aria-hidden="true">
-            {icon ?? TONE_GLYPHS[tone]}
-          </span>
+          {control != null ? (
+            <span className="callout-control">{control}</span>
+          ) : (
+            <span className="callout-icon" aria-hidden="true">
+              {icon ?? TONE_GLYPHS[tone]}
+            </span>
+          )}
           <span className="callout-body">{content}</span>
         </span>
         {actions ? <span className="callout-actions">{actions}</span> : null}
