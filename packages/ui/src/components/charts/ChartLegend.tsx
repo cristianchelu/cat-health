@@ -25,6 +25,11 @@ interface ChartLegendProps extends Omit<
   'children'
 > {
   items: readonly ChartLegendItem[];
+  /**
+   * `bar` rules the key off from a chart that fills its own box; `inline`
+   * leaves it bare for a chart sitting on a page among other things.
+   */
+  variant?: 'bar' | 'inline';
 }
 
 /**
@@ -36,8 +41,12 @@ interface ChartLegendProps extends Omit<
  * out seven times across two files.
  */
 const ChartLegend = React.forwardRef<HTMLDivElement, ChartLegendProps>(
-  ({ items, className, ...props }, ref) => (
-    <div className={cn('chart-legend', className)} ref={ref} {...props}>
+  ({ items, variant = 'bar', className, ...props }, ref) => (
+    <div
+      className={cn('chart-legend', variant, className)}
+      ref={ref}
+      {...props}
+    >
       {items.map((item) => (
         <span className="chart-legend-item" key={item.label}>
           {item.swatch ?? (

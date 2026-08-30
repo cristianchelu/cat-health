@@ -2,11 +2,19 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs) var(--space-md);
-  padding: var(--space-sm) var(--space-md);
   font-size: var(--text-xs);
   color: var(--color-text-muted);
-  background: var(--color-surface-muted);
-  border-top: 1px solid var(--color-border);
+
+  /*
+   * Under a chart that fills its own box — the annotation workspace, the
+   * timeline card — the key is a strip ruled off from the trace above it.
+   * Bare, it is just the next line on whatever surface it was dropped onto.
+   */
+  &.bar {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-surface-muted);
+    border-top: 1px solid var(--color-border);
+  }
 
   .chart-legend-item {
     display: flex;
