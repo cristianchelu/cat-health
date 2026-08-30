@@ -68,7 +68,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </nav>
         {showPetSelector ? (
           <section>
-            <h4>{t('navigation.pets')}</h4>
+            <h4 className="section-label">{t('navigation.pets')}</h4>
             <PetSelector />
           </section>
         ) : null}

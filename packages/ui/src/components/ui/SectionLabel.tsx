@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import './SectionLabel.css';
 
 interface SectionLabelProps extends React.ComponentProps<'div'> {
   /**
@@ -13,10 +12,10 @@ interface SectionLabelProps extends React.ComponentProps<'div'> {
 /**
  * The name of a group, above it.
  *
- * The same landmark the pickers, the menus and the food ladder already draw;
- * `SectionLabel.css` is the one place its type is written, and a host that
- * renders its own element (a Radix label, a sticky header) wears the
- * `section-label` class instead of this component.
+ * The same landmark the pickers, the menus, the sidebar and the settings
+ * pages already draw. `styles/section-label.css` is the one place its type is
+ * written, and a host that renders its own element — a heading, a Radix label,
+ * a sticky header — wears the `section-label` class instead of this component.
  *
  * Not `SectionHeader`, which is a heading proper — an `h2` with a subtitle and
  * room for actions. This is an eyebrow: it names what follows and takes no

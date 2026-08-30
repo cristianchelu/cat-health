@@ -7,10 +7,5 @@
 
   .provider-account-devices h2 {
     margin: 0 0 var(--space-sm);
-    font-size: var(--text-sm);
-    font-weight: var(--font-semibold);
-    color: var(--color-text-light);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
   }
 }

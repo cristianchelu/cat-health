@@ -286,7 +286,7 @@ const ProviderAccountPage: React.FC = () => {
       )}
 
       <section className="provider-account-devices">
-        <h2>{t('settings.devices')}</h2>
+        <h2 className="section-label">{t('settings.devices')}</h2>
         <CardList>
           {accountDevices.map((device) => (
             <CardListItem

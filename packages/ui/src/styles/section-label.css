@@ -1,11 +1,16 @@
 /*
  * The quiet uppercase landmark above a group: a list's section heading, a
- * sheet page's band of readings.
+ * settings page's subhead, a sheet page's band of readings.
+ *
+ * One recipe for all of them. These had drifted into three sizes, three
+ * trackings and two colours across nine files, which read as three different
+ * kinds of thing on screen when they are one kind of thing.
  *
  * Typography only. Every host places it differently — a picker heading takes
  * the row's own inline padding, a food group is sticky over its scroller, a
  * menu label sits tighter than either — so padding stays with the host and
- * only the type comes from here.
+ * only the type comes from here. Hosts keep their own element, so a heading
+ * stays a heading.
  */
 .section-label {
   display: flex;

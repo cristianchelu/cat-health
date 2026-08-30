@@ -133,7 +133,9 @@ const ProvidersPage: React.FC = () => {
 
           {systemAccounts.length > 0 && (
             <section className="providers-page-system">
-              <h2>{t('settings.system_integrations')}</h2>
+              <h2 className="section-label">
+                {t('settings.system_integrations')}
+              </h2>
               <CardList className="providers-page-list">
                 {systemAccounts.map((account) => (
                   <ProviderRow

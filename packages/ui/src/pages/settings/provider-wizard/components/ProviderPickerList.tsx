@@ -56,7 +56,9 @@ export const ProviderPickerList: React.FC<ProviderPickerListProps> = ({
       {groups.map((group, groupIndex) => (
         <div className="provider-picker-group" key={group.label ?? groupIndex}>
           {group.label && (
-            <p className="provider-picker-group-label">{group.label}</p>
+            <p className="section-label provider-picker-group-label">
+              {group.label}
+            </p>
           )}
           <CardList className="provider-picker-rows">
             {group.options.map((option) => (

@@ -228,7 +228,7 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
             </SectionHeader>
             {controls.length > 0 ? (
               <div className="esphome-view-subsection">
-                <h3 className="esphome-view-subsection-title">
+                <h3 className="section-label esphome-view-subsection-title">
                   {t('devices.esphome.subsection_controls')}
                 </h3>
                 {renderGrid(controls)}
@@ -236,7 +236,7 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
             ) : null}
             {sensorEntities.length > 0 ? (
               <div className="esphome-view-subsection">
-                <h3 className="esphome-view-subsection-title">
+                <h3 className="section-label esphome-view-subsection-title">
                   {t('devices.esphome.subsection_sensors')}
                 </h3>
                 {renderGrid(sensorEntities)}
