@@ -12,20 +12,11 @@
      puts it back on each row. */
   margin: calc(var(--space-lg) * -1);
 
+  /* Backed out of the dialog's padding, so the header puts its own inset back
+     and draws the rule the rows below scroll under. */
   .select-page-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    flex: none;
     padding: var(--space-sm) var(--space-md);
     border-bottom: var(--border-thin);
-  }
-
-  .select-page-title {
-    margin: 0;
-    font-size: var(--text-base);
-    font-weight: var(--font-bold);
-    color: var(--color-text);
   }
 
   .select-page-body {

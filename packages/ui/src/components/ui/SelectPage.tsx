@@ -1,10 +1,7 @@
 import * as React from 'react';
-import { useTranslation } from 'react-i18next';
-import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from './Button';
-import { DialogTitle } from './Dialog';
 import { PickerList } from './PickerList';
+import { SheetPageHeader } from './SheetPageHeader';
 import { type PickerOption } from './pickerOptions';
 import './SelectPage.css';
 
@@ -46,22 +43,13 @@ export const SelectPage: React.FC<SelectPageProps> = ({
   onBack,
   className,
 }) => {
-  const { t } = useTranslation();
-
   return (
     <div className={cn('select-page', className)}>
-      <div className="select-page-header">
-        <Button
-          type="button"
-          variant="ghost"
-          icon
-          onClick={onBack}
-          aria-label={t('common.back')}
-        >
-          <ChevronLeft aria-hidden />
-        </Button>
-        <DialogTitle className="select-page-title">{title}</DialogTitle>
-      </div>
+      <SheetPageHeader
+        className="select-page-header"
+        title={title}
+        onBack={onBack}
+      />
 
       {/*
        * A radiogroup, not a listbox: these are rows on a page, and leaving the

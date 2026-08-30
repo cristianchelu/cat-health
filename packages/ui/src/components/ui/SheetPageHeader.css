@@ -1,0 +1,41 @@
+/*
+ * The header of a sheet page. Structure and type only — the page owns its own
+ * padding and whatever rule it wants under itself, because a page backed out
+ * of the sheet's padding and a page sitting inside it need different insets
+ * to line their text up with the body below.
+ */
+.sheet-page-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex: none;
+
+  .sheet-page-header-identity {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sheet-page-header-title {
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: var(--font-bold);
+    line-height: var(--line-height-tight);
+    color: var(--color-text);
+  }
+
+  /* What the page is of, said once under its name rather than repeated into
+     every band below. */
+  .sheet-page-header-subtitle {
+    margin-top: var(--space-3xs);
+    font-size: var(--text-xs);
+    line-height: var(--line-height-normal);
+    color: var(--color-text-muted);
+  }
+
+  .sheet-page-header-actions {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+  }
+}
