@@ -10,6 +10,12 @@ import { downsample } from '@/components/charts/downsample';
 import type { LitterboxAnalysisStatePeriod as StatePeriod } from 'shared';
 import type { LitterboxBoutAnnotation } from '@/types/litterbox';
 
+import {
+  formatMeanG,
+  formatSigmaG,
+  trimmedSliceMeanSigma,
+} from './litterboxPeriodStats';
+
 import './WeightSignalChart.css';
 
 export interface WeightSignalChartMediaSync {
@@ -57,24 +63,6 @@ function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
 }
 
-/** Must match `buffer` in `LitterboxStateTracker.processEvent`. */
-const PERIOD_STATS_BUFFER = 10;
-
-function trimmedSliceMeanSigma(
-  weights: number[],
-  startSample: number,
-  endSample: number,
-): { mean: number; sigma: number } | null {
-  const lo = startSample + PERIOD_STATS_BUFFER;
-  const hiExclusive = endSample + 1 - PERIOD_STATS_BUFFER;
-  if (hiExclusive - lo < 2) return null;
-  const slice = weights.slice(lo, hiExclusive);
-  if (slice.length < 2) return null;
-  const mean = slice.reduce((s, w) => s + w, 0) / slice.length;
-  const v = slice.reduce((s, w) => s + (w - mean) ** 2, 0) / slice.length;
-  return { mean, sigma: Math.sqrt(v) };
-}
-
 function boutTimeToSampleRange(
   tStartS: number,
   tEndS: number,
@@ -85,16 +73,6 @@ function boutTimeToSampleRange(
   const a = clamp(Math.floor(tStartS * sampleRate), 0, last);
   const b = clamp(Math.ceil(tEndS * sampleRate), 0, last);
   return { start: Math.min(a, b), end: Math.max(a, b) };
-}
-
-function formatSigmaG(value: number): string {
-  if (!Number.isFinite(value)) return '';
-  return value >= 100 ? value.toFixed(0) : value.toFixed(1);
-}
-
-function formatMeanG(value: number): string {
-  if (!Number.isFinite(value)) return '';
-  return Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(1);
 }
 
 /** Single pass; avoid Math.min/max(...arr) on large arrays (re-renders per pointer frame during drag). */
@@ -228,7 +206,7 @@ const WeightSignalChartInner = React.forwardRef<
       };
     }, [weights]);
 
-    const chartHeight = isInteractive ? SVG_HEIGHT : SVG_HEIGHT;
+    const chartHeight = SVG_HEIGHT;
     const svgHeight = isInteractive ? SVG_HEIGHT + AXIS_HEIGHT : SVG_HEIGHT;
 
     const linePath = React.useMemo(
