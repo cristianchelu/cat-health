@@ -2,6 +2,7 @@ import type {
   DeviceSignal,
   SignalSeverity,
   SignalTone,
+  SignalValue,
 } from '../schemas/api/deviceSignals.ts';
 
 /**
@@ -21,7 +22,10 @@ import type {
  *
  * Where a signal sits inside `calm` is a question of interest, not of alarm.
  * A counter that reads zero when there is nothing to report can hold most of
- * the calm range while still warning only at its own threshold.
+ * the calm range while still warning only at its own threshold, and it can do
+ * that with no threshold configured at all: whether there is waste in the box
+ * is knowable from the box alone, and only how much of it is too much needs a
+ * number from its owner.
  */
 
 export const DEVICE_SIGNAL_KEYS = {
@@ -51,6 +55,9 @@ export const BACKFILL_URGENCY = 5;
 /** Highest urgency a `calm` signal may reach, keeping calm below `soon`. */
 const CALM_CEILING = 44;
 
+/** Where an accumulation's calm band starts once anything is in it. */
+const PRESENT_URGENCY = 36;
+
 interface ScoreRule {
   /**
    * Which end of the scale is bad. `lower` for levels and countdowns, `higher`
@@ -73,6 +80,15 @@ interface ScoreRule {
    * would say it loudly.
    */
   emptyScore?: number;
+  /**
+   * Urgency when the counter reads above zero but has no threshold to score
+   * it against. Presence and severity are separate questions: the box weighs
+   * what is in it on its own, and only "is that too much" waits on a number
+   * its owner has to type. So an unconfigured box still ranks on the thing it
+   * knows, and stays `calm` forever because the thing it does not know is
+   * exactly the one that would raise a band.
+   */
+  presenceScore?: number;
 }
 
 const SCORE_TABLE: Record<string, ScoreRule> = {
@@ -158,8 +174,9 @@ const SCORE_TABLE: Record<string, ScoreRule> = {
     soon: 0.75,
     nowScore: 80,
     soonScore: 50,
-    calm: { base: 36, slope: 10 },
-    emptyScore: BACKFILL_URGENCY,
+    calm: { base: PRESENT_URGENCY, slope: 10 },
+    emptyScore: 0,
+    presenceScore: PRESENT_URGENCY,
   },
   /*
    * Percent of a full box rather than kilograms left, so one band fits every
@@ -202,6 +219,12 @@ const SCORE_TABLE: Record<string, ScoreRule> = {
 export interface SignalScore {
   tone: SignalTone;
   urgency: number;
+  /**
+   * The table read this signal. An unscored one — a timestamp, a bare count —
+   * only backfills a slot, and the card sorts it below anything the table
+   * could read.
+   */
+  measured: boolean;
 }
 
 const clamp = (value: number, min: number, max: number) =>
@@ -225,15 +248,36 @@ function bandDepth(
 /** Urgency added across the width of a band. */
 const BAND_RAMP = 9;
 
+const BACKFILL: SignalScore = {
+  tone: 'calm',
+  urgency: BACKFILL_URGENCY,
+  measured: false,
+};
+
+/** A counter reporting something rather than nothing. */
+function readsAboveZero(value?: SignalValue): boolean {
+  if (value === undefined) return false;
+  return (
+    (value.kind === 'number' || value.kind === 'percent') && value.value > 0
+  );
+}
+
 export function scoreDeviceSignal(signal: {
   key: string;
+  value?: SignalValue;
   severity?: SignalSeverity;
 }): SignalScore {
   const rule = SCORE_TABLE[signal.key];
   const severity = signal.severity;
 
-  if (!rule || !severity) {
-    return { tone: 'calm', urgency: BACKFILL_URGENCY };
+  if (!rule) return BACKFILL;
+
+  if (!severity) {
+    /* Nothing to score the reading against, so no band — but an accumulation
+     * that reads above zero has still told us the one thing that ranks it. */
+    return rule.presenceScore !== undefined && readsAboveZero(signal.value)
+      ? { tone: 'calm', urgency: rule.presenceScore, measured: true }
+      : BACKFILL;
   }
 
   const { value } = severity;
@@ -247,6 +291,7 @@ export function scoreDeviceSignal(signal: {
     return {
       tone: 'now',
       urgency: clamp(nowScore + depth * BAND_RAMP, 0, 100),
+      measured: true,
     };
   }
 
@@ -255,16 +300,18 @@ export function scoreDeviceSignal(signal: {
     return {
       tone: 'soon',
       urgency: clamp(soonScore + depth * BAND_RAMP, 0, 100),
+      measured: true,
     };
   }
 
   if (rule.emptyScore !== undefined && value <= 0) {
-    return { tone: 'calm', urgency: rule.emptyScore };
+    return { tone: 'calm', urgency: rule.emptyScore, measured: true };
   }
 
   return {
     tone: 'calm',
     urgency: clamp(calm.base + calm.slope * value, 0, CALM_CEILING),
+    measured: true,
   };
 }
 

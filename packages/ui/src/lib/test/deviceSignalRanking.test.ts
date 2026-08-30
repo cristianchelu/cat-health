@@ -224,6 +224,29 @@ describe('rankDeviceSignals', () => {
     assert.equal(slots.attention, null);
   });
 
+  it('leads on the waste even when no scoop threshold is set', () => {
+    /* Without a threshold the box reports grams and no severity, which used to
+     * read as "not a measurement" and sort it under every counter on the card
+     * — the box's whole subject, third. */
+    const slots = rankDeviceSignals([
+      signal(DEVICE_SIGNAL_KEYS.LITTER_REMAINING, {
+        icon: 'litter',
+        value: { kind: 'number', value: 3.8, unit: 'kg' },
+        display: { kind: 'bar', fill: 0.55 },
+        severity: { kind: 'percent', value: 55 },
+      }),
+      days(DEVICE_SIGNAL_KEYS.DEEP_CLEAN, 22),
+      signal(DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP, {
+        icon: 'waste',
+        value: { kind: 'number', value: 51, unit: 'g' },
+        display: { kind: 'pips', of: 8, pips: ['urination'] },
+      }),
+    ]);
+
+    assert.equal(slots.gauge?.signal.key, DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP);
+    assert.equal(slots.attention, null);
+  });
+
   it('re-ranks when a scoop empties the deposit counter', () => {
     const beforeScoop = rankDeviceSignals([
       signal(DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP, {

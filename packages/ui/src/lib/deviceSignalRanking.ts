@@ -29,6 +29,8 @@ export interface RankedSignal {
   signal: DeviceSignal;
   tone: SignalTone;
   urgency: number;
+  /** The scoring table read this signal, rather than backfilling a slot. */
+  measured: boolean;
 }
 
 export interface DeviceSlots {
@@ -51,10 +53,13 @@ export interface DeviceSlots {
  * `soon` can outscore one that has just entered `now` — and a `now` must always
  * sort above a `soon` whatever the arithmetic says.
  *
- * Measurements outrank timestamps regardless of score. A calm reading and a
+ * Measurements outrank the rest regardless of score. A calm reading and a
  * "last updated" both land near the bottom of the scale, and a card whose
  * headline is the time we last spoke to a feeder rather than how much food is
- * in it has answered the wrong question.
+ * in it has answered the wrong question. What counts as a measurement is the
+ * scoring table's call, not a test for a configured threshold: a box weighing
+ * its waste with no scoop-now weight set is still measuring, and reading that
+ * as "not a measurement" buried the one row worth looking at.
  *
  * Declaration order settles the rest, so equal signals keep a stable slot.
  */
@@ -62,8 +67,7 @@ function compareRanked(a: RankedSignal, b: RankedSignal): number {
   const byTone = TONE_RANK[b.tone] - TONE_RANK[a.tone];
   if (byTone !== 0) return byTone;
 
-  const byMeasurement =
-    Number(Boolean(b.signal.severity)) - Number(Boolean(a.signal.severity));
+  const byMeasurement = Number(b.measured) - Number(a.measured);
   if (byMeasurement !== 0) return byMeasurement;
 
   return b.urgency - a.urgency;
@@ -89,8 +93,8 @@ export function rankDeviceSignals(
   const ranked = signals
     .filter((signal) => RANKABLE.has(signal.category))
     .map((signal) => {
-      const { tone, urgency } = scoreDeviceSignal(signal);
-      return { signal, tone, urgency };
+      const { tone, urgency, measured } = scoreDeviceSignal(signal);
+      return { signal, tone, urgency, measured };
     })
     .filter((entry) => competesForSlot(entry.signal, entry.tone))
     .sort(compareRanked);

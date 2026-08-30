@@ -64,7 +64,7 @@ describe('waste_since_scoop scoring (ratio against the scoop threshold)', () => 
 
   it('drops to the bottom of the scale on a scooped box', () => {
     assert.equal(waste(0).tone, 'calm');
-    assert.equal(waste(0).urgency, BACKFILL_URGENCY);
+    assert.equal(waste(0).urgency, 0);
   });
 
   it('leads the calm counters as soon as anything is in the box', () => {
@@ -96,5 +96,35 @@ describe('waste_since_scoop scoring (ratio against the scoop threshold)', () => 
     assert.equal(waste(0.74).tone, 'calm');
     assert.equal(waste(0.75).tone, 'soon');
     assert.equal(waste(1).tone, 'now');
+  });
+
+  it('still ranks on presence with no threshold configured', () => {
+    /* The box weighs what is in it on its own; only "is that too much" waits
+     * on a number its owner types. So an unconfigured box ranks on the half
+     * it knows and never leaves `calm`. */
+    const unconfigured = scoreDeviceSignal({
+      key: DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP,
+      value: { kind: 'number', value: 51, unit: 'g' },
+    });
+
+    assert.equal(unconfigured.tone, 'calm');
+    assert.equal(unconfigured.measured, true);
+    assert.ok(
+      unconfigured.urgency >
+        scoreDeviceSignal({
+          key: DEVICE_SIGNAL_KEYS.LITTER_REMAINING,
+          severity: { kind: 'percent', value: 55 },
+        }).urgency,
+    );
+  });
+
+  it('backfills an unconfigured box with nothing in it', () => {
+    const empty = scoreDeviceSignal({
+      key: DEVICE_SIGNAL_KEYS.WASTE_SINCE_SCOOP,
+      value: { kind: 'number', value: 0, unit: 'g' },
+    });
+
+    assert.equal(empty.urgency, BACKFILL_URGENCY);
+    assert.equal(empty.measured, false);
   });
 });
