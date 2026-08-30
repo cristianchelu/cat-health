@@ -27,6 +27,12 @@ export default tseslint.config([
         'error',
         { assertionStyle: 'as', objectLiteralTypeAssertions: 'allow' },
       ],
+      /* `const { dropped, ...rest } = obj` is how a config flow drops a key it
+         must not forward. The binding is the point and is never read. */
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { ignoreRestSiblings: true },
+      ],
     },
   },
   {

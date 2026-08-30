@@ -186,10 +186,13 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
    * Pushing the fallback left the wizard under that page, so its back control
    * bounced straight back in.
    */
+  /* Destructured so the memo depends on the stable callback rather than on
+     the object `useBackNavigation` rebuilds around it every render. */
+  const { go: leaveGo } = leave;
   const exit = React.useCallback(() => {
     markSaved();
-    leave.go();
-  }, [markSaved, leave.go]);
+    leaveGo();
+  }, [markSaved, leaveGo]);
 
   /** Where a connect flow lands once its remaining steps are exhausted. */
   const finishConnect = React.useCallback(

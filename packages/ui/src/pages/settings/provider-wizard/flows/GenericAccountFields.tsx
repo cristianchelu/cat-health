@@ -1,10 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Callout } from '@/components/ui/Callout';
-import type {
-  ProviderAccountConfigModule,
-  ProviderAccountFieldsProps,
-} from './accountConfigTypes.ts';
+import type { ProviderAccountFieldsProps } from './accountConfigTypes.ts';
 
 /**
  * Fallback for providers with no connect form: `esphome`, `camera`, `thingino`,
@@ -16,19 +13,14 @@ import type {
  *
  * This replaces the old raw-JSON textarea, and is strictly safer than it: that
  * textarea let a typo destroy a working account's config, whereas `toConfig`
- * here returns nothing at all and the page omits `config` from the request.
+ * returns nothing at all and the page omits `config` from the request.
  */
-const GenericAccountFields: React.FC<ProviderAccountFieldsProps> = () => {
+export const GenericAccountFields: React.FC<
+  ProviderAccountFieldsProps
+> = () => {
   const { t } = useTranslation();
 
   return (
     <Callout tone="info">{t('settings.no_configurable_settings')}</Callout>
   );
-};
-
-export const genericAccountConfig: ProviderAccountConfigModule = {
-  defaultConfigValues: {},
-  toFormValues: () => ({}),
-  toConfig: () => ({}),
-  Fields: GenericAccountFields,
 };

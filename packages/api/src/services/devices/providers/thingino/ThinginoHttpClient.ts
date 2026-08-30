@@ -199,11 +199,14 @@ async function parseJsonBody(response: Response): Promise<unknown> {
   return parseCameraJson(text);
 }
 
+/** Where a JSON value starts, once the CGI framing around it is skipped. */
+const JSON_START = /[{[]/;
+
 function isEmptyCgiChunk(text: string): boolean {
   const trimmed = text.trim();
   return (
     /transfer-encoding:\s*chunked/i.test(trimmed) &&
-    trimmed.search(/[{\[]/) < 0 &&
+    trimmed.search(JSON_START) < 0 &&
     !/unsupported setting path/.test(trimmed)
   );
 }
@@ -219,7 +222,7 @@ export function parseCameraJson(text: string): unknown {
   }
   const unsupported = trimmed.match(/unsupported setting path:[^\r\n]*/);
   if (unsupported) return unsupported[0];
-  const start = trimmed.search(/[{\[]/);
+  const start = trimmed.search(JSON_START);
   if (start < 0) {
     if (/transfer-encoding:\s*chunked/i.test(trimmed)) return null;
     throw new Error('Camera returned non-JSON');
@@ -310,12 +313,16 @@ function bracketIpv6(addr: string): string {
 export async function confirmThinginoCandidates<
   T extends { config: Record<string, unknown> },
 >(candidates: T[], fetchFn: typeof fetch = fetch): Promise<T[]> {
-  const settled = await Promise.all(
+  /* Booleans through the await, not the candidates themselves: `Promise.all`
+     resolves `T` to `Awaited<T>`, which for an unconstrained `T` it cannot
+     prove is `T` again — so the filtered rows stopped matching the return
+     type. Probing to a verdict and selecting on it keeps `T` untouched. */
+  const reachable = await Promise.all(
     candidates.map(async (candidate) => {
       const origin = candidate.config.origin;
-      if (typeof origin !== 'string') return null;
-      return (await probeThinginoOrigin(origin, fetchFn)) ? candidate : null;
+      if (typeof origin !== 'string') return false;
+      return probeThinginoOrigin(origin, fetchFn);
     }),
   );
-  return settled.filter((row): row is T => row != null);
+  return candidates.filter((_, index) => reachable[index]);
 }

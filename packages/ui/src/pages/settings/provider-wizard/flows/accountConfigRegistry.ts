@@ -1,5 +1,5 @@
 import type { ProviderAccountConfigModule } from './accountConfigTypes.ts';
-import { genericAccountConfig } from './genericAccountConfig.tsx';
+import { genericAccountConfig } from './genericAccountConfig.ts';
 import { SurePetAccountFields } from './surepet/SurePetAccountFields.tsx';
 import {
   surepetDefaultConfigValues,
