@@ -11,6 +11,7 @@ import {
   Pencil,
   Sparkles,
   Trash2,
+  Waves,
 } from 'lucide-react';
 import { type EventDataDTO, type GetEventListItemDTO } from 'shared';
 
@@ -48,6 +49,10 @@ import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import TimelapsePlayer from './TimelapsePlayer';
 import { buildTimelapseTimeline } from './buildTimelapseTimeline';
 import { decodeLitterboxRawData } from './decodeLitterboxRawData';
+import { decodeWaterRawData } from './decodeWaterRawData';
+import EventAdvancedDetails, {
+  type AdvancedSignal,
+} from './EventAdvancedDetails';
 import EventFacts from './EventFacts';
 import { buildEventFacts } from './buildEventFacts';
 import EventCorrectionBand from './EventCorrectionBand';
@@ -129,6 +134,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [reidentifyOnDelete, setReidentifyOnDelete] = React.useState(false);
   const [fixMode, setFixMode] = React.useState<'fix' | 'edit' | null>(null);
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
   /* Set by the fix level so Escape steps back one rung of the ladder — out of
      a picker, then out of the form — rather than dropping the whole drawer. */
   const fixBackRef = React.useRef<(() => boolean) | null>(null);
@@ -142,15 +148,33 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       ? eventFromServer.children
       : undefined;
 
-  /** `event` is a list row without `raw_data`; only the detail fetch carries the signal. */
-  const decodedRawData = React.useMemo(() => {
-    if (displayEvent?.data?.type !== 'litterbox_use') return null;
-    return decodeLitterboxRawData(eventFromServer?.raw_data);
+  /**
+   * `event` is a list row without `raw_data`; only the detail fetch carries
+   * the signal. Decoded once here because both the menu entry and the page it
+   * opens are answering the same question — is there a trace to look at —
+   * and two decodes could answer it differently.
+   */
+  const advancedSignal = React.useMemo<AdvancedSignal | null>(() => {
+    const raw = eventFromServer?.raw_data;
+    switch (displayEvent?.data?.type) {
+      case 'litterbox_use': {
+        const decoded = decodeLitterboxRawData(raw);
+        return decoded && decoded.weights.length > 0
+          ? { type: 'litterbox_use', decoded }
+          : null;
+      }
+      case 'water_intake': {
+        const decoded = decodeWaterRawData(raw);
+        return decoded && decoded.weights.length > 0
+          ? { type: 'water_intake', decoded }
+          : null;
+      }
+      default:
+        return null;
+    }
   }, [displayEvent, eventFromServer]);
 
-  const hasLitterboxChartWeights =
-    displayEvent?.data?.type === 'litterbox_use' &&
-    (decodedRawData?.weights?.length ?? 0) > 0;
+  const hasLitterboxChartWeights = advancedSignal?.type === 'litterbox_use';
 
   /*
    * Every visit starts on the read surface with nothing carried over from the
@@ -170,6 +194,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       setShowDeleteConfirm(false);
       setReidentifyOnDelete(false);
       setFixMode(null);
+      setShowAdvanced(false);
       setIsNoteDirty(false);
       setShowDiscardConfirm(false);
     }
@@ -330,6 +355,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   const menuHasFix = showsFixInMenu(displayEvent, correction);
 
+  /* One ladder. The fix form and the advanced page are both rung 1 off the
+     read surface, and neither is reachable from the other. */
+  const page =
+    fixMode ?? (advancedSignal && showAdvanced ? 'advanced' : 'read');
+
   return (
     <>
       <Sheet
@@ -355,13 +385,23 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           else if (fixMode) {
             escape.preventDefault();
             setFixMode(null);
+          } else if (showAdvanced) {
+            escape.preventDefault();
+            setShowAdvanced(false);
           }
         }}
       >
         {/* The whole surface travels, stage included: it is one page turning
             into another, not a panel swapped under a fixed header. */}
-        <SheetPages page={fixMode ?? 'read'} depth={fixMode ? 1 : 0}>
-          {fixMode ? (
+        <SheetPages page={page} depth={page === 'read' ? 0 : 1}>
+          {advancedSignal && showAdvanced && !fixMode ? (
+            <EventAdvancedDetails
+              event={displayEvent}
+              signal={advancedSignal}
+              deviceName={device?.name}
+              onBack={() => setShowAdvanced(false)}
+            />
+          ) : fixMode ? (
             <EventFixForm
               event={displayEvent}
               eventChildren={children}
@@ -377,9 +417,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                * Media only. The signal chart used to share this space behind a
                * Media|Analysis tab strip, which read as chrome bolted onto the top
                * of the sheet — worse on a phone, where it sat where the grabber
-               * belongs. The signal is not lost, just homeless: it wants a surface
-               * of its own rather than half of this one, and that is a design
-               * still to be made.
+               * belongs. The signal wanted a surface of its own rather than half
+               * of this one, and it has one: `EventAdvancedDetails`, a rung in
+               * off the kebab.
                *
                * No clip means no stage at all: the surface starts at the headline
                * rather than opening on an empty black box.
@@ -495,6 +535,17 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                           <DropdownMenuItem onSelect={() => setFixMode('fix')}>
                             <Pencil size={15} aria-hidden />
                             {t('event_details.fix')}
+                          </DropdownMenuItem>
+                        )}
+                        {advancedSignal && (
+                          /* Reads as a place rather than an action, so it
+                             takes the chevron the pickers take. */
+                          <DropdownMenuItem
+                            opensPage
+                            onSelect={() => setShowAdvanced(true)}
+                          >
+                            <Waves size={15} aria-hidden />
+                            {t('event_details.advanced_details')}
                           </DropdownMenuItem>
                         )}
                         {hasLitterboxChartWeights && (

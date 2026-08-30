@@ -49,6 +49,8 @@ export interface WaterRateSeries {
    */
   windowSeconds: number;
   sampleRateHz: number;
+  /** Span of the EMA the slope is taken over, for the same reason. */
+  emaSpan: number;
 }
 
 /**
@@ -64,6 +66,7 @@ export function analyzeWaterRates(weights: number[]): WaterRateSeries {
     rates: weights.length < 2 ? [] : estimateRates(emaSmooth(weights)),
     windowSeconds: (RATE_HALF * 2) / HZ,
     sampleRateHz: HZ,
+    emaSpan: EMA_SPAN,
   };
 }
 

@@ -1,0 +1,129 @@
+/*
+ * The advanced rung of the event drawer.
+ *
+ * A page inside the sheet, so it brings the same insets the read surface does
+ * — its left edge has to land where the title above it landed, or walking in
+ * and back out reads as the surface shifting sideways.
+ */
+.event-advanced-details {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  /*
+   * Tighter than the body's inset: the back button is an icon button with its
+   * own padding, so matching the text inset here would push its glyph a step
+   * further in than everything under it.
+   */
+  .event-advanced-header {
+    padding: var(--space-2xs) var(--space-sm) var(--space-xs);
+  }
+
+  /* The whole page scrolls, the same way the read surface does. */
+  .event-advanced-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    padding: var(--space-xs) var(--space-lg) var(--space-lg);
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* A label, what it names, and the numbers read off it. */
+  .event-advanced-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  /*
+   * One row per analyzer section. Four columns of one kind of thing each: the
+   * band's colour, its name, how long it ran, and the σ that classified it.
+   * Only this page has one, so it is not a design-system table.
+   */
+  .segment-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+
+    th,
+    td {
+      padding: var(--space-xs) 0;
+      border-bottom: 1px solid var(--color-border);
+      text-align: start;
+      font-weight: var(--font-normal);
+    }
+
+    tr:last-child :is(th, td) {
+      border-bottom: none;
+    }
+
+    /* The column heads are the quiet landmark this page uses everywhere else,
+       so they are set as one rather than as table type. */
+    thead :is(th, td) {
+      padding-block: 0 var(--space-2xs);
+      font-size: var(--text-2xs);
+      font-weight: var(--font-semibold);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+    }
+
+    /* Swatch, name, then two number columns wide enough not to wrap. */
+    :is(th, td):first-child {
+      width: 12px;
+    }
+
+    :is(th, td):nth-child(3) {
+      width: 4rem;
+    }
+
+    :is(th, td):nth-child(4) {
+      width: 4.5rem;
+    }
+
+    tbody th {
+      color: var(--color-text);
+      font-weight: var(--font-medium);
+      line-height: var(--line-height-tight);
+    }
+
+    /* What the σ beside it decided — the classifier's answer, under its
+       input rather than in a column of its own. */
+    tbody th small {
+      display: block;
+      margin-top: var(--space-3xs);
+      font-size: var(--text-xs);
+      font-weight: var(--font-normal);
+      color: var(--color-text-muted);
+    }
+
+    .segment-table-swatch {
+      display: block;
+      width: 10px;
+      height: 10px;
+      border-radius: var(--radius-sm);
+    }
+
+    .segment-table-number {
+      text-align: end;
+      font-weight: var(--font-semibold);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+
+      /* σ is context for the length beside it, not a second headline. */
+      &.quiet {
+        font-weight: var(--font-medium);
+        color: var(--color-text-light);
+      }
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .event-advanced-details {
+    .event-advanced-body {
+      padding: var(--space-xs) var(--space-md) var(--space-xl);
+    }
+  }
+}

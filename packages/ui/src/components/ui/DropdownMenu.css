@@ -51,6 +51,14 @@
       }
     }
 
+    /* Pushed to the trailing edge, where a chevron means "further in" on
+       every other surface in the app. */
+    .dropdown-menu-item-chevron {
+      margin-inline-start: auto;
+      width: 15px;
+      height: 15px;
+    }
+
     &.danger,
     &.danger > svg {
       color: var(--color-error);

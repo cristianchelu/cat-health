@@ -13,6 +13,8 @@ interface WaterSignalChartProps extends React.ComponentProps<'div'> {
   periods: WaterPeriod[];
   /** `inline` for a trace on a page among other things; see `ChartLegend`. */
   legendVariant?: 'bar' | 'inline';
+  /** Passed through to `SignalTrace`; the page decides how tall a track is. */
+  height?: number;
 }
 
 const STATE_COLORS: Record<string, string> = {
@@ -45,39 +47,50 @@ function emaSmooth(weights: number[]): number[] {
 const WaterSignalChart = React.forwardRef<
   HTMLDivElement,
   WaterSignalChartProps
->(({ className, weights, periods, legendVariant = 'bar', ...props }, ref) => {
-  const { t } = useTranslation();
+>(
+  (
+    { className, weights, periods, legendVariant = 'bar', height, ...props },
+    ref,
+  ) => {
+    const { t } = useTranslation();
 
-  const smoothed = React.useMemo(() => emaSmooth(weights), [weights]);
+    const smoothed = React.useMemo(() => emaSmooth(weights), [weights]);
 
-  const bands = React.useMemo<SignalBand[]>(
-    () =>
-      periods.map((period, i) => ({
-        key: `${period.state}-${i}`,
-        start: period.start,
-        end: period.end,
-        color: STATE_COLORS[period.state] ?? 'transparent',
-      })),
-    [periods],
-  );
+    const bands = React.useMemo<SignalBand[]>(
+      () =>
+        periods.map((period, i) => ({
+          key: `${period.state}-${i}`,
+          start: period.start,
+          end: period.end,
+          color: STATE_COLORS[period.state] ?? 'transparent',
+        })),
+      [periods],
+    );
 
-  return (
-    <div className={cn('water-signal-chart', className)} ref={ref} {...props}>
-      <SignalTrace values={smoothed} bands={bands} />
-      <ChartLegend
-        variant={legendVariant}
-        items={[
-          {
-            tone: STATE_COLORS.drinking,
-            label: t('event_details.legend_drinking'),
-          },
-          { tone: STATE_COLORS.spill, label: t('event_details.legend_spill') },
-          { tone: STATE_COLORS.noise, label: t('event_details.legend_noise') },
-        ]}
-      />
-    </div>
-  );
-});
+    return (
+      <div className={cn('water-signal-chart', className)} ref={ref} {...props}>
+        <SignalTrace values={smoothed} bands={bands} height={height} />
+        <ChartLegend
+          variant={legendVariant}
+          items={[
+            {
+              tone: STATE_COLORS.drinking,
+              label: t('event_details.legend_drinking'),
+            },
+            {
+              tone: STATE_COLORS.spill,
+              label: t('event_details.legend_spill'),
+            },
+            {
+              tone: STATE_COLORS.noise,
+              label: t('event_details.legend_noise'),
+            },
+          ]}
+        />
+      </div>
+    );
+  },
+);
 
 WaterSignalChart.displayName = 'WaterSignalChart';
 

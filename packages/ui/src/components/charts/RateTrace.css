@@ -1,0 +1,87 @@
+/*
+ * A rate track. The recess it sits in comes from `.signal-trace`, which this
+ * wears alongside; what is here is the layer of labels over the box.
+ */
+.rate-trace {
+  /* The overlay is positioned against this, and the trace's own recess is
+     already `position: relative`. */
+  .rate-trace-overlay {
+    position: absolute;
+    inset: 0;
+    /* Labels annotate the trace; nothing here is a target. */
+    pointer-events: none;
+    font-size: var(--text-2xs);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * Under its own rule, hard against the leading edge. Under rather than over
+   * because the box is only ever padded a tenth above whichever is higher, the
+   * peak or the rule — so a ceiling nobody reached sits within a few pixels of
+   * the top, and a label written above it would be clipped away by the recess.
+   * The leading edge is where it cannot land on the peak it is read against.
+   */
+  .rate-trace-rule-label {
+    position: absolute;
+    inset-inline-start: var(--space-2xs);
+    transform: translateY(2px);
+    color: var(--color-text-muted);
+  }
+
+  .rate-trace-marker {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    /* The point itself is the anchor: the dot centres on the sample and the
+       label hangs off whichever side has room. */
+    transform: translateY(-50%);
+    color: var(--color-text-light);
+
+    &.trailing {
+      flex-direction: row;
+    }
+
+    /* Past halfway the label would run out of the box, so it is written back
+       toward the middle instead. */
+    &.leading {
+      flex-direction: row-reverse;
+      transform: translate(-100%, -50%);
+    }
+
+    &.alert {
+      color: var(--color-error);
+    }
+  }
+
+  .rate-trace-marker-dot {
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: var(--radius-full);
+    background: currentcolor;
+    /* Centred on the sample rather than starting at it — the flex row would
+       otherwise push the dot a radius off the point it names. */
+    margin-inline: -3px;
+  }
+
+  .rate-trace-marker-label {
+    white-space: nowrap;
+  }
+
+  /* The two ends of the window the track covers, on the floor of the box. */
+  .rate-trace-axis {
+    position: absolute;
+    bottom: var(--space-2xs);
+    color: var(--color-text-muted);
+
+    &.start {
+      inset-inline-start: var(--space-2xs);
+    }
+
+    &.end {
+      inset-inline-end: var(--space-2xs);
+    }
+  }
+}

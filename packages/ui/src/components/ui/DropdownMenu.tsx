@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import './DropdownMenu.css';
 
@@ -47,17 +48,31 @@ const DropdownMenuContent = React.forwardRef<
 );
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;
 
+/**
+ * A row of the menu.
+ *
+ * Every row is a command, so none of them announce where they go — except one
+ * that goes somewhere: `opensPage` marks a row that walks you onto another
+ * surface rather than doing something and closing. The chevron is the whole
+ * announcement, which is why it is a flag here and not a caller's icon.
+ */
 const DropdownMenuItem = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
     tone?: 'default' | 'danger';
+    opensPage?: boolean;
   }
->(({ className, tone = 'default', ...props }, ref) => (
+>(({ className, tone = 'default', opensPage, children, ...props }, ref) => (
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn('dropdown-menu-item', tone, className)}
     {...props}
-  />
+  >
+    {children}
+    {opensPage && (
+      <ChevronRight className="dropdown-menu-item-chevron" aria-hidden />
+    )}
+  </DropdownMenuPrimitive.Item>
 ));
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
 
