@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { SectionLabel } from './SectionLabel';
 import { PickerRow } from './PickerRow';
 import { groupOptions, type PickerOption } from './pickerOptions';
 import './PickerList.css';
@@ -69,7 +70,9 @@ export const PickerList: React.FC<PickerListProps> = ({
       {groups.map((group) => (
         <React.Fragment key={group.heading ?? '_'}>
           {group.heading && (
-            <div className="picker-list-heading">{group.heading}</div>
+            <SectionLabel className="picker-list-heading">
+              {group.heading}
+            </SectionLabel>
           )}
           {group.options.map((option) => (
             <PickerRow

@@ -1,0 +1,33 @@
+/*
+ * The quiet uppercase landmark above a group: a list's section heading, a
+ * sheet page's band of readings.
+ *
+ * Typography only. Every host places it differently — a picker heading takes
+ * the row's own inline padding, a food group is sticky over its scroller, a
+ * menu label sits tighter than either — so padding stays with the host and
+ * only the type comes from here.
+ */
+.section-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+
+  /*
+   * What the group is measured in — a sample count, a smoothing window. It
+   * annotates the label rather than repeating its voice, so it drops the
+   * uppercase and the tracking and keeps only the size.
+   */
+  .section-label-aside {
+    margin-inline-start: auto;
+    font-weight: var(--font-normal);
+    letter-spacing: normal;
+    text-transform: none;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}

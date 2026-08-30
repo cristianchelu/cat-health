@@ -153,7 +153,7 @@ const SelectMenuLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Label
     ref={ref}
-    className={cn('select-menu-label', className)}
+    className={cn('section-label', 'select-menu-label', className)}
     {...props}
   />
 ));

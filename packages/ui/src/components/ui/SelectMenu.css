@@ -163,11 +163,6 @@
 
   .select-menu-label {
     padding: var(--space-xs) var(--space-sm) var(--space-2xs);
-    color: var(--color-text-muted);
-    font-size: var(--text-xs);
-    font-weight: var(--font-semibold);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
   }
 
   /*

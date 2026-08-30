@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ScanBarcode } from 'lucide-react';
 import type { GetFoodDTO } from 'shared';
 import { PickerSheet } from '@/components/ui/PickerSheet';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Button } from '@/components/ui/Button';
 import { MetaLine } from '@/components/ui/MetaLine';
 import { LoadingState } from '@/components/ui/PageState';
@@ -265,9 +266,9 @@ const LogFoodSheet: React.FC<LogFoodSheetProps> = ({
           step.kind === 'root' && !isFlatMode(foods) ? (
             <>
               {recentFoods.length > 0 && (
-                <div className="log-food-group-header">
+                <SectionLabel className="log-food-group-header">
                   {t('log_food.recent')}
-                </div>
+                </SectionLabel>
               )}
               {recentFoods.map((row) => {
                 const food = foodsById.get(row.foodId);
@@ -293,9 +294,9 @@ const LogFoodSheet: React.FC<LogFoodSheetProps> = ({
                   />
                 );
               })}
-              <div className="log-food-group-header">
+              <SectionLabel className="log-food-group-header">
                 {t('log_food.browse')}
-              </div>
+              </SectionLabel>
             </>
           ) : null
         }
