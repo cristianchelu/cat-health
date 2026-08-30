@@ -44,7 +44,9 @@
    */
   &.sheet-inner .event-details-stage {
     width: auto;
-    margin: var(--space-xs) var(--space-md) 0;
+    /* No top margin of its own: the grabber's strip is already exactly the
+       inset the clip keeps at its sides. */
+    margin: 0 var(--space-md);
     border-radius: var(--radius-lg);
     overflow: hidden;
   }

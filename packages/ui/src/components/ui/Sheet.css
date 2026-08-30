@@ -35,11 +35,20 @@
   border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
   outline: none;
 
-  /* vaul's injected CSS supplies the pill geometry and its 44px hit area;
-     this supplies the colour and the breathing room above it. */
+  /*
+   * vaul's injected CSS supplies the pill geometry and its 44px hit area;
+   * this supplies the colour and the strip it sits in.
+   *
+   * The strip is one `md` tall with the pill centred, so a surface that backs
+   * out of the content padding — the event drawer, whose clip runs to
+   * `md` at the sides — meets the same inset at the top. Left at `xs` above
+   * and nothing below, the clip sat 21px down against 16px in.
+   */
   .sheet-handle {
     flex: none;
-    margin-block: var(--space-xs) 0;
+    /* vaul's own height, which it writes inline and this cannot read. */
+    --sheet-handle-height: 5px;
+    margin-block: calc((var(--space-md) - var(--sheet-handle-height)) / 2);
     background-color: var(--color-border-hover);
   }
 }
