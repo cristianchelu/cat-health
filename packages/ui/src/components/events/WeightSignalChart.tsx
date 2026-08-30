@@ -32,10 +32,10 @@ interface WeightSignalChartProps extends React.ComponentProps<'div'> {
 }
 
 const STATE_COLORS: Record<string, string> = {
-  entering: 'var(--color-state-entering)',
-  occupied: 'var(--color-state-occupied)',
-  eliminating: 'var(--color-state-eliminating)',
-  gap: 'var(--color-state-gap)',
+  entering: 'var(--color-signal-entering)',
+  occupied: 'var(--color-signal-occupied)',
+  eliminating: 'var(--color-signal-eliminating)',
+  gap: 'var(--color-signal-gap)',
 };
 
 /** Urination: amber/orange; defecation: saddle brown (aligned with overview event dots). */

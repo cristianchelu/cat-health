@@ -1,22 +1,16 @@
 .water-signal-chart {
-  --water-color-drinking: rgba(34, 197, 94, 0.2);
-  --water-color-spill: rgba(239, 68, 68, 0.2);
-  --water-color-noise: rgba(148, 163, 184, 0.12);
-  --color-signal-line: var(--color-primary);
-  --color-chart-bg: var(--color-surface-muted);
-
   position: relative;
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--color-chart-bg);
+  background: var(--color-signal-surface);
 
   svg {
     flex: 1;
     width: 100%;
     min-height: 0;
-    background: var(--color-chart-bg);
+    background: var(--color-signal-surface);
   }
 
   .chart-duration {
@@ -29,15 +23,5 @@
     padding: var(--space-3xs) var(--space-xs);
     border-radius: var(--radius-sm);
     opacity: 0.8;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .water-signal-chart {
-    --water-color-drinking: rgba(16, 185, 129, 0.22);
-    --water-color-spill: rgba(248, 113, 113, 0.22);
-    --water-color-noise: rgba(100, 116, 139, 0.14);
-    --color-signal-line: var(--color-primary-light);
-    --color-chart-bg: var(--color-surface);
   }
 }

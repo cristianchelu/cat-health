@@ -15,9 +15,9 @@ interface WaterSignalChartProps extends React.ComponentProps<'div'> {
 }
 
 const STATE_COLORS: Record<string, string> = {
-  drinking: 'var(--water-color-drinking)',
-  spill: 'var(--water-color-spill)',
-  noise: 'var(--water-color-noise)',
+  drinking: 'var(--color-signal-drinking)',
+  spill: 'var(--color-signal-spill)',
+  noise: 'var(--color-signal-noise)',
 };
 
 const EMA_SPAN = 10; // must match analyzeWaterSegments and FountainController

@@ -1,27 +1,16 @@
 .weight-signal-chart {
-  /* Light theme colors */
-  --color-state-entering: rgba(99, 102, 241, 0.18);
-  /* occupied = cat detected (green) */
-  --color-state-occupied: rgba(34, 197, 94, 0.18);
-  /* eliminating = pee/poop vibe (yellow→brown) */
-  --color-state-eliminating: rgba(245, 158, 11, 0.2);
-  /* gap = distinct cool tone */
-  --color-state-gap: rgba(6, 182, 212, 0.16);
-  --color-signal-line: var(--color-primary);
-  --color-chart-bg: var(--color-surface-muted);
-
   position: relative;
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--color-chart-bg);
+  background: var(--color-signal-surface);
 
   svg {
     flex: 1;
     width: 100%;
     min-height: 0;
-    background: var(--color-chart-bg);
+    background: var(--color-signal-surface);
     /* Let σ labels extend past narrow bout bands without clipping */
     overflow: visible;
   }
@@ -133,17 +122,5 @@
   .chart-duration-sep {
     opacity: 0.65;
     user-select: none;
-  }
-}
-
-/* Dark theme adjustments */
-@media (prefers-color-scheme: dark) {
-  .weight-signal-chart {
-    --color-state-entering: rgba(99, 113, 241, 0.25);
-    --color-state-occupied: rgba(16, 185, 129, 0.22);
-    --color-state-eliminating: rgba(251, 191, 36, 0.22);
-    --color-state-gap: rgba(6, 182, 212, 0.18);
-    --color-signal-line: var(--color-primary-light);
-    --color-chart-bg: var(--color-surface);
   }
 }
