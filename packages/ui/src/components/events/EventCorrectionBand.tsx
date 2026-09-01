@@ -72,11 +72,11 @@ const EventCorrectionBand: React.FC<EventCorrectionBandProps> = ({
             onClick={onFix}
             disabled={isBusy}
           >
-            {/* One destination, one word for it. An unassigned event and a
-                wrongly-matched one are corrected on the same form, so calling
-                the button something else here only implied a second place to
-                go. */}
-            {t('event_details.fix')}
+            {/* One destination, one word for it — the same word the header
+                and the menu use. An unassigned event, a wrongly-matched one
+                and one you logged yourself all land on the same form, so a
+                second verb here only implied a second place to go. */}
+            {t('common.edit')}
           </Button>
         </>
       }

@@ -239,8 +239,8 @@ async function renderModal(
 
 /** Open the one correction form, from wherever this event offers it. */
 async function openFixForm(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: /^Fix/ }));
-  return screen.getByRole('dialog', { name: /Fix this event/ });
+  await user.click(screen.getByRole('button', { name: 'Edit' }));
+  return screen.getByRole('dialog', { name: /Edit this event/ });
 }
 
 describe('EventDetailsModal', () => {
@@ -362,7 +362,6 @@ describe('EventDetailsModal', () => {
     await renderModal(MICROCHIP_MEAL);
 
     assert.equal(screen.queryByRole('button', { name: 'Looks right' }), null);
-    assert.equal(screen.queryByRole('button', { name: /^Fix/ }), null);
     assert.equal(screen.queryByRole('button', { name: 'Edit' }), null);
   });
 
@@ -382,12 +381,13 @@ describe('EventDetailsModal', () => {
     );
     /* Same word, same destination: an unassigned event and a wrongly-matched
        one are corrected on the one form. */
-    assert.ok(screen.getByRole('button', { name: /^Fix/ }));
+    assert.ok(screen.getByRole('button', { name: 'Edit' }));
     /* One answer, not two: there is no guess to agree with. */
     assert.equal(screen.queryByRole('button', { name: 'Looks right' }), null);
   });
 
   it('drops the band once the event is settled, and marks the face', async () => {
+    const user = userEvent.setup();
     await renderModal(VERIFIED_VISIT);
 
     assert.equal(screen.queryByRole('button', { name: 'Looks right' }), null);
@@ -395,6 +395,11 @@ describe('EventDetailsModal', () => {
        time: a settled event is a quiet fact, not an announcement. */
     assert.ok(screen.getByLabelText('Verified by you'));
     assert.equal(screen.queryByText('Verified by you'), null);
+    /* Nothing is asking any more, so the way back in is a late second thought
+       under the kebab — same word as the band and the header. */
+    assert.equal(screen.queryByRole('button', { name: 'Edit' }), null);
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    assert.ok(screen.getByRole('menuitem', { name: 'Edit' }));
   });
 
   it('re-attributes the event through the fix form, and marks it verified', async () => {

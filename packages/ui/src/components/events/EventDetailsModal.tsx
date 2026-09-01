@@ -91,9 +91,11 @@ interface EventDetailsModalProps {
  * correction goes through the fix form; nothing else on the body is
  * interactive, and nothing here commits on its own.
  *
- * Three affordance tiers read straight off the header: a band means the
- * machine guessed, Edit means you authored it, and neither means the hardware
- * knew (a microchip is not a guess).
+ * One word for it everywhere — Edit — and where it sits is the tier: in the
+ * band the machine guessed and is asking, in the header you authored it and
+ * nothing is asking, under the kebab the question is already settled and this
+ * is a late second thought. Nowhere at all means the hardware knew (a
+ * microchip is not a guess).
  */
 const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   event,
@@ -133,7 +135,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [reidentifyOnDelete, setReidentifyOnDelete] = React.useState(false);
-  const [fixMode, setFixMode] = React.useState<'fix' | 'edit' | null>(null);
+  const [isEditing, setIsEditing] = React.useState(false);
   const [showAdvanced, setShowAdvanced] = React.useState(false);
   /* Set by the fix level so Escape steps back one rung of the ladder — out of
      a picker, then out of the form — rather than dropping the whole drawer. */
@@ -179,7 +181,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   /*
    * Every visit starts on the read surface with nothing carried over from the
    * last one — reset on arrival, never on the way out. On the way out the
-   * drawer is still sliding, and clearing `fixMode` there would have it walk
+   * drawer is still sliding, and clearing `isEditing` there would have it walk
    * back down its own ladder in full view. An effect would be a frame too
    * late for the same reason, so this is the render-phase pattern
    * `SheetPages` uses.
@@ -193,7 +195,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     if (isOpen) {
       setShowDeleteConfirm(false);
       setReidentifyOnDelete(false);
-      setFixMode(null);
+      setIsEditing(false);
       setShowAdvanced(false);
       setIsNoteDirty(false);
       setShowDiscardConfirm(false);
@@ -353,12 +355,15 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     });
   };
 
-  const menuHasFix = showsFixInMenu(displayEvent, correction);
+  const menuHasEdit = showsFixInMenu(displayEvent, correction);
 
   /* One ladder. The fix form and the advanced page are both rung 1 off the
      read surface, and neither is reachable from the other. */
-  const page =
-    fixMode ?? (advancedSignal && showAdvanced ? 'advanced' : 'read');
+  const page = isEditing
+    ? 'edit'
+    : advancedSignal && showAdvanced
+      ? 'advanced'
+      : 'read';
 
   return (
     <>
@@ -382,9 +387,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           /* One rung at a time: out of a picker, then out of the form, and
              only from the read surface does Escape close the drawer. */
           if (fixBackRef.current?.()) escape.preventDefault();
-          else if (fixMode) {
+          else if (isEditing) {
             escape.preventDefault();
-            setFixMode(null);
+            setIsEditing(false);
           } else if (showAdvanced) {
             escape.preventDefault();
             setShowAdvanced(false);
@@ -394,19 +399,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         {/* The whole surface travels, stage included: it is one page turning
             into another, not a panel swapped under a fixed header. */}
         <SheetPages page={page} depth={page === 'read' ? 0 : 1}>
-          {advancedSignal && showAdvanced && !fixMode ? (
+          {advancedSignal && showAdvanced && !isEditing ? (
             <EventAdvancedDetails
               event={displayEvent}
               signal={advancedSignal}
               deviceName={device?.name}
               onBack={() => setShowAdvanced(false)}
             />
-          ) : fixMode ? (
+          ) : isEditing ? (
             <EventFixForm
               event={displayEvent}
               eventChildren={children}
-              mode={fixMode}
-              onClose={() => setFixMode(null)}
+              onClose={() => setIsEditing(false)}
               registerBack={(back) => {
                 fixBackRef.current = back;
               }}
@@ -506,13 +510,15 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   </div>
 
                   <div className="event-details-actions">
-                    {/* You logged it, so nothing was guessed — Edit, not Fix. */}
+                    {/* You logged it, so nothing was guessed and nothing is
+                        asking: the affordance sits in the open rather than
+                        under the kebab. */}
                     {correction.kind === 'manual' && (
                       <Button
                         type="button"
                         variant="neutral"
                         size="sm"
-                        onClick={() => setFixMode('edit')}
+                        onClick={() => setIsEditing(true)}
                       >
                         <Pencil size={15} aria-hidden />
                         {t('common.edit')}
@@ -531,10 +537,16 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        {menuHasFix && (
-                          <DropdownMenuItem onSelect={() => setFixMode('fix')}>
+                        {menuHasEdit && (
+                          /* Same rung as Advanced details below, so it takes
+                             the same chevron: both walk you onto another
+                             surface rather than doing something and closing. */
+                          <DropdownMenuItem
+                            opensPage
+                            onSelect={() => setIsEditing(true)}
+                          >
                             <Pencil size={15} aria-hidden />
-                            {t('event_details.fix')}
+                            {t('common.edit')}
                           </DropdownMenuItem>
                         )}
                         {advancedSignal && (
@@ -604,7 +616,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     }
                     isBusy={isUpdating}
                     onVerify={handleVerify}
-                    onFix={() => setFixMode('fix')}
+                    onFix={() => setIsEditing(true)}
                   />
                 )}
 

@@ -77,7 +77,6 @@ async function renderPhoneFixForm() {
             <EventFixForm
               event={GUESSED_VISIT}
               eventChildren={[]}
-              mode="fix"
               onClose={() => {}}
             />
           </DialogContent>

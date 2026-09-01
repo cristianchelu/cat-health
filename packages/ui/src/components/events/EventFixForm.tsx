@@ -79,8 +79,6 @@ export interface EventFixFormProps {
   eventChildren: GetEventChildDTO[] | undefined;
   /** Back to the surface this opened from. */
   onClose: () => void;
-  /** Manual events are edited, not corrected — same fields, different framing. */
-  mode: 'fix' | 'edit';
   /**
    * Hands the host a way to step back one level, for Escape. Returns true when
    * this form swallowed it by closing a picker of its own, false when the whole
@@ -94,7 +92,7 @@ export interface EventFixFormProps {
  *
  * The three guesses travel together because a wrong cat usually means the rest
  * is suspect too, and the visit's weight joins them rather than earning its own
- * entry point — one Fix per event, no per-value forms. Nothing commits on tap:
+ * entry point — one edit per event, no per-value forms. Nothing commits on tap:
  * the explicit Cancel/Save pair is where the guardrails live.
  *
  * Every control here is the form grammar the Settings pages already use — one
@@ -108,7 +106,6 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
   event,
   eventChildren,
   onClose,
-  mode,
   registerBack,
 }) => {
   const { t } = useTranslation();
@@ -252,11 +249,6 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
     }
   };
 
-  const titleKey =
-    mode === 'edit'
-      ? 'event_details.edit_event_title'
-      : 'event_details.fix_event_title';
-
   const typeOptions: PickerOption[] = ELIMINATION_TYPES.map((type) => ({
     value: type,
     label: t(ELIMINATION_LABEL_KEYS[type]),
@@ -305,7 +297,7 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
           <div className="event-fix-form-main">
             <div className="event-fix-header">
               <DialogTitle className="event-fix-title">
-                {t(titleKey)}
+                {t('event_details.edit_event_title')}
               </DialogTitle>
               <DialogDescription className="event-fix-subtitle">
                 {formatDateTime(new Date(event.timestamp))}
