@@ -10,14 +10,15 @@ import type {
  * - `guess` — the machine decided and could be wrong: the band asks once.
  * - `assign` — the machine gave up: the band asks who it was.
  * - `settled` — already answered; a pill in the meta line, never the band again.
- * - `manual` — you logged it, so nothing was guessed: Edit, not Fix.
+ * - `manual` — you logged it, so nothing was guessed: Edit in the header,
+ *   no band.
  * - `none` — hardware knew (a microchip is not a guess), or the event is not
  *   about a pet at all. The absence is the design.
  */
 export type EventCorrection =
   | { kind: 'guess' }
   | { kind: 'assign' }
-  | { kind: 'settled'; how: 'verified' | 'fixed' }
+  | { kind: 'settled'; how: 'verified' | 'corrected' }
   | { kind: 'manual' }
   | { kind: 'none' };
 
@@ -64,10 +65,10 @@ export function deriveEventCorrection(
   // a blank is the wrong question — the band asks for an assignment instead.
   if (event.caused_by === 'unknown') return { kind: 'assign' };
 
-  // A person settled the attribution: that is a fix, and a fix counts as
-  // verification. Both end states are terminal and mutually exclusive.
+  // A person settled the attribution: overriding the guess counts as
+  // verifying it. Both end states are terminal and mutually exclusive.
   if (event.attributed_by === 'manual') {
-    return { kind: 'settled', how: 'fixed' };
+    return { kind: 'settled', how: 'corrected' };
   }
 
   const isGuess =
@@ -86,13 +87,13 @@ export function deriveEventCorrection(
 }
 
 /**
- * Whether the fix form has anything to offer for this event.
+ * Whether the edit form has anything to offer for this event.
  *
  * A microchip read is the one case with nothing to correct — the hardware
  * named the animal. Everything else about a pet can be re-decided, including
  * the `null`-attribution history the band cannot speak for.
  */
-export function canFixEvent(event: EventCorrectionInput): boolean {
+export function canEditEvent(event: EventCorrectionInput): boolean {
   return isPetEvent(event.data.type) && event.attributed_by !== 'microchip';
 }
 
@@ -101,12 +102,12 @@ export function canFixEvent(event: EventCorrectionInput): boolean {
  * go through the overflow menu. While the band or Edit is on screen, the menu
  * would only duplicate them.
  */
-export function showsFixInMenu(
+export function showsEditInMenu(
   event: EventCorrectionInput,
   correction: EventCorrection,
 ): boolean {
   return (
-    canFixEvent(event) &&
+    canEditEvent(event) &&
     (correction.kind === 'settled' || correction.kind === 'none')
   );
 }

@@ -57,11 +57,11 @@ import EventFacts from './EventFacts';
 import { buildEventFacts } from './buildEventFacts';
 import EventCorrectionBand from './EventCorrectionBand';
 import EventNoteField from './EventNoteField';
-import EventFixForm from './EventFixForm';
+import EventEditForm from './EventEditForm';
 import {
   deriveEventCorrection,
   isPetEvent,
-  showsFixInMenu,
+  showsEditInMenu,
 } from './eventCorrection';
 import './EventDetailsModal.css';
 
@@ -88,7 +88,7 @@ interface EventDetailsModalProps {
  *
  * The surface is a sentence, the readings behind it, and — only where the
  * machine guessed — one band that asks once whether the guess was right. Every
- * correction goes through the fix form; nothing else on the body is
+ * correction goes through the edit form; nothing else on the body is
  * interactive, and nothing here commits on its own.
  *
  * One word for it everywhere — Edit — and where it sits is the tier: in the
@@ -137,9 +137,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const [reidentifyOnDelete, setReidentifyOnDelete] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [showAdvanced, setShowAdvanced] = React.useState(false);
-  /* Set by the fix level so Escape steps back one rung of the ladder — out of
+  /* Set by the edit level so Escape steps back one rung of the ladder — out of
      a picker, then out of the form — rather than dropping the whole drawer. */
-  const fixBackRef = React.useRef<(() => boolean) | null>(null);
+  const editBackRef = React.useRef<(() => boolean) | null>(null);
   const [isNoteDirty, setIsNoteDirty] = React.useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = React.useState(false);
 
@@ -277,8 +277,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   /* One glyph either way — a person settled it. Which way they settled it is
      the badge's name, not a second mark. */
   const settledLabelKey =
-    correction.kind === 'settled' && correction.how === 'fixed'
-      ? 'event_details.fixed_by_you'
+    correction.kind === 'settled' && correction.how === 'corrected'
+      ? 'event_details.corrected_by_you'
       : 'event_details.verified_by_you';
 
   const facts = buildEventFacts({ event: displayEvent, children, t });
@@ -355,9 +355,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     });
   };
 
-  const menuHasEdit = showsFixInMenu(displayEvent, correction);
+  const menuHasEdit = showsEditInMenu(displayEvent, correction);
 
-  /* One ladder. The fix form and the advanced page are both rung 1 off the
+  /* One ladder. The edit form and the advanced page are both rung 1 off the
      read surface, and neither is reachable from the other. */
   const page = isEditing
     ? 'edit'
@@ -386,7 +386,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         onEscapeKeyDown={(escape) => {
           /* One rung at a time: out of a picker, then out of the form, and
              only from the read surface does Escape close the drawer. */
-          if (fixBackRef.current?.()) escape.preventDefault();
+          if (editBackRef.current?.()) escape.preventDefault();
           else if (isEditing) {
             escape.preventDefault();
             setIsEditing(false);
@@ -407,12 +407,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               onBack={() => setShowAdvanced(false)}
             />
           ) : isEditing ? (
-            <EventFixForm
+            <EventEditForm
               event={displayEvent}
               eventChildren={children}
               onClose={() => setIsEditing(false)}
               registerBack={(back) => {
-                fixBackRef.current = back;
+                editBackRef.current = back;
               }}
             />
           ) : (
@@ -616,7 +616,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     }
                     isBusy={isUpdating}
                     onVerify={handleVerify}
-                    onFix={() => setIsEditing(true)}
+                    onEdit={() => setIsEditing(true)}
                   />
                 )}
 

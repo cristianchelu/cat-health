@@ -15,7 +15,7 @@ interface EventCorrectionBandProps {
   /** How the subject was arrived at, e.g. "by weight" / "from the camera". */
   basis?: string;
   onVerify: () => void;
-  onFix: () => void;
+  onEdit: () => void;
   isBusy?: boolean;
 }
 
@@ -36,7 +36,7 @@ const EventCorrectionBand: React.FC<EventCorrectionBandProps> = ({
   subject,
   basis,
   onVerify,
-  onFix,
+  onEdit,
   isBusy = false,
 }) => {
   const { t } = useTranslation();
@@ -69,7 +69,7 @@ const EventCorrectionBand: React.FC<EventCorrectionBandProps> = ({
             type="button"
             variant="neutral"
             size="sm"
-            onClick={onFix}
+            onClick={onEdit}
             disabled={isBusy}
           >
             {/* One destination, one word for it — the same word the header

@@ -24,7 +24,7 @@ export interface LitterboxWeightBlockProps {
  *
  * Kept for the annotation workspace, where the weight sits beside the signal
  * being annotated. The event details surface reaches the same edit through its
- * one fix form instead — see `EventFixDialog`.
+ * one edit form instead — see `EventEditForm`.
  */
 const LitterboxWeightBlock = ({ parentEvent }: LitterboxWeightBlockProps) => {
   const { t } = useTranslation();

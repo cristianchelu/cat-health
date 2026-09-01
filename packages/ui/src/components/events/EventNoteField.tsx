@@ -24,7 +24,7 @@ interface EventNoteFieldProps {
  *
  * It carries its own Cancel/Save rather than joining a screen commit row: the
  * rest of the surface commits nothing, so there is no row for it to join, and
- * the same local-commit grammar is what the fix form uses. Re-editing
+ * the same local-commit grammar is what the edit form uses. Re-editing
  * overwrites — one note per event, no thread.
  */
 const EventNoteField: React.FC<EventNoteFieldProps> = ({

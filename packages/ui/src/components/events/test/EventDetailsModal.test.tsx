@@ -238,7 +238,7 @@ async function renderModal(
 }
 
 /** Open the one correction form, from wherever this event offers it. */
-async function openFixForm(user: ReturnType<typeof userEvent.setup>) {
+async function openEditForm(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Edit' }));
   return screen.getByRole('dialog', { name: /Edit this event/ });
 }
@@ -402,11 +402,11 @@ describe('EventDetailsModal', () => {
     assert.ok(screen.getByRole('menuitem', { name: 'Edit' }));
   });
 
-  it('re-attributes the event through the fix form, and marks it verified', async () => {
+  it('re-attributes the event through the edit form, and marks it verified', async () => {
     const user = userEvent.setup();
     await renderModal(GUESSED_VISIT);
 
-    const form = await openFixForm(user);
+    const form = await openEditForm(user);
     /* The cat picker is a listbox, not a row of radios: it has to carry a face
        per option, and it has to survive a household bigger than three. */
     await user.click(within(form).getByRole('combobox', { name: 'Cat' }));
@@ -426,7 +426,7 @@ describe('EventDetailsModal', () => {
     const user = userEvent.setup();
     await renderModal(GUESSED_VISIT);
 
-    const form = await openFixForm(user);
+    const form = await openEditForm(user);
     /* The same picker the cat field uses: one form, one language. */
     await user.click(within(form).getByRole('combobox', { name: 'Type' }));
     await user.click(screen.getByRole('option', { name: 'Defecation' }));
@@ -445,7 +445,7 @@ describe('EventDetailsModal', () => {
     const user = userEvent.setup();
     await renderModal(GUESSED_VISIT);
 
-    const form = await openFixForm(user);
+    const form = await openEditForm(user);
     await user.click(
       within(form).getByRole('checkbox', { name: 'Straining observed' }),
     );
@@ -463,7 +463,7 @@ describe('EventDetailsModal', () => {
     const user = userEvent.setup();
     await renderModal(GUESSED_VISIT);
 
-    const form = await openFixForm(user);
+    const form = await openEditForm(user);
     const reanalyze = /Re-analyze later visits/;
     assert.equal(
       within(form).queryByRole('checkbox', { name: reanalyze }),
@@ -482,11 +482,11 @@ describe('EventDetailsModal', () => {
     assert.equal((followUp as HTMLInputElement).checked, true);
   });
 
-  it('never offers re-analysis for a cat or type fix', async () => {
+  it('never offers re-analysis for a cat or type edit', async () => {
     const user = userEvent.setup();
     await renderModal(GUESSED_VISIT);
 
-    const form = await openFixForm(user);
+    const form = await openEditForm(user);
     await user.click(within(form).getByRole('combobox', { name: 'Type' }));
     await user.click(screen.getByRole('option', { name: 'Defecation' }));
 
@@ -519,7 +519,7 @@ describe('EventDetailsModal', () => {
       },
     });
 
-    const form = await openFixForm(user);
+    const form = await openEditForm(user);
     const weight = within(form).getByRole('spinbutton', { name: 'Cat weight' });
     assert.equal((weight as HTMLInputElement).value, '4.54');
 
@@ -569,7 +569,7 @@ describe('EventDetailsModal', () => {
       },
     });
 
-    const form = await openFixForm(user);
+    const form = await openEditForm(user);
     const weight = within(form).getByRole('spinbutton', { name: 'Cat weight' });
 
     await user.clear(weight);

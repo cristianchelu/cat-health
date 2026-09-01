@@ -46,7 +46,7 @@ import {
   useLitterboxWeightEdit,
   WeightOutOfRangeError,
 } from './useLitterboxWeightEdit';
-import './EventFixForm.css';
+import './EventEditForm.css';
 
 const CAUSE_ICONS: Record<
   Exclude<EventCauseDTO, 'unknown' | 'pet'>,
@@ -74,7 +74,7 @@ const ELIMINATION_LABEL_KEYS: Record<LitterboxUseEliminationType, string> = {
   unknown: 'common.unknown',
 };
 
-export interface EventFixFormProps {
+export interface EventEditFormProps {
   event: GetEventListItemDTO;
   eventChildren: GetEventChildDTO[] | undefined;
   /** Back to the surface this opened from. */
@@ -102,7 +102,7 @@ export interface EventFixFormProps {
  * out a collage: seven vocabularies, no two sharing a height, a radius, or a
  * way of showing what was selected.
  */
-const EventFixForm: React.FC<EventFixFormProps> = ({
+const EventEditForm: React.FC<EventEditFormProps> = ({
   event,
   eventChildren,
   onClose,
@@ -180,8 +180,8 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
     })),
     {
       value: 'unknown',
-      label: t('event_details.fix_not_sure'),
-      subline: t('event_details.fix_not_sure_hint'),
+      label: t('event_details.edit_not_sure'),
+      subline: t('event_details.edit_not_sure_hint'),
       /* An `Avatar` rather than a bare glyph so the blank keeps the column the
          faces above it occupy — otherwise its label starts further left than
          every other row's. */
@@ -199,7 +199,7 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
         value: cause,
         label: t(causeLabelKey(cause)),
         leading: <Icon size={16} aria-hidden />,
-        group: t('event_details.fix_not_a_cat'),
+        group: t('event_details.edit_not_a_cat'),
       };
     }),
   ];
@@ -244,7 +244,7 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
       setError(
         e instanceof WeightOutOfRangeError
           ? t('event_details.weight_out_of_range')
-          : t('event_details.fix_save_failed'),
+          : t('event_details.edit_save_failed'),
       );
     }
   };
@@ -262,14 +262,14 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
   const pickerLevel =
     picker === 'cat'
       ? {
-          title: t('event_details.fix_cat_label'),
+          title: t('event_details.edit_cat_label'),
           options: attributionOptions,
           value: attribution,
           onSelect: setAttribution,
         }
       : picker === 'type'
         ? {
-            title: t('event_details.fix_type_label'),
+            title: t('event_details.edit_type_label'),
             options: typeOptions,
             value: eliminationType,
             onSelect: (next: string) => {
@@ -280,7 +280,7 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
         : null;
 
   return (
-    <div className="event-fix-form">
+    <div className="event-edit-form">
       <SheetPages page={picker ?? 'form'} depth={picker ? 1 : 0}>
         {pickerLevel ? (
           <SelectPage
@@ -294,23 +294,23 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
             }}
           />
         ) : (
-          <div className="event-fix-form-main">
-            <div className="event-fix-header">
-              <DialogTitle className="event-fix-title">
+          <div className="event-edit-form-main">
+            <div className="event-edit-header">
+              <DialogTitle className="event-edit-title">
                 {t('event_details.edit_event_title')}
               </DialogTitle>
-              <DialogDescription className="event-fix-subtitle">
+              <DialogDescription className="event-edit-subtitle">
                 {formatDateTime(new Date(event.timestamp))}
               </DialogDescription>
             </div>
 
-            <div className="event-fix-body">
-              <FormField label={t('event_details.fix_cat_label')}>
+            <div className="event-edit-body">
+              <FormField label={t('event_details.edit_cat_label')}>
                 <AdaptiveSelect
                   value={attribution}
                   onValueChange={setAttribution}
                   options={attributionOptions}
-                  label={t('event_details.fix_cat_label')}
+                  label={t('event_details.edit_cat_label')}
                   disabled={isBusy}
                   onOpenPage={() => setPicker('cat')}
                 />
@@ -322,7 +322,7 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
                       `<select>` — but the cat above it opens a page, and one
                       form that speaks two interaction languages a few pixels
                       apart reads as two products. */}
-                  <FormField label={t('event_details.fix_type_label')}>
+                  <FormField label={t('event_details.edit_type_label')}>
                     <AdaptiveSelect
                       value={eliminationType}
                       onValueChange={(next) => {
@@ -330,14 +330,14 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
                         if (parsed) setEliminationType(parsed);
                       }}
                       options={typeOptions}
-                      label={t('event_details.fix_type_label')}
+                      label={t('event_details.edit_type_label')}
                       disabled={isBusy}
                       onOpenPage={() => setPicker('type')}
                     />
                   </FormField>
 
-                  <FormField label={t('event_details.fix_weight_label')}>
-                    <div className="event-fix-weight">
+                  <FormField label={t('event_details.edit_weight_label')}>
+                    <div className="event-edit-weight">
                       <Input
                         type="number"
                         step="0.01"
@@ -345,10 +345,10 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
                         max={MAX_WEIGHT_G / 1000}
                         value={weightKg}
                         disabled={isBusy}
-                        aria-label={t('event_details.fix_weight_label')}
+                        aria-label={t('event_details.edit_weight_label')}
                         onChange={(e) => setWeightKg(e.target.value)}
                       />
-                      <span className="event-fix-weight-unit">kg</span>
+                      <span className="event-edit-weight-unit">kg</span>
                       {/*
                        * One slot, two jobs. Untouched, it is the bin: clearing
                        * the field *is* the removal, so the control that does it
@@ -380,7 +380,7 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
                           type="button"
                           variant="ghost"
                           icon
-                          className="event-fix-weight-remove"
+                          className="event-edit-weight-remove"
                           disabled={isBusy || weightRemoved}
                           title={t('event_details.remove_weight')}
                           aria-label={t('event_details.remove_weight')}
@@ -394,7 +394,7 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
                     {/* What removing costs, said only once it is what will
                         happen. */}
                     {weightRemoved && (
-                      <p className="event-fix-weight-note">
+                      <p className="event-edit-weight-note">
                         {t('event_details.remove_weight_hint')}
                       </p>
                     )}
@@ -404,23 +404,23 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
                      * exists only once the weight actually changed, and sits
                      * with the field that caused it: cats are told apart by
                      * weight, so this one edit can re-identify every later
-                     * visit on the device. A cat, type or straining fix never
+                     * visit on the device. A cat, type or straining edit never
                      * feeds identification and never raises it.
                      */}
                     {weightChanged && event.device_id != null && (
                       <Callout
                         tone="info"
-                        className="event-fix-followup"
+                        className="event-edit-followup"
                         control={
                           <Switch
-                            id="event-fix-reanalyze"
+                            id="event-edit-reanalyze"
                             checked={reanalyze}
                             disabled={isBusy}
                             onCheckedChange={setReanalyze}
                           />
                         }
                       >
-                        <label htmlFor="event-fix-reanalyze">
+                        <label htmlFor="event-edit-reanalyze">
                           {t('event_details.reanalyze_later_visits')}
                           <small>
                             {t('event_details.reanalyze_later_visits_hint')}
@@ -430,12 +430,12 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
                     )}
                   </FormField>
 
-                  <div className="event-fix-switch-row">
-                    <label htmlFor="event-fix-straining">
+                  <div className="event-edit-switch-row">
+                    <label htmlFor="event-edit-straining">
                       {t('event_details.straining_observed')}
                     </label>
                     <Switch
-                      id="event-fix-straining"
+                      id="event-edit-straining"
                       checked={straining}
                       disabled={isBusy}
                       onCheckedChange={setStraining}
@@ -448,7 +448,7 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
             </div>
 
             <FormActions
-              className="event-fix-actions"
+              className="event-edit-actions"
               onCancel={onClose}
               cancelLabel={t('common.cancel')}
               submitLabel={t('common.save')}
@@ -463,4 +463,4 @@ const EventFixForm: React.FC<EventFixFormProps> = ({
   );
 };
 
-export default EventFixForm;
+export default EventEditForm;

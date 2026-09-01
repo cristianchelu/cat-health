@@ -57,7 +57,7 @@ export class WeightOutOfRangeError extends Error {}
  * deleting are the same analytics outcome, and the visit itself survives
  * either way.
  *
- * Shared by the fix form and the annotation workspace so the two cannot drift
+ * Shared by the edit form and the annotation workspace so the two cannot drift
  * on what a weight edit invalidates.
  */
 export function useLitterboxWeightEdit(

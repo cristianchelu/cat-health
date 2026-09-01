@@ -9,7 +9,7 @@ import {
   type GetPetResponseDTO,
 } from 'shared';
 
-import EventFixForm from '../EventFixForm.tsx';
+import EventEditForm from '../EventEditForm.tsx';
 import { Dialog, DialogContent } from '@/components/ui/Dialog.tsx';
 import RegionalPreferencesProvider from '@/contexts/RegionalPreferencesProvider';
 import { MOBILE_QUERY } from '@/lib/breakpoints.ts';
@@ -17,7 +17,7 @@ import { resetMediaMatches, setMediaMatches } from '@/test/matchMedia.ts';
 import { renderWithProviders } from '@/test/render.tsx';
 
 /*
- * The phone half of the fix form: `AdaptiveSelect` only offers a page at phone
+ * The phone half of the edit form: `AdaptiveSelect` only offers a page at phone
  * widths, so this ladder — form → picker level → back — is unreachable from
  * every other test in the suite, which all run the desktop branch.
  *
@@ -58,7 +58,7 @@ const GUESSED_VISIT: GetEventListItemDTO = {
   human_verified: false,
 };
 
-async function renderPhoneFixForm() {
+async function renderPhoneEditForm() {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: Infinity, staleTime: Infinity },
@@ -74,7 +74,7 @@ async function renderPhoneFixForm() {
       <RegionalPreferencesProvider>
         <Dialog open>
           <DialogContent showCloseButton={false}>
-            <EventFixForm
+            <EventEditForm
               event={GUESSED_VISIT}
               eventChildren={[]}
               onClose={() => {}}
@@ -86,13 +86,13 @@ async function renderPhoneFixForm() {
   );
 }
 
-describe('EventFixForm on a phone', () => {
+describe('EventEditForm on a phone', () => {
   it('takes the whole surface for a picker level, and comes back with the answer', async () => {
     act(() => {
       setMediaMatches(MOBILE_QUERY, true);
     });
     const user = userEvent.setup();
-    await renderPhoneFixForm();
+    await renderPhoneEditForm();
 
     /* The phone anchor: a button that opens a page, not a listbox. */
     const trigger = screen.getByRole('button', { name: /Cat/ });

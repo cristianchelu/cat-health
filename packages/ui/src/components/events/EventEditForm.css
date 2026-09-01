@@ -1,12 +1,12 @@
 /*
- * The fix form.
+ * The edit form.
  *
  * Almost nothing is styled here on purpose. Every control is a DS form control
  * at one shared height, so what is left is the dialog's own frame and the two
  * places a field grows an attachment — the unit and bin beside the weight, the
  * follow-up under it.
  */
-.event-fix-form {
+.event-edit-form {
   /* A passive frame around the pages: each level owns its own padding and its
      own scroller, because during a slide both are mounted at once and a
      scrollbar on this shared box would belong to neither. */
@@ -21,7 +21,7 @@
     margin: 0;
   }
 
-  .event-fix-form-main {
+  .event-edit-form-main {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
@@ -41,32 +41,32 @@
 
   /* Title and timestamp are one block, so the dialog's own gap sits below
      them rather than between two halves of the same heading. */
-  .event-fix-header {
+  .event-edit-header {
     display: flex;
     flex-direction: column;
     gap: var(--space-3xs);
   }
 
-  .event-fix-title {
+  .event-edit-title {
     font-size: var(--text-base);
     font-weight: var(--font-bold);
     color: var(--color-text);
     margin: 0;
   }
 
-  .event-fix-subtitle {
+  .event-edit-subtitle {
     margin: 0;
     font-size: var(--text-xs);
     color: var(--color-text-muted);
   }
 
-  .event-fix-body {
+  .event-edit-body {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
   }
 
-  .event-fix-weight {
+  .event-edit-weight {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
@@ -76,7 +76,7 @@
     }
   }
 
-  .event-fix-weight-unit {
+  .event-edit-weight-unit {
     font-size: var(--text-sm);
     color: var(--color-text-muted);
   }
@@ -84,13 +84,13 @@
   /* Destructive, so it says so — but as a red glyph on nothing, not the filled
      `danger` button, which beside a text input reads as the form's main
      action. */
-  .event-fix-weight-remove:not(:disabled) {
+  .event-edit-weight-remove:not(:disabled) {
     color: var(--color-error);
   }
 
   /* Only on screen when the field is empty, which is the one moment the cost
      of removing is about to be paid. */
-  .event-fix-weight-note {
+  .event-edit-weight-note {
     margin: var(--space-xs) 0 0;
     font-size: var(--text-xs);
     line-height: var(--line-height-normal);
@@ -99,7 +99,7 @@
 
   /* Attached to the field that raised it, under the control rather than level
      with it — it is a consequence of that input, not the next question. */
-  .event-fix-followup {
+  .event-edit-followup {
     margin-top: var(--space-sm);
 
     label {
@@ -120,7 +120,7 @@
   }
 
   /* Label left, switch right — a statement you turn on, not a field you fill. */
-  .event-fix-switch-row {
+  .event-edit-switch-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -133,7 +133,7 @@
     }
   }
 
-  .event-fix-actions {
+  .event-edit-actions {
     margin-top: var(--space-xs);
   }
 }
