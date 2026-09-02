@@ -345,7 +345,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         setReidentifyOnDelete(false);
         if (shouldReidentify && deviceId != null) {
           await reidentifyLitterboxVisits(deviceId, after);
-          invalidateQueriesAfterEventPatch(queryClient);
+          invalidateQueriesAfterEventPatch(queryClient, displayEvent);
           await queryClient.invalidateQueries({
             queryKey: ['litterboxTrends'],
           });

@@ -76,13 +76,13 @@ export function useLitterboxWeightEdit(
     await queryClient.invalidateQueries({
       queryKey: ['event', parentEvent.id],
     });
-    invalidateQueriesAfterEventPatch(queryClient);
+    invalidateQueriesAfterEventPatch(queryClient, parentEvent);
     if (parentEvent.pet_id != null) {
       await queryClient.invalidateQueries({
         queryKey: ['weightTrends', parentEvent.pet_id],
       });
     }
-  }, [parentEvent.id, parentEvent.pet_id, queryClient]);
+  }, [parentEvent, queryClient]);
 
   const saveWeight = React.useCallback(
     async (grams: number | null, options: { reidentify?: boolean } = {}) => {
@@ -114,7 +114,7 @@ export function useLitterboxWeightEdit(
           parentEvent.device_id,
           parentEvent.timestamp,
         );
-        invalidateQueriesAfterEventPatch(queryClient);
+        invalidateQueriesAfterEventPatch(queryClient, parentEvent);
         await queryClient.invalidateQueries({ queryKey: ['litterboxTrends'] });
       }
 
@@ -122,10 +122,7 @@ export function useLitterboxWeightEdit(
     },
     [
       deleteEvent,
-      parentEvent.device_id,
-      parentEvent.id,
-      parentEvent.pet_id,
-      parentEvent.timestamp,
+      parentEvent,
       queryClient,
       refreshAfterChange,
       updateEvent,

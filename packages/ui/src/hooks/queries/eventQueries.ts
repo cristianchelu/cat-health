@@ -3,9 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
 import apiClient from '@/api/apiClient';
 import {
+  type EventDataDTO,
   type GetEventDTO,
   type GetEventsResponseDTO,
   type GetEventMediaResponseDTO,
+  type GetEventWithChildrenDTO,
   type PatchEventRequestDTO,
 } from 'shared';
 import {
@@ -36,27 +38,49 @@ export function mergeGetEventIntoDeviceAnnotationCaches(
   );
 }
 
-/** Detail query + annotation list rows; does not refetch. Pair with {@link invalidateQueriesAfterEventPatch}. */
+/**
+ * Detail query + annotation list rows. Pair with {@link invalidateQueriesAfterEventPatch}.
+ *
+ * The PATCH body carries no `children`, so splicing it over the detail cache
+ * wholesale would un-load children an open surface is mid-render on (the
+ * litterbox drawer's cat-weight fact reads them). The cached children are
+ * kept and the detail query invalidated instead: the row updates instantly,
+ * and whatever the server reconciled on the children catches up on refetch.
+ */
 export function applyServerEventToEventCaches(
   queryClient: QueryClient,
   event: GetEventDTO,
 ): void {
-  queryClient.setQueryData(['event', event.id], event);
+  queryClient.setQueryData<GetEventDTO | GetEventWithChildrenDTO>(
+    ['event', event.id],
+    (old) =>
+      old != null && 'children' in old
+        ? { ...event, children: old.children }
+        : event,
+  );
+  queryClient.invalidateQueries({ queryKey: ['event', event.id] });
   mergeGetEventIntoDeviceAnnotationCaches(queryClient, event);
 }
 
 /**
  * Invalidate list queries that are not updated by {@link applyServerEventToEventCaches}.
  * Call `applyServerEventToEventCaches(queryClient, result)` first when you have the patched event body.
+ *
+ * The overview trend cards only move with intake data — a food patch moves
+ * water too, through the moisture child — so other event types skip those
+ * refetches. With no event in hand (a delete), assume either could have moved.
  */
-export function invalidateQueriesAfterEventPatch(queryClient: QueryClient) {
+export function invalidateQueriesAfterEventPatch(
+  queryClient: QueryClient,
+  patchedEvent?: { data: { type: EventDataDTO['type'] } },
+) {
   queryClient.invalidateQueries({ queryKey: ['deviceEvents'] });
   queryClient.invalidateQueries({ queryKey: ['petEvents'] });
-  // A patched amount moves the overview cards too — the server reconciles
-  // calories and the moisture child, so both trends can be stale after any
-  // event patch. This is the single funnel every patch path goes through.
-  queryClient.invalidateQueries({ queryKey: ['foodTrends'] });
-  queryClient.invalidateQueries({ queryKey: ['waterTrends'] });
+  const type = patchedEvent?.data.type;
+  if (type == null || type === 'food_intake' || type === 'water_intake') {
+    queryClient.invalidateQueries({ queryKey: ['foodTrends'] });
+    queryClient.invalidateQueries({ queryKey: ['waterTrends'] });
+  }
 }
 
 /**
@@ -78,7 +102,7 @@ export function usePatchEvent() {
       try {
         const result = await updateEvent(variables.eventId, variables.data);
         applyServerEventToEventCaches(queryClient, result);
-        invalidateQueriesAfterEventPatch(queryClient);
+        invalidateQueriesAfterEventPatch(queryClient, result);
         return result;
       } finally {
         pendingRef.current -= 1;
@@ -119,7 +143,7 @@ export function useUpdateEvent() {
     }) => updateEvent(eventId, data),
     onSuccess: (data) => {
       applyServerEventToEventCaches(queryClient, data);
-      invalidateQueriesAfterEventPatch(queryClient);
+      invalidateQueriesAfterEventPatch(queryClient, data);
     },
   });
 }
@@ -129,8 +153,10 @@ export function useDeleteEvent() {
   return useMutation({
     mutationFn: (eventId: number) => deleteEvent(eventId),
     onSuccess: (_data, eventId) => {
-      queryClient.invalidateQueries({ queryKey: ['deviceEvents'] });
-      queryClient.invalidateQueries({ queryKey: ['petEvents'] });
+      // The deleted row is gone, so its type is unknown here — the funnel
+      // treats that as "could have moved either trend". Deleting a meal must
+      // move the overview cards exactly like editing it to zero does.
+      invalidateQueriesAfterEventPatch(queryClient);
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
     },
   });

@@ -532,40 +532,50 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       // `pet_id` is required on POST, so the body always states a decision.
       const columns = attribution ?? attributionColumns('unknown', null, null);
 
-      let result = await db
-        .insertInto('event')
-        .values({
-          parent_event_id: parent_event_id || null,
-          ...columns,
-          device_id,
-          timestamp: eventTimestamp,
-          data: storedEventData,
-          raw_data: null,
-          human_verified: humanVerified,
-          ...(note ? { note, note_updated_at: eventTimestamp } : {}),
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow();
-
-      if (result.data.type === 'food_intake') {
-        const reconciled = await reconcileFoodIntakeDerived({
-          db,
-          eventId: result.id,
-          data: result.data,
-          attribution: {
-            pet_id: result.pet_id,
-            caused_by: result.caused_by,
-            attributed_by: result.attributed_by,
-          },
-          timestamp: result.timestamp,
-        });
-        result = await db
-          .updateTable('event')
-          .set({ data: reconciled })
-          .where('id', '=', result.id)
+      // One transaction: the meal, its nutrients and its moisture child land
+      // together or not at all — a failed enrichment must not leave a bare
+      // row behind for a retry to duplicate.
+      const result = await db.transaction().execute(async (trx) => {
+        let row = await trx
+          .insertInto('event')
+          .values({
+            parent_event_id: parent_event_id || null,
+            ...columns,
+            device_id,
+            timestamp: eventTimestamp,
+            data: storedEventData,
+            raw_data: null,
+            human_verified: humanVerified,
+            ...(note ? { note, note_updated_at: eventTimestamp } : {}),
+          })
           .returningAll()
           .executeTakeFirstOrThrow();
-      }
+
+        if (row.data.type === 'food_intake') {
+          const reconciled = await reconcileFoodIntakeDerived({
+            db: trx,
+            eventId: row.id,
+            data: row.data,
+            attribution: {
+              pet_id: row.pet_id,
+              caused_by: row.caused_by,
+              attributed_by: row.attributed_by,
+            },
+            timestamp: row.timestamp,
+            recomputeNutrients: true,
+          });
+          if (JSON.stringify(reconciled) !== JSON.stringify(row.data)) {
+            row = await trx
+              .updateTable('event')
+              .set({ data: reconciled })
+              .where('id', '=', row.id)
+              .returningAll()
+              .executeTakeFirstOrThrow();
+          }
+        }
+
+        return row;
+      });
 
       return requireSerializedEventRow(result);
     },
@@ -772,51 +782,62 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         attribution ??
         (attributed_by !== undefined ? { attributed_by } : undefined);
 
-      let result = await db
-        .updateTable('event')
-        .set({
-          ...fkRepair,
-          ...(human_verified !== undefined ? { human_verified } : {}),
-          ...(attributionUpdate ?? {}),
-          ...(patchEventData !== undefined
-            ? { data: eventDataFromDto(patchEventData) }
-            : {}),
-          ...(noteUpdate ?? {}),
-        })
-        .where('id', '=', eventId)
-        .returningAll()
-        .executeTakeFirstOrThrow();
+      // One transaction: a failed reconcile rolls the whole patch back rather
+      // than durably landing new grams under old calories.
+      const result = await db.transaction().execute(async (trx) => {
+        let row = await trx
+          .updateTable('event')
+          .set({
+            ...fkRepair,
+            ...(human_verified !== undefined ? { human_verified } : {}),
+            ...(attributionUpdate ?? {}),
+            ...(patchEventData !== undefined
+              ? { data: eventDataFromDto(patchEventData) }
+              : {}),
+            ...(noteUpdate ?? {}),
+          })
+          .where('id', '=', eventId)
+          .returningAll()
+          .executeTakeFirstOrThrow();
 
-      // The patch may have moved the grams or the attribution out from under
-      // everything derived from them — nutrients, and the moisture child's
-      // amount and ownership. Reconcile off the row's *final* state, so an
-      // attribution-only patch reaches the child too.
-      if (result.data.type === 'food_intake') {
-        const previousData = parseStoredEventData(existing.data);
-        const reconciled = await reconcileFoodIntakeDerived({
-          db,
-          eventId,
-          data: result.data,
-          attribution: {
-            pet_id: result.pet_id,
-            caused_by: result.caused_by,
-            attributed_by: result.attributed_by,
-          },
-          timestamp: result.timestamp,
-          previousAmount:
-            previousData?.type === 'food_intake'
-              ? previousData.amount
-              : undefined,
-        });
-        if (JSON.stringify(reconciled) !== JSON.stringify(result.data)) {
-          result = await db
-            .updateTable('event')
-            .set({ data: reconciled })
-            .where('id', '=', eventId)
-            .returningAll()
-            .executeTakeFirstOrThrow();
+        // Reconcile off the row's *final* state — but only when the patch
+        // touched the grams, the food link or the attribution. A note or a
+        // verify says nothing about nutrition, and re-deriving on it would
+        // let a later food-catalog edit silently rewrite historical meals.
+        const touchesDerived =
+          patchEventData !== undefined ||
+          attributionUpdate !== undefined ||
+          fkRepair.pet_id !== undefined;
+        if (row.data.type === 'food_intake' && touchesDerived) {
+          const previousData = parseStoredEventData(existing.data);
+          const reconciled = await reconcileFoodIntakeDerived({
+            db: trx,
+            eventId,
+            data: row.data,
+            attribution: {
+              pet_id: row.pet_id,
+              caused_by: row.caused_by,
+              attributed_by: row.attributed_by,
+            },
+            timestamp: row.timestamp,
+            recomputeNutrients: patchEventData !== undefined,
+            previousAmount:
+              previousData?.type === 'food_intake'
+                ? previousData.amount
+                : undefined,
+          });
+          if (JSON.stringify(reconciled) !== JSON.stringify(row.data)) {
+            row = await trx
+              .updateTable('event')
+              .set({ data: reconciled })
+              .where('id', '=', eventId)
+              .returningAll()
+              .executeTakeFirstOrThrow();
+          }
         }
-      }
+
+        return row;
+      });
 
       return requireSerializedEventRow(result);
     },

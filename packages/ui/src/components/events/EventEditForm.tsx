@@ -43,6 +43,11 @@ import {
 } from '@/lib/eventAttribution';
 import { intakeFoodType } from '@/components/food-picker/foodGroups';
 import {
+  compareFoodBrands,
+  NO_BRAND,
+  normalizeFoodBrand,
+} from '@/components/food-picker/foodLadder';
+import {
   gramsToKgInput,
   MAX_WEIGHT_G,
   MIN_WEIGHT_G,
@@ -52,6 +57,8 @@ import {
 import {
   FOOD_AMOUNT_RANGE_G,
   MeasureOutOfRangeError,
+  parseAmountInput,
+  requireAmount,
   WATER_AMOUNT_RANGE_ML,
   type EditableMeasure,
 } from './eventMeasures';
@@ -91,14 +98,6 @@ const RANGE_ERROR_KEYS: Record<EditableMeasure, string> = {
 
 /** The food select's value for "no food row backs this meal". */
 const FOOD_NOT_LINKED = 'none';
-
-/** `null` for anything that is not a number — amounts have no blank state. */
-function parseAmountInput(value: string): number | null {
-  const trimmed = value.trim();
-  if (trimmed === '') return null;
-  const amount = Number.parseFloat(trimmed);
-  return Number.isFinite(amount) ? amount : null;
-}
 
 export interface EventEditFormProps {
   event: GetEventListItemDTO;
@@ -201,23 +200,39 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
     ? t('event_details.restore_weight', { weight: baselineWeight })
     : t('event_details.undo_weight_change');
 
-  const amountUnit = isFood ? 'g' : 'ml';
-  const amountChanged = (isFood || isWater) && amountText !== baselineAmount;
+  /* Grams and millilitres are the same row with different clothes; only the
+     label, the window and the unit change, so they live in one config rather
+     than two copies of the JSX. */
+  const amountField = isFood
+    ? {
+        label: t('event_details.edit_food_amount_label'),
+        range: FOOD_AMOUNT_RANGE_G,
+        unit: 'g',
+      }
+    : isWater
+      ? {
+          label: t('event_details.edit_water_amount_label'),
+          range: WATER_AMOUNT_RANGE_ML,
+          unit: 'ml',
+        }
+      : null;
+  const amountChanged = amountField != null && amountText !== baselineAmount;
   const foodChanged = isFood && foodId !== baselineFoodId;
   /* A device amount is never absent, so the arrow always names the reading. */
   const undoAmountLabel = t('event_details.restore_amount', {
     amount: baselineAmount,
-    unit: amountUnit,
+    unit: amountField?.unit ?? '',
   });
 
-  /* What the correction leaves behind: the analyzer's invariant says the rest
-     of the sensor's total is spill, so the field owns up to it before Save. */
+  /* What the correction leaves behind — computed by the same invariant the
+     save will write, so the hint can never promise a different split than
+     the one that lands. */
   const spillMl = (() => {
     if (event.data.type !== 'water_intake' || !amountChanged) return 0;
-    const raw = event.data.raw_amount;
+    if (event.data.raw_amount == null) return 0;
     const amount = parseAmountInput(amountText);
-    if (raw == null || amount == null) return 0;
-    return Math.max(0, Math.round(raw - amount));
+    if (amount == null) return 0;
+    return overrideWaterAmount(event.data, amount).excluded_amount ?? 0;
   })();
 
   /**
@@ -286,14 +301,7 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
 
     if (event.data.type === 'food_intake') {
       if (!amountChanged && !foodChanged) return undefined;
-      const amount = parseAmountInput(amountText);
-      if (
-        amount == null ||
-        amount < FOOD_AMOUNT_RANGE_G.min ||
-        amount > FOOD_AMOUNT_RANGE_G.max
-      ) {
-        throw new MeasureOutOfRangeError('food');
-      }
+      const amount = requireAmount(amountText, FOOD_AMOUNT_RANGE_G, 'food');
       const base = { ...event.data, amount };
       if (!foodChanged) return base;
       const food = foods?.find((f) => String(f.id) === foodId);
@@ -309,14 +317,7 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
 
     if (event.data.type === 'water_intake') {
       if (!amountChanged) return undefined;
-      const amount = parseAmountInput(amountText);
-      if (
-        amount == null ||
-        amount < WATER_AMOUNT_RANGE_ML.min ||
-        amount > WATER_AMOUNT_RANGE_ML.max
-      ) {
-        throw new MeasureOutOfRangeError('water');
-      }
+      const amount = requireAmount(amountText, WATER_AMOUNT_RANGE_ML, 'water');
       return overrideWaterAmount(event.data, amount);
     }
 
@@ -367,24 +368,28 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
 
   /**
    * The library grouped by brand, with the honest blank on top: a feeder event
-   * with no food row has no nutrition, and saying so is an answer too.
+   * with no food row has no nutrition, and saying so is an answer too. The
+   * brand buckets and their order come from the ladder's shared rule, so this
+   * list and the log flow's browse tree can never disagree about them.
    */
   const foodOptions: PickerOption[] = React.useMemo(() => {
-    const sorted = [...(foods ?? [])].sort(
-      (a, b) =>
-        (a.brand ?? '').localeCompare(b.brand ?? '') ||
-        a.name.localeCompare(b.name),
-    );
+    const sorted = [...(foods ?? [])]
+      .map((food) => ({ food, brand: normalizeFoodBrand(food.brand) }))
+      .sort(
+        (a, b) =>
+          compareFoodBrands(a.brand, b.brand) ||
+          a.food.name.localeCompare(b.food.name),
+      );
     return [
       {
         value: FOOD_NOT_LINKED,
         label: t('event_details.edit_food_not_linked'),
         muted: true,
       },
-      ...sorted.map((food) => ({
+      ...sorted.map(({ food, brand }) => ({
         value: String(food.id),
         label: food.name,
-        group: food.brand ?? t('food_picker.no_brand'),
+        group: brand === NO_BRAND ? t('food_picker.no_brand') : brand,
       })),
     ];
   }, [foods, t]);
@@ -458,68 +463,39 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
                 />
               </FormField>
 
+              {isFood && (
+                <FormField label={t('event_details.edit_food_label')}>
+                  <AdaptiveSelect
+                    value={foodId}
+                    onValueChange={setFoodId}
+                    options={foodOptions}
+                    label={t('event_details.edit_food_label')}
+                    disabled={isBusy}
+                    onOpenPage={() => setPicker('food')}
+                  />
+                </FormField>
+              )}
+
               {/* The measurement, in this form's own grammar — one label, one
                   control at the shared height. Deliberately not the log
                   ladder's slider-and-headline `AmountStep`: that is the log
                   flow's vocabulary, and this form is not a collage. */}
-              {isFood && (
-                <>
-                  <FormField label={t('event_details.edit_food_label')}>
-                    <AdaptiveSelect
-                      value={foodId}
-                      onValueChange={setFoodId}
-                      options={foodOptions}
-                      label={t('event_details.edit_food_label')}
-                      disabled={isBusy}
-                      onOpenPage={() => setPicker('food')}
-                    />
-                  </FormField>
-
-                  <FormField label={t('event_details.edit_food_amount_label')}>
-                    <div className="event-edit-measure">
-                      <Input
-                        type="number"
-                        step="1"
-                        min={FOOD_AMOUNT_RANGE_G.min}
-                        max={FOOD_AMOUNT_RANGE_G.max}
-                        value={amountText}
-                        disabled={isBusy}
-                        aria-label={t('event_details.edit_food_amount_label')}
-                        onChange={(e) => setAmountText(e.target.value)}
-                      />
-                      <span className="event-edit-measure-unit">g</span>
-                      {amountChanged && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          icon
-                          disabled={isBusy}
-                          title={undoAmountLabel}
-                          aria-label={undoAmountLabel}
-                          onClick={() => setAmountText(baselineAmount)}
-                        >
-                          <Undo2 size={16} aria-hidden />
-                        </Button>
-                      )}
-                    </div>
-                  </FormField>
-                </>
-              )}
-
-              {isWater && (
-                <FormField label={t('event_details.edit_water_amount_label')}>
+              {amountField && (
+                <FormField label={amountField.label}>
                   <div className="event-edit-measure">
                     <Input
                       type="number"
                       step="1"
-                      min={WATER_AMOUNT_RANGE_ML.min}
-                      max={WATER_AMOUNT_RANGE_ML.max}
+                      min={amountField.range.min}
+                      max={amountField.range.max}
                       value={amountText}
                       disabled={isBusy}
-                      aria-label={t('event_details.edit_water_amount_label')}
+                      aria-label={amountField.label}
                       onChange={(e) => setAmountText(e.target.value)}
                     />
-                    <span className="event-edit-measure-unit">ml</span>
+                    <span className="event-edit-measure-unit">
+                      {amountField.unit}
+                    </span>
                     {amountChanged && (
                       <Button
                         type="button"
@@ -536,11 +512,13 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
                   </div>
 
                   {/* The invariant's other half, said while it is about to be
-                      written rather than discovered on the spill line later. */}
+                      written rather than discovered on the spill line later.
+                      Rounded for reading only — visibility and the saved
+                      split both use the exact value. */}
                   {spillMl > 0 && (
                     <p className="event-edit-measure-note">
                       {t('event_details.edit_water_spill_hint', {
-                        amount: spillMl,
+                        amount: Math.round(spillMl * 100) / 100,
                       })}
                     </p>
                   )}

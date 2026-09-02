@@ -503,6 +503,36 @@ describe('EventDetailsModal', () => {
     assert.equal(body.data.filtered, true);
   });
 
+  it('promises the exact split the save will write, fractions included', async () => {
+    const user = userEvent.setup();
+    await renderModal(FILTERED_WATER);
+
+    const form = await openEditForm(user);
+    const amount = within(form).getByRole('spinbutton', {
+      name: 'Amount drunk',
+    });
+    await user.clear(amount);
+    /* A sub-millilitre remainder: rounding would hide the hint entirely
+       while the save still flips the event to filtered. */
+    await user.type(amount, '44.6');
+
+    assert.match(
+      form.textContent ?? '',
+      /other 0\.4 ml the sensor saw will count as spilled/,
+    );
+
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => assert.equal(writes().length, 1));
+    const body = writes()[0].body as {
+      data: { amount: number; excluded_amount: number; filtered: boolean };
+    };
+    assert.equal(body.data.amount, 44.6);
+    /* The hint and the stored value came from the same arithmetic. */
+    assert.ok(Math.abs(body.data.excluded_amount - 0.4) < 1e-9);
+    assert.equal(body.data.filtered, true);
+  });
+
   it('rejects an amount outside its window before anything is written', async () => {
     const user = userEvent.setup();
     await renderModal(FILTERED_WATER);

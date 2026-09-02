@@ -186,6 +186,191 @@ describe('events API mutations', () => {
     assert.equal(detail.json().children[0].data.source, 'food');
   });
 
+  it('leaves nutrients and the moisture child alone on note and verify patches', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Annotated Cat' });
+    const food = await insertFood(ctx.db, {
+      name: 'Wet pouch',
+      food_type: 'complete_wet',
+      moisture_percent: 80,
+      calories_per_100g: 90,
+    });
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/events',
+      payload: {
+        pet_id: pet.id,
+        device_id: null,
+        parent_event_id: null,
+        human_verified: false,
+        data: {
+          type: 'food_intake',
+          food_type: 'unknown',
+          amount: 50,
+          food_id: food.id,
+        },
+      },
+    });
+    const parent = create.json();
+
+    // The catalog moves on; history must not move with it on a text edit.
+    await ctx.db
+      .updateTable('food')
+      .set({ calories_per_100g: 500, moisture_percent: 10 })
+      .where('id', '=', food.id)
+      .execute();
+
+    const note = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${parent.id}`,
+      payload: { note: 'Half left in the bowl.' },
+    });
+    assert.equal(note.statusCode, 200);
+    assert.equal(note.json().data.nutrients.calories, 45);
+
+    const verify = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${parent.id}`,
+      payload: { human_verified: true },
+    });
+    assert.equal(verify.statusCode, 200);
+    assert.equal(verify.json().data.nutrients.calories, 45);
+    assert.equal(verify.json().data.nutrients.moisture_ml, 40);
+
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/api/events/${parent.id}`,
+    });
+    assert.equal(detail.json().children[0].data.amount, 40);
+  });
+
+  it('scales rather than erases when the food row has no nutrition data', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Name-Only Cat' });
+    const bareFood = await insertFood(ctx.db, {
+      name: 'Mystery kibble',
+      food_type: 'complete_dry',
+    });
+    // The fixture defaults nutrition columns; a name-only row has none.
+    await ctx.db
+      .updateTable('food')
+      .set({ moisture_percent: null, calories_per_100g: null })
+      .where('id', '=', bareFood.id)
+      .execute();
+    const event = await insertFoodIntakeEvent(ctx.db, {
+      pet_id: pet.id,
+      food_type: 'dry',
+      amount: 50,
+      food_id: bareFood.id,
+      nutrients: { calories: 100, moisture_ml: 20 },
+    });
+
+    const patch = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${event.id}`,
+      payload: {
+        data: {
+          type: 'food_intake',
+          food_type: 'dry',
+          amount: 25,
+          food_id: bareFood.id,
+          nutrients: { calories: 100, moisture_ml: 20 },
+        },
+      },
+    });
+    assert.equal(patch.statusCode, 200);
+    // The name-only row cannot speak for the meal; the stored reading can.
+    assert.equal(patch.json().data.nutrients.calories, 50);
+    assert.equal(patch.json().data.nutrients.moisture_ml, 10);
+  });
+
+  it('drops nutrition at zero grams instead of storing zero readings', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Refill Cat' });
+    const event = await insertFoodIntakeEvent(ctx.db, {
+      pet_id: pet.id,
+      food_type: 'wet',
+      amount: 50,
+      nutrients: { calories: 100, moisture_ml: 20 },
+    });
+
+    const toZero = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${event.id}`,
+      payload: {
+        data: {
+          type: 'food_intake',
+          food_type: 'wet',
+          amount: 0,
+          nutrients: { calories: 100, moisture_ml: 20 },
+        },
+      },
+    });
+    assert.equal(toZero.statusCode, 200);
+    // Zeros would masquerade as a measurement; absence is the honest state.
+    assert.equal(toZero.json().data.nutrients, undefined);
+
+    // Correcting back up finds nothing to scale from — no crash, no ghost
+    // numbers, just a meal with unknown nutrition until a food is linked.
+    const backUp = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${event.id}`,
+      payload: {
+        data: { type: 'food_intake', food_type: 'wet', amount: 30 },
+      },
+    });
+    assert.equal(backUp.statusCode, 200);
+    assert.equal(backUp.json().data.amount, 30);
+    assert.equal(backUp.json().data.nutrients, undefined);
+  });
+
+  it('rolls the whole patch back when reconciliation fails', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Atomic Cat' });
+    const food = await insertFood(ctx.db, {
+      name: 'Wet pouch',
+      food_type: 'complete_wet',
+      moisture_percent: 80,
+    });
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/events',
+      payload: {
+        pet_id: pet.id,
+        device_id: null,
+        parent_event_id: null,
+        human_verified: true,
+        data: {
+          type: 'food_intake',
+          food_type: 'unknown',
+          amount: 50,
+          food_id: food.id,
+        },
+      },
+    });
+    const parent = create.json();
+
+    // Corrupt the food row so nutrient recomputation throws mid-reconcile.
+    await sql`update food set nutrients = '{broken' where id = ${food.id}`.execute(
+      ctx.db,
+    );
+
+    const patch = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${parent.id}`,
+      payload: { data: { ...parent.data, amount: 25 } },
+    });
+    assert.equal(patch.statusCode, 500);
+
+    // The failed patch left nothing behind: old grams, old calories, and the
+    // moisture child still sized for them.
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/api/events/${parent.id}`,
+    });
+    assert.equal(detail.json().data.amount, 50);
+    assert.equal(detail.json().data.nutrients.moisture_ml, 40);
+    assert.equal(detail.json().children[0].data.amount, 40);
+  });
+
   it('takes the moisture child along when the meal is reattributed', async () => {
     const pet = await insertPet(ctx.db, { name: 'Refill Victim' });
     const food = await insertFood(ctx.db, {

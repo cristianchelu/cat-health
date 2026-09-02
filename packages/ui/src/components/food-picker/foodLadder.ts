@@ -17,6 +17,23 @@ export const FLAT_LIST_MAX_FOODS = 8;
 /** The bucket a food with no brand recorded falls into. */
 export const NO_BRAND = '';
 
+/**
+ * The brand bucket a food falls into: trimmed, or `NO_BRAND` for none. One
+ * owner, so `"Felix "` and `"Felix"` can never split into two groups on one
+ * surface and not another.
+ */
+export function normalizeFoodBrand(brand: string | null | undefined): string {
+  return brand?.trim() || NO_BRAND;
+}
+
+/** Unbranded foods sort last; the rest alphabetically. */
+export function compareFoodBrands(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a === NO_BRAND) return 1;
+  if (b === NO_BRAND) return -1;
+  return a.localeCompare(b);
+}
+
 export interface BrandNode {
   /** The brand as recorded, or `NO_BRAND` for foods with none. */
   brand: string;
@@ -70,7 +87,7 @@ export function buildFoodBrowseTree(
 
   for (const food of foods) {
     const group = coarseFoodGroup(food.food_type);
-    const brand = food.brand?.trim() || NO_BRAND;
+    const brand = normalizeFoodBrand(food.brand);
     const brands = byGroup.get(group) ?? new Map<string, GetFoodDTO[]>();
     byGroup.set(group, brands);
     brands.set(brand, [...(brands.get(brand) ?? []), food]);
@@ -84,12 +101,7 @@ export function buildFoodBrowseTree(
         brand,
         foods: [...groupFoods].sort((a, b) => a.name.localeCompare(b.name)),
       }))
-      // Unbranded foods sort last; the rest alphabetically.
-      .sort((a, b) => {
-        if (a.brand === NO_BRAND) return 1;
-        if (b.brand === NO_BRAND) return -1;
-        return a.brand.localeCompare(b.brand);
-      });
+      .sort((a, b) => compareFoodBrands(a.brand, b.brand));
     return [
       {
         group,

@@ -5,7 +5,9 @@ import type { GetFoodDTO } from 'shared';
 import {
   NO_BRAND,
   buildFoodBrowseTree,
+  compareFoodBrands,
   isFlatMode,
+  normalizeFoodBrand,
   stepForGroup,
 } from '../foodLadder.ts';
 
@@ -80,6 +82,23 @@ describe('buildFoodBrowseTree', () => {
   it('treats blank brand strings as no brand at all', () => {
     const tree = buildFoodBrowseTree([food('Mystery pouch', '   ')]);
     assert.equal(tree[0].brands[0].brand, NO_BRAND);
+  });
+});
+
+describe('the shared brand rule', () => {
+  /* Every food-choosing surface buckets and orders brands through these two;
+     a change here is a change everywhere at once. */
+  it('trims stray whitespace into one bucket', () => {
+    assert.equal(normalizeFoodBrand('Felix '), 'Felix');
+    assert.equal(normalizeFoodBrand(' Felix'), normalizeFoodBrand('Felix'));
+    assert.equal(normalizeFoodBrand('  '), NO_BRAND);
+    assert.equal(normalizeFoodBrand(null), NO_BRAND);
+    assert.equal(normalizeFoodBrand(undefined), NO_BRAND);
+  });
+
+  it('sorts real brands alphabetically and the unbranded bucket last', () => {
+    const sorted = ['Whiskas', NO_BRAND, 'Acana'].sort(compareFoodBrands);
+    assert.deepEqual(sorted, ['Acana', 'Whiskas', NO_BRAND]);
   });
 });
 
