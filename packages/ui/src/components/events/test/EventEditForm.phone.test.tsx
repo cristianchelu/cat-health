@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createDefaultSettingsResponse,
   type GetEventListItemDTO,
+  type GetFoodDTO,
   type GetPetResponseDTO,
 } from 'shared';
 
@@ -58,7 +59,38 @@ const GUESSED_VISIT: GetEventListItemDTO = {
   human_verified: false,
 };
 
-async function renderPhoneEditForm() {
+const MICROCHIP_MEAL: GetEventListItemDTO = {
+  parent_event_id: null,
+  note: null,
+  note_updated_at: null,
+  id: 22,
+  pet_id: 2,
+  caused_by: 'pet',
+  attributed_by: 'microchip',
+  device_id: 5,
+  timestamp: '2026-08-20T05:12:00.000Z',
+  data: { type: 'food_intake', food_type: 'dry', amount: 42 },
+  human_verified: false,
+};
+
+const FOODS: GetFoodDTO[] = [
+  {
+    id: 7,
+    name: 'Salmon pouch',
+    brand: 'Felix',
+    food_type: 'complete_wet',
+    barcode_ean13: null,
+    moisture_percent: 80,
+    calories_per_100g: 90,
+    nutrients: null,
+    serving_size_g: 85,
+    notes: null,
+    created_at: 0,
+    updated_at: 0,
+  },
+];
+
+async function renderPhoneEditForm(event: GetEventListItemDTO = GUESSED_VISIT) {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: Infinity, staleTime: Infinity },
@@ -67,6 +99,7 @@ async function renderPhoneEditForm() {
   });
   queryClients.push(client);
   client.setQueryData(['pets'], PETS);
+  client.setQueryData(['foods'], FOODS);
   client.setQueryData(['settings'], createDefaultSettingsResponse());
 
   return renderWithProviders(
@@ -75,7 +108,7 @@ async function renderPhoneEditForm() {
         <Dialog open>
           <DialogContent showCloseButton={false}>
             <EventEditForm
-              event={GUESSED_VISIT}
+              event={event}
               eventChildren={[]}
               onClose={() => {}}
             />
@@ -113,6 +146,33 @@ describe('EventEditForm on a phone', () => {
     assert.match(
       screen.getByRole('button', { name: /Cat/ }).textContent ?? '',
       /Jazz/,
+    );
+  });
+
+  it('walks the food library as a level too, on the same rung', async () => {
+    act(() => {
+      setMediaMatches(MOBILE_QUERY, true);
+    });
+    const user = userEvent.setup();
+    await renderPhoneEditForm(MICROCHIP_MEAL);
+
+    /* A meal with no food row says so rather than showing a blank. */
+    const trigger = screen.getByRole('button', { name: 'Food' });
+    assert.match(trigger.textContent ?? '', /Not linked/);
+
+    await user.click(trigger);
+
+    const level = screen.getByRole('radiogroup', { name: 'Food' });
+    /* Brand is the grouping, not part of each row's name. */
+    assert.match(level.textContent ?? '', /Felix/);
+    await user.click(
+      within(level).getByRole('radio', { name: /Salmon pouch/ }),
+    );
+
+    assert.equal(screen.queryByRole('radiogroup'), null);
+    assert.match(
+      screen.getByRole('button', { name: 'Food' }).textContent ?? '',
+      /Salmon pouch/,
     );
   });
 });

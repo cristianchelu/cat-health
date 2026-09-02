@@ -12,6 +12,7 @@ import {
   useDeleteEvent,
   useUpdateEvent,
 } from '@/hooks/queries/eventQueries';
+import { MeasureOutOfRangeError } from './eventMeasures';
 
 export const MIN_WEIGHT_G = 500;
 export const MAX_WEIGHT_G = 20_000;
@@ -45,8 +46,6 @@ export function parseKgInput(value: string): number | null {
   if (!Number.isFinite(kg)) return null;
   return Math.round(kg * 1000);
 }
-
-export class WeightOutOfRangeError extends Error {}
 
 /**
  * Writing a visit's cat weight, in the three shapes it takes: correct the
@@ -90,7 +89,7 @@ export function useLitterboxWeightEdit(
       if (grams === null) {
         if (weightChild) await deleteEvent(weightChild.id);
       } else if (grams < MIN_WEIGHT_G || grams > MAX_WEIGHT_G) {
-        throw new WeightOutOfRangeError();
+        throw new MeasureOutOfRangeError('weight');
       } else if (weightChild) {
         await updateEvent({
           eventId: weightChild.id,

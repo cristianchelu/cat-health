@@ -52,6 +52,11 @@ export function applyServerEventToEventCaches(
 export function invalidateQueriesAfterEventPatch(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ['deviceEvents'] });
   queryClient.invalidateQueries({ queryKey: ['petEvents'] });
+  // A patched amount moves the overview cards too — the server reconciles
+  // calories and the moisture child, so both trends can be stale after any
+  // event patch. This is the single funnel every patch path goes through.
+  queryClient.invalidateQueries({ queryKey: ['foodTrends'] });
+  queryClient.invalidateQueries({ queryKey: ['waterTrends'] });
 }
 
 /**

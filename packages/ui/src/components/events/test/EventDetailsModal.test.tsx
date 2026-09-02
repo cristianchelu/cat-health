@@ -9,6 +9,7 @@ import {
   LITTERBOX_RAW_DATA_VERSION_2,
   type GetEventListItemDTO,
   type GetEventMediaResponseDTO,
+  type GetFoodDTO,
   type GetPetResponseDTO,
 } from 'shared';
 
@@ -142,12 +143,51 @@ const VERIFIED_VISIT: GetEventListItemDTO = {
   human_verified: true,
 };
 
+/** The analyzer split the draw: some counted, the rest was spill. */
+const FILTERED_WATER: GetEventListItemDTO = {
+  ...BASE,
+  id: 17,
+  pet_id: 1,
+  caused_by: 'pet',
+  attributed_by: 'weight',
+  device_id: 3,
+  timestamp: '2026-08-20T11:45:00.000Z',
+  data: {
+    type: 'water_intake',
+    amount: 30,
+    duration: 40,
+    source: 'drinking',
+    raw_amount: 45,
+    excluded_amount: 15,
+    filtered: true,
+  },
+  human_verified: false,
+};
+
 const ALL_EVENTS = [
   UNASSIGNED_WATER,
   GUESSED_VISIT,
   MICROCHIP_MEAL,
   MANUAL_MEAL,
   VERIFIED_VISIT,
+  FILTERED_WATER,
+];
+
+const FOODS: GetFoodDTO[] = [
+  {
+    id: 7,
+    name: 'Salmon pouch',
+    brand: 'Felix',
+    food_type: 'complete_wet',
+    barcode_ean13: null,
+    moisture_percent: 80,
+    calories_per_100g: 90,
+    nutrients: null,
+    serving_size_g: 85,
+    notes: null,
+    created_at: 0,
+    updated_at: 0,
+  },
 ];
 
 function eventById(id: number): GetEventListItemDTO {
@@ -220,6 +260,9 @@ async function renderModal(
   client.setQueryData(['pets'], PETS);
   client.setQueryData(['devices'], devices);
   client.setQueryData(['settings'], createDefaultSettingsResponse());
+  /* Always seeded: the edit form's food query is live on food events, and an
+     unseeded fetch would take whatever the event adapter answers. */
+  client.setQueryData(['foods'], FOODS);
   client.setQueryData(['events', event.id, 'media'], media);
   /* Seeded rather than fetched: the detail query is enabled the moment the
      modal opens, and an unseeded one would race every assertion below. */
@@ -363,6 +406,138 @@ describe('EventDetailsModal', () => {
 
     assert.equal(screen.queryByRole('button', { name: 'Looks right' }), null);
     assert.equal(screen.queryByRole('button', { name: 'Edit' }), null);
+  });
+
+  it('still offers Edit for a microchip meal, as a late second thought', async () => {
+    /* The chip named the animal, not the amount: the reading can be wrong on
+       exactly the device whose attribution cannot be. No band, no header
+       button — the way in is the kebab, like any settled event. */
+    const user = userEvent.setup();
+    await renderModal(MICROCHIP_MEAL);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    assert.ok(screen.getByRole('menuitem', { name: 'Edit' }));
+  });
+
+  it('corrects the grams without relabelling who ate them', async () => {
+    const user = userEvent.setup();
+    await renderModal(MICROCHIP_MEAL);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    const form = screen.getByRole('dialog', { name: /Edit this event/ });
+
+    const amount = within(form).getByRole('spinbutton', {
+      name: 'Amount eaten',
+    });
+    await user.clear(amount);
+    /* Zero is the answer for a refill misread as a meal. */
+    await user.type(amount, '0');
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => assert.equal(writes().length, 1));
+    assert.equal(writes()[0].url, '/events/13');
+    const body = writes()[0].body as Record<string, unknown>;
+    assert.equal((body.data as { amount: number }).amount, 0);
+    assert.equal(body.human_verified, true);
+    /* An untouched attribution is not a decision: restating it would stamp
+       `attributed_by: 'manual'` over what the chip actually read. */
+    assert.equal('pet_id' in body, false);
+    assert.equal('caused_by' in body, false);
+  });
+
+  it('links a food to a meal, and stamps its coarse type', async () => {
+    const user = userEvent.setup();
+    await renderModal(MICROCHIP_MEAL);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    const form = screen.getByRole('dialog', { name: /Edit this event/ });
+
+    await user.click(within(form).getByRole('combobox', { name: 'Food' }));
+    await user.click(screen.getByRole('option', { name: /Salmon pouch/ }));
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => assert.equal(writes().length, 1));
+    const body = writes()[0].body as {
+      data: { food_id: number; food_type: string; amount: number };
+    };
+    assert.equal(body.data.food_id, 7);
+    /* The same wet/dry/treat bucket the log ladder would stamp; the server
+       recomputes the nutrients from the row. */
+    assert.equal(body.data.food_type, 'wet');
+    assert.equal(body.data.amount, 42);
+  });
+
+  it('corrects the drank amount, and the spill follows the invariant', async () => {
+    const user = userEvent.setup();
+    await renderModal(FILTERED_WATER);
+
+    const form = await openEditForm(user);
+    const amount = within(form).getByRole('spinbutton', {
+      name: 'Amount drunk',
+    });
+    await user.clear(amount);
+    await user.type(amount, '20');
+
+    /* The consequence is named before Save, in the field's own hint slot. */
+    assert.match(
+      form.textContent ?? '',
+      /other 25 ml the sensor saw will count as spilled/,
+    );
+
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => assert.equal(writes().length, 1));
+    const body = writes()[0].body as {
+      data: {
+        amount: number;
+        raw_amount: number;
+        excluded_amount: number;
+        filtered: boolean;
+      };
+    };
+    assert.equal(body.data.amount, 20);
+    assert.equal(body.data.raw_amount, 45);
+    assert.equal(body.data.excluded_amount, 25);
+    assert.equal(body.data.filtered, true);
+  });
+
+  it('rejects an amount outside its window before anything is written', async () => {
+    const user = userEvent.setup();
+    await renderModal(FILTERED_WATER);
+
+    const form = await openEditForm(user);
+    const amount = within(form).getByRole('spinbutton', {
+      name: 'Amount drunk',
+    });
+    await user.clear(amount);
+    await user.type(amount, '5000');
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+
+    assert.ok(within(form).getByText('Amount must be between 0 and 2000 ml.'));
+    assert.equal(writes().length, 0);
+  });
+
+  it('hands back the device reading after an amount edit', async () => {
+    const user = userEvent.setup();
+    await renderModal(MICROCHIP_MEAL);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    const form = screen.getByRole('dialog', { name: /Edit this event/ });
+
+    const amount = within(form).getByRole('spinbutton', {
+      name: 'Amount eaten',
+    });
+    await user.clear(amount);
+    await user.type(amount, '15');
+
+    await user.click(
+      within(form).getByRole('button', { name: 'Restore 42 g' }),
+    );
+    assert.equal((amount as HTMLInputElement).value, '42');
+    assert.equal(writes().length, 0);
   });
 
   it('offers Edit, not a band, on an event you logged yourself', async () => {

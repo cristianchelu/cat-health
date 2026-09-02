@@ -89,12 +89,15 @@ export function deriveEventCorrection(
 /**
  * Whether the edit form has anything to offer for this event.
  *
- * A microchip read is the one case with nothing to correct — the hardware
- * named the animal. Everything else about a pet can be re-decided, including
- * the `null`-attribution history the band cannot speak for.
+ * Everything about a pet can be re-decided — including a microchip read. The
+ * chip named the *animal*, not the *amount*: a SureFeed can read a bowl
+ * refill as an 80 g meal, and on that hardware the chip is often a collar
+ * tag, which cats swap. The certainty microchip does carry lives in
+ * `deriveEventCorrection`, which keeps it out of the band; the form stays
+ * reachable through the overflow menu.
  */
 export function canEditEvent(event: EventCorrectionInput): boolean {
-  return isPetEvent(event.data.type) && event.attributed_by !== 'microchip';
+  return isPetEvent(event.data.type);
 }
 
 /**

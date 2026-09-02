@@ -10,9 +10,9 @@ import {
   MIN_WEIGHT_G,
   parseKgInput,
   useLitterboxWeightEdit,
-  WeightOutOfRangeError,
   type LitterboxWeightParentEvent,
 } from './useLitterboxWeightEdit';
+import { MeasureOutOfRangeError } from './eventMeasures';
 import './LitterboxWeightBlock.css';
 
 export interface LitterboxWeightBlockProps {
@@ -57,7 +57,7 @@ const LitterboxWeightBlock = ({ parentEvent }: LitterboxWeightBlockProps) => {
       setIsEditing(false);
     } catch (e) {
       setError(
-        e instanceof WeightOutOfRangeError
+        e instanceof MeasureOutOfRangeError
           ? t('event_details.weight_out_of_range')
           : t('event_details.weight_save_failed'),
       );

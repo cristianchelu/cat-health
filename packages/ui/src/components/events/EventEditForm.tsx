@@ -13,8 +13,10 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import {
   NON_PET_CAUSES,
+  overrideWaterAmount,
   parseLitterboxUseEliminationType,
   type EventCauseDTO,
+  type EventDataDTO,
   type GetEventChildDTO,
   type GetEventListItemDTO,
   type LitterboxUseEliminationType,
@@ -30,6 +32,7 @@ import { Button } from '@/components/ui/Button';
 import { FormActions, FormError, FormField, Input } from '@/components/ui/form';
 import { usePets } from '@/hooks/queries/petQueries';
 import { useUpdateEvent } from '@/hooks/queries/eventQueries';
+import { useFoods } from '@/hooks/queries/foodQueries';
 import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
 import {
   attributionFromEvent,
@@ -38,14 +41,20 @@ import {
   attributionToPatch,
   causeLabelKey,
 } from '@/lib/eventAttribution';
+import { intakeFoodType } from '@/components/food-picker/foodGroups';
 import {
   gramsToKgInput,
   MAX_WEIGHT_G,
   MIN_WEIGHT_G,
   parseKgInput,
   useLitterboxWeightEdit,
-  WeightOutOfRangeError,
 } from './useLitterboxWeightEdit';
+import {
+  FOOD_AMOUNT_RANGE_G,
+  MeasureOutOfRangeError,
+  WATER_AMOUNT_RANGE_ML,
+  type EditableMeasure,
+} from './eventMeasures';
 import './EventEditForm.css';
 
 const CAUSE_ICONS: Record<
@@ -73,6 +82,23 @@ const ELIMINATION_LABEL_KEYS: Record<LitterboxUseEliminationType, string> = {
   no_elimination: 'overview.no_elimination',
   unknown: 'common.unknown',
 };
+
+const RANGE_ERROR_KEYS: Record<EditableMeasure, string> = {
+  weight: 'event_details.weight_out_of_range',
+  food: 'event_details.edit_food_out_of_range',
+  water: 'event_details.edit_water_out_of_range',
+};
+
+/** The food select's value for "no food row backs this meal". */
+const FOOD_NOT_LINKED = 'none';
+
+/** `null` for anything that is not a number — amounts have no blank state. */
+function parseAmountInput(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+  const amount = Number.parseFloat(trimmed);
+  return Number.isFinite(amount) ? amount : null;
+}
 
 export interface EventEditFormProps {
   event: GetEventListItemDTO;
@@ -114,11 +140,14 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
   const { mutateAsync: updateEvent, isPending: isPatching } = useUpdateEvent();
 
   const isLitterbox = event.data.type === 'litterbox_use';
+  const isFood = event.data.type === 'food_intake';
+  const isWater = event.data.type === 'water_intake';
   const {
     weightGrams,
     saveWeight,
     isSaving: isSavingWeight,
   } = useLitterboxWeightEdit({ ...event, children: eventChildren });
+  const { data: foods } = useFoods(isFood);
 
   const baselineAttribution = attributionSelectValue(
     attributionFromEvent(event),
@@ -132,15 +161,28 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
       ? (event.data.straining ?? false)
       : false;
   const baselineWeight = weightGrams != null ? gramsToKgInput(weightGrams) : '';
+  /* Food grams and water ml share one field: an event is only ever one kind. */
+  const baselineAmount =
+    event.data.type === 'food_intake' || event.data.type === 'water_intake'
+      ? String(event.data.amount)
+      : '';
+  const baselineFoodId =
+    event.data.type === 'food_intake' && event.data.food_id != null
+      ? String(event.data.food_id)
+      : FOOD_NOT_LINKED;
 
   const [attribution, setAttribution] = React.useState(baselineAttribution);
   const [eliminationType, setEliminationType] = React.useState(baselineType);
   const [straining, setStraining] = React.useState(baselineStraining);
   const [weightKg, setWeightKg] = React.useState(baselineWeight);
+  const [amountText, setAmountText] = React.useState(baselineAmount);
+  const [foodId, setFoodId] = React.useState(baselineFoodId);
   const [reanalyze, setReanalyze] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   /* Which picker level the drawer is showing, or the form itself. */
-  const [picker, setPicker] = React.useState<'cat' | 'type' | null>(null);
+  const [picker, setPicker] = React.useState<'cat' | 'type' | 'food' | null>(
+    null,
+  );
 
   React.useEffect(() => {
     registerBack?.(() => {
@@ -158,6 +200,25 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
   const undoWeightLabel = baselineWeight
     ? t('event_details.restore_weight', { weight: baselineWeight })
     : t('event_details.undo_weight_change');
+
+  const amountUnit = isFood ? 'g' : 'ml';
+  const amountChanged = (isFood || isWater) && amountText !== baselineAmount;
+  const foodChanged = isFood && foodId !== baselineFoodId;
+  /* A device amount is never absent, so the arrow always names the reading. */
+  const undoAmountLabel = t('event_details.restore_amount', {
+    amount: baselineAmount,
+    unit: amountUnit,
+  });
+
+  /* What the correction leaves behind: the analyzer's invariant says the rest
+     of the sensor's total is spill, so the field owns up to it before Save. */
+  const spillMl = (() => {
+    if (event.data.type !== 'water_intake' || !amountChanged) return 0;
+    const raw = event.data.raw_amount;
+    const amount = parseAmountInput(amountText);
+    if (raw == null || amount == null) return 0;
+    return Math.max(0, Math.round(raw - amount));
+  })();
 
   /**
    * Cats first, then the honest blank, then the ways an event happens without
@@ -204,46 +265,96 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
     }),
   ];
 
+  /**
+   * The corrected reading as the event's next `data`, or `undefined` when the
+   * reading was not touched. Throws when the number is missing or out of its
+   * window, before anything has been written.
+   */
+  const buildDataPatch = (): EventDataDTO | undefined => {
+    if (event.data.type === 'litterbox_use') {
+      return {
+        ...event.data,
+        elimination_type: eliminationType,
+        straining,
+        // The stored segments describe a different visit once the type
+        // changes; the server re-runs them rather than keeping a lie.
+        ...(eliminationType !== (event.data.elimination_type ?? 'unknown') && {
+          segments: null,
+        }),
+      };
+    }
+
+    if (event.data.type === 'food_intake') {
+      if (!amountChanged && !foodChanged) return undefined;
+      const amount = parseAmountInput(amountText);
+      if (
+        amount == null ||
+        amount < FOOD_AMOUNT_RANGE_G.min ||
+        amount > FOOD_AMOUNT_RANGE_G.max
+      ) {
+        throw new MeasureOutOfRangeError('food');
+      }
+      const base = { ...event.data, amount };
+      if (!foodChanged) return base;
+      const food = foods?.find((f) => String(f.id) === foodId);
+      if (food) {
+        // The server recomputes nutrients and the moisture child from the row.
+        return { ...base, food_id: food.id, food_type: intakeFoodType(food) };
+      }
+      // Unlinked on purpose: the old food's nutrition no longer speaks for
+      // this meal, so it leaves with the link rather than being rescaled.
+      const { food_id: _unlinked, nutrients: _stale, ...rest } = base;
+      return { ...rest, food_type: 'unknown' };
+    }
+
+    if (event.data.type === 'water_intake') {
+      if (!amountChanged) return undefined;
+      const amount = parseAmountInput(amountText);
+      if (
+        amount == null ||
+        amount < WATER_AMOUNT_RANGE_ML.min ||
+        amount > WATER_AMOUNT_RANGE_ML.max
+      ) {
+        throw new MeasureOutOfRangeError('water');
+      }
+      return overrideWaterAmount(event.data, amount);
+    }
+
+    return undefined;
+  };
+
   const handleSave = async () => {
     setError(null);
     const grams = isLitterbox ? parseKgInput(weightKg) : null;
 
     try {
-      // The weight goes first: it can be rejected for range, and a rejected
-      // save must leave the whole form untouched rather than half-applied.
+      // The data patch is built first and the weight saved second: both can
+      // reject for range, and a rejected save must leave the whole form
+      // untouched rather than half-applied.
+      const dataPatch = buildDataPatch();
       if (weightChanged) {
         await saveWeight(grams, { reidentify: reanalyze });
       }
 
       const nextAttribution = attributionFromSelectValue(attribution);
-      const litterboxPatch =
-        event.data.type === 'litterbox_use'
-          ? {
-              ...event.data,
-              elimination_type: eliminationType,
-              straining,
-              // The stored segments describe a different visit once the type
-              // changes; the server re-runs them rather than keeping a lie.
-              ...(eliminationType !==
-                (event.data.elimination_type ?? 'unknown') && {
-                segments: null,
-              }),
-            }
-          : undefined;
+      // Only a changed attribution is a decision. Restating the current one
+      // would stamp `attributed_by: 'manual'` — relabelling a microchip event
+      // "corrected by you" when all that moved was a number.
+      const attributionChanged = attribution !== baselineAttribution;
 
       await updateEvent({
         eventId: event.id,
         data: {
-          ...attributionToPatch(nextAttribution),
-          ...(litterboxPatch && { data: litterboxPatch }),
+          ...(attributionChanged && attributionToPatch(nextAttribution)),
+          ...(dataPatch && { data: dataPatch }),
           human_verified: true,
         },
       });
       onClose();
     } catch (e) {
       setError(
-        e instanceof WeightOutOfRangeError
-          ? t('event_details.weight_out_of_range')
+        e instanceof MeasureOutOfRangeError
+          ? t(RANGE_ERROR_KEYS[e.measure])
           : t('event_details.edit_save_failed'),
       );
     }
@@ -253,6 +364,30 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
     value: type,
     label: t(ELIMINATION_LABEL_KEYS[type]),
   }));
+
+  /**
+   * The library grouped by brand, with the honest blank on top: a feeder event
+   * with no food row has no nutrition, and saying so is an answer too.
+   */
+  const foodOptions: PickerOption[] = React.useMemo(() => {
+    const sorted = [...(foods ?? [])].sort(
+      (a, b) =>
+        (a.brand ?? '').localeCompare(b.brand ?? '') ||
+        a.name.localeCompare(b.name),
+    );
+    return [
+      {
+        value: FOOD_NOT_LINKED,
+        label: t('event_details.edit_food_not_linked'),
+        muted: true,
+      },
+      ...sorted.map((food) => ({
+        value: String(food.id),
+        label: food.name,
+        group: food.brand ?? t('food_picker.no_brand'),
+      })),
+    ];
+  }, [foods, t]);
 
   /*
    * The picker takes over the drawer rather than opening one of its own. Two
@@ -277,7 +412,14 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
               if (parsed) setEliminationType(parsed);
             },
           }
-        : null;
+        : picker === 'food'
+          ? {
+              title: t('event_details.edit_food_label'),
+              options: foodOptions,
+              value: foodId,
+              onSelect: setFoodId,
+            }
+          : null;
 
   return (
     <div className="event-edit-form">
@@ -316,6 +458,95 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
                 />
               </FormField>
 
+              {/* The measurement, in this form's own grammar — one label, one
+                  control at the shared height. Deliberately not the log
+                  ladder's slider-and-headline `AmountStep`: that is the log
+                  flow's vocabulary, and this form is not a collage. */}
+              {isFood && (
+                <>
+                  <FormField label={t('event_details.edit_food_label')}>
+                    <AdaptiveSelect
+                      value={foodId}
+                      onValueChange={setFoodId}
+                      options={foodOptions}
+                      label={t('event_details.edit_food_label')}
+                      disabled={isBusy}
+                      onOpenPage={() => setPicker('food')}
+                    />
+                  </FormField>
+
+                  <FormField label={t('event_details.edit_food_amount_label')}>
+                    <div className="event-edit-measure">
+                      <Input
+                        type="number"
+                        step="1"
+                        min={FOOD_AMOUNT_RANGE_G.min}
+                        max={FOOD_AMOUNT_RANGE_G.max}
+                        value={amountText}
+                        disabled={isBusy}
+                        aria-label={t('event_details.edit_food_amount_label')}
+                        onChange={(e) => setAmountText(e.target.value)}
+                      />
+                      <span className="event-edit-measure-unit">g</span>
+                      {amountChanged && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          icon
+                          disabled={isBusy}
+                          title={undoAmountLabel}
+                          aria-label={undoAmountLabel}
+                          onClick={() => setAmountText(baselineAmount)}
+                        >
+                          <Undo2 size={16} aria-hidden />
+                        </Button>
+                      )}
+                    </div>
+                  </FormField>
+                </>
+              )}
+
+              {isWater && (
+                <FormField label={t('event_details.edit_water_amount_label')}>
+                  <div className="event-edit-measure">
+                    <Input
+                      type="number"
+                      step="1"
+                      min={WATER_AMOUNT_RANGE_ML.min}
+                      max={WATER_AMOUNT_RANGE_ML.max}
+                      value={amountText}
+                      disabled={isBusy}
+                      aria-label={t('event_details.edit_water_amount_label')}
+                      onChange={(e) => setAmountText(e.target.value)}
+                    />
+                    <span className="event-edit-measure-unit">ml</span>
+                    {amountChanged && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        icon
+                        disabled={isBusy}
+                        title={undoAmountLabel}
+                        aria-label={undoAmountLabel}
+                        onClick={() => setAmountText(baselineAmount)}
+                      >
+                        <Undo2 size={16} aria-hidden />
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* The invariant's other half, said while it is about to be
+                      written rather than discovered on the spill line later. */}
+                  {spillMl > 0 && (
+                    <p className="event-edit-measure-note">
+                      {t('event_details.edit_water_spill_hint', {
+                        amount: spillMl,
+                      })}
+                    </p>
+                  )}
+                </FormField>
+              )}
+
               {isLitterbox && (
                 <>
                   {/* Five plain words would be served fine by a native
@@ -337,7 +568,7 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
                   </FormField>
 
                   <FormField label={t('event_details.edit_weight_label')}>
-                    <div className="event-edit-weight">
+                    <div className="event-edit-measure">
                       <Input
                         type="number"
                         step="0.01"
@@ -348,7 +579,7 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
                         aria-label={t('event_details.edit_weight_label')}
                         onChange={(e) => setWeightKg(e.target.value)}
                       />
-                      <span className="event-edit-weight-unit">kg</span>
+                      <span className="event-edit-measure-unit">kg</span>
                       {/*
                        * One slot, two jobs. Untouched, it is the bin: clearing
                        * the field *is* the removal, so the control that does it
@@ -380,7 +611,7 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
                           type="button"
                           variant="ghost"
                           icon
-                          className="event-edit-weight-remove"
+                          className="event-edit-measure-remove"
                           disabled={isBusy || weightRemoved}
                           title={t('event_details.remove_weight')}
                           aria-label={t('event_details.remove_weight')}
@@ -394,7 +625,7 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
                     {/* What removing costs, said only once it is what will
                         happen. */}
                     {weightRemoved && (
-                      <p className="event-edit-weight-note">
+                      <p className="event-edit-measure-note">
                         {t('event_details.remove_weight_hint')}
                       </p>
                     )}

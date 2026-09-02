@@ -3,8 +3,8 @@
  *
  * Almost nothing is styled here on purpose. Every control is a DS form control
  * at one shared height, so what is left is the dialog's own frame and the two
- * places a field grows an attachment — the unit and bin beside the weight, the
- * follow-up under it.
+ * places a field grows an attachment — the unit and trailing button beside a
+ * measurement, the follow-up under it. One row shape serves kg, grams and ml.
  */
 .event-edit-form {
   /* A passive frame around the pages: each level owns its own padding and its
@@ -66,7 +66,7 @@
     gap: var(--space-md);
   }
 
-  .event-edit-weight {
+  .event-edit-measure {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
@@ -76,7 +76,7 @@
     }
   }
 
-  .event-edit-weight-unit {
+  .event-edit-measure-unit {
     font-size: var(--text-sm);
     color: var(--color-text-muted);
   }
@@ -84,13 +84,13 @@
   /* Destructive, so it says so — but as a red glyph on nothing, not the filled
      `danger` button, which beside a text input reads as the form's main
      action. */
-  .event-edit-weight-remove:not(:disabled) {
+  .event-edit-measure-remove:not(:disabled) {
     color: var(--color-error);
   }
 
-  /* Only on screen when the field is empty, which is the one moment the cost
-     of removing is about to be paid. */
-  .event-edit-weight-note {
+  /* Only on screen while its consequence is about to be paid: the weight
+     about to be removed, the remainder about to count as spill. */
+  .event-edit-measure-note {
     margin: var(--space-xs) 0 0;
     font-size: var(--text-xs);
     line-height: var(--line-height-normal);

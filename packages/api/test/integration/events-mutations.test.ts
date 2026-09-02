@@ -5,6 +5,7 @@ import type { FastifyInstance } from 'fastify';
 
 import {
   insertFood,
+  insertFoodIntakeEvent,
   insertLitterboxEvent,
   insertPet,
 } from '../helpers/fixtures.ts';
@@ -97,6 +98,181 @@ describe('events API mutations', () => {
     assert.equal(withChildren.children[0].data.type, 'water_intake');
     assert.equal(withChildren.children[0].data.amount, 40);
     assert.equal(withChildren.children[0].data.source, 'food');
+  });
+
+  it('recomputes nutrients and the moisture child when the grams change', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Overfed Cat' });
+    const food = await insertFood(ctx.db, {
+      name: 'Wet pouch',
+      food_type: 'complete_wet',
+      moisture_percent: 80,
+      calories_per_100g: 90,
+    });
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/events',
+      payload: {
+        pet_id: pet.id,
+        device_id: null,
+        parent_event_id: null,
+        human_verified: true,
+        data: {
+          type: 'food_intake',
+          food_type: 'unknown',
+          amount: 50,
+          food_id: food.id,
+        },
+      },
+    });
+    const parent = create.json();
+    assert.equal(parent.data.nutrients.calories, 45);
+
+    // What the edit form sends: the stored data with only the amount moved.
+    const patch = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${parent.id}`,
+      payload: {
+        data: { ...parent.data, amount: 25 },
+        human_verified: true,
+      },
+    });
+    assert.equal(patch.statusCode, 200);
+    // The stale nutrients in the body were recomputed from the food row.
+    assert.equal(patch.json().data.nutrients.calories, 22.5);
+    assert.equal(patch.json().data.nutrients.moisture_ml, 20);
+
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/api/events/${parent.id}`,
+    });
+    const children = detail.json().children;
+    assert.equal(children.length, 1);
+    assert.equal(children[0].data.amount, 20);
+  });
+
+  it('scales nutrients linearly when no food row backs them', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Orphan Meal Cat' });
+    const event = await insertFoodIntakeEvent(ctx.db, {
+      pet_id: pet.id,
+      food_type: 'wet',
+      amount: 50,
+      nutrients: { calories: 100, moisture_ml: 20 },
+    });
+
+    const patch = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${event.id}`,
+      payload: {
+        data: {
+          type: 'food_intake',
+          food_type: 'wet',
+          amount: 25,
+          nutrients: { calories: 100, moisture_ml: 20 },
+        },
+      },
+    });
+    assert.equal(patch.statusCode, 200);
+    assert.equal(patch.json().data.nutrients.calories, 50);
+    assert.equal(patch.json().data.nutrients.moisture_ml, 10);
+
+    // The meal now owes a moisture child it never had.
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/api/events/${event.id}`,
+    });
+    assert.equal(detail.json().children.length, 1);
+    assert.equal(detail.json().children[0].data.amount, 10);
+    assert.equal(detail.json().children[0].data.source, 'food');
+  });
+
+  it('takes the moisture child along when the meal is reattributed', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Refill Victim' });
+    const food = await insertFood(ctx.db, {
+      name: 'Wet pouch',
+      food_type: 'complete_wet',
+      moisture_percent: 80,
+    });
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/events',
+      payload: {
+        pet_id: pet.id,
+        device_id: null,
+        parent_event_id: null,
+        human_verified: true,
+        data: {
+          type: 'food_intake',
+          food_type: 'unknown',
+          amount: 50,
+          food_id: food.id,
+        },
+      },
+    });
+    const parent = create.json();
+
+    // A refill misread as a meal: a person, not the cat. The child must stop
+    // counting as the cat's water intake, not just the parent's food.
+    const patch = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${parent.id}`,
+      payload: { caused_by: 'human' },
+    });
+    assert.equal(patch.statusCode, 200);
+
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/api/events/${parent.id}`,
+    });
+    const child = detail.json().children[0];
+    assert.equal(child.caused_by, 'human');
+    assert.equal(child.pet_id, null);
+  });
+
+  it('drops nutrition and the moisture child when the food is unlinked', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Unlinked Cat' });
+    const food = await insertFood(ctx.db, {
+      name: 'Wet pouch',
+      food_type: 'complete_wet',
+      moisture_percent: 80,
+    });
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/events',
+      payload: {
+        pet_id: pet.id,
+        device_id: null,
+        parent_event_id: null,
+        human_verified: true,
+        data: {
+          type: 'food_intake',
+          food_type: 'unknown',
+          amount: 50,
+          food_id: food.id,
+        },
+      },
+    });
+    const parent = create.json();
+
+    // The edit form's unlink patch: no food_id, no nutrients.
+    const patch = await app.inject({
+      method: 'PATCH',
+      url: `/api/events/${parent.id}`,
+      payload: {
+        data: { type: 'food_intake', food_type: 'unknown', amount: 50 },
+      },
+    });
+    assert.equal(patch.statusCode, 200);
+    assert.equal(patch.json().data.food_id, undefined);
+    assert.equal(patch.json().data.nutrients, undefined);
+
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/api/events/${parent.id}`,
+    });
+    assert.equal(detail.json().children.length, 0);
   });
 
   it('patches human_verified and deletes an event', async () => {

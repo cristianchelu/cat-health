@@ -32,11 +32,7 @@ import {
   type FastifyPluginAsyncTypebox,
 } from '@fastify/type-provider-typebox';
 import { MediaManager } from '../services/media/MediaManager.ts';
-import {
-  buildMoistureChildEventValues,
-  calculateNutrientsFromFood,
-  enrichFoodIntakeEventData,
-} from '../services/food/enrichFoodIntake.ts';
+import { reconcileFoodIntakeDerived } from '../services/food/enrichFoodIntake.ts';
 import { computeLitterboxAnalysisData } from '../services/devices/providers/esphome/analyzeLitterboxUse.ts';
 import { buildLitterboxTrendResult } from '../services/litterbox/litterboxAnalytics.ts';
 import {
@@ -521,23 +517,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         });
       }
 
-      let storedEventData: EventData = eventDataFromDto(data);
-      let nutrients: Record<string, number> | undefined;
-
-      if (
-        storedEventData.type === 'food_intake' &&
-        typeof storedEventData.food_id === 'number'
-      ) {
-        const food = await db
-          .selectFrom('food')
-          .selectAll()
-          .where('id', '=', storedEventData.food_id)
-          .executeTakeFirst();
-        if (food && typeof storedEventData.amount === 'number') {
-          nutrients = calculateNutrientsFromFood(storedEventData.amount, food);
-          storedEventData = enrichFoodIntakeEventData(storedEventData, food);
-        }
-      }
+      const storedEventData: EventData = eventDataFromDto(data);
 
       const eventTimestamp =
         bodyTimestamp != null ? new Date(bodyTimestamp) : new Date();
@@ -552,7 +532,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       // `pet_id` is required on POST, so the body always states a decision.
       const columns = attribution ?? attributionColumns('unknown', null, null);
 
-      const result = await db
+      let result = await db
         .insertInto('event')
         .values({
           parent_event_id: parent_event_id || null,
@@ -567,25 +547,24 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      if (
-        nutrients?.moisture_ml != null &&
-        result.data.type === 'food_intake'
-      ) {
-        await db
-          .insertInto('event')
-          .values(
-            buildMoistureChildEventValues({
-              parentEventId: result.id,
-              attribution: {
-                pet_id: result.pet_id,
-                caused_by: result.caused_by,
-                attributed_by: result.attributed_by,
-              },
-              timestamp: result.timestamp,
-              moistureMl: nutrients.moisture_ml,
-            }),
-          )
-          .execute();
+      if (result.data.type === 'food_intake') {
+        const reconciled = await reconcileFoodIntakeDerived({
+          db,
+          eventId: result.id,
+          data: result.data,
+          attribution: {
+            pet_id: result.pet_id,
+            caused_by: result.caused_by,
+            attributed_by: result.attributed_by,
+          },
+          timestamp: result.timestamp,
+        });
+        result = await db
+          .updateTable('event')
+          .set({ data: reconciled })
+          .where('id', '=', result.id)
+          .returningAll()
+          .executeTakeFirstOrThrow();
       }
 
       return requireSerializedEventRow(result);
@@ -678,7 +657,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const existing = await db
         .selectFrom('event')
-        .select(['id', 'pet_id', 'device_id', 'parent_event_id'])
+        .select(['id', 'pet_id', 'device_id', 'parent_event_id', 'data'])
         .where('id', '=', eventId)
         .executeTakeFirst();
 
@@ -793,7 +772,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         attribution ??
         (attributed_by !== undefined ? { attributed_by } : undefined);
 
-      const result = await db
+      let result = await db
         .updateTable('event')
         .set({
           ...fkRepair,
@@ -807,6 +786,37 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .where('id', '=', eventId)
         .returningAll()
         .executeTakeFirstOrThrow();
+
+      // The patch may have moved the grams or the attribution out from under
+      // everything derived from them — nutrients, and the moisture child's
+      // amount and ownership. Reconcile off the row's *final* state, so an
+      // attribution-only patch reaches the child too.
+      if (result.data.type === 'food_intake') {
+        const previousData = parseStoredEventData(existing.data);
+        const reconciled = await reconcileFoodIntakeDerived({
+          db,
+          eventId,
+          data: result.data,
+          attribution: {
+            pet_id: result.pet_id,
+            caused_by: result.caused_by,
+            attributed_by: result.attributed_by,
+          },
+          timestamp: result.timestamp,
+          previousAmount:
+            previousData?.type === 'food_intake'
+              ? previousData.amount
+              : undefined,
+        });
+        if (JSON.stringify(reconciled) !== JSON.stringify(result.data)) {
+          result = await db
+            .updateTable('event')
+            .set({ data: reconciled })
+            .where('id', '=', eventId)
+            .returningAll()
+            .executeTakeFirstOrThrow();
+        }
+      }
 
       return requireSerializedEventRow(result);
     },

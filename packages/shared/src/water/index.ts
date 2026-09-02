@@ -9,6 +9,7 @@ export {
   analyzeDrinkingFromSamples,
   weightSamplesAtFixedHz,
 } from './analyzeDrinkingFromSamples.ts';
+export { overrideWaterAmount } from './overrideWaterAmount.ts';
 export type {
   DrinkingAnalysis,
   WaterPeriod,
