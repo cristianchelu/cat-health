@@ -149,30 +149,17 @@ describe('EventEditForm on a phone', () => {
     );
   });
 
-  it('walks the food library as a level too, on the same rung', async () => {
+  it('keeps the food out of the drawer ladder — its ladder has its own sheet', async () => {
     act(() => {
       setMediaMatches(MOBILE_QUERY, true);
     });
-    const user = userEvent.setup();
     await renderPhoneEditForm(MICROCHIP_MEAL);
 
-    /* A meal with no food row says so rather than showing a blank. */
+    /* A meal with no food row says so rather than showing a blank. The
+       trigger opens `FoodPickerSheet` — the picking itself is exercised at
+       desktop width in the modal's suite, and by that sheet's own tests. */
     const trigger = screen.getByRole('button', { name: 'Food' });
     assert.match(trigger.textContent ?? '', /Not linked/);
-
-    await user.click(trigger);
-
-    const level = screen.getByRole('radiogroup', { name: 'Food' });
-    /* Brand is the grouping, not part of each row's name. */
-    assert.match(level.textContent ?? '', /Felix/);
-    await user.click(
-      within(level).getByRole('radio', { name: /Salmon pouch/ }),
-    );
-
-    assert.equal(screen.queryByRole('radiogroup'), null);
-    assert.match(
-      screen.getByRole('button', { name: 'Food' }).textContent ?? '',
-      /Salmon pouch/,
-    );
+    assert.equal(trigger.getAttribute('aria-haspopup'), 'dialog');
   });
 });

@@ -416,6 +416,7 @@
     "edit_food_amount_label": "Cantitate mâncată",
     "edit_food_label": "Mâncare",
     "edit_food_not_linked": "Nelegată",
+    "edit_food_not_linked_hint": "Nu atribui valori nutriționale",
     "edit_food_out_of_range": "Cantitatea trebuie să fie între 0 și 1000 g.",
     "edit_not_a_cat": "Nu e pisică",
     "edit_not_sure": "Nu sunt sigur",

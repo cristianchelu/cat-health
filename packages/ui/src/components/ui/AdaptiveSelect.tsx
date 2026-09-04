@@ -14,6 +14,56 @@ import {
 } from './SelectMenu';
 import './AdaptiveSelect.css';
 
+export interface SelectTriggerButtonProps {
+  /** Names the control. */
+  label: string;
+  /** Display text of the current answer; the placeholder shows without one. */
+  text?: string;
+  placeholder?: string;
+  leading?: React.ReactNode;
+  disabled?: boolean;
+  id?: string;
+  className?: string;
+  onClick: () => void;
+}
+
+/**
+ * The select-shaped button on its own, for a field whose options live on a
+ * picker surface the caller opens — the food ladder's sheet, for one — rather
+ * than in this module's dropdown or the host sheet's page. Shared with the
+ * phone anchor below so the two cannot drift into two shapes of one control.
+ */
+export const SelectTriggerButton: React.FC<SelectTriggerButtonProps> = ({
+  label,
+  text,
+  placeholder,
+  leading,
+  disabled = false,
+  id,
+  className,
+  onClick,
+}) => (
+  <button
+    type="button"
+    id={id}
+    className={cn('adaptive-select', className)}
+    aria-label={label}
+    aria-haspopup="dialog"
+    disabled={disabled}
+    onClick={onClick}
+  >
+    {leading != null && (
+      <span className="adaptive-select-leading" aria-hidden="true">
+        {leading}
+      </span>
+    )}
+    <span className="adaptive-select-value">
+      {text ?? <span className="is-placeholder">{placeholder}</span>}
+    </span>
+    <ChevronDown size={16} aria-hidden="true" />
+  </button>
+);
+
 export interface AdaptiveSelectProps {
   value: string;
   onValueChange: (value: string) => void;
@@ -75,29 +125,16 @@ export const AdaptiveSelect: React.FC<AdaptiveSelectProps> = ({
     return (
       /* Shaped like the dropdown trigger so a form row does not change height
          across the breakpoint — it just opens somewhere else. */
-      <button
-        type="button"
+      <SelectTriggerButton
         id={id}
-        className={cn('adaptive-select', className)}
-        aria-label={label}
-        aria-haspopup="dialog"
+        className={className}
+        label={label}
+        text={selected?.label}
+        placeholder={placeholder}
+        leading={selected?.leading}
         disabled={disabled}
         onClick={onOpenPage}
-      >
-        {selected?.leading != null && (
-          <span className="adaptive-select-leading" aria-hidden="true">
-            {selected.leading}
-          </span>
-        )}
-        <span className="adaptive-select-value">
-          {selected ? (
-            selected.label
-          ) : (
-            <span className="is-placeholder">{placeholder}</span>
-          )}
-        </span>
-        <ChevronDown size={16} aria-hidden="true" />
-      </button>
+      />
     );
   }
 

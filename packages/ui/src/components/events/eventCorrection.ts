@@ -10,10 +10,13 @@ import type {
  * - `guess` — the machine decided and could be wrong: the band asks once.
  * - `assign` — the machine gave up: the band asks who it was.
  * - `settled` — already answered; a pill in the meta line, never the band again.
- * - `manual` — you logged it, so nothing was guessed: Edit in the header,
- *   no band.
+ * - `manual` — you logged it, so nothing was guessed: no band.
  * - `none` — hardware knew (a microchip is not a guess), or the event is not
  *   about a pet at all. The absence is the design.
+ *
+ * The kinds decide what *asks* — the band and the settled pill. The Edit
+ * affordance is not tiered by them: it lives in the overflow menu on every
+ * event `canEditEvent` admits, and the band merely repeats it while asking.
  */
 export type EventCorrection =
   | { kind: 'guess' }
@@ -98,19 +101,4 @@ export function deriveEventCorrection(
  */
 export function canEditEvent(event: EventCorrectionInput): boolean {
   return isPetEvent(event.data.type);
-}
-
-/**
- * Late corrections — after the band was answered, or where it never appeared —
- * go through the overflow menu. While the band or Edit is on screen, the menu
- * would only duplicate them.
- */
-export function showsEditInMenu(
-  event: EventCorrectionInput,
-  correction: EventCorrection,
-): boolean {
-  return (
-    canEditEvent(event) &&
-    (correction.kind === 'settled' || correction.kind === 'none')
-  );
 }

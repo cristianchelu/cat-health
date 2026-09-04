@@ -164,6 +164,19 @@ const FILTERED_WATER: GetEventListItemDTO = {
   human_verified: false,
 };
 
+/** Not about a cat at all: nothing to correct, so the menu is Delete alone. */
+const SCOOP: GetEventListItemDTO = {
+  ...BASE,
+  id: 18,
+  pet_id: null,
+  caused_by: 'human',
+  attributed_by: null,
+  device_id: 4,
+  timestamp: '2026-08-20T08:00:00.000Z',
+  data: { type: 'litterbox_maintenance', maintenance_type: 'scoop' },
+  human_verified: false,
+};
+
 const ALL_EVENTS = [
   UNASSIGNED_WATER,
   GUESSED_VISIT,
@@ -171,6 +184,7 @@ const ALL_EVENTS = [
   MANUAL_MEAL,
   VERIFIED_VISIT,
   FILTERED_WATER,
+  SCOOP,
 ];
 
 const FOODS: GetFoodDTO[] = [
@@ -454,8 +468,16 @@ describe('EventDetailsModal', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
     const form = screen.getByRole('dialog', { name: /Edit this event/ });
 
-    await user.click(within(form).getByRole('combobox', { name: 'Food' }));
-    await user.click(screen.getByRole('option', { name: /Salmon pouch/ }));
+    /* Not a dropdown: the trigger opens the same picker sheet every other
+       food field walks. One food in the library, so the ladder goes out
+       flat and the row is one tap away. */
+    await user.click(within(form).getByRole('button', { name: 'Food' }));
+    const picker = screen.getByRole('dialog', { name: 'Food' });
+    const foodRow = within(picker)
+      .getAllByRole('button')
+      .find((row) => /Salmon pouch/.test(row.textContent ?? ''));
+    assert.ok(foodRow);
+    await user.click(foodRow);
     await user.click(within(form).getByRole('button', { name: 'Save' }));
 
     await waitFor(() => assert.equal(writes().length, 1));
@@ -570,11 +592,16 @@ describe('EventDetailsModal', () => {
     assert.equal(writes().length, 0);
   });
 
-  it('offers Edit, not a band, on an event you logged yourself', async () => {
+  it('offers Edit in the menu, not a band, on an event you logged yourself', async () => {
+    const user = userEvent.setup();
     await renderModal(MANUAL_MEAL);
 
     assert.equal(screen.queryByRole('button', { name: 'Looks right' }), null);
-    assert.ok(screen.getByRole('button', { name: 'Edit' }));
+    /* Nothing was guessed, so nothing asks from the surface: the one home
+       Edit has is the kebab, here like everywhere else. */
+    assert.equal(screen.queryByRole('button', { name: 'Edit' }), null);
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    assert.ok(screen.getByRole('menuitem', { name: 'Edit' }));
   });
 
   it('asks who it was when the matcher gave up', async () => {
@@ -601,10 +628,38 @@ describe('EventDetailsModal', () => {
     assert.ok(screen.getByLabelText('Verified by you'));
     assert.equal(screen.queryByText('Verified by you'), null);
     /* Nothing is asking any more, so the way back in is a late second thought
-       under the kebab — same word as the band and the header. */
+       under the kebab — same word the band used. */
     assert.equal(screen.queryByRole('button', { name: 'Edit' }), null);
     await user.click(screen.getByRole('button', { name: 'More actions' }));
     assert.ok(screen.getByRole('menuitem', { name: 'Edit' }));
+  });
+
+  it('keeps Edit under the kebab even while the band is asking', async () => {
+    /* The band's Edit is an invitation beside the question, not the only
+       door: the menu's copy stays put so the way in never moves. */
+    const user = userEvent.setup();
+    await renderModal(GUESSED_VISIT);
+
+    assert.ok(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    assert.ok(screen.getByRole('menuitem', { name: 'Edit' }));
+  });
+
+  it('draws no separator when Delete is all the menu holds', async () => {
+    /* A scoop has no cat to re-decide, no signal and no clip: Delete stands
+       alone, and a rule over an empty section would read as chrome. */
+    const user = userEvent.setup();
+    await renderModal(SCOOP);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    const menu = screen.getByRole('menu');
+    assert.deepEqual(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+      ['Delete Event'],
+    );
+    assert.equal(within(menu).queryByRole('separator'), null);
   });
 
   it('re-attributes the event through the edit form, and marks it verified', async () => {

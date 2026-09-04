@@ -59,9 +59,9 @@ import EventCorrectionBand from './EventCorrectionBand';
 import EventNoteField from './EventNoteField';
 import EventEditForm from './EventEditForm';
 import {
+  canEditEvent,
   deriveEventCorrection,
   isPetEvent,
-  showsEditInMenu,
 } from './eventCorrection';
 import './EventDetailsModal.css';
 
@@ -91,11 +91,11 @@ interface EventDetailsModalProps {
  * correction goes through the edit form; nothing else on the body is
  * interactive, and nothing here commits on its own.
  *
- * One word for it everywhere — Edit — and where it sits is the tier: in the
- * band the machine guessed and is asking, in the header you authored it and
- * nothing is asking, under the kebab the question is already settled and this
- * is a late second thought. Nowhere at all means the hardware knew (a
- * microchip is not a guess).
+ * One word for it everywhere — Edit — and one fixed home: the kebab, on every
+ * event the form can serve, so the way in never has to be hunted for. While
+ * the machine guessed and is still asking, the band offers the same door
+ * beside "Looks right" — an invitation next to the question, not a second
+ * destination.
  */
 const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   event,
@@ -355,7 +355,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     });
   };
 
-  const menuHasEdit = showsEditInMenu(displayEvent, correction);
+  const menuHasEdit = canEditEvent(displayEvent);
+  /* Delete gets a section of its own only when something sits above it — a
+     separator with nothing over it reads as a stray rule at the menu's top. */
+  const menuHasMoreThanDelete =
+    menuHasEdit ||
+    advancedSignal != null ||
+    hasLitterboxChartWeights ||
+    (hasMedia && downloadMediaPath != null);
 
   /* One ladder. The edit form and the advanced page are both rung 1 off the
      read surface, and neither is reachable from the other. */
@@ -510,20 +517,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   </div>
 
                   <div className="event-details-actions">
-                    {/* You logged it, so nothing was guessed and nothing is
-                        asking: the affordance sits in the open rather than
-                        under the kebab. */}
-                    {correction.kind === 'manual' && (
-                      <Button
-                        type="button"
-                        variant="neutral"
-                        size="sm"
-                        onClick={() => setIsEditing(true)}
-                      >
-                        <Pencil size={15} aria-hidden />
-                        {t('common.edit')}
-                      </Button>
-                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -584,7 +577,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                             {t('event_details.download_media')}
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuSeparator />
+                        {menuHasMoreThanDelete && <DropdownMenuSeparator />}
                         <DropdownMenuItem
                           tone="danger"
                           disabled={isDeleting}

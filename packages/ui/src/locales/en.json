@@ -468,6 +468,7 @@
     "edit_food_amount_label": "Amount eaten",
     "edit_food_label": "Food",
     "edit_food_not_linked": "Not linked",
+    "edit_food_not_linked_hint": "Don’t attribute nutrition",
     "edit_food_out_of_range": "Amount must be between 0 and 1000 g.",
     "edit_not_a_cat": "Not a cat",
     "edit_not_sure": "Not sure",

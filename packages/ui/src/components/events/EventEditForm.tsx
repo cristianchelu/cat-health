@@ -25,7 +25,10 @@ import { DialogDescription, DialogTitle } from '@/components/ui/Dialog';
 import Avatar from '@/components/ui/Avatar';
 import { Switch } from '@/components/ui/Switch';
 import { Callout } from '@/components/ui/Callout';
-import { AdaptiveSelect } from '@/components/ui/AdaptiveSelect';
+import {
+  AdaptiveSelect,
+  SelectTriggerButton,
+} from '@/components/ui/AdaptiveSelect';
 import { SelectPage, type PickerOption } from '@/components/ui/SelectPage';
 import { SheetPages } from '@/components/ui/SheetPages';
 import { Button } from '@/components/ui/Button';
@@ -42,11 +45,7 @@ import {
   causeLabelKey,
 } from '@/lib/eventAttribution';
 import { intakeFoodType } from '@/components/food-picker/foodGroups';
-import {
-  compareFoodBrands,
-  NO_BRAND,
-  normalizeFoodBrand,
-} from '@/components/food-picker/foodLadder';
+import { FoodPickerSheet } from '@/components/food-picker/FoodPickerSheet';
 import {
   gramsToKgInput,
   MAX_WEIGHT_G,
@@ -95,9 +94,6 @@ const RANGE_ERROR_KEYS: Record<EditableMeasure, string> = {
   food: 'event_details.edit_food_out_of_range',
   water: 'event_details.edit_water_out_of_range',
 };
-
-/** The food select's value for "no food row backs this meal". */
-const FOOD_NOT_LINKED = 'none';
 
 export interface EventEditFormProps {
   event: GetEventListItemDTO;
@@ -165,10 +161,9 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
     event.data.type === 'food_intake' || event.data.type === 'water_intake'
       ? String(event.data.amount)
       : '';
+  /* `null` is an answer — "no food row backs this meal" — not an unset field. */
   const baselineFoodId =
-    event.data.type === 'food_intake' && event.data.food_id != null
-      ? String(event.data.food_id)
-      : FOOD_NOT_LINKED;
+    event.data.type === 'food_intake' ? (event.data.food_id ?? null) : null;
 
   const [attribution, setAttribution] = React.useState(baselineAttribution);
   const [eliminationType, setEliminationType] = React.useState(baselineType);
@@ -179,9 +174,9 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
   const [reanalyze, setReanalyze] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   /* Which picker level the drawer is showing, or the form itself. */
-  const [picker, setPicker] = React.useState<'cat' | 'type' | 'food' | null>(
-    null,
-  );
+  const [picker, setPicker] = React.useState<'cat' | 'type' | null>(null);
+  /* The food ladder is a sheet of its own, not a level of this drawer. */
+  const [foodPickerOpen, setFoodPickerOpen] = React.useState(false);
 
   React.useEffect(() => {
     registerBack?.(() => {
@@ -304,7 +299,8 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
       const amount = requireAmount(amountText, FOOD_AMOUNT_RANGE_G, 'food');
       const base = { ...event.data, amount };
       if (!foodChanged) return base;
-      const food = foods?.find((f) => String(f.id) === foodId);
+      const food =
+        foodId != null ? foods?.find((f) => f.id === foodId) : undefined;
       if (food) {
         // The server recomputes nutrients and the moisture child from the row.
         return { ...base, food_id: food.id, food_type: intakeFoodType(food) };
@@ -366,38 +362,16 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
     label: t(ELIMINATION_LABEL_KEYS[type]),
   }));
 
-  /**
-   * The library grouped by brand, with the honest blank on top: a feeder event
-   * with no food row has no nutrition, and saying so is an answer too. The
-   * brand buckets and their order come from the ladder's shared rule, so this
-   * list and the log flow's browse tree can never disagree about them.
-   */
-  const foodOptions: PickerOption[] = React.useMemo(() => {
-    const sorted = [...(foods ?? [])]
-      .map((food) => ({ food, brand: normalizeFoodBrand(food.brand) }))
-      .sort(
-        (a, b) =>
-          compareFoodBrands(a.brand, b.brand) ||
-          a.food.name.localeCompare(b.food.name),
-      );
-    return [
-      {
-        value: FOOD_NOT_LINKED,
-        label: t('event_details.edit_food_not_linked'),
-        muted: true,
-      },
-      ...sorted.map(({ food, brand }) => ({
-        value: String(food.id),
-        label: food.name,
-        group: brand === NO_BRAND ? t('food_picker.no_brand') : brand,
-      })),
-    ];
-  }, [foods, t]);
+  const selectedFood =
+    isFood && foodId != null
+      ? foods?.find((food) => food.id === foodId)
+      : undefined;
 
   /*
-   * The picker takes over the drawer rather than opening one of its own. Two
-   * sheets stacked at two heights is the shape this replaced; here the drawer
-   * stays put and only its contents change.
+   * The flat pickers take over the drawer rather than opening one of their
+   * own. The food field is deliberately not among them: its library is the
+   * browse ladder, and the ladder already has a surface — the same
+   * `FoodPickerSheet` every other food field opens.
    */
   const pickerLevel =
     picker === 'cat'
@@ -417,14 +391,7 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
               if (parsed) setEliminationType(parsed);
             },
           }
-        : picker === 'food'
-          ? {
-              title: t('event_details.edit_food_label'),
-              options: foodOptions,
-              value: foodId,
-              onSelect: setFoodId,
-            }
-          : null;
+        : null;
 
   return (
     <div className="event-edit-form">
@@ -465,13 +432,17 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
 
               {isFood && (
                 <FormField label={t('event_details.edit_food_label')}>
-                  <AdaptiveSelect
-                    value={foodId}
-                    onValueChange={setFoodId}
-                    options={foodOptions}
+                  {/* Not a dropdown: the library is the browse ladder, and the
+                      ladder lives on its own sheet. The trigger keeps the
+                      select's shape so the form row reads like its peers. */}
+                  <SelectTriggerButton
                     label={t('event_details.edit_food_label')}
+                    text={
+                      selectedFood?.name ??
+                      t('event_details.edit_food_not_linked')
+                    }
                     disabled={isBusy}
-                    onOpenPage={() => setPicker('food')}
+                    onClick={() => setFoodPickerOpen(true)}
                   />
                 </FormField>
               )}
@@ -668,6 +639,25 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
           </div>
         )}
       </SheetPages>
+
+      {/* The same ladder every food field walks, on the sheet it owns —
+          stacked over this drawer rather than folded into it, so the two
+          surfaces cannot drift apart. */}
+      {isFood && (
+        <FoodPickerSheet
+          open={foodPickerOpen}
+          onOpenChange={setFoodPickerOpen}
+          title={t('event_details.edit_food_label')}
+          foods={foods ?? []}
+          selectedFoodId={foodId}
+          noneLabel={t('event_details.edit_food_not_linked')}
+          noneHint={t('event_details.edit_food_not_linked_hint')}
+          onPick={(next) => {
+            setFoodId(next);
+            setFoodPickerOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };
