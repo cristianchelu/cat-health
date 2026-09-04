@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -899,6 +905,61 @@ describe('EventDetailsModal', () => {
 
     assert.equal(closed, 0);
     await user.click(screen.getByRole('button', { name: 'Discard' }));
+    assert.equal(closed, 1);
+  });
+
+  it('asks before a scrim dismissal that would drop an unsaved edit', async () => {
+    const user = userEvent.setup();
+    let closed = 0;
+    await renderModal(GUESSED_VISIT, { onClose: () => (closed += 1) });
+
+    const form = await openEditForm(user);
+    await user.click(
+      within(form).getByRole('checkbox', { name: 'Straining observed' }),
+    );
+
+    /* The scrim: a pointer landing outside the drawer. fireEvent rather than
+       a user-event click — the modal marks the page behind it inert, which
+       user-event rightly refuses to click through. */
+    fireEvent.pointerDown(document.body);
+
+    assert.equal(closed, 0);
+    const confirm = screen.getByRole('dialog', {
+      name: 'Discard unsaved changes?',
+    });
+    await user.click(within(confirm).getByRole('button', { name: 'Discard' }));
+    assert.equal(closed, 1);
+  });
+
+  it('closes freely on the scrim while the edit form is untouched', async () => {
+    const user = userEvent.setup();
+    let closed = 0;
+    await renderModal(GUESSED_VISIT, { onClose: () => (closed += 1) });
+
+    await openEditForm(user);
+    fireEvent.pointerDown(document.body);
+
+    /* Nothing answered yet, nothing to lose: no dialog in the way. */
+    assert.equal(closed, 1);
+    assert.equal(
+      screen.queryByRole('dialog', { name: 'Discard unsaved changes?' }),
+      null,
+    );
+  });
+
+  it('stands the guard down once the edit is cancelled', async () => {
+    const user = userEvent.setup();
+    let closed = 0;
+    await renderModal(GUESSED_VISIT, { onClose: () => (closed += 1) });
+
+    const form = await openEditForm(user);
+    await user.click(
+      within(form).getByRole('checkbox', { name: 'Straining observed' }),
+    );
+    await user.click(within(form).getByRole('button', { name: 'Cancel' }));
+
+    /* Leaving by Cancel was the discard; the drawer owes no second question. */
+    fireEvent.pointerDown(document.body);
     assert.equal(closed, 1);
   });
 

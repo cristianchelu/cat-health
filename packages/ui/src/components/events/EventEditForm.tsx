@@ -124,6 +124,12 @@ export interface EventEditFormProps {
    * form is what should close.
    */
   registerBack?: (back: () => boolean) => void;
+  /**
+   * Raised while any field differs from the stored event, so the surface
+   * around the form can ask before a scrim tap or a drag throws the edit
+   * away — the same contract `EventNoteField` keeps for its text.
+   */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 /**
@@ -146,6 +152,7 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
   eventChildren,
   onClose,
   registerBack,
+  onDirtyChange,
 }) => {
   const { t } = useTranslation();
   const { formatDateTime } = useFormatters();
@@ -231,6 +238,29 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
       : null;
   const amountChanged = amountField != null && amountText !== baselineAmount;
   const foodChanged = isFood && foodId !== baselineFoodId;
+  /* Only a changed attribution is a decision. Restating the current one
+     would stamp `attributed_by: 'manual'` — relabelling a microchip event
+     "corrected by you" when all that moved was a number. */
+  const attributionChanged = attribution !== baselineAttribution;
+
+  /* Any answer differing from the stored event. Being partway down a picker
+     with nothing changed is deliberately not dirt: leaving loses only a
+     ladder position, and a dialog crying "unsaved changes" over that would
+     teach the warning to be ignored. */
+  const isDirty =
+    attributionChanged ||
+    (isLitterbox &&
+      (eliminationType !== baselineType || straining !== baselineStraining)) ||
+    weightChanged ||
+    amountChanged ||
+    foodChanged;
+
+  React.useEffect(() => {
+    onDirtyChange?.(isDirty);
+    /* Leaving the form — Cancel, Save, Escape — is itself the discard or the
+       commit, so the guard stands down with the unmount. */
+    return () => onDirtyChange?.(false);
+  }, [isDirty, onDirtyChange]);
   /* A device amount is never absent, so the arrow always names the reading. */
   const undoAmountLabel = t('event_details.restore_amount', {
     amount: baselineAmount,
@@ -352,10 +382,6 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
       }
 
       const nextAttribution = attributionFromSelectValue(attribution);
-      // Only a changed attribution is a decision. Restating the current one
-      // would stamp `attributed_by: 'manual'` — relabelling a microchip event
-      // "corrected by you" when all that moved was a number.
-      const attributionChanged = attribution !== baselineAttribution;
 
       await updateEvent({
         eventId: event.id,

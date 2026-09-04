@@ -141,6 +141,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
      a picker, then out of the form — rather than dropping the whole drawer. */
   const editBackRef = React.useRef<(() => boolean) | null>(null);
   const [isNoteDirty, setIsNoteDirty] = React.useState(false);
+  const [isEditDirty, setIsEditDirty] = React.useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = React.useState(false);
 
   /** Prefer React Query payload so the modal stays in sync after mutations (e.g. reanalyze) while `event` from parent state may be stale. */
@@ -198,6 +199,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       setIsEditing(false);
       setShowAdvanced(false);
       setIsNoteDirty(false);
+      setIsEditDirty(false);
       setShowDiscardConfirm(false);
     }
   }
@@ -316,7 +318,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   /** The band is on screen, so it owns the restatement of what was guessed. */
   const isAsking = correction.kind === 'guess' || correction.kind === 'assign';
 
-  const canDiscardCleanly = !isNoteDirty;
+  /* An unsaved note or an unsaved correction: either is work a stray scrim
+     tap must not throw away without asking. */
+  const canDiscardCleanly = !isNoteDirty && !isEditDirty;
   const handleClose = () => {
     if (canDiscardCleanly) onClose();
     else setShowDiscardConfirm(true);
@@ -383,15 +387,15 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         open={isOpen}
         onOpenChange={(open) => !open && handleClose()}
         /*
-         * Phone: an unsaved note takes the drag and the scrim off the table —
-         * vaul cannot be vetoed after the fact, so the guard has to be
-         * declared up front rather than answered when it fires.
+         * Phone: an unsaved note or edit takes the drag and the scrim off the
+         * table — vaul cannot be vetoed after the fact, so the guard has to
+         * be declared up front rather than answered when it fires.
          *
-         * That leaves no way out of the drawer while a note is open, which is
-         * the point: the way out is the note's own Cancel, which is on screen
-         * beside the text it would throw away and names what it discards.
-         * Desktop keeps Escape and the scrim, which Radix does let us veto, so
-         * both still route to the discard dialog.
+         * That leaves no way out of the drawer while one is open, which is
+         * the point: the way out is the note's or the form's own Cancel,
+         * which is on screen beside the work it would throw away. Desktop
+         * keeps Escape and the scrim, which Radix does let us veto, so both
+         * still route to the discard dialog.
          */
         dismissible={canDiscardCleanly}
         className="event-details-modal"
@@ -432,6 +436,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               registerBack={(back) => {
                 editBackRef.current = back;
               }}
+              onDirtyChange={setIsEditDirty}
             />
           ) : (
             <>
@@ -641,6 +646,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         onConfirm={() => {
           setShowDiscardConfirm(false);
           setIsNoteDirty(false);
+          setIsEditDirty(false);
           onClose();
         }}
         onCancel={() => setShowDiscardConfirm(false)}
