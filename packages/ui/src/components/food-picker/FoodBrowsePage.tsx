@@ -1,12 +1,10 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { GetFoodDTO } from 'shared';
-import { SheetPageHeader } from '@/components/ui/SheetPageHeader';
-import { PickerRow } from '@/components/ui/PickerRow';
+import { SheetPageFrame } from '@/components/ui/SheetPageFrame';
 import { FoodBrowseLevel } from './FoodBrowseLevel';
 import { foodBrowseHeading } from './foodBrowseHeader';
 import type { BrowseStep, FoodBrowseTree } from './foodLadder';
-import './FoodBrowsePage.css';
 
 interface FoodBrowsePageProps {
   /** The rung on screen. The caller owns the stack, as everywhere else. */
@@ -28,13 +26,10 @@ interface FoodBrowsePageProps {
 
 /**
  * One rung of the food ladder as a level of the sheet you are already in —
- * the `SelectPage` shape with the browse tree inside. `FoodPickerSheet` is
+ * the `SheetPageFrame` with the browse tree inside. `FoodPickerSheet` is
  * the same ladder for hosts with no page machinery of their own; a form that
  * already swaps pages under `SheetPages` mounts this instead, so the drawer
  * stays put and only its contents change.
- *
- * Renders a `DialogTitle` via its header, so it must be mounted inside a
- * `Dialog` — it is a level of a sheet, never a standalone panel.
  */
 const FoodBrowsePage: React.FC<FoodBrowsePageProps> = ({
   step,
@@ -52,37 +47,25 @@ const FoodBrowsePage: React.FC<FoodBrowsePageProps> = ({
   const header = foodBrowseHeading(step, tree, title, t);
 
   return (
-    <div className="food-browse-page">
-      <SheetPageHeader
-        className="food-browse-page-header"
-        title={header.heading}
-        subtitle={header.sub ?? undefined}
-        onBack={onBack}
+    <SheetPageFrame
+      title={header.heading}
+      subtitle={header.sub ?? undefined}
+      onBack={onBack}
+    >
+      <FoodBrowseLevel
+        step={step}
+        tree={tree}
+        foods={foods}
+        selectedFoodId={selectedFoodId}
+        onPush={onPush}
+        onPick={(food) => onPick(food.id)}
+        none={{
+          label: noneLabel,
+          hint: noneHint,
+          onPick: () => onPick(null),
+        }}
       />
-      <div className="food-browse-page-body">
-        <FoodBrowseLevel
-          step={step}
-          tree={tree}
-          foods={foods}
-          selectedFoodId={selectedFoodId}
-          onPush={onPush}
-          onPick={(food) => onPick(food.id)}
-          leading={
-            step.kind === 'root' ? (
-              /* Unlinking is a choice about this field, so it sits among the
-                 choices rather than behind a clear button. */
-              <PickerRow
-                title={noneLabel}
-                subtitle={noneHint}
-                muted
-                selected={selectedFoodId === null}
-                onClick={() => onPick(null)}
-              />
-            ) : null
-          }
-        />
-      </div>
-    </div>
+    </SheetPageFrame>
   );
 };
 

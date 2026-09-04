@@ -1,9 +1,7 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
 import { PickerList } from './PickerList';
-import { SheetPageHeader } from './SheetPageHeader';
+import { SheetPageFrame } from './SheetPageFrame';
 import { type PickerOption } from './pickerOptions';
-import './SelectPage.css';
 
 export type { PickerOption };
 
@@ -21,7 +19,9 @@ export interface SelectPageProps {
  *
  * The rows are the DS `PickerRow` — the same row the food ladder and the
  * settings lists use, so a list of cats and a list of foods are one list with
- * different contents, and a fix to one is a fix to both.
+ * different contents, and a fix to one is a fix to both. The frame around
+ * them is `SheetPageFrame`, shared with the ladder's own page for the same
+ * reason.
  *
  * Not its own dialog. A picker that opens a *second* sheet over the first
  * leaves two surfaces on screen at two different heights, and the seam between
@@ -31,9 +31,6 @@ export interface SelectPageProps {
  *
  * Back walks out and choosing is the commit, so there is no commit row here:
  * whatever form owns the value still commits on its own Save.
- *
- * Renders a `DialogTitle`, so it must be mounted inside a `Dialog` — it is a
- * level of a sheet, never a standalone panel.
  */
 export const SelectPage: React.FC<SelectPageProps> = ({
   title,
@@ -44,20 +41,13 @@ export const SelectPage: React.FC<SelectPageProps> = ({
   className,
 }) => {
   return (
-    <div className={cn('select-page', className)}>
-      <SheetPageHeader
-        className="select-page-header"
-        title={title}
-        onBack={onBack}
-      />
-
+    <SheetPageFrame title={title} onBack={onBack} className={className}>
       {/*
        * A radiogroup, not a listbox: these are rows on a page, and leaving the
        * page is what commits. There is no open/closed state for a screen
        * reader to track.
        */}
       <PickerList
-        className="select-page-body"
         role="radiogroup"
         aria-label={title}
         optionRole="radio"
@@ -65,7 +55,7 @@ export const SelectPage: React.FC<SelectPageProps> = ({
         value={value}
         onSelect={onSelect}
       />
-    </div>
+    </SheetPageFrame>
   );
 };
 

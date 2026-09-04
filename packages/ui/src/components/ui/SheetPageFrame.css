@@ -4,22 +4,18 @@
  * It fills the host surface rather than sitting on it — the drawer keeps the
  * height it already had, and only its contents change.
  */
-.select-page {
+.sheet-page-frame {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  /* Rows run edge to edge, so the page backs out of the dialog's padding and
-     puts it back on each row. */
-  margin: calc(var(--space-lg) * -1);
 
-  /* Backed out of the dialog's padding, so the header puts its own inset back
-     and draws the rule the rows below scroll under. */
-  .select-page-header {
+  /* The header draws the rule the rows below scroll under. */
+  .sheet-page-frame-header {
     padding: var(--space-sm) var(--space-md);
     border-bottom: var(--border-thin);
   }
 
-  .select-page-body {
+  .sheet-page-frame-body {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;

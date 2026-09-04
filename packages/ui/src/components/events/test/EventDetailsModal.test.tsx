@@ -492,6 +492,22 @@ describe('EventDetailsModal', () => {
     assert.equal(body.data.amount, 42);
   });
 
+  it('never claims "Not linked" for a linked meal whose row is missing', async () => {
+    const user = userEvent.setup();
+    await renderModal(MICROCHIP_MEAL, {
+      detail: { data: { ...MICROCHIP_MEAL.data, food_id: 999 } },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    const form = screen.getByRole('dialog', { name: /Edit this event/ });
+
+    /* The library has no row 999 — deleted, say. Blank is the honest face:
+       the meal is still linked, and "Not linked" would be a false claim. */
+    const trigger = within(form).getByRole('button', { name: 'Food' });
+    assert.doesNotMatch(trigger.textContent ?? '', /Not linked/);
+  });
+
   it('corrects the drank amount, and the spill follows the invariant', async () => {
     const user = userEvent.setup();
     await renderModal(FILTERED_WATER);

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { GetFoodDTO } from 'shared';
 import { FoodFlatList } from './FoodFlatList';
 import { PickerList } from '@/components/ui/PickerList';
+import { PickerRow } from '@/components/ui/PickerRow';
 import {
   NO_BRAND,
   findBrand,
@@ -20,8 +21,16 @@ interface FoodBrowseLevelProps {
   /** Walk down a rung. Skipped rungs are resolved before this is called. */
   onPush: (step: BrowseStep) => void;
   onPick: (food: GetFoodDTO) => void;
-  /** Rows above the browse list — Recent in the log flow, Not linked in the feeder. */
+  /** Rows above the browse list — Recent in the log flow. */
   leading?: React.ReactNode;
+  /**
+   * Copy for the root row that means "no food row backs this". One owner for
+   * the row itself, so the hosts that offer unlinking (the feeder's bowl, the
+   * event edit form) cannot drift into two versions of the same answer.
+   * Selecting it calls `none.onPick`; the row shows selected while
+   * `selectedFoodId` is null.
+   */
+  none?: { label: string; hint: string; onPick: () => void };
   selectedFoodId?: number | null;
 }
 
@@ -37,9 +46,28 @@ const FoodBrowseLevel: React.FC<FoodBrowseLevelProps> = ({
   onPush,
   onPick,
   leading,
+  none,
   selectedFoodId,
 }) => {
   const { t } = useTranslation();
+
+  /* Only at the root: unlinking is a choice about the whole field, so it sits
+     among the top-level choices rather than inside one branch of them. */
+  const leadingRows =
+    step.kind === 'root' && none ? (
+      <>
+        <PickerRow
+          title={none.label}
+          subtitle={none.hint}
+          muted
+          selected={selectedFoodId === null}
+          onClick={none.onPick}
+        />
+        {leading}
+      </>
+    ) : (
+      leading
+    );
 
   if (step.kind === 'foods') {
     const node = findBrand(tree, step.group, step.brand);
@@ -56,7 +84,7 @@ const FoodBrowseLevel: React.FC<FoodBrowseLevelProps> = ({
     const node = findGroup(tree, step.group);
     return (
       <PickerList
-        leadingRow={leading}
+        leadingRow={leadingRows}
         options={(node?.brands ?? []).map((brand) => ({
           value: brand.brand || NO_BRAND,
           label:
@@ -85,14 +113,14 @@ const FoodBrowseLevel: React.FC<FoodBrowseLevelProps> = ({
         selectedFoodId={selectedFoodId}
         onSelect={onPick}
         showTypeTags
-        leadingRow={leading}
+        leadingRow={leadingRows}
       />
     );
   }
 
   return (
     <PickerList
-      leadingRow={leading}
+      leadingRow={leadingRows}
       options={tree.map((node) => ({
         value: node.group,
         label: t(`food_picker.group_${node.group}`),

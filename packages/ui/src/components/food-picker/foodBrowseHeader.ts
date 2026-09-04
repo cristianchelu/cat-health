@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import {
   findBrand,
   findGroup,
@@ -5,8 +6,6 @@ import {
   type BrowseStep,
   type FoodBrowseTree,
 } from './foodLadder';
-
-type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 export interface FoodBrowseHeading {
   heading: string;
@@ -23,7 +22,7 @@ export function foodBrowseHeading(
   tree: FoodBrowseTree,
   /** Names the root rung — the bowl or the field this ladder fills. */
   rootTitle: string,
-  t: Translate,
+  t: TFunction,
 ): FoodBrowseHeading {
   if (step.kind === 'brands') {
     const node = findGroup(tree, step.group);

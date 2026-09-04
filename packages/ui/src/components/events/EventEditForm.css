@@ -14,14 +14,6 @@
   flex-direction: column;
   min-height: 0;
 
-  /* `SelectPage` and `FoodBrowsePage` back out of a padded host by --space-lg;
-     their host is now the sibling page rather than this frame, and the
-     negative margin would poke outside the box the slide clips against. */
-  .select-page,
-  .food-browse-page {
-    margin: 0;
-  }
-
   .event-edit-form-main {
     display: flex;
     flex-direction: column;

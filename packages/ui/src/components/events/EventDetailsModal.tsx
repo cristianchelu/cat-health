@@ -224,7 +224,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     return buildTimelapseTimeline(imageFrames, eventDurationSec);
   }, [displayEvent, imageFrames]);
 
-  const downloadMediaPath = imageFrames[0]?.file_path ?? media?.[0]?.file_path;
+  /* `||`, not `??`: an empty-string path is no path — it can neither be
+     downloaded nor justify the menu entry that offers to. Non-null from here
+     on means "there is a file to hand over". */
+  const downloadMediaPath =
+    imageFrames[0]?.file_path || media?.[0]?.file_path || undefined;
 
   if (!shownEvent || !displayEvent) {
     return null;
@@ -357,12 +361,13 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
   const menuHasEdit = canEditEvent(displayEvent);
   /* Delete gets a section of its own only when something sits above it — a
-     separator with nothing over it reads as a stray rule at the menu's top. */
+     separator with nothing over it reads as a stray rule at the menu's top.
+     One disjunct per menu item, each the item's own render condition, so the
+     two cannot drift; Analyze needs no term of its own because its gate
+     (`hasLitterboxChartWeights`) already implies `advancedSignal`. The CSS
+     orphan guard in DropdownMenu.css backstops any future drift. */
   const menuHasMoreThanDelete =
-    menuHasEdit ||
-    advancedSignal != null ||
-    hasLitterboxChartWeights ||
-    (hasMedia && downloadMediaPath != null);
+    menuHasEdit || advancedSignal != null || downloadMediaPath != null;
 
   /* One ladder. The edit form and the advanced page are both rung 1 off the
      read surface, and neither is reachable from the other. */
@@ -392,8 +397,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         className="event-details-modal"
         onEscapeKeyDown={(escape) => {
           /* One rung at a time: out of a picker, then out of the form, and
-             only from the read surface does Escape close the drawer. */
-          if (editBackRef.current?.()) escape.preventDefault();
+             only from the read surface does Escape close the drawer.
+
+             Gated on `isEditing` because the ref outlives the form: a scrim
+             dismissal mid-picker leaves the last registered closure behind,
+             and consulted off the edit surface it would swallow Escape for
+             good. While editing it is always this mount's registration —
+             the form registers on mount, before any Escape can arrive. */
+          if (isEditing && editBackRef.current?.()) escape.preventDefault();
           else if (isEditing) {
             escape.preventDefault();
             setIsEditing(false);
@@ -563,7 +574,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                             {t('event_details.analyze')}
                           </DropdownMenuItem>
                         )}
-                        {hasMedia && downloadMediaPath && (
+                        {downloadMediaPath != null && (
                           <DropdownMenuItem
                             onSelect={() => {
                               const link = document.createElement('a');

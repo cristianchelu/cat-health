@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import type { GetFoodDTO } from 'shared';
 import { PickerSheet } from '@/components/ui/PickerSheet';
 import { FoodBrowseLevel } from './FoodBrowseLevel';
-import { PickerRow } from '@/components/ui/PickerRow';
 import {
   browseStepKey,
   buildFoodBrowseTree,
@@ -88,19 +87,11 @@ const FoodPickerSheet: React.FC<FoodPickerSheetProps> = ({
         selectedFoodId={selectedFoodId}
         onPush={follow}
         onPick={(food) => onPick(food.id)}
-        leading={
-          step.kind === 'root' ? (
-            /* Unlinking is a choice about this bowl, so it sits among the
-               choices rather than behind a clear button. */
-            <PickerRow
-              title={noneLabel}
-              subtitle={noneHint}
-              muted
-              selected={selectedFoodId === null}
-              onClick={() => onPick(null)}
-            />
-          ) : null
-        }
+        none={{
+          label: noneLabel,
+          hint: noneHint,
+          onPick: () => onPick(null),
+        }}
       />
     </PickerSheet>
   );

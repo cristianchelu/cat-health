@@ -90,7 +90,10 @@ const FOODS: GetFoodDTO[] = [
   },
 ];
 
-async function renderPhoneEditForm(event: GetEventListItemDTO = GUESSED_VISIT) {
+async function renderPhoneEditForm(
+  event: GetEventListItemDTO = GUESSED_VISIT,
+  { seedFoods = true }: { seedFoods?: boolean } = {},
+) {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: Infinity, staleTime: Infinity },
@@ -99,7 +102,7 @@ async function renderPhoneEditForm(event: GetEventListItemDTO = GUESSED_VISIT) {
   });
   queryClients.push(client);
   client.setQueryData(['pets'], PETS);
-  client.setQueryData(['foods'], FOODS);
+  if (seedFoods) client.setQueryData(['foods'], FOODS);
   client.setQueryData(['settings'], createDefaultSettingsResponse());
 
   return renderWithProviders(
@@ -177,5 +180,17 @@ describe('EventEditForm on a phone', () => {
       screen.getByRole('button', { name: 'Food' }).textContent ?? '',
       /Salmon pouch/,
     );
+  });
+
+  it('keeps the food ladder shut until the library has arrived', async () => {
+    act(() => {
+      setMediaMatches(MOBILE_QUERY, true);
+    });
+    await renderPhoneEditForm(MICROCHIP_MEAL, { seedFoods: false });
+
+    /* An unloaded library would open on nothing but the unlink row — one
+       tap from silently stripping a link — so the trigger waits for data. */
+    const trigger = screen.getByRole('button', { name: 'Food' });
+    assert.ok((trigger as HTMLButtonElement).disabled);
   });
 });

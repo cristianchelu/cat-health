@@ -69,6 +69,17 @@
     height: 1px;
     margin: var(--space-3xs) calc(var(--space-2xs) * -1);
     background-color: var(--color-border);
+
+    /* A separator separates; one with nothing on a side is a stray rule.
+       Menus render items conditionally, so an emptied-out section can leave
+       its rule orphaned at an edge (or doubled) — swallowed here once for
+       every menu, instead of each call site mirroring its items' conditions
+       into a gate. */
+    &:first-child,
+    &:last-child,
+    & + .dropdown-menu-separator {
+      display: none;
+    }
   }
 }
 

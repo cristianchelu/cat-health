@@ -100,6 +100,19 @@ const RANGE_ERROR_KEYS: Record<EditableMeasure, string> = {
   water: 'event_details.edit_water_out_of_range',
 };
 
+/**
+ * A page the drawer can walk into: a flat picker, or one rung of the food
+ * browse ladder. One union so the form keeps one stack — "which page is on
+ * screen" has a single owner, and a state where two pickers are open at once
+ * cannot be represented.
+ */
+type EditPage = 'cat' | 'type' | BrowseStep;
+
+/** Identity of a page for `SheetPages` — a change is what starts a slide. */
+function editPageKey(page: EditPage): string {
+  return typeof page === 'string' ? page : `food:${browseStepKey(page)}`;
+}
+
 export interface EventEditFormProps {
   event: GetEventListItemDTO;
   eventChildren: GetEventChildDTO[] | undefined;
@@ -178,24 +191,18 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
   const [foodId, setFoodId] = React.useState(baselineFoodId);
   const [reanalyze, setReanalyze] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  /* Which picker level the drawer is showing, or the form itself. */
-  const [picker, setPicker] = React.useState<'cat' | 'type' | null>(null);
-  /* The food ladder's rungs, while the drawer is inside it; empty otherwise.
-     A stack rather than a flag because the ladder is the one picker here with
-     more than one level to be on. */
-  const [foodStack, setFoodStack] = React.useState<BrowseStep[]>([]);
+  /* The pages the drawer has walked into, or empty for the form itself. The
+     flat pickers push one entry; the food ladder pushes one per rung. */
+  const [pages, setPages] = React.useState<EditPage[]>([]);
+  const onAPage = pages.length > 0;
 
   React.useEffect(() => {
     registerBack?.(() => {
-      if (foodStack.length > 0) {
-        setFoodStack((prev) => prev.slice(0, -1));
-        return true;
-      }
-      if (!picker) return false;
-      setPicker(null);
+      if (!onAPage) return false;
+      setPages((prev) => prev.slice(0, -1));
       return true;
     });
-  }, [picker, foodStack.length, registerBack]);
+  }, [onAPage, registerBack]);
 
   const isBusy = isPatching || isSavingWeight;
   const weightChanged = isLitterbox && weightKg !== baselineWeight;
@@ -382,9 +389,6 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
     () => buildFoodBrowseTree(foods ?? []),
     [foods],
   );
-  const foodStep = foodStack.length
-    ? foodStack[foodStack.length - 1]
-    : undefined;
 
   /*
    * Every picker takes over the drawer rather than opening a sheet of its
@@ -393,15 +397,17 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
    * a `SelectPage` each; the food field walks its browse ladder the same way,
    * one `FoodBrowsePage` per rung.
    */
+  const topPage = onAPage ? pages[pages.length - 1] : undefined;
+  const foodStep = typeof topPage === 'object' ? topPage : undefined;
   const pickerLevel =
-    picker === 'cat'
+    topPage === 'cat'
       ? {
           title: t('event_details.edit_cat_label'),
           options: attributionOptions,
           value: attribution,
           onSelect: setAttribution,
         }
-      : picker === 'type'
+      : topPage === 'type'
         ? {
             title: t('event_details.edit_type_label'),
             options: typeOptions,
@@ -416,8 +422,8 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
   return (
     <div className="event-edit-form">
       <SheetPages
-        page={picker ?? (foodStep ? `food:${browseStepKey(foodStep)}` : 'form')}
-        depth={picker ? 1 : foodStack.length}
+        page={topPage ? editPageKey(topPage) : 'form'}
+        depth={pages.length}
       >
         {foodStep ? (
           <FoodBrowsePage
@@ -426,13 +432,13 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
             foods={foods ?? []}
             title={t('event_details.edit_food_label')}
             selectedFoodId={foodId}
-            onPush={(next) => setFoodStack((prev) => [...prev, next])}
-            onBack={() => setFoodStack((prev) => prev.slice(0, -1))}
+            onPush={(next) => setPages((prev) => [...prev, next])}
+            onBack={() => setPages((prev) => prev.slice(0, -1))}
             onPick={(next) => {
               setFoodId(next);
               /* Chosen, so all the way out — the rungs in between were the
                  way to the answer, not places to return through. */
-              setFoodStack([]);
+              setPages([]);
             }}
             noneLabel={t('event_details.edit_food_not_linked')}
             noneHint={t('event_details.edit_food_not_linked_hint')}
@@ -442,10 +448,10 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
             title={pickerLevel.title}
             options={pickerLevel.options}
             value={pickerLevel.value}
-            onBack={() => setPicker(null)}
+            onBack={() => setPages([])}
             onSelect={(next) => {
               pickerLevel.onSelect(next);
-              setPicker(null);
+              setPages([]);
             }}
           />
         ) : (
@@ -467,7 +473,7 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
                   options={attributionOptions}
                   label={t('event_details.edit_cat_label')}
                   disabled={isBusy}
-                  onOpenPage={() => setPicker('cat')}
+                  onOpenPage={() => setPages(['cat'])}
                 />
               </FormField>
 
@@ -475,15 +481,23 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
                 <FormField label={t('event_details.edit_food_label')}>
                   {/* Not a dropdown: the library is the browse ladder, walked
                       as levels of this same drawer. The trigger keeps the
-                      select's shape so the form row reads like its peers. */}
+                      select's shape so the form row reads like its peers.
+
+                      "Not linked" is said only when the *event* says so. A
+                      linked meal whose row is still loading — or gone from
+                      the library — shows blank rather than a false claim,
+                      and while the library hasn't arrived the trigger stays
+                      shut: an unloaded ladder would open on nothing but the
+                      unlink row, one tap from silently stripping the link. */}
                   <SelectTriggerButton
                     label={t('event_details.edit_food_label')}
                     text={
-                      selectedFood?.name ??
-                      t('event_details.edit_food_not_linked')
+                      foodId == null
+                        ? t('event_details.edit_food_not_linked')
+                        : selectedFood?.name
                     }
-                    disabled={isBusy}
-                    onClick={() => setFoodStack([{ kind: 'root' }])}
+                    disabled={isBusy || foods == null}
+                    onClick={() => setPages([{ kind: 'root' }])}
                   />
                 </FormField>
               )}
@@ -553,7 +567,7 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
                       options={typeOptions}
                       label={t('event_details.edit_type_label')}
                       disabled={isBusy}
-                      onOpenPage={() => setPicker('type')}
+                      onOpenPage={() => setPages(['type'])}
                     />
                   </FormField>
 
