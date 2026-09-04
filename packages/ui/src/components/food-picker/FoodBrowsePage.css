@@ -1,0 +1,27 @@
+/*
+ * The food ladder as a level inside a sheet: `SelectPage`'s frame with the
+ * browse tree inside. Same shape, own declarations — a page quietly borrowing
+ * another page's class is how one of the two ends up unable to change.
+ */
+.food-browse-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* Rows run edge to edge, so the page backs out of the dialog's padding and
+     puts it back on each row. */
+  margin: calc(var(--space-lg) * -1);
+
+  .food-browse-page-header {
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: var(--border-thin);
+  }
+
+  .food-browse-page-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    /* Rows put the inline padding back themselves, lining their text up with
+       the header above. */
+    --picker-row-inline: var(--space-lg);
+  }
+}

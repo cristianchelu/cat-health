@@ -468,12 +468,13 @@ describe('EventDetailsModal', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
     const form = screen.getByRole('dialog', { name: /Edit this event/ });
 
-    /* Not a dropdown: the trigger opens the same picker sheet every other
-       food field walks. One food in the library, so the ladder goes out
-       flat and the row is one tap away. */
+    /* Not a dropdown: the trigger walks the same browse ladder every other
+       food field walks, as levels of this same drawer — no second sheet
+       opens over it. One food in the library, so the ladder goes out flat
+       and the row is one tap away. */
     await user.click(within(form).getByRole('button', { name: 'Food' }));
-    const picker = screen.getByRole('dialog', { name: 'Food' });
-    const foodRow = within(picker)
+    assert.equal(screen.getAllByRole('dialog').length, 1);
+    const foodRow = within(form)
       .getAllByRole('button')
       .find((row) => /Salmon pouch/.test(row.textContent ?? ''));
     assert.ok(foodRow);

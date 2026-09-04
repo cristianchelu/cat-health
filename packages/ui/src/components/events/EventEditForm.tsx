@@ -45,7 +45,12 @@ import {
   causeLabelKey,
 } from '@/lib/eventAttribution';
 import { intakeFoodType } from '@/components/food-picker/foodGroups';
-import { FoodPickerSheet } from '@/components/food-picker/FoodPickerSheet';
+import { FoodBrowsePage } from '@/components/food-picker/FoodBrowsePage';
+import {
+  browseStepKey,
+  buildFoodBrowseTree,
+  type BrowseStep,
+} from '@/components/food-picker/foodLadder';
 import {
   gramsToKgInput,
   MAX_WEIGHT_G,
@@ -175,16 +180,22 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
   const [error, setError] = React.useState<string | null>(null);
   /* Which picker level the drawer is showing, or the form itself. */
   const [picker, setPicker] = React.useState<'cat' | 'type' | null>(null);
-  /* The food ladder is a sheet of its own, not a level of this drawer. */
-  const [foodPickerOpen, setFoodPickerOpen] = React.useState(false);
+  /* The food ladder's rungs, while the drawer is inside it; empty otherwise.
+     A stack rather than a flag because the ladder is the one picker here with
+     more than one level to be on. */
+  const [foodStack, setFoodStack] = React.useState<BrowseStep[]>([]);
 
   React.useEffect(() => {
     registerBack?.(() => {
+      if (foodStack.length > 0) {
+        setFoodStack((prev) => prev.slice(0, -1));
+        return true;
+      }
       if (!picker) return false;
       setPicker(null);
       return true;
     });
-  }, [picker, registerBack]);
+  }, [picker, foodStack.length, registerBack]);
 
   const isBusy = isPatching || isSavingWeight;
   const weightChanged = isLitterbox && weightKg !== baselineWeight;
@@ -367,11 +378,20 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
       ? foods?.find((food) => food.id === foodId)
       : undefined;
 
+  const foodTree = React.useMemo(
+    () => buildFoodBrowseTree(foods ?? []),
+    [foods],
+  );
+  const foodStep = foodStack.length
+    ? foodStack[foodStack.length - 1]
+    : undefined;
+
   /*
-   * The flat pickers take over the drawer rather than opening one of their
-   * own. The food field is deliberately not among them: its library is the
-   * browse ladder, and the ladder already has a surface — the same
-   * `FoodPickerSheet` every other food field opens.
+   * Every picker takes over the drawer rather than opening a sheet of its
+   * own. Two sheets stacked at two heights is the shape this replaced; here
+   * the drawer stays put and only its contents change. The flat pickers are
+   * a `SelectPage` each; the food field walks its browse ladder the same way,
+   * one `FoodBrowsePage` per rung.
    */
   const pickerLevel =
     picker === 'cat'
@@ -395,8 +415,29 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
 
   return (
     <div className="event-edit-form">
-      <SheetPages page={picker ?? 'form'} depth={picker ? 1 : 0}>
-        {pickerLevel ? (
+      <SheetPages
+        page={picker ?? (foodStep ? `food:${browseStepKey(foodStep)}` : 'form')}
+        depth={picker ? 1 : foodStack.length}
+      >
+        {foodStep ? (
+          <FoodBrowsePage
+            step={foodStep}
+            tree={foodTree}
+            foods={foods ?? []}
+            title={t('event_details.edit_food_label')}
+            selectedFoodId={foodId}
+            onPush={(next) => setFoodStack((prev) => [...prev, next])}
+            onBack={() => setFoodStack((prev) => prev.slice(0, -1))}
+            onPick={(next) => {
+              setFoodId(next);
+              /* Chosen, so all the way out — the rungs in between were the
+                 way to the answer, not places to return through. */
+              setFoodStack([]);
+            }}
+            noneLabel={t('event_details.edit_food_not_linked')}
+            noneHint={t('event_details.edit_food_not_linked_hint')}
+          />
+        ) : pickerLevel ? (
           <SelectPage
             title={pickerLevel.title}
             options={pickerLevel.options}
@@ -432,8 +473,8 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
 
               {isFood && (
                 <FormField label={t('event_details.edit_food_label')}>
-                  {/* Not a dropdown: the library is the browse ladder, and the
-                      ladder lives on its own sheet. The trigger keeps the
+                  {/* Not a dropdown: the library is the browse ladder, walked
+                      as levels of this same drawer. The trigger keeps the
                       select's shape so the form row reads like its peers. */}
                   <SelectTriggerButton
                     label={t('event_details.edit_food_label')}
@@ -442,7 +483,7 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
                       t('event_details.edit_food_not_linked')
                     }
                     disabled={isBusy}
-                    onClick={() => setFoodPickerOpen(true)}
+                    onClick={() => setFoodStack([{ kind: 'root' }])}
                   />
                 </FormField>
               )}
@@ -639,25 +680,6 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
           </div>
         )}
       </SheetPages>
-
-      {/* The same ladder every food field walks, on the sheet it owns —
-          stacked over this drawer rather than folded into it, so the two
-          surfaces cannot drift apart. */}
-      {isFood && (
-        <FoodPickerSheet
-          open={foodPickerOpen}
-          onOpenChange={setFoodPickerOpen}
-          title={t('event_details.edit_food_label')}
-          foods={foods ?? []}
-          selectedFoodId={foodId}
-          noneLabel={t('event_details.edit_food_not_linked')}
-          noneHint={t('event_details.edit_food_not_linked_hint')}
-          onPick={(next) => {
-            setFoodId(next);
-            setFoodPickerOpen(false);
-          }}
-        />
-      )}
     </div>
   );
 };

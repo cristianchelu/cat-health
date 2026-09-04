@@ -7,11 +7,9 @@ import { PickerRow } from '@/components/ui/PickerRow';
 import {
   browseStepKey,
   buildFoodBrowseTree,
-  findBrand,
-  findGroup,
   type BrowseStep,
-  NO_BRAND,
 } from './foodLadder';
+import { foodBrowseHeading } from './foodBrowseHeader';
 import './FoodPickerSheet.css';
 
 interface FoodPickerSheetProps {
@@ -70,24 +68,7 @@ const FoodPickerSheet: React.FC<FoodPickerSheetProps> = ({
 
   const follow = (next: BrowseStep) => setStack((prev) => [...prev, next]);
 
-  const header = (() => {
-    if (step.kind === 'brands') {
-      const node = findGroup(tree, step.group);
-      return {
-        heading: t(`food_picker.group_${step.group}`),
-        sub: t('food_picker.food_count', { count: node?.foodCount ?? 0 }),
-      };
-    }
-    if (step.kind === 'foods') {
-      const node = findBrand(tree, step.group, step.brand);
-      return {
-        heading:
-          step.brand === NO_BRAND ? t('food_picker.no_brand') : step.brand,
-        sub: t('food_picker.food_count', { count: node?.foods.length ?? 0 }),
-      };
-    }
-    return { heading: title, sub: null };
-  })();
+  const header = foodBrowseHeading(step, tree, title, t);
 
   return (
     <PickerSheet

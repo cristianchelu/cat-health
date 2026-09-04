@@ -149,17 +149,33 @@ describe('EventEditForm on a phone', () => {
     );
   });
 
-  it('keeps the food out of the drawer ladder — its ladder has its own sheet', async () => {
+  it('walks the food ladder as levels of the same surface', async () => {
     act(() => {
       setMediaMatches(MOBILE_QUERY, true);
     });
+    const user = userEvent.setup();
     await renderPhoneEditForm(MICROCHIP_MEAL);
 
-    /* A meal with no food row says so rather than showing a blank. The
-       trigger opens `FoodPickerSheet` — the picking itself is exercised at
-       desktop width in the modal's suite, and by that sheet's own tests. */
+    /* A meal with no food row says so rather than showing a blank. */
     const trigger = screen.getByRole('button', { name: 'Food' });
     assert.match(trigger.textContent ?? '', /Not linked/);
-    assert.equal(trigger.getAttribute('aria-haspopup'), 'dialog');
+
+    await user.click(trigger);
+
+    /* The ladder replaced the form — no second sheet opened over it. One
+       food in the library, so the root goes out flat: Not linked on top,
+       the food a tap away. */
+    assert.equal(screen.getAllByRole('dialog').length, 1);
+    assert.equal(screen.queryByRole('button', { name: /^Save/ }), null);
+    const foodRow = screen
+      .getAllByRole('button')
+      .find((row) => /Salmon pouch/.test(row.textContent ?? ''));
+    assert.ok(foodRow);
+    await user.click(foodRow!);
+
+    assert.match(
+      screen.getByRole('button', { name: 'Food' }).textContent ?? '',
+      /Salmon pouch/,
+    );
   });
 });

@@ -14,10 +14,11 @@
   flex-direction: column;
   min-height: 0;
 
-  /* `SelectPage` backs out of a padded host by --space-lg; its host is now the
-     sibling page rather than this frame, and the negative margin would poke
-     outside the box the slide clips against. */
-  .select-page {
+  /* `SelectPage` and `FoodBrowsePage` back out of a padded host by --space-lg;
+     their host is now the sibling page rather than this frame, and the
+     negative margin would poke outside the box the slide clips against. */
+  .select-page,
+  .food-browse-page {
     margin: 0;
   }
 
