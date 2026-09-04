@@ -173,8 +173,9 @@ export async function reconcileFoodIntakeDerived(options: {
     if (computed && Object.keys(computed).length > 0) {
       next = { ...linked, nutrients: computed };
     } else if (linked.nutrients != null && data.amount === 0) {
-      const { nutrients: _dropped, ...rest } = linked;
-      next = rest;
+      const dropped = { ...linked };
+      delete dropped.nutrients;
+      next = dropped;
     } else if (
       linked.nutrients != null &&
       previousAmount != null &&
