@@ -112,14 +112,14 @@ const CameraTab: React.FC<CameraTabProps> = ({ device, onDirtyChange }) => {
       options.push({
         id: device.id,
         name: t('camera_link.integrated_camera'),
-        thumbnailUrl: `api/devices/${device.id}/snapshot`,
+        thumbnailUrl: `api/devices/${device.id}/thumbnail`,
       });
     }
     for (const camera of otherCameras) {
       options.push({
         id: camera.id,
         name: camera.name,
-        thumbnailUrl: `api/devices/${camera.id}/snapshot`,
+        thumbnailUrl: `api/devices/${camera.id}/thumbnail`,
       });
     }
     return options;

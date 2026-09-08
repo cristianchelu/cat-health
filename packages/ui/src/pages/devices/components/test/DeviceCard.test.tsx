@@ -9,7 +9,7 @@ import {
   type DeviceSignal,
 } from 'shared';
 
-import DeviceCard from '../DeviceCard.tsx';
+import DeviceCard, { type DeviceCardPreview } from '../DeviceCard.tsx';
 import RegionalPreferencesProvider from '@/contexts/RegionalPreferencesProvider';
 import { TooltipProvider } from '@/components/ui/Tooltip';
 import { renderWithProviders } from '@/test/render.tsx';
@@ -83,7 +83,10 @@ function device(overrides: Partial<DeviceListItemDTO> = {}): DeviceListItemDTO {
  * the assertions below readable and catches a `label_key` that stops
  * resolving.
  */
-function renderCard(overrides: Partial<DeviceListItemDTO> = {}) {
+function renderCard(
+  overrides: Partial<DeviceListItemDTO> = {},
+  preview?: DeviceCardPreview,
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
@@ -96,7 +99,7 @@ function renderCard(overrides: Partial<DeviceListItemDTO> = {}) {
         {/* The drawer cells are tooltip triggers, and the app mounts the
             provider once at its root. */}
         <TooltipProvider>
-          <DeviceCard device={device(overrides)} />
+          <DeviceCard device={device(overrides)} preview={preview} />
         </TooltipProvider>
       </RegionalPreferencesProvider>
     </QueryClientProvider>,
@@ -179,5 +182,51 @@ describe('DeviceCard', () => {
        the reading is named twice and that is expected. */
     assert.ok(within(card()).getAllByLabelText('Battery 40%').length > 0);
     assert.ok(within(card()).getAllByLabelText(/^Signal: /).length > 0);
+  });
+
+  it('overlays an atlas cell when a preview is passed', async () => {
+    await renderCard(
+      { camera_link: { camera_id: 9 } },
+      {
+        atlasUrl: 'api/devices/previews/atlas?g=1',
+        atlasWidth: 80,
+        atlasHeight: 80,
+        cellSize: 80,
+        x: 0,
+        y: 0,
+      },
+    );
+
+    assert.ok(card().querySelector('.device-card-tile-preview'));
+  });
+
+  it('places a non-origin atlas cell by grid index', async () => {
+    await renderCard(
+      { camera_link: { camera_id: 9 } },
+      {
+        atlasUrl: 'api/devices/previews/atlas?g=1',
+        atlasWidth: 160,
+        atlasHeight: 160,
+        cellSize: 80,
+        x: 80,
+        y: 80,
+      },
+    );
+
+    const overlay = card().querySelector('.device-card-tile-preview');
+    assert.ok(overlay instanceof HTMLElement);
+    assert.equal(
+      overlay.style.getPropertyValue('--device-card-atlas-col'),
+      '1',
+    );
+    assert.equal(
+      overlay.style.getPropertyValue('--device-card-atlas-row'),
+      '1',
+    );
+  });
+
+  it('keeps the type icon when no preview cell is passed', async () => {
+    await renderCard({ camera_link: { camera_id: 9 } });
+    assert.equal(card().querySelector('.device-card-tile-preview'), null);
   });
 });

@@ -17,12 +17,14 @@ import foodRoutes from './routes/foods.ts';
 import settingsRoutes from './routes/settings.ts';
 import type { DeviceIntegrationContext } from './services/devices/types.ts';
 import type { RecognitionService } from './services/recognition/RecognitionService.ts';
+import type { CameraPreviewService } from './services/devices/cameraPreview/CameraPreviewService.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
     db: Kysely<Database>;
     integrationManager: DeviceIntegrationContext;
     recognitionService: RecognitionService;
+    cameraPreview: CameraPreviewService;
   }
 }
 
@@ -30,6 +32,7 @@ export interface BuildAppOptions {
   db: Kysely<Database>;
   integrationManager?: DeviceIntegrationContext;
   recognitionService?: RecognitionService;
+  cameraPreview?: CameraPreviewService;
   logger?: boolean;
 }
 
@@ -48,6 +51,7 @@ export async function buildApp({
   db,
   integrationManager,
   recognitionService,
+  cameraPreview,
   logger = true,
 }: BuildAppOptions) {
   const fastify = Fastify({
@@ -61,6 +65,9 @@ export async function buildApp({
   }
   if (recognitionService) {
     fastify.decorate('recognitionService', recognitionService);
+  }
+  if (cameraPreview) {
+    fastify.decorate('cameraPreview', cameraPreview);
   }
 
   const corsAllowedOrigins = getCorsAllowedOrigins();

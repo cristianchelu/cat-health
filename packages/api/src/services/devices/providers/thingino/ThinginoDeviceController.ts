@@ -283,6 +283,7 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
     if (this.deviceId !== 0) {
       this.deps.presence.recordActivity(this.deviceId);
     }
+    this.deps.onSnapshotBuffer?.(this.deviceId, buffer);
     return buffer;
   }
 

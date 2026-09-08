@@ -1,7 +1,10 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DeviceListItemDTO, SignalTone } from 'shared';
-import { useDevices } from '@/hooks/queries/deviceQueries';
+import {
+  useDevices,
+  useCameraPreviewAtlas,
+} from '@/hooks/queries/deviceQueries';
 import { useRegionalPreferences } from '@/contexts/RegionalPreferencesProvider';
 import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import {
@@ -15,7 +18,7 @@ import {
   partitionRoster,
   type RosterEmptyReason,
 } from '@/lib/deviceMonitoring';
-import DeviceCard from './components/DeviceCard';
+import DeviceCard, { type DeviceCardPreview } from './components/DeviceCard';
 import './Devices.css';
 
 const ADD_DEVICE_ROUTE = '/settings/devices/new';
@@ -125,6 +128,9 @@ const DeviceGrid: React.FC<{
   hasError: boolean;
 }> = ({ devices, emptyReason, isLoading, hasError }) => {
   const { t } = useTranslation();
+  const { layout, cells, atlasUrl } = useCameraPreviewAtlas(
+    !isLoading && !hasError && devices.length > 0,
+  );
 
   if (isLoading) {
     return <LoadingState message={t('devices.loading')} />;
@@ -149,10 +155,33 @@ const DeviceGrid: React.FC<{
   return (
     <div className="page-devices-grid">
       {devices.map((device) => (
-        <DeviceCard key={device.id} device={device} />
+        <DeviceCard
+          key={device.id}
+          device={device}
+          preview={cardPreview(device.id, atlasUrl, layout, cells)}
+        />
       ))}
     </div>
   );
 };
+
+function cardPreview(
+  deviceId: number,
+  atlasUrl: string | undefined,
+  layout: { width: number; height: number; cell_size: number } | undefined,
+  cells: Map<number, { x: number; y: number }>,
+): DeviceCardPreview | undefined {
+  if (!atlasUrl || !layout) return undefined;
+  const cell = cells.get(deviceId);
+  if (!cell) return undefined;
+  return {
+    atlasUrl,
+    atlasWidth: layout.width,
+    atlasHeight: layout.height,
+    cellSize: layout.cell_size,
+    x: cell.x,
+    y: cell.y,
+  };
+}
 
 export default Devices;

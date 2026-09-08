@@ -13,6 +13,7 @@ import type {
   GetProvidersResponseDTO,
   PutDeviceCameraRequestDTO,
   PatchDeviceCameraRequestDTO,
+  GetDevicePreviewsResponseDTO,
   PutDeviceRecognitionRequestDTO,
   PatchDeviceRecognitionRequestDTO,
   PostDeviceTestIdentifyRequestDTO,
@@ -77,6 +78,12 @@ export async function discoverDevices(accountId: number) {
 
 export async function getDevices() {
   const { data } = await apiClient.get<GetDevicesResponseDTO>('/devices');
+  return data;
+}
+
+export async function getDevicePreviews() {
+  const { data } =
+    await apiClient.get<GetDevicePreviewsResponseDTO>('/devices/previews');
   return data;
 }
 

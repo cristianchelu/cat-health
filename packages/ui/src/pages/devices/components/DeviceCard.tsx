@@ -30,6 +30,16 @@ import './DeviceCard.css';
 interface DeviceCardProps {
   device: DeviceListItemDTO;
   className?: string;
+  preview?: DeviceCardPreview;
+}
+
+export interface DeviceCardPreview {
+  atlasUrl: string;
+  atlasWidth: number;
+  atlasHeight: number;
+  cellSize: number;
+  x: number;
+  y: number;
 }
 
 const STATUS_CLASS: Record<string, string> = {
@@ -47,7 +57,11 @@ const STATUS_CLASS: Record<string, string> = {
  * useful thing that device can currently say without the grid reflowing when
  * that changes.
  */
-const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
+const DeviceCard: React.FC<DeviceCardProps> = ({
+  device,
+  className,
+  preview,
+}) => {
   const { t } = useTranslation();
   const { gauge, meta, drawer, attention, stale } = useDeviceSlots(
     device.signals,
@@ -66,6 +80,12 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, className }) => {
       <div className="device-card-head">
         <span className="device-card-tile">
           {getDeviceIcon(device.type)}
+          {preview ? (
+            <span
+              className="device-card-tile-preview"
+              style={previewStyle(preview)}
+            />
+          ) : null}
           <span
             className={cn(
               'device-card-status',
@@ -304,3 +324,14 @@ const batteryTone = (percent: number) =>
   }).tone;
 
 export default DeviceCard;
+
+function previewStyle(preview: DeviceCardPreview): React.CSSProperties {
+  const { atlasUrl, atlasWidth, atlasHeight, cellSize, x, y } = preview;
+  return {
+    '--device-card-atlas': `url(${JSON.stringify(atlasUrl)})`,
+    '--device-card-atlas-cols': String(atlasWidth / cellSize),
+    '--device-card-atlas-rows': String(atlasHeight / cellSize),
+    '--device-card-atlas-col': String(x / cellSize),
+    '--device-card-atlas-row': String(y / cellSize),
+  } as React.CSSProperties;
+}

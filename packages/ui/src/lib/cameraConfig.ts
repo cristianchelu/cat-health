@@ -11,6 +11,11 @@ export interface CameraConfigDraft {
   fetchDelay: number;
   snapshotIntervalSec: number;
   snapshotFirstFrameDelaySec: number;
+  /**
+   * Idle preview poll interval. The Camera tab does not edit it; it is
+   * copied through so Save cannot clobber an API-set value.
+   */
+  previewIntervalSec?: number;
 }
 
 export type CameraSaveAction =
@@ -88,6 +93,9 @@ export function buildCameraConfig(
           firstFrameDelaySec: draft.snapshotFirstFrameDelaySec,
         }
       : undefined,
+    ...(draft.previewIntervalSec !== undefined
+      ? { previewIntervalSec: draft.previewIntervalSec }
+      : {}),
   };
 }
 
@@ -113,6 +121,9 @@ export function draftFromCameraConfig(
     fetchDelay: config?.fetchDelay ?? 60,
     snapshotIntervalSec: config?.snapshot?.intervalSec ?? 0,
     snapshotFirstFrameDelaySec: config?.snapshot?.firstFrameDelaySec ?? 0,
+    ...(config?.previewIntervalSec !== undefined
+      ? { previewIntervalSec: config.previewIntervalSec }
+      : {}),
   };
 }
 
@@ -193,4 +204,14 @@ export function deviceHasIntegratedCamera(device: {
 }): boolean {
   if (isRecord(device.state) && device.state.hasCamera === true) return true;
   return isRecord(device.config) && device.config.hasCamera === true;
+}
+
+/** A monitoring card can show an atlas cell for a linked or integrated camera. */
+export function deviceHasPreviewSource(device: {
+  camera_link?: { camera_id: number } | null;
+  state?: unknown;
+  config?: unknown;
+}): boolean {
+  if (device.camera_link != null) return true;
+  return deviceHasIntegratedCamera(device);
 }

@@ -51,10 +51,30 @@
       width: var(--space-lg);
       height: var(--space-lg);
     }
+
+    .device-card-tile-preview {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background-repeat: no-repeat;
+      background-image: var(--device-card-atlas);
+      background-size: calc(var(--device-card-atlas-cols) * 100%)
+        calc(var(--device-card-atlas-rows) * 100%);
+      /*
+       * Pixel shift from the tile size, not background-position %. A %
+       * offset is (tile - image) * p, so -100% on a 2-cell sheet moves the
+       * wrong way and the non-origin cells paint empty.
+       */
+      background-position: calc(
+          -1 * var(--device-card-atlas-col) * var(--space-3xl)
+        )
+        calc(-1 * var(--device-card-atlas-row) * var(--space-3xl));
+    }
   }
 
   .device-card-status {
     position: absolute;
+    z-index: 1;
     right: calc(var(--space-3xs) * -1);
     bottom: calc(var(--space-3xs) * -1);
     width: var(--space-sm);

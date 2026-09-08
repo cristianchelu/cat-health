@@ -147,7 +147,9 @@ export class CameraDeviceController implements Camera {
         throw new Error(`Failed to fetch snapshot: ${response.statusText}`);
       }
 
-      return Buffer.from(await response.arrayBuffer());
+      const buffer = Buffer.from(await response.arrayBuffer());
+      this.deps.onSnapshotBuffer?.(this.deviceId, buffer);
+      return buffer;
     } catch (error) {
       console.error(
         `Error fetching snapshot for camera ${this.device.name}:`,

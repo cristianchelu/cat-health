@@ -473,7 +473,10 @@ export class FountainController
       this.requestSnapshotBuffer(),
     );
     this.snapshotCaptureChain = next.catch(() => undefined);
-    return next;
+    return next.then((buffer) => {
+      if (buffer) this.deps.onSnapshotBuffer?.(this.deviceId, buffer);
+      return buffer;
+    });
   }
 
   private requestSnapshotBuffer(): Promise<Buffer | undefined> {

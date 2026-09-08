@@ -17,6 +17,7 @@ import {
   GetProviderRemotePetsResponseSchema,
   ProviderAccountSchema,
   GetProvidersResponseSchema,
+  GetDevicePreviewsResponseSchema,
   PutDeviceCameraRequestSchema,
   PatchDeviceCameraRequestSchema,
   PutDeviceRecognitionRequestSchema,
@@ -39,7 +40,9 @@ import { reidentifyLitterboxVisits } from '../services/litterbox/reidentifyLitte
 import { getDepositsSinceScoop } from '../services/litterbox/depositsSinceScoop.ts';
 import { presenceSignals } from '../services/devices/presenceSignals.ts';
 import type { LiveControllerFailure } from '../services/devices/types.ts';
+import { isCamera } from '../services/devices/types.ts';
 import { isDeviceReachable } from '../services/devices/deviceEnablement.ts';
+import { EMPTY_ATLAS_LAYOUT } from '../services/devices/cameraPreview/composeAtlas.ts';
 
 /** Deposit track length on a device card. */
 const DEPOSIT_PIP_SLOTS = 8;
@@ -759,6 +762,54 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   );
 
   fastify.get(
+    '/previews',
+    {
+      schema: {
+        response: {
+          '200': GetDevicePreviewsResponseSchema,
+        },
+      },
+    },
+    async () => {
+      if (!fastify.hasDecorator('cameraPreview')) {
+        return EMPTY_ATLAS_LAYOUT;
+      }
+      return fastify.cameraPreview.getLayout();
+    },
+  );
+
+  fastify.get(
+    '/previews/atlas',
+    {
+      schema: {
+        querystring: Type.Object({
+          g: Type.Optional(Type.Number()),
+        }),
+      },
+    },
+    async (_request, reply) => {
+      if (!fastify.hasDecorator('cameraPreview')) {
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'No camera preview atlas',
+        });
+      }
+      const atlas = await fastify.cameraPreview.getAtlas();
+      if (!atlas) {
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'No camera preview atlas',
+        });
+      }
+      reply.header('Content-Type', 'image/jpeg');
+      reply.header('Cache-Control', 'private, max-age=2');
+      return atlas.jpeg;
+    },
+  );
+
+  fastify.get(
     '/:id',
     {
       schema: {
@@ -1007,12 +1058,58 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           throw new Error('Failed to capture snapshot');
         }
 
+        if (fastify.hasDecorator('cameraPreview')) {
+          fastify.cameraPreview.remember(id, buffer);
+        }
+
         reply.header('Content-Type', 'image/jpeg');
         reply.header('Cache-Control', 'no-store');
         return buffer;
       }
 
       throw new Error('Device does not support snapshots');
+    },
+  );
+
+  fastify.get(
+    '/:id/thumbnail',
+    {
+      schema: {
+        params: GetDeviceParamsSchema,
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+
+      if (fastify.hasDecorator('cameraPreview')) {
+        const buffer = await fastify.cameraPreview.getThumbnail(id);
+        if (!buffer) {
+          return reply.code(404).send({
+            statusCode: 404,
+            error: 'Not Found',
+            message: `No thumbnail for device ${id}`,
+          });
+        }
+        reply.header('Content-Type', 'image/jpeg');
+        reply.header('Cache-Control', 'private, max-age=2');
+        return buffer;
+      }
+
+      const resolved = await integrationManager.resolveLiveController(id);
+      if (!resolved.ok) {
+        return sendControllerFailure(reply, id, resolved.reason);
+      }
+      const { controller } = resolved;
+      if (!isCamera(controller)) {
+        throw new Error('Device does not support snapshots');
+      }
+      const buffer = await controller.getSnapshotBuffer();
+      if (!buffer) {
+        throw new Error('Failed to capture snapshot');
+      }
+      reply.header('Content-Type', 'image/jpeg');
+      reply.header('Cache-Control', 'no-store');
+      return buffer;
     },
   );
 

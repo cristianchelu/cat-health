@@ -28,6 +28,8 @@ export class IntegrationManager
   private deps: ProviderDeps;
   private mediaManager: MediaManager;
   private readonly presence: DevicePresence;
+  private onSnapshotBuffer?: (deviceId: number, buffer: Buffer) => void;
+  private onSnapshotForget?: (deviceId: number) => void;
 
   constructor(db: Kysely<Database>, eventBus: EventBus) {
     this.mediaManager = new MediaManager(db);
@@ -43,7 +45,23 @@ export class IntegrationManager
       mediaManager: this.mediaManager,
       directory: this,
       presence: this.presence,
+      onSnapshotBuffer: (deviceId, buffer) => {
+        this.onSnapshotBuffer?.(deviceId, buffer);
+      },
     };
+  }
+
+  /**
+   * Preview cache write-through. Live `getSnapshotBuffer` always hits the
+   * camera; this is how a successful fetch also updates the last frame.
+   */
+  bindPreviewCache(cache: {
+    remember: (deviceId: number, jpeg: Buffer) => void;
+    forget: (deviceId: number) => void;
+  }): void {
+    this.onSnapshotBuffer = (deviceId, buffer) =>
+      cache.remember(deviceId, buffer);
+    this.onSnapshotForget = (deviceId) => cache.forget(deviceId);
   }
 
   getPresence(): DevicePresence {
@@ -207,6 +225,7 @@ export class IntegrationManager
 
   /** Teardown cached controller for a device so next use gets fresh config (e.g. after PATCH device). */
   async invalidateDeviceController(deviceId: number): Promise<void> {
+    this.onSnapshotForget?.(deviceId);
     const device = await this.deps.db
       .selectFrom('device')
       .select(['provider_account_id'])

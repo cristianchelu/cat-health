@@ -7,6 +7,7 @@ import {
   cameraConfigEqual,
   clamp01,
   deviceHasIntegratedCamera,
+  deviceHasPreviewSource,
   draftFromCameraConfig,
   draftFromCameraLink,
   hasLinkableCameras,
@@ -228,6 +229,18 @@ describe('buildCameraConfig', () => {
     assert.equal(config.rotate, 180);
     assert.equal(config.fetchDelay, 30);
   });
+
+  it('preserves previewIntervalSec so Camera tab Save cannot clobber idle config', () => {
+    const config = buildCameraConfig(
+      draft({ cameraId: 1, previewIntervalSec: 10 }),
+    );
+    assert.equal(config.previewIntervalSec, 10);
+  });
+
+  it('omits previewIntervalSec when the draft has none, so omitted stays the 2s poll default', () => {
+    const config = buildCameraConfig(draft({ cameraId: 1 }));
+    assert.equal(config.previewIntervalSec, undefined);
+  });
 });
 
 describe('toggleAcquisitionType', () => {
@@ -277,6 +290,7 @@ describe('draftFromCameraConfig', () => {
       acquisitionTypes: ['recording'],
       fetchDelay: 15,
       snapshot: { intervalSec: 3, firstFrameDelaySec: 1 },
+      previewIntervalSec: 0,
     };
     assert.deepEqual(
       draftFromCameraConfig(config),
@@ -287,6 +301,7 @@ describe('draftFromCameraConfig', () => {
         fetchDelay: 15,
         snapshotIntervalSec: 3,
         snapshotFirstFrameDelaySec: 1,
+        previewIntervalSec: 0,
       }),
     );
   });
@@ -496,6 +511,35 @@ describe('deviceHasIntegratedCamera', () => {
     assert.equal(
       deviceHasIntegratedCamera({
         state: { waterLevel: 0 },
+        config: { host: '192.168.1.10' },
+      }),
+      false,
+    );
+  });
+});
+
+describe('deviceHasPreviewSource', () => {
+  it('is true when a camera is linked', () => {
+    assert.equal(
+      deviceHasPreviewSource({ camera_link: { camera_id: 9 } }),
+      true,
+    );
+  });
+
+  it('is true for an integrated camera with no link row', () => {
+    assert.equal(
+      deviceHasPreviewSource({
+        camera_link: null,
+        config: { hasCamera: true },
+      }),
+      true,
+    );
+  });
+
+  it('is false when there is no camera at all', () => {
+    assert.equal(
+      deviceHasPreviewSource({
+        camera_link: null,
         config: { host: '192.168.1.10' },
       }),
       false,

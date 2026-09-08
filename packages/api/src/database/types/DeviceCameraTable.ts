@@ -16,6 +16,11 @@ export interface DeviceCameraConfig {
   acquisitionTypes?: string[];
   /** Snapshot capture options; timelapse when intervalSec > 0. */
   snapshot?: DeviceCameraSnapshotConfig;
+  /**
+   * Seconds between idle last-frame polls for this watching device.
+   * Omit for 2s; 0 means do not poll.
+   */
+  previewIntervalSec?: number;
 }
 
 export interface DeviceCameraTable {

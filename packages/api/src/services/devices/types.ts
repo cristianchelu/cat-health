@@ -62,6 +62,11 @@ export interface ProviderDeps {
   presence: DevicePresence;
   // scheduler: Scheduler; // Not implemented yet, skipping for now
   logger: Console; // Using console for now
+  /**
+   * Write-through for a successful live snapshot. Preview cache peeks this;
+   * getSnapshotBuffer itself always hits the camera.
+   */
+  onSnapshotBuffer?: (deviceId: number, buffer: Buffer) => void;
 }
 
 export interface DeviceController {

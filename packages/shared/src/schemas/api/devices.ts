@@ -162,6 +162,11 @@ export const DeviceCameraConfigSchema = Type.Object({
   fetchDelay: Type.Optional(Type.Number()),
   /** Snapshot capture options; timelapse when intervalSec > 0. */
   snapshot: Type.Optional(DeviceCameraSnapshotConfigSchema),
+  /**
+   * Seconds between idle last-frame polls for this watching device.
+   * Omit for 2s; 0 means do not poll.
+   */
+  previewIntervalSec: Type.Optional(Type.Number()),
 });
 export type DeviceCameraConfigDTO = Static<typeof DeviceCameraConfigSchema>;
 
@@ -258,6 +263,27 @@ export type DeviceListItemDTO = Static<typeof DeviceListItemSchema>;
 
 export const GetDevicesResponseSchema = Type.Array(DeviceListItemSchema);
 export type GetDevicesResponseDTO = Static<typeof GetDevicesResponseSchema>;
+
+export const DevicePreviewLayoutCellSchema = Type.Object({
+  id: Type.Number(),
+  x: Type.Number(),
+  y: Type.Number(),
+});
+export type DevicePreviewLayoutCellDTO = Static<
+  typeof DevicePreviewLayoutCellSchema
+>;
+
+export const GetDevicePreviewsResponseSchema = Type.Object({
+  generation: Type.Number(),
+  cell_size: Type.Number(),
+  columns: Type.Number(),
+  width: Type.Number(),
+  height: Type.Number(),
+  devices: Type.Array(DevicePreviewLayoutCellSchema),
+});
+export type GetDevicePreviewsResponseDTO = Static<
+  typeof GetDevicePreviewsResponseSchema
+>;
 
 export const PostDeviceRequestSchema = Type.Object({
   provider_account_id: Type.Number(),

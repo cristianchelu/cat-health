@@ -3,6 +3,7 @@ import {
   getDeviceEvents,
   getDeviceAnnotationEvents,
   getDevices,
+  getDevicePreviews,
   getProviders,
   getProviderAccounts,
   getProviderAccount,
@@ -20,6 +21,7 @@ import {
   unlinkDeviceRecognition,
 } from '@/api/devices';
 import { deleteEvent, updateEvent } from '@/api/pets';
+import * as React from 'react';
 import {
   useMutation,
   useQuery,
@@ -43,6 +45,104 @@ export function useDevices() {
   return useQuery({
     queryKey: ['devices'],
     queryFn: () => getDevices(),
+  });
+}
+
+/**
+ * Layout + atlas URL for device-card sprites. Polling the layout does not
+ * start camera fetches — the idle poller already does that.
+ *
+ * The CSS background is swapped only after the next atlas has decoded, so
+ * a generation bump does not flash empty tiles for a few frames.
+ */
+export function useCameraPreviewAtlas(enabled: boolean) {
+  const { data: layout } = useQuery({
+    queryKey: ['devicePreviews'],
+    queryFn: getDevicePreviews,
+    enabled,
+    refetchInterval: 1000,
+    placeholderData: keepPreviousData,
+  });
+
+  const [sheet, setSheet] = React.useState<PreviewAtlasSheet | undefined>();
+  const sheetRef = React.useRef(sheet);
+  sheetRef.current = sheet;
+  const layoutRef = React.useRef(layout);
+  layoutRef.current = layout;
+
+  React.useEffect(() => {
+    const nextLayout = layoutRef.current;
+    if (!enabled || !nextLayout) return;
+    if (nextLayout.devices.length === 0) {
+      sheetRef.current = undefined;
+      setSheet(undefined);
+      return;
+    }
+    if (sheetRef.current?.generation === nextLayout.generation) return;
+
+    const atlasUrl = previewAtlasUrl(nextLayout.generation);
+    let cancelled = false;
+    void decodePreviewAtlas(atlasUrl).then(
+      () => {
+        if (cancelled) return;
+        const next: PreviewAtlasSheet = {
+          generation: nextLayout.generation,
+          atlasUrl,
+          width: nextLayout.width,
+          height: nextLayout.height,
+          cell_size: nextLayout.cell_size,
+          devices: nextLayout.devices,
+        };
+        sheetRef.current = next;
+        setSheet(next);
+      },
+      () => {
+        /* Keep the last good sheet; a failed fetch must not blank the tiles. */
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, layout?.generation]);
+
+  const cells = React.useMemo(() => {
+    const map = new Map<number, { x: number; y: number }>();
+    for (const cell of sheet?.devices ?? []) {
+      map.set(cell.id, { x: cell.x, y: cell.y });
+    }
+    return map;
+  }, [sheet]);
+
+  return {
+    layout: sheet,
+    cells,
+    atlasUrl: sheet?.atlasUrl,
+  };
+}
+
+type PreviewAtlasSheet = {
+  generation: number;
+  atlasUrl: string;
+  width: number;
+  height: number;
+  cell_size: number;
+  devices: { id: number; x: number; y: number }[];
+};
+
+function previewAtlasUrl(generation: number): string {
+  return `api/devices/previews/atlas?g=${generation}`;
+}
+
+function decodePreviewAtlas(url: string): Promise<void> {
+  const img = new Image();
+  img.src = url;
+  if (typeof img.decode === 'function') {
+    return img.decode().then(() => undefined);
+  }
+  return new Promise((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error('Failed to load preview atlas'));
   });
 }
 
