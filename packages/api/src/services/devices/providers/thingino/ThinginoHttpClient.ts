@@ -5,6 +5,14 @@ import { Readable } from 'node:stream';
 const REQUEST_TIMEOUT_MS = 12_000;
 const DOWNLOAD_TIMEOUT_MS = 90_000;
 
+type RequestOptions = {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  extraQuery?: Record<string, string>;
+  timeoutMs?: number;
+};
+
 export class ThinginoHttpError extends Error {
   readonly status: number;
 
@@ -34,7 +42,7 @@ export class ThinginoHttpClient {
   ): Promise<unknown> {
     const response = await this.request(path, { extraQuery, timeoutMs });
     const text = await response.text();
-    if (isEmptyCgiChunk(text)) {
+    if (!text.trim() || isEmptyCgiChunk(text)) {
       const retry = await this.request(path, { extraQuery, timeoutMs });
       return parseJsonBody(retry);
     }
@@ -73,13 +81,7 @@ export class ThinginoHttpClient {
 
   private request(
     path: string,
-    options: {
-      method?: string;
-      headers?: Record<string, string>;
-      body?: string;
-      extraQuery?: Record<string, string>;
-      timeoutMs?: number;
-    } = {},
+    options: RequestOptions = {},
   ): Promise<Response> {
     const run = this.queue.then(
       () => this.send(path, options),
@@ -92,16 +94,7 @@ export class ThinginoHttpClient {
     return run;
   }
 
-  private async send(
-    path: string,
-    options: {
-      method?: string;
-      headers?: Record<string, string>;
-      body?: string;
-      extraQuery?: Record<string, string>;
-      timeoutMs?: number;
-    },
-  ): Promise<Response> {
+  private async send(path: string, options: RequestOptions): Promise<Response> {
     const url = this.buildUrl(path, options.extraQuery);
     const controller = new AbortController();
     const timer = setTimeout(
@@ -201,33 +194,43 @@ async function parseJsonBody(response: Response): Promise<unknown> {
 
 /** Where a JSON value starts, once the CGI framing around it is skipped. */
 const JSON_START = /[{[]/;
+const CRLF = Buffer.from('\r\n');
 
 function isEmptyCgiChunk(text: string): boolean {
   const trimmed = text.trim();
-  return (
+  if (
     /transfer-encoding:\s*chunked/i.test(trimmed) &&
     trimmed.search(JSON_START) < 0 &&
     !/unsupported setting path/.test(trimmed)
-  );
+  ) {
+    return true;
+  }
+  const decoded = decodeCgiFramedBody(trimmed);
+  return decoded !== trimmed && decoded.trim() === '';
 }
 
-/** Thingino CGI can prefix JSON with a second HTTP header block and chunk sizes. */
+/**
+ * Thingino CGI can prefix JSON with a second HTTP header block and
+ * `Transfer-Encoding: chunked` sizes in the body. Large payloads split
+ * mid-object (`1000\\r\\n{…}\\r\\n4F3\\r\\n…`).
+ */
 export function parseCameraJson(text: string): unknown {
   const trimmed = text.trim();
   if (!trimmed) return null;
+  const decoded = decodeCgiFramedBody(trimmed).trim() || trimmed;
   try {
-    return JSON.parse(trimmed) as unknown;
+    return JSON.parse(decoded) as unknown;
   } catch {
-    /* try to recover a JSON value from a CGI-framed body */
+    /* try to recover a JSON value from leftover CGI framing */
   }
-  const unsupported = trimmed.match(/unsupported setting path:[^\r\n]*/);
+  const unsupported = decoded.match(/unsupported setting path:[^\r\n]*/);
   if (unsupported) return unsupported[0];
-  const start = trimmed.search(JSON_START);
+  const start = decoded.search(JSON_START);
   if (start < 0) {
     if (/transfer-encoding:\s*chunked/i.test(trimmed)) return null;
     throw new Error('Camera returned non-JSON');
   }
-  const slice = trimmed.slice(start);
+  const slice = decoded.slice(start);
   try {
     return JSON.parse(slice) as unknown;
   } catch {
@@ -237,6 +240,40 @@ export function parseCameraJson(text: string): unknown {
     }
     throw new Error('Camera returned non-JSON');
   }
+}
+
+function decodeCgiFramedBody(text: string): string {
+  if (!/transfer-encoding:\s*chunked/i.test(text)) return text;
+  const headerEnd = text.search(/\r\n\r\n/);
+  const body = headerEnd >= 0 ? text.slice(headerEnd + 4) : text;
+  const decoded = decodeChunkedBody(body);
+  return decoded === null ? text : decoded;
+}
+
+/**
+ * Chunk sizes count octets, not UTF-16 code units, so this walks a Buffer --
+ * one non-ASCII byte in a split payload would otherwise desync every later
+ * size and hand back a silently truncated object.
+ */
+function decodeChunkedBody(body: string): string | null {
+  let rest = Buffer.from(body, 'utf8');
+  const parts: Buffer[] = [];
+  const done = () =>
+    parts.length === 0 ? null : Buffer.concat(parts).toString('utf8');
+  while (rest.length > 0) {
+    const lineEnd = rest.indexOf(CRLF);
+    if (lineEnd < 0) return done();
+    const sizeToken = rest.subarray(0, lineEnd).toString('utf8').trim();
+    const size = parseInt(sizeToken.split(';', 1)[0], 16);
+    if (!/^[0-9a-fA-F]+/.test(sizeToken) || Number.isNaN(size)) return done();
+    rest = rest.subarray(lineEnd + 2);
+    if (size === 0) return Buffer.concat(parts).toString('utf8');
+    if (rest.length < size) return done();
+    parts.push(rest.subarray(0, size));
+    rest = rest.subarray(size);
+    if (rest.subarray(0, 2).equals(CRLF)) rest = rest.subarray(2);
+  }
+  return done();
 }
 
 function redactToken(message: string, token: string): string {

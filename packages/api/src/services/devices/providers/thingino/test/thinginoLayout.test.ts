@@ -2,38 +2,26 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  ThinginoLayoutError,
-  assertDefaultRecordingLayout,
   clipsRoot,
   dayDirectories,
+  defaultClipDuration,
   filesOverlappingWindow,
-  hourDirectories,
-  isDefaultRecordingLayout,
   joinListedFile,
-  recordsRoot,
+  raptorDayDirectories,
+  raptorRecordRoot,
+  recordingLayoutKind,
 } from '../thinginoLayout.ts';
 
 describe('thinginoLayout', () => {
-  it('accepts the default prudynt filename and device_path', () => {
+  it('accepts the Prudynt factory filename when device_path is unset', () => {
+    assert.equal(recordingLayoutKind('%Y/%m/%d/%H-%M-%S', null), 'prudynt-day');
     assert.equal(
-      isDefaultRecordingLayout('%Y%m%dT%H%M%S.mp4', '%hostname/records'),
-      true,
-    );
-    assert.equal(
-      isDefaultRecordingLayout('%Y%m%d/%H/%Y%m%dT%H%M%S', 'records'),
-      true,
+      recordingLayoutKind('%Y/%m/%d/%H-%M-%S', '%hostname'),
+      'prudynt-day',
     );
   });
 
-  it('accepts Ciao factory filename when device_path is unset', () => {
-    assert.equal(isDefaultRecordingLayout('%Y/%m/%d/%H-%M-%S', null), true);
-    assert.equal(
-      isDefaultRecordingLayout('%Y/%m/%d/%H-%M-%S', '%hostname'),
-      true,
-    );
-  });
-
-  it('lists Ciao day directories that overlap the visit window', () => {
+  it('lists Prudynt day directories that overlap the visit window', () => {
     const root = clipsRoot('/mnt/mmcblk0p1', 'littercam');
     const start = new Date(2026, 6, 18, 23, 50, 0);
     const end = new Date(2026, 6, 19, 0, 10, 0);
@@ -43,7 +31,7 @@ describe('thinginoLayout', () => {
     ]);
   });
 
-  it('selects Ciao clip names that overlap the visit', () => {
+  it('selects Prudynt clip names that overlap the visit', () => {
     const files = [
       '/mnt/mmcblk0p1/littercam/2026/07/18/17-22-39.mp4',
       '/mnt/mmcblk0p1/littercam/2026/07/18/readme.txt',
@@ -57,40 +45,123 @@ describe('thinginoLayout', () => {
   });
 
   it('fails closed on a custom recording path', () => {
-    assert.throws(
-      () => assertDefaultRecordingLayout('%f', '/custom'),
-      ThinginoLayoutError,
+    assert.equal(recordingLayoutKind('%f', '/custom'), null);
+    // An absolute device_path is only a record root on a Raptor image; on any
+    // other backend it is the custom path we refuse to guess at.
+    assert.equal(recordingLayoutKind(null, '/mnt/mmcblk0p1/elsewhere'), null);
+    assert.equal(
+      recordingLayoutKind(null, '/mnt/mmcblk0p1/elsewhere', 'prudynt'),
+      null,
     );
   });
 
-  it('lists only hour directories that overlap the visit window', () => {
-    const root = recordsRoot('/mnt/mmcblk0p1', 'littercam');
-    const start = new Date(2026, 5, 11, 1, 50, 0);
-    const end = new Date(2026, 5, 11, 2, 10, 0);
-    assert.deepEqual(hourDirectories(root, start, end, 60), [
-      '/mnt/mmcblk0p1/littercam/records/20260611/01',
-      '/mnt/mmcblk0p1/littercam/records/20260611/02',
-    ]);
-  });
-
-  it('selects default basenames that overlap the visit', () => {
-    const files = [
-      '/mnt/mmcblk0p1/littercam/records/20260611/01/20260611T014830.mp4',
-      '/mnt/mmcblk0p1/littercam/records/20260611/01/readme.txt',
-      '/mnt/mmcblk0p1/littercam/records/20260611/02/20260611T020000.mp4',
-    ];
-    const start = new Date(2026, 5, 11, 1, 50, 0);
-    const end = new Date(2026, 5, 11, 1, 55, 0);
-    assert.deepEqual(filesOverlappingWindow(files, start, end, 60, 60), [
-      '/mnt/mmcblk0p1/littercam/records/20260611/01/20260611T014830.mp4',
-    ]);
+  it('rejects the retired records/YYYYMMDD/HH tree', () => {
+    assert.equal(
+      recordingLayoutKind('%Y%m%dT%H%M%S.mp4', '%hostname/records'),
+      null,
+    );
+    assert.deepEqual(
+      filesOverlappingWindow(
+        ['/mnt/mmcblk0p1/littercam/records/20260611/01/20260611T014830.mp4'],
+        new Date(2026, 5, 11, 1, 50, 0),
+        new Date(2026, 5, 11, 1, 55, 0),
+        60,
+        60,
+        'prudynt-day',
+      ),
+      [],
+    );
   });
 
   it('joins relative file-manager names onto the listed directory', () => {
     assert.equal(
-      joinListedFile('/mnt/mmcblk0p1/littercam/records/20260611/01', 'a.mp4'),
-      '/mnt/mmcblk0p1/littercam/records/20260611/01/a.mp4',
+      joinListedFile('/mnt/mmcblk0p1/littercam/2026/06/11', 'a.mp4'),
+      '/mnt/mmcblk0p1/littercam/2026/06/11/a.mp4',
     );
     assert.equal(joinListedFile('/dir', '/absolute/a.mp4'), '/absolute/a.mp4');
+  });
+
+  it('accepts a Raptor absolute record root from the agent backend name', () => {
+    assert.equal(
+      recordingLayoutKind(null, '/mnt/mmcblk0p1/raptor', 'raptor'),
+      'raptor-day',
+    );
+    assert.equal(
+      recordingLayoutKind('', '/mnt/mmcblk0p1/raptor/', 'Raptor'),
+      'raptor-day',
+    );
+    // Raptor spelling out its own strftime template is still the default tree.
+    assert.equal(
+      recordingLayoutKind(
+        '%Y-%m-%d/%H-%M-%S',
+        '/mnt/mmcblk0p1/raptor',
+        'raptor',
+      ),
+      'raptor-day',
+    );
+    assert.equal(recordingLayoutKind(null, 'raptor', 'raptor'), null);
+  });
+
+  it('lists Raptor day directories that overlap the visit window', () => {
+    const root = raptorRecordRoot('/mnt/mmcblk0p1/raptor/');
+    const start = new Date(2026, 8, 7, 23, 50, 0);
+    const end = new Date(2026, 8, 8, 0, 10, 0);
+    assert.deepEqual(raptorDayDirectories(root, start, end, 60), [
+      '/mnt/mmcblk0p1/raptor/2026-09-07',
+      '/mnt/mmcblk0p1/raptor/2026-09-08',
+    ]);
+  });
+
+  it('selects Raptor segments using the 5-minute default, not clip_length_sec', () => {
+    const files = [
+      '/mnt/mmcblk0p1/raptor/2026-09-07/17-00-00.mp4',
+      '/mnt/mmcblk0p1/raptor/2026-09-07/17-05-00.mp4',
+    ];
+    const start = new Date(2026, 8, 7, 17, 3, 0);
+    const end = new Date(2026, 8, 7, 17, 4, 0);
+    assert.deepEqual(
+      filesOverlappingWindow(files, start, end, 60, 60, 'raptor-day'),
+      [],
+    );
+    assert.deepEqual(
+      filesOverlappingWindow(
+        files,
+        start,
+        end,
+        defaultClipDuration('raptor-day', 60),
+        60,
+        'raptor-day',
+      ),
+      ['/mnt/mmcblk0p1/raptor/2026-09-07/17-00-00.mp4'],
+    );
+  });
+
+  it('infers Raptor segment length from the next filename', () => {
+    const files = [
+      '/mnt/mmcblk0p1/raptor/2026-09-07/17-00-00.mp4',
+      '/mnt/mmcblk0p1/raptor/2026-09-07/17-10-00.mp4',
+    ];
+    const start = new Date(2026, 8, 7, 17, 8, 0);
+    const end = new Date(2026, 8, 7, 17, 9, 0);
+    assert.deepEqual(
+      filesOverlappingWindow(files, start, end, 300, 60, 'raptor-day'),
+      ['/mnt/mmcblk0p1/raptor/2026-09-07/17-00-00.mp4'],
+    );
+  });
+
+  it('never stretches a Prudynt clip to reach the next one', () => {
+    // A really ends at 17:01:00. Stretching it to B's 17:01:50 start would make
+    // it files[0] and shift processVideo's -ss offset onto a clip that is not
+    // in the window at all.
+    const files = [
+      '/mnt/mmcblk0p1/littercam/2026/09/07/17-00-00.mp4',
+      '/mnt/mmcblk0p1/littercam/2026/09/07/17-01-50.mp4',
+    ];
+    const start = new Date(2026, 8, 7, 17, 2, 0);
+    const end = new Date(2026, 8, 7, 17, 2, 30);
+    assert.deepEqual(
+      filesOverlappingWindow(files, start, end, 60, 60, 'prudynt-day'),
+      ['/mnt/mmcblk0p1/littercam/2026/09/07/17-01-50.mp4'],
+    );
   });
 });

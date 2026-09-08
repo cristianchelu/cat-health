@@ -32,16 +32,16 @@ import {
 } from './ThinginoHttpClient.ts';
 import {
   BUFFER_SECONDS,
-  DEFAULT_CLIP_DURATION_SECONDS,
-  assertDefaultRecordingLayout,
+  ThinginoLayoutError,
   clipsRoot,
   dayDirectories,
+  defaultClipDuration,
   filenameToEpoch,
   filesOverlappingWindow,
-  hourDirectories,
   joinListedFile,
+  raptorDayDirectories,
   recordingLayoutKind,
-  recordsRoot,
+  type RecordingLayoutKind,
 } from './thinginoLayout.ts';
 
 export const ThinginoConfigSchema = Type.Object(
@@ -55,7 +55,7 @@ export type ThinginoConfig = Static<typeof ThinginoConfigSchema>;
 
 const FILE_MANAGER_PATH = '/x/tool-file-manager.cgi';
 const RECORD_TOOL_PATH = '/x/tool-record.cgi';
-const SNAPSHOT_PATH = '/x/ch0.jpg';
+const SNAPSHOT_PATHS = ['/x/ch0.jpg', '/x/dl0.jpg'] as const;
 /** Agent CGI takes ~1s; `/health` is ~3s and shells out. `/device` is identity JSON. */
 const HEARTBEAT_INTERVAL_MS = 10_000;
 const HEARTBEAT_TIMEOUT_MS = 4_000;
@@ -72,6 +72,7 @@ interface CachedStorage {
 
 interface RuntimeRecording {
   active: boolean;
+  autostart: boolean;
 }
 
 interface RecordingLayout {
@@ -81,6 +82,8 @@ interface RecordingLayout {
   devicePath: string | null;
   durationSeconds: number | null;
   autostart: boolean;
+  /** Agent `backend.name`; null when only the record-tool fallback answered. */
+  backendName: string | null;
 }
 
 export class ThinginoDeviceController implements Camera, RecordingSource {
@@ -105,12 +108,8 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
       device.config,
       'Thingino configuration',
     );
-    this.client =
-      client ??
-      new ThinginoHttpClient(
-        this.config.origin.replace(/\/+$/, ''),
-        this.config.token,
-      );
+    const origin = this.config.origin.replace(/\/+$/, '');
+    this.client = client ?? new ThinginoHttpClient(origin, this.config.token);
   }
 
   async connect(): Promise<void> {
@@ -273,7 +272,7 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
   }
 
   async getSnapshotBuffer(): Promise<Buffer> {
-    const buffer = await this.client.getBuffer(SNAPSHOT_PATH);
+    const buffer = await this.getCgiSnapshotBuffer();
     if (!isJpegBuffer(buffer)) {
       throw new Error('Camera snapshot was empty');
     }
@@ -282,6 +281,27 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
       this.deps.presence.recordActivity(this.deviceId);
     }
     return buffer;
+  }
+
+  private async getCgiSnapshotBuffer(): Promise<Buffer> {
+    let lastError: Error | null = null;
+    for (const snapshotPath of SNAPSHOT_PATHS) {
+      try {
+        const buffer = await this.client.getBuffer(snapshotPath);
+        if (isJpegBuffer(buffer)) return buffer;
+        lastError = new Error('Camera snapshot was empty');
+      } catch (error) {
+        if (
+          error instanceof ThinginoHttpError &&
+          (error.status === 404 || error.status === 503)
+        ) {
+          lastError = error;
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw lastError ?? new Error('Camera snapshot was empty');
   }
 
   async captureSnapshot(options: {
@@ -342,8 +362,22 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
     }
 
     const layout = await this.readRecordingLayout();
-    assertDefaultRecordingLayout(layout.filename, layout.devicePath);
-    if (!layout.mount) {
+    if (!layout.filename && !layout.devicePath && !layout.mount) {
+      throw new Error('Camera did not report its recording configuration');
+    }
+    const kind = recordingLayoutKind(
+      layout.filename,
+      layout.devicePath,
+      layout.backendName,
+    );
+    if (kind == null) {
+      throw new ThinginoLayoutError(
+        "cat-health only supports Thingino's default recording path",
+      );
+    }
+    // `raptor-day` already implies an absolute record root; the other two
+    // layouts are built from the mount, so that has to be there.
+    if (kind !== 'raptor-day' && !layout.mount) {
       throw new Error('Camera recording mount is not set');
     }
 
@@ -359,14 +393,14 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
     try {
       await fs.mkdir(tempDir, { recursive: true });
 
-      const duration = layout.durationSeconds ?? DEFAULT_CLIP_DURATION_SECONDS;
+      const duration = defaultClipDuration(kind, layout.durationSeconds);
       const relevantFiles = await this.listOverlappingFiles(
+        kind,
         layout.mount,
         layout.hostname,
         options.startTime,
         options.endTime,
         duration,
-        layout.filename,
         layout.devicePath,
       );
       if (relevantFiles.length === 0) {
@@ -408,12 +442,17 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
   }
 
   private async refreshStorage(): Promise<CachedStorage> {
-    const layout = await this.readRecordingLayout();
-    const runtimeStorage = await this.readRuntimeStorage();
-    const runtimeRecording = await this.readRuntimeRecording();
+    const [layout, runtimeAll] = await Promise.all([
+      this.readRecordingLayout(),
+      this.agentSetting('runtime/all'),
+    ]);
+    const fromAll = parseRuntimeAll(runtimeAll);
+    const runtimeStorage = fromAll.storage ?? (await this.readRuntimeStorage());
+    const runtimeRecording =
+      fromAll.recording ?? (await this.readRuntimeRecording());
 
     const cached: CachedStorage = {
-      recordingEnabled: layout.autostart,
+      recordingEnabled: layout.autostart || runtimeRecording.autostart,
       recorderActive: runtimeRecording.active,
       durationSeconds: layout.durationSeconds,
       mount: layout.mount,
@@ -430,15 +469,45 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
   }
 
   private async readRecordingLayout(): Promise<RecordingLayout> {
-    const [device, recorder] = await Promise.all([
+    const [device, config] = await Promise.all([
       this.agentSetting('device'),
-      this.client.getJson(RECORD_TOOL_PATH),
+      this.agentSetting('config'),
     ]);
-    const parsed = parseRecordTool(recorder);
+    const hostname = stringSetting(objectField(device, 'hostname')) || 'camera';
+    const backendName = stringSetting(
+      objectField(objectField(config, 'backend'), 'name'),
+    );
+    const fromConfig = parseAgentConfigStorage(config);
+    if (fromConfig) {
+      return { hostname, backendName, ...fromConfig };
+    }
+    const fallback = await this.readRecordToolFallback();
     return {
-      hostname: stringSetting(objectField(device, 'hostname')) || 'camera',
-      ...parsed,
+      hostname,
+      backendName,
+      mount: fallback?.mount ?? null,
+      filename: fallback?.filename ?? null,
+      devicePath: fallback?.devicePath ?? null,
+      durationSeconds: fallback?.durationSeconds ?? null,
+      autostart: fallback?.autostart ?? false,
     };
+  }
+
+  /** Modern images answer this with an HTML redirect, so a miss is expected. */
+  private async readRecordToolFallback(): Promise<Omit<
+    RecordingLayout,
+    'hostname' | 'backendName'
+  > | null> {
+    try {
+      const recorder = await this.client.getJson(RECORD_TOOL_PATH);
+      const parsed = parseRecordTool(recorder);
+      if (!parsed.mount && !parsed.filename && !parsed.devicePath) {
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
   }
 
   private async readRuntimeStorage(): Promise<{
@@ -446,62 +515,28 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
     totalBytes: number | null;
   }> {
     const payload = await this.agentSetting('runtime/storage');
-    if (!payload || typeof payload !== 'object') {
-      return { usedBytes: null, totalBytes: null };
-    }
-    const record = payload as Record<string, unknown>;
-    const usedKib = numberSetting(record.used_kib);
-    const totalKib = numberSetting(record.total_kib);
-    return {
-      usedBytes:
-        usedKib != null
-          ? usedKib * 1024
-          : numberSetting(record.used ?? record.used_bytes ?? record.size_used),
-      totalBytes:
-        totalKib != null
-          ? totalKib * 1024
-          : numberSetting(record.total ?? record.total_bytes ?? record.size),
-    };
+    return parseRuntimeStoragePayload(payload);
   }
 
   private async readRuntimeRecording(): Promise<RuntimeRecording> {
     const payload = await this.agentSetting('runtime/recording');
-    if (typeof payload === 'boolean') {
-      return { active: payload };
-    }
-    if (typeof payload === 'string') {
-      return {
-        active:
-          payload === 'recording' || payload === 'active' || payload === 'on',
-      };
-    }
-    if (!payload || typeof payload !== 'object') return { active: false };
-    const record = payload as Record<string, unknown>;
-    const state = record.state ?? record.status ?? record.recording;
-    if (typeof state === 'boolean') return { active: state };
-    if (typeof state === 'string') {
-      return {
-        active: state === 'recording' || state === 'active' || state === 'on',
-      };
-    }
-    return { active: booleanSetting(record.active ?? record.enabled) };
+    return parseRuntimeRecording(payload);
   }
 
   private async listOverlappingFiles(
-    mount: string,
+    kind: RecordingLayoutKind,
+    mount: string | null,
     hostname: string,
     start: Date,
     end: Date,
     clipDurationSeconds: number,
-    filename: string | null,
-    devicePath: string | null,
+    recordRoot: string | null,
   ): Promise<string[]> {
-    const kind = recordingLayoutKind(filename, devicePath);
     const dirs =
-      kind === 'ciao-day'
-        ? dayDirectories(clipsRoot(mount, hostname), start, end, BUFFER_SECONDS)
-        : hourDirectories(
-            recordsRoot(mount, hostname),
+      kind === 'raptor-day'
+        ? raptorDayDirectories(recordRoot ?? '', start, end, BUFFER_SECONDS)
+        : dayDirectories(
+            clipsRoot(mount ?? '', hostname),
             start,
             end,
             BUFFER_SECONDS,
@@ -516,6 +551,7 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
       end,
       clipDurationSeconds,
       BUFFER_SECONDS,
+      kind,
     );
   }
 
@@ -638,7 +674,98 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
   }
 }
 
-function parseRecordTool(payload: unknown): Omit<RecordingLayout, 'hostname'> {
+function parseAgentConfigStorage(
+  payload: unknown,
+): Omit<RecordingLayout, 'hostname' | 'backendName'> | null {
+  const storage = objectField(payload, 'storage');
+  if (!storage || typeof storage !== 'object' || Array.isArray(storage)) {
+    return null;
+  }
+  const record = storage as Record<string, unknown>;
+  const devicePath = stringSetting(record.device_path);
+  const filename = stringSetting(record.filename);
+  const mount = stringSetting(record.mount);
+  if (!mount && !devicePath && !filename) return null;
+  return {
+    mount,
+    filename,
+    devicePath,
+    durationSeconds: numberSetting(record.duration),
+    autostart: booleanSetting(record.autostart),
+  };
+}
+
+function parseRuntimeAll(payload: unknown): {
+  storage: { usedBytes: number | null; totalBytes: number | null } | null;
+  recording: RuntimeRecording | null;
+} {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return { storage: null, recording: null };
+  }
+  const record = payload as Record<string, unknown>;
+  return {
+    storage:
+      record.storage === undefined
+        ? null
+        : parseRuntimeStoragePayload(record.storage),
+    recording:
+      record.recording === undefined
+        ? null
+        : parseRuntimeRecording(record.recording),
+  };
+}
+
+function parseRuntimeStoragePayload(payload: unknown): {
+  usedBytes: number | null;
+  totalBytes: number | null;
+} {
+  if (!payload || typeof payload !== 'object') {
+    return { usedBytes: null, totalBytes: null };
+  }
+  const record = payload as Record<string, unknown>;
+  const usedKib = numberSetting(record.used_kib);
+  const totalKib = numberSetting(record.total_kib);
+  return {
+    usedBytes:
+      usedKib != null
+        ? usedKib * 1024
+        : numberSetting(record.used ?? record.used_bytes ?? record.size_used),
+    totalBytes:
+      totalKib != null
+        ? totalKib * 1024
+        : numberSetting(record.total ?? record.total_bytes ?? record.size),
+  };
+}
+
+function parseRuntimeRecording(payload: unknown): RuntimeRecording {
+  const empty: RuntimeRecording = { active: false, autostart: false };
+  if (typeof payload === 'boolean') return { ...empty, active: payload };
+  if (typeof payload === 'string') {
+    return {
+      ...empty,
+      active:
+        payload === 'recording' || payload === 'active' || payload === 'on',
+    };
+  }
+  if (!payload || typeof payload !== 'object') return empty;
+  const record = payload as Record<string, unknown>;
+  const state = record.state ?? record.status ?? record.recording;
+  let active = false;
+  if (typeof state === 'boolean') active = state;
+  else if (typeof state === 'string') {
+    active = state === 'recording' || state === 'active' || state === 'on';
+  } else {
+    active = booleanSetting(record.active ?? record.enabled);
+  }
+  return {
+    active,
+    autostart: booleanSetting(record.configured_autostart ?? record.autostart),
+  };
+}
+
+function parseRecordTool(
+  payload: unknown,
+): Omit<RecordingLayout, 'hostname' | 'backendName'> {
   const root = unwrapRecordTool(payload);
   const video = objectField(root, 'video');
   const videoRecord =

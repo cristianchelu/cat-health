@@ -1,4 +1,3 @@
-import path from 'node:path';
 import { format } from 'date-fns';
 
 /** Overlap padding around a visit when selecting hour directories and files. */
@@ -7,14 +6,29 @@ export const BUFFER_SECONDS = 60;
 /** Used when the camera does not report a segment length. */
 export const DEFAULT_CLIP_DURATION_SECONDS = 60;
 
-const DEFAULT_DEVICE_PATH = /^(?:%hostname\/)?records\/?$/i;
-const DEFAULT_FILENAME = /^(?:%Y%m%d\/%H\/)?%Y%m%dT%H%M%S(?:\.mp4)?$/i;
-const CIAO_FILENAME = /^%Y\/%m\/%d\/%H-%M-%S(?:\.mp4)?$/i;
-const CIAO_DEVICE_PATH = /^(?:%hostname)?$/i;
-const CIAO_PATH =
-  /(?:^|\/)(\d{4})\/(\d{2})\/(\d{2})\/(\d{2})-(\d{2})-(\d{2})(?:\.mp4)?$/;
+/**
+ * Raptor writes two trees under the record root: the 24/7 recorder's
+ * `YYYY-MM-DD/HH-MM-SS.mp4` day directories, which is what we read, and RMD's
+ * motion clips in `clips/`, which we do not touch. The agent's `duration` is
+ * `clip_length_sec` -- the motion-clip length -- so it says nothing about the
+ * 24/7 segments, which rotate on `segment_minutes` (default 5).
+ */
+export const DEFAULT_RAPTOR_CLIP_DURATION_SECONDS = 300;
 
-export type RecordingLayoutKind = 'prudynt-hour' | 'ciao-day';
+const PRUDYNT_FILENAME = /^%Y\/%m\/%d\/%H-%M-%S(?:\.mp4)?$/i;
+const PRUDYNT_DEVICE_PATH = /^(?:%hostname)?$/i;
+const PRUDYNT_PATH =
+  /(?:^|\/)(\d{4})\/(\d{2})\/(\d{2})\/(\d{2})-(\d{2})-(\d{2})(?:\.mp4)?$/;
+const RAPTOR_FILENAME = /^%Y-%m-%d\/%H-%M-%S(?:\.mp4)?$/i;
+const RAPTOR_PATH =
+  /(?:^|\/)(\d{4})-(\d{2})-(\d{2})\/(\d{2})-(\d{2})-(\d{2})(?:\.mp4)?$/;
+
+/**
+ * The two recording trees Thingino ships, named for the recorder that writes
+ * each -- which is what `backend.name` reports: Prudynt on the stable `ciao`
+ * branch, Raptor on `master`. Anything else is a custom path we refuse.
+ */
+export type RecordingLayoutKind = 'prudynt-day' | 'raptor-day';
 
 export class ThinginoLayoutError extends Error {
   constructor(message: string) {
@@ -23,46 +37,28 @@ export class ThinginoLayoutError extends Error {
   }
 }
 
+/**
+ * Raptor reports its record root verbatim, so an absolute `device_path` is the
+ * layout on a Raptor image and a custom path -- which we do not support -- on
+ * any other. Only the agent's backend name tells those apart.
+ */
 export function recordingLayoutKind(
   filename: string | null | undefined,
   devicePath: string | null | undefined,
+  backendName?: string | null,
 ): RecordingLayoutKind | null {
   const file = normalizeSetting(filename);
   const dir = normalizeSetting(devicePath);
-  if (CIAO_FILENAME.test(file) && CIAO_DEVICE_PATH.test(dir)) return 'ciao-day';
   if (
-    file &&
-    dir &&
-    DEFAULT_FILENAME.test(file) &&
-    DEFAULT_DEVICE_PATH.test(dir)
+    isRaptorBackend(backendName) &&
+    isAbsoluteRecordRoot(devicePath) &&
+    (!file || RAPTOR_FILENAME.test(file))
   ) {
-    return 'prudynt-hour';
+    return 'raptor-day';
   }
+  if (PRUDYNT_FILENAME.test(file) && PRUDYNT_DEVICE_PATH.test(dir))
+    return 'prudynt-day';
   return null;
-}
-
-export function isDefaultRecordingLayout(
-  filename: string | null | undefined,
-  devicePath: string | null | undefined,
-): boolean {
-  return recordingLayoutKind(filename, devicePath) != null;
-}
-
-export function assertDefaultRecordingLayout(
-  filename: string | null | undefined,
-  devicePath: string | null | undefined,
-): void {
-  if (!isDefaultRecordingLayout(filename, devicePath)) {
-    throw new ThinginoLayoutError(
-      "cat-health only supports Thingino's default recording path",
-    );
-  }
-}
-
-export function recordsRoot(mount: string, hostname: string): string {
-  const trimmedMount = mount.replace(/\/+$/, '');
-  const host = hostname.replace(/\/+$/, '').replace(/^\/+/, '');
-  return `${trimmedMount}/${host}/records`;
 }
 
 export function clipsRoot(mount: string, hostname: string): string {
@@ -71,35 +67,8 @@ export function clipsRoot(mount: string, hostname: string): string {
   return `${trimmedMount}/${host}`;
 }
 
-export function hourDirectories(
-  recordsRootPath: string,
-  start: Date,
-  end: Date,
-  bufferSeconds: number = BUFFER_SECONDS,
-): string[] {
-  const searchStart = new Date(start.getTime() - bufferSeconds * 1000);
-  const cursor = new Date(
-    searchStart.getFullYear(),
-    searchStart.getMonth(),
-    searchStart.getDate(),
-    searchStart.getHours(),
-  );
-  const last = new Date(
-    end.getFullYear(),
-    end.getMonth(),
-    end.getDate(),
-    end.getHours(),
-  );
-
-  const dirs: string[] = [];
-  for (
-    const d = new Date(cursor.getTime());
-    d <= last;
-    d.setHours(d.getHours() + 1)
-  ) {
-    dirs.push(`${recordsRootPath}/${format(d, 'yyyyMMdd/HH')}`);
-  }
-  return dirs;
+export function raptorRecordRoot(recordRoot: string): string {
+  return recordRoot.replace(/\/+$/, '');
 }
 
 export function dayDirectories(
@@ -107,6 +76,7 @@ export function dayDirectories(
   start: Date,
   end: Date,
   bufferSeconds: number = BUFFER_SECONDS,
+  datePattern = 'yyyy/MM/dd',
 ): string[] {
   const searchStart = new Date(start.getTime() - bufferSeconds * 1000);
   const cursor = new Date(
@@ -122,38 +92,64 @@ export function dayDirectories(
     d <= last;
     d.setDate(d.getDate() + 1)
   ) {
-    dirs.push(`${clipsRootPath}/${format(d, 'yyyy/MM/dd')}`);
+    dirs.push(`${clipsRootPath}/${format(d, datePattern)}`);
   }
   return dirs;
 }
 
+export function raptorDayDirectories(
+  recordRootPath: string,
+  start: Date,
+  end: Date,
+  bufferSeconds: number = BUFFER_SECONDS,
+): string[] {
+  return dayDirectories(
+    raptorRecordRoot(recordRootPath),
+    start,
+    end,
+    bufferSeconds,
+    'yyyy-MM-dd',
+  );
+}
+
+export function defaultClipDuration(
+  kind: RecordingLayoutKind,
+  reportedSeconds: number | null,
+): number {
+  if (kind === 'raptor-day') return DEFAULT_RAPTOR_CLIP_DURATION_SECONDS;
+  return reportedSeconds ?? DEFAULT_CLIP_DURATION_SECONDS;
+}
+
 /**
- * Parses a default prudynt basename `YYYYMMDDTHHMMSS.mp4` or Ciao
- * `.../YYYY/MM/DD/HH-MM-SS.mp4` in local time.
+ * Parses Prudynt `.../YYYY/MM/DD/HH-MM-SS.mp4` or Raptor
+ * `.../YYYY-MM-DD/HH-MM-SS.mp4` in local time. 0 means "not a clip".
  */
 export function filenameToEpoch(filePath: string): number {
-  const ciao = filePath.match(CIAO_PATH);
-  if (ciao) {
-    const year = parseInt(ciao[1], 10);
-    const month = parseInt(ciao[2], 10) - 1;
-    const day = parseInt(ciao[3], 10);
-    const hour = parseInt(ciao[4], 10);
-    const minute = parseInt(ciao[5], 10);
-    const second = parseInt(ciao[6], 10);
-    const date = new Date(year, month, day, hour, minute, second);
-    return Math.floor(date.getTime() / 1000);
+  const raptor = filePath.match(RAPTOR_PATH);
+  if (raptor) {
+    return localEpoch(
+      raptor[1],
+      raptor[2],
+      raptor[3],
+      raptor[4],
+      raptor[5],
+      raptor[6],
+    );
   }
 
-  const datetimePart = path.basename(filePath, '.mp4');
-  if (!/^\d{8}T\d{6}$/.test(datetimePart)) return 0;
-  const year = parseInt(datetimePart.slice(0, 4), 10);
-  const month = parseInt(datetimePart.slice(4, 6), 10) - 1;
-  const day = parseInt(datetimePart.slice(6, 8), 10);
-  const hour = parseInt(datetimePart.slice(9, 11), 10);
-  const minute = parseInt(datetimePart.slice(11, 13), 10);
-  const second = parseInt(datetimePart.slice(13, 15), 10);
-  const date = new Date(year, month, day, hour, minute, second);
-  return Math.floor(date.getTime() / 1000);
+  const prudynt = filePath.match(PRUDYNT_PATH);
+  if (prudynt) {
+    return localEpoch(
+      prudynt[1],
+      prudynt[2],
+      prudynt[3],
+      prudynt[4],
+      prudynt[5],
+      prudynt[6],
+    );
+  }
+
+  return 0;
 }
 
 export function filesOverlappingWindow(
@@ -162,25 +158,84 @@ export function filesOverlappingWindow(
   end: Date,
   clipDurationSeconds: number,
   bufferSeconds: number = BUFFER_SECONDS,
+  kind: RecordingLayoutKind | null = null,
 ): string[] {
   const startEpoch = Math.floor(start.getTime() / 1000);
   const endEpoch = Math.floor(end.getTime() / 1000);
   const extendedStart = startEpoch - bufferSeconds;
+  const dated = filePaths
+    .map((filePath) => ({ filePath, start: filenameToEpoch(filePath) }))
+    .filter((row) => row.start !== 0)
+    .sort((a, b) => a.start - b.start || a.filePath.localeCompare(b.filePath));
+
   const matched: string[] = [];
-  for (const filePath of filePaths) {
-    const fileStart = filenameToEpoch(filePath);
-    if (fileStart === 0) continue;
-    const fileEnd = fileStart + clipDurationSeconds;
-    if (fileStart < endEpoch && fileEnd > extendedStart) {
-      matched.push(filePath);
+  for (let index = 0; index < dated.length; index++) {
+    const row = dated[index];
+    const nextStart = dated[index + 1]?.start ?? null;
+    const duration =
+      kind === 'raptor-day'
+        ? inferredClipDuration(row.start, nextStart, clipDurationSeconds)
+        : clipDurationSeconds;
+    const fileEnd = row.start + duration;
+    if (row.start < endEpoch && fileEnd > extendedStart) {
+      matched.push(row.filePath);
     }
   }
-  return matched.sort();
+  return matched;
+}
+
+/**
+ * Adjacent-file delta when it looks like a rotation, otherwise the default.
+ *
+ * Raptor only, because it is the one recorder that never reports its rotation.
+ * Prudynt reports a real `duration`, so a larger gap in its tree is a recorder
+ * dropout rather than a longer clip; stretching one to reach the next would
+ * make a clip that already ended look like it covers the visit, and it would
+ * then become `files[0]` and throw off the `-ss` offset `processVideo`
+ * measures from it.
+ */
+export function inferredClipDuration(
+  fileStart: number,
+  nextFileStart: number | null,
+  defaultDurationSeconds: number,
+): number {
+  if (nextFileStart == null) return defaultDurationSeconds;
+  const delta = nextFileStart - fileStart;
+  if (delta > 0 && delta <= defaultDurationSeconds * 2) return delta;
+  return defaultDurationSeconds;
 }
 
 export function joinListedFile(directory: string, name: string): string {
   if (name.startsWith('/')) return name;
   return `${directory.replace(/\/+$/, '')}/${name}`;
+}
+
+function isAbsoluteRecordRoot(value: string | null | undefined): boolean {
+  if (value == null) return false;
+  return value.trim().startsWith('/');
+}
+
+function isRaptorBackend(name: string | null | undefined): boolean {
+  return typeof name === 'string' && name.trim().toLowerCase() === 'raptor';
+}
+
+function localEpoch(
+  year: string,
+  month: string,
+  day: string,
+  hour: string,
+  minute: string,
+  second: string,
+): number {
+  const date = new Date(
+    parseInt(year, 10),
+    parseInt(month, 10) - 1,
+    parseInt(day, 10),
+    parseInt(hour, 10),
+    parseInt(minute, 10),
+    parseInt(second, 10),
+  );
+  return Math.floor(date.getTime() / 1000);
 }
 
 function normalizeSetting(value: string | null | undefined): string {

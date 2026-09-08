@@ -47,6 +47,41 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+const RECORD_TOOL_REDIRECT = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=/"><title>Redirecting...</title></head><body></body></html>`;
+
+function agentConfigResponse(
+  storage: Record<string, unknown> | null = {},
+  backend = 'prudynt',
+): Response {
+  return jsonResponse({
+    storage:
+      storage === null
+        ? undefined
+        : {
+            autostart: false,
+            channel: 0,
+            device_path: '%hostname',
+            duration: 60,
+            filename: '%Y/%m/%d/%H-%M-%S',
+            mount: '/mnt/mmcblk0p1',
+            ...storage,
+          },
+    backend: { name: backend },
+  });
+}
+
+function runtimeAllResponse(overrides: Record<string, unknown> = {}): Response {
+  return jsonResponse({
+    storage: {
+      used_kib: 94,
+      total_kib: 100,
+      record_root: '/mnt/mmcblk0p1/littercam',
+    },
+    recording: { active: false, configured_autostart: false },
+    ...overrides,
+  });
+}
+
 function recordToolResponse(
   video: Record<string, unknown> = {},
   mounts: string[] = ['/mnt/mmcblk0p1'],
@@ -68,18 +103,20 @@ function recordToolResponse(
   });
 }
 
-function storageJson(url: URL): Response {
-  if (url.pathname.endsWith('/x/tool-record.cgi')) {
-    return recordToolResponse();
-  }
+function defaultAgentJson(url: URL): Response {
+  if (url.pathname.endsWith('/config')) return agentConfigResponse();
+  if (url.pathname.endsWith('/runtime/all')) return runtimeAllResponse();
   if (url.pathname.endsWith('/runtime/storage')) {
-    return jsonResponse({
-      used_kib: 94,
-      total_kib: 100,
-    });
+    return jsonResponse({ used_kib: 94, total_kib: 100 });
   }
   if (url.pathname.endsWith('/runtime/recording')) {
     return jsonResponse({ active: false });
+  }
+  if (url.pathname.endsWith('/x/tool-record.cgi')) {
+    return new Response(RECORD_TOOL_REDIRECT, {
+      status: 200,
+      headers: { 'content-type': 'text/html' },
+    });
   }
   throw new Error(`unexpected ${url.pathname}`);
 }
@@ -94,8 +131,8 @@ describe('ThinginoDeviceController', () => {
         if (url.pathname.endsWith('/device')) {
           return jsonResponse({ hostname: 'littercam' });
         }
-        if (url.pathname.endsWith('/x/tool-record.cgi')) {
-          return recordToolResponse({
+        if (url.pathname.endsWith('/config')) {
+          return agentConfigResponse({
             filename: '%f',
             device_path: 'custom',
             mount: '/mnt/mmcblk0p1',
@@ -117,8 +154,8 @@ describe('ThinginoDeviceController', () => {
     );
   });
 
-  it('lists only overlapping hour directories on the default layout', async () => {
-    const listed: string[] = [];
+  it('connects using agent config and runtime/all without the record tool', async () => {
+    let recordToolGets = 0;
     const client = new ThinginoHttpClient(
       'http://camera.local',
       'secret-token',
@@ -128,62 +165,18 @@ describe('ThinginoDeviceController', () => {
           return jsonResponse({ hostname: 'littercam' });
         }
         if (url.pathname.endsWith('/x/tool-record.cgi')) {
-          return recordToolResponse({
-            filename: '%Y%m%dT%H%M%S.mp4',
-            device_path: '%hostname/records',
-            mount: '/mnt/mmcblk0p1',
+          recordToolGets += 1;
+          return new Response(RECORD_TOOL_REDIRECT, {
+            status: 200,
+            headers: { 'content-type': 'text/html' },
           });
         }
-        if (url.pathname.endsWith('/x/tool-file-manager.cgi')) {
-          listed.push(url.searchParams.get('cd') ?? '');
-          return jsonResponse({ files: [] });
-        }
-        throw new Error(`unexpected ${url.pathname}`);
-      },
-    );
-    const controller = new ThinginoDeviceController(device, deps, client);
-
-    await assert.rejects(
-      () =>
-        controller.fetchRecording({
-          startTime: new Date(2026, 5, 11, 1, 50, 0),
-          endTime: new Date(2026, 5, 11, 2, 10, 0),
-          eventType: 'litterbox_use',
-        }),
-      /No recording files found/,
-    );
-
-    assert.deepEqual(listed, [
-      '/mnt/mmcblk0p1/littercam/records/20260611/01',
-      '/mnt/mmcblk0p1/littercam/records/20260611/02',
-    ]);
-    assert.equal(
-      listed.some(
-        (dir) => dir.includes('records') && !/\/\d{8}\/\d{2}$/.test(dir),
-      ),
-      false,
-    );
-  });
-
-  it('connects using the Video Recorder tool', async () => {
-    let fetches = 0;
-    const client = new ThinginoHttpClient(
-      'http://camera.local',
-      'secret-token',
-      async (input) => {
-        fetches += 1;
-        const url = new URL(String(input));
-        if (url.pathname.endsWith('/device')) {
-          return jsonResponse({ hostname: 'littercam' });
-        }
-        return storageJson(url);
+        return defaultAgentJson(url);
       },
     );
     const controller = new ThinginoDeviceController(device, deps, client);
     await controller.connect();
-    const afterConnect = fetches;
     const signals = controller.getSignals();
-    assert.equal(fetches, afterConnect);
     const storage = signals.find((signal) => signal.key === 'storage');
     const recording = signals.find((signal) => signal.key === 'recording');
     assert.equal(storage?.value.kind, 'percent');
@@ -196,10 +189,11 @@ describe('ThinginoDeviceController', () => {
       recording?.value.kind === 'text' ? recording.value.key : null,
       'devices.signals.values.recording_off',
     );
+    assert.equal(recordToolGets, 0);
     await controller.disconnect();
   });
 
-  it('lists Ciao day directories for fetchRecording', async () => {
+  it('falls back to the record tool when agent config has no storage', async () => {
     const listed: string[] = [];
     const client = new ThinginoHttpClient(
       'http://camera.local',
@@ -208,6 +202,9 @@ describe('ThinginoDeviceController', () => {
         const url = new URL(String(input));
         if (url.pathname.endsWith('/device')) {
           return jsonResponse({ hostname: 'littercam' });
+        }
+        if (url.pathname.endsWith('/config')) {
+          return jsonResponse({ backend: { name: 'prudynt' } });
         }
         if (url.pathname.endsWith('/x/tool-record.cgi')) {
           return recordToolResponse({ mount: '/mnt/mmcblk0p1' });
@@ -232,7 +229,7 @@ describe('ThinginoDeviceController', () => {
     assert.deepEqual(listed, ['/mnt/mmcblk0p1/littercam/2026/07/18']);
   });
 
-  it('uses mounts[0] when video.mount is empty', async () => {
+  it('lists Prudynt day directories for fetchRecording', async () => {
     const listed: string[] = [];
     const client = new ThinginoHttpClient(
       'http://camera.local',
@@ -241,6 +238,82 @@ describe('ThinginoDeviceController', () => {
         const url = new URL(String(input));
         if (url.pathname.endsWith('/device')) {
           return jsonResponse({ hostname: 'littercam' });
+        }
+        if (url.pathname.endsWith('/config')) return agentConfigResponse();
+        if (url.pathname.endsWith('/x/tool-file-manager.cgi')) {
+          listed.push(url.searchParams.get('cd') ?? '');
+          return jsonResponse({ entries: [] });
+        }
+        throw new Error(`unexpected ${url.pathname}`);
+      },
+    );
+    const controller = new ThinginoDeviceController(device, deps, client);
+    await assert.rejects(
+      () =>
+        controller.fetchRecording({
+          startTime: new Date(2026, 6, 18, 17, 20, 0),
+          endTime: new Date(2026, 6, 18, 17, 25, 0),
+          eventType: 'litterbox_use',
+        }),
+      /No recording files found/,
+    );
+    assert.deepEqual(listed, ['/mnt/mmcblk0p1/littercam/2026/07/18']);
+  });
+
+  it('lists Raptor day directories from an absolute record root', async () => {
+    const listed: string[] = [];
+    const client = new ThinginoHttpClient(
+      'http://camera.local',
+      'secret-token',
+      async (input) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith('/device')) {
+          return jsonResponse({ hostname: 'catcam' });
+        }
+        if (url.pathname.endsWith('/config')) {
+          return agentConfigResponse(
+            {
+              autostart: true,
+              device_path: '/mnt/mmcblk0p1/raptor',
+              duration: 60,
+              filename: null,
+              mount: '/mnt/mmcblk0p1',
+            },
+            'raptor',
+          );
+        }
+        if (url.pathname.endsWith('/x/tool-file-manager.cgi')) {
+          listed.push(url.searchParams.get('cd') ?? '');
+          return jsonResponse({ entries: [] });
+        }
+        throw new Error(`unexpected ${url.pathname}`);
+      },
+    );
+    const controller = new ThinginoDeviceController(device, deps, client);
+    await assert.rejects(
+      () =>
+        controller.fetchRecording({
+          startTime: new Date(2026, 8, 7, 17, 20, 0),
+          endTime: new Date(2026, 8, 7, 17, 25, 0),
+          eventType: 'litterbox_use',
+        }),
+      /No recording files found/,
+    );
+    assert.deepEqual(listed, ['/mnt/mmcblk0p1/raptor/2026-09-07']);
+  });
+
+  it('uses mounts[0] when the record-tool video.mount is empty', async () => {
+    const listed: string[] = [];
+    const client = new ThinginoHttpClient(
+      'http://camera.local',
+      'secret-token',
+      async (input) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith('/device')) {
+          return jsonResponse({ hostname: 'littercam' });
+        }
+        if (url.pathname.endsWith('/config')) {
+          return jsonResponse({ backend: { name: 'prudynt' } });
         }
         if (url.pathname.endsWith('/x/tool-record.cgi')) {
           return recordToolResponse({ mount: '' });
@@ -274,9 +347,7 @@ describe('ThinginoDeviceController', () => {
         if (url.pathname.endsWith('/device')) {
           return jsonResponse({ hostname: 'littercam' });
         }
-        if (url.pathname.endsWith('/x/tool-record.cgi')) {
-          return recordToolResponse({ mount: '/mnt/mmcblk0p1' });
-        }
+        if (url.pathname.endsWith('/config')) return agentConfigResponse();
         if (url.pathname.endsWith('/x/tool-file-manager.cgi')) {
           return new Response('nope', { status: 401 });
         }
@@ -295,21 +366,77 @@ describe('ThinginoDeviceController', () => {
     );
   });
 
-  it('rejects an empty JPEG snapshot', async () => {
+  it('rejects an empty JPEG snapshot after trying both CGI paths', async () => {
+    const paths: string[] = [];
     const client = new ThinginoHttpClient(
       'http://camera.local',
       'secret-token',
-      async () =>
-        new Response(Buffer.alloc(0), {
+      async (input) => {
+        const url = new URL(String(input));
+        paths.push(url.pathname);
+        return new Response(Buffer.alloc(0), {
           status: 200,
           headers: { 'content-type': 'image/jpeg' },
-        }),
+        });
+      },
     );
     const controller = new ThinginoDeviceController(device, deps, client);
     await assert.rejects(
       () => controller.getSnapshotBuffer(),
       /Camera snapshot was empty/,
     );
+    assert.deepEqual(paths, ['/x/ch0.jpg', '/x/dl0.jpg']);
+  });
+
+  it('falls back to dl0.jpg when ch0.jpg is empty', async () => {
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+    const client = new ThinginoHttpClient(
+      'http://camera.local',
+      'secret-token',
+      async (input) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith('/x/ch0.jpg')) {
+          return new Response(Buffer.alloc(0), {
+            status: 200,
+            headers: { 'content-type': 'image/jpeg' },
+          });
+        }
+        if (url.pathname.endsWith('/x/dl0.jpg')) {
+          return new Response(jpeg, {
+            status: 200,
+            headers: { 'content-type': 'image/jpeg' },
+          });
+        }
+        throw new Error(`unexpected ${url.pathname}`);
+      },
+    );
+    const controller = new ThinginoDeviceController(device, deps, client);
+    const buffer = await controller.getSnapshotBuffer();
+    assert.equal(buffer.equals(jpeg), true);
+  });
+
+  it('falls back to dl0.jpg when ch0.jpg returns 503', async () => {
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+    const client = new ThinginoHttpClient(
+      'http://camera.local',
+      'secret-token',
+      async (input) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith('/x/ch0.jpg')) {
+          return new Response('', { status: 503 });
+        }
+        if (url.pathname.endsWith('/x/dl0.jpg')) {
+          return new Response(jpeg, {
+            status: 200,
+            headers: { 'content-type': 'image/jpeg' },
+          });
+        }
+        throw new Error(`unexpected ${url.pathname}`);
+      },
+    );
+    const controller = new ThinginoDeviceController(device, deps, client);
+    const buffer = await controller.getSnapshotBuffer();
+    assert.equal(buffer.equals(jpeg), true);
   });
 
   it('marks the camera offline after two missed agent pings', async (t) => {
@@ -329,7 +456,7 @@ describe('ThinginoDeviceController', () => {
           }
           return new Response('down', { status: 500 });
         }
-        return storageJson(url);
+        return defaultAgentJson(url);
       },
     );
     const controller = new ThinginoDeviceController(
@@ -383,7 +510,7 @@ describe('ThinginoDeviceController', () => {
             headers: { 'content-type': 'image/jpeg' },
           });
         }
-        return storageJson(url);
+        return defaultAgentJson(url);
       },
     );
     const controller = new ThinginoDeviceController(device, deps, client);
@@ -420,13 +547,16 @@ describe('ThinginoDeviceController', () => {
           }
           return new Response('down', { status: 500 });
         }
-        if (url.pathname.endsWith('/runtime/storage')) {
-          return jsonResponse({
-            used_kib: usedKib,
-            total_kib: 100,
+        if (url.pathname.endsWith('/runtime/all')) {
+          return runtimeAllResponse({
+            storage: {
+              used_kib: usedKib,
+              total_kib: 100,
+              record_root: '/mnt/mmcblk0p1/littercam',
+            },
           });
         }
-        return storageJson(url);
+        return defaultAgentJson(url);
       },
     );
     const controller = new ThinginoDeviceController(device, deps, client);

@@ -126,6 +126,32 @@ describe('ThinginoHttpClient', () => {
     });
     assert.equal(calls, 2);
   });
+
+  it('retries once when the decoded body is empty', async () => {
+    let calls = 0;
+    const client = new ThinginoHttpClient(
+      'http://camera.local',
+      'secret-token',
+      async () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Response('', {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        return jsonResponse({ hostname: 'camera' });
+      },
+    );
+
+    assert.deepEqual(
+      await client.getJson('/x/agent.cgi/api/v1/runtime/storage'),
+      {
+        hostname: 'camera',
+      },
+    );
+    assert.equal(calls, 2);
+  });
 });
 
 describe('probeThinginoOrigin', () => {
@@ -241,6 +267,37 @@ describe('parseCameraJson', () => {
     const body =
       'Connection: close\r\nTransfer-Encoding: chunked\r\nContent-Type: application/json\r\n\r\n131\r\n{"duration":60}\r\n0\r\n\r\n';
     assert.deepEqual(parseCameraJson(body), { duration: 60 });
+  });
+
+  it('reassembles JSON split across CGI chunks', () => {
+    const json = '{"storage":{"filename":"%Y/%m/%d/%H-%M-%S","mount":"/mnt"}}';
+    const first = json.slice(0, 20);
+    const second = json.slice(20);
+    const body =
+      'Connection: close\r\nTransfer-Encoding: chunked\r\nContent-Type: application/json\r\n\r\n' +
+      `${first.length.toString(16)}\r\n${first}\r\n` +
+      `${second.length.toString(16)}\r\n${second}\r\n` +
+      '0\r\n\r\n';
+    assert.deepEqual(parseCameraJson(body), {
+      storage: { filename: '%Y/%m/%d/%H-%M-%S', mount: '/mnt' },
+    });
+  });
+
+  it('sizes CGI chunks in octets, not UTF-16 code units', () => {
+    // A multi-byte char before the split drifts every later size by a byte,
+    // landing the chunk delimiter inside the next string literal.
+    const json = '{"storage":{"mount":"/mnt/sd\u00e9","filename":"%Y/%m/%d"}}';
+    const first = json.slice(0, 29);
+    const second = json.slice(29);
+    const size = (part: string) => Buffer.byteLength(part, 'utf8').toString(16);
+    const body =
+      'Connection: close\r\nTransfer-Encoding: chunked\r\n\r\n' +
+      `${size(first)}\r\n${first}\r\n` +
+      `${size(second)}\r\n${second}\r\n` +
+      '0\r\n\r\n';
+    assert.deepEqual(parseCameraJson(body), {
+      storage: { mount: '/mnt/sd\u00e9', filename: '%Y/%m/%d' },
+    });
   });
 
   it('treats an empty CGI chunk as a missing value', () => {
