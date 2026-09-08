@@ -39,6 +39,7 @@ import {
   filenameToEpoch,
   filesOverlappingWindow,
   joinListedFile,
+  parseRaptorSegmentSeconds,
   raptorDayDirectories,
   recordingLayoutKind,
   type RecordingLayoutKind,
@@ -84,6 +85,8 @@ interface RecordingLayout {
   autostart: boolean;
   /** Agent `backend.name`; null when only the record-tool fallback answered. */
   backendName: string | null;
+  /** `backend.raw.config_path` -- where the recorder keeps its own config. */
+  backendConfigPath: string | null;
 }
 
 export class ThinginoDeviceController implements Camera, RecordingSource {
@@ -393,7 +396,15 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
     try {
       await fs.mkdir(tempDir, { recursive: true });
 
-      const duration = defaultClipDuration(kind, layout.durationSeconds);
+      // Prudynt reports `duration`; Raptor reports only the motion-clip knob,
+      // so its 24/7 rotation comes from the recorder's own config file.
+      const duration = defaultClipDuration(
+        kind,
+        layout.durationSeconds,
+        kind === 'raptor-day'
+          ? await this.readRaptorSegmentSeconds(layout.backendConfigPath)
+          : null,
+      );
       const relevantFiles = await this.listOverlappingFiles(
         kind,
         layout.mount,
@@ -474,17 +485,20 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
       this.agentSetting('config'),
     ]);
     const hostname = stringSetting(objectField(device, 'hostname')) || 'camera';
-    const backendName = stringSetting(
-      objectField(objectField(config, 'backend'), 'name'),
+    const backend = objectField(config, 'backend');
+    const backendName = stringSetting(objectField(backend, 'name'));
+    const backendConfigPath = stringSetting(
+      objectField(objectField(backend, 'raw'), 'config_path'),
     );
     const fromConfig = parseAgentConfigStorage(config);
     if (fromConfig) {
-      return { hostname, backendName, ...fromConfig };
+      return { hostname, backendName, backendConfigPath, ...fromConfig };
     }
     const fallback = await this.readRecordToolFallback();
     return {
       hostname,
       backendName,
+      backendConfigPath,
       mount: fallback?.mount ?? null,
       filename: fallback?.filename ?? null,
       devicePath: fallback?.devicePath ?? null,
@@ -496,7 +510,7 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
   /** Modern images answer this with an HTML redirect, so a miss is expected. */
   private async readRecordToolFallback(): Promise<Omit<
     RecordingLayout,
-    'hostname' | 'backendName'
+    'hostname' | 'backendName' | 'backendConfigPath'
   > | null> {
     try {
       const recorder = await this.client.getJson(RECORD_TOOL_PATH);
@@ -553,6 +567,21 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
       BUFFER_SECONDS,
       kind,
     );
+  }
+
+  /** A missing or unreadable recorder config just means "use the default". */
+  private async readRaptorSegmentSeconds(
+    configPath: string | null,
+  ): Promise<number | null> {
+    if (!configPath) return null;
+    try {
+      const buffer = await this.client.getBuffer(FILE_MANAGER_PATH, {
+        dl: configPath,
+      });
+      return parseRaptorSegmentSeconds(buffer.toString('utf8'));
+    } catch {
+      return null;
+    }
   }
 
   private async listDirectoryFiles(directory: string): Promise<string[]> {
@@ -676,7 +705,10 @@ export class ThinginoDeviceController implements Camera, RecordingSource {
 
 function parseAgentConfigStorage(
   payload: unknown,
-): Omit<RecordingLayout, 'hostname' | 'backendName'> | null {
+): Omit<
+  RecordingLayout,
+  'hostname' | 'backendName' | 'backendConfigPath'
+> | null {
   const storage = objectField(payload, 'storage');
   if (!storage || typeof storage !== 'object' || Array.isArray(storage)) {
     return null;
@@ -765,7 +797,7 @@ function parseRuntimeRecording(payload: unknown): RuntimeRecording {
 
 function parseRecordTool(
   payload: unknown,
-): Omit<RecordingLayout, 'hostname' | 'backendName'> {
+): Omit<RecordingLayout, 'hostname' | 'backendName' | 'backendConfigPath'> {
   const root = unwrapRecordTool(payload);
   const video = objectField(root, 'video');
   const videoRecord =

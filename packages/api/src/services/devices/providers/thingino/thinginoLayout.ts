@@ -115,9 +115,44 @@ export function raptorDayDirectories(
 export function defaultClipDuration(
   kind: RecordingLayoutKind,
   reportedSeconds: number | null,
+  observedSeconds: number | null = null,
 ): number {
-  if (kind === 'raptor-day') return DEFAULT_RAPTOR_CLIP_DURATION_SECONDS;
+  if (kind === 'raptor-day') {
+    return observedSeconds ?? DEFAULT_RAPTOR_CLIP_DURATION_SECONDS;
+  }
   return reportedSeconds ?? DEFAULT_CLIP_DURATION_SECONDS;
+}
+
+const RAPTOR_SECTION = /^\s*\[([^\]]+)\]/;
+const RAPTOR_SETTING = /^\s*([A-Za-z0-9_]+)\s*=\s*([^#]*)/;
+
+/**
+ * The `[recording]` segment length from `/etc/raptor.conf`, whose path the
+ * agent advertises at `config.backend.raw.config_path`. `segment_seconds`
+ * overrides `segment_minutes` when nonzero; a commented-out key means the
+ * recorder falls back to its own default, so it reads as absent here.
+ */
+export function parseRaptorSegmentSeconds(conf: string): number | null {
+  let section = '';
+  let minutes: number | null = null;
+  let seconds: number | null = null;
+  for (const line of conf.split('\n')) {
+    const heading = line.match(RAPTOR_SECTION);
+    if (heading) {
+      section = heading[1].trim().toLowerCase();
+      continue;
+    }
+    if (section !== 'recording' || /^\s*[#;]/.test(line)) continue;
+    const setting = line.match(RAPTOR_SETTING);
+    if (!setting) continue;
+    const value = Number(setting[2].trim());
+    if (!Number.isFinite(value)) continue;
+    if (setting[1] === 'segment_minutes') minutes = value;
+    if (setting[1] === 'segment_seconds') seconds = value;
+  }
+  if (seconds != null && seconds > 0) return seconds;
+  if (minutes != null && minutes > 0) return minutes * 60;
+  return null;
 }
 
 /**

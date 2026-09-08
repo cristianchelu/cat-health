@@ -7,6 +7,7 @@ import {
   defaultClipDuration,
   filesOverlappingWindow,
   joinListedFile,
+  parseRaptorSegmentSeconds,
   raptorDayDirectories,
   raptorRecordRoot,
   recordingLayoutKind,
@@ -146,6 +147,49 @@ describe('thinginoLayout', () => {
     assert.deepEqual(
       filesOverlappingWindow(files, start, end, 300, 60, 'raptor-day'),
       ['/mnt/mmcblk0p1/raptor/2026-09-07/17-00-00.mp4'],
+    );
+  });
+
+  it('reads the Raptor rotation out of raptor.conf', () => {
+    // Shape taken from /etc/raptor.conf on a live master camera: the knobs ship
+    // commented out, so a stock recorder falls through to its own default.
+    const stock = [
+      '[recording]',
+      'enabled = true',
+      'mode = continuous',
+      'storage_path = /mnt/mmcblk0p1/raptor',
+      '# segment_minutes = 5',
+      '# segment_seconds = 0          # nonzero overrides segment_minutes',
+      '# clip_length_sec = 60        # motion clip max duration',
+    ].join('\n');
+    assert.equal(parseRaptorSegmentSeconds(stock), null);
+    assert.equal(defaultClipDuration('raptor-day', null, null), 300);
+
+    const tuned = stock.replace(
+      '# segment_minutes = 5',
+      'segment_minutes = 10',
+    );
+    assert.equal(parseRaptorSegmentSeconds(tuned), 600);
+    assert.equal(defaultClipDuration('raptor-day', 60, 600), 600);
+
+    // segment_seconds wins when nonzero, and zero means "not set".
+    assert.equal(
+      parseRaptorSegmentSeconds(
+        tuned.replace('# segment_seconds = 0', 'segment_seconds = 90'),
+      ),
+      90,
+    );
+    assert.equal(
+      parseRaptorSegmentSeconds(
+        tuned.replace('# segment_seconds = 0', 'segment_seconds = 0'),
+      ),
+      600,
+    );
+
+    // A segment_minutes under another section is not the recorder's.
+    assert.equal(
+      parseRaptorSegmentSeconds('[timelapse]\nsegment_minutes = 30\n'),
+      null,
     );
   });
 
