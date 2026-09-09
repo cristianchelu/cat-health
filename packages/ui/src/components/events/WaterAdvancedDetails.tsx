@@ -18,7 +18,7 @@ import {
 } from '@/components/charts/TraceLayers';
 import { ReadoutGrid } from '@/components/ui/ReadoutGrid';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 
 import type { DecodedWaterRawData } from './decodeWaterRawData';
 import WaterSignalChart from './WaterSignalChart';

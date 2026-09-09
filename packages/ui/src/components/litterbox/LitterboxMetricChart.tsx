@@ -9,7 +9,7 @@ import {
 import { enUS } from 'date-fns/locale';
 import type { UntrackedIntervalDTO } from 'shared';
 import { cn } from '@/lib/utils';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 import UntrackedRegionOverlay from '@/components/charts/UntrackedRegionOverlay';
 import './LitterboxMetricChart.css';
 

@@ -19,12 +19,14 @@ const RESIZE_LABELS = {
 async function renderEditor(
   crop: CameraCropRect,
   onCropChange: (crop: CameraCropRect) => void,
+  rotate?: number,
 ) {
   return renderWithProviders(
     <CameraRoiEditor
       snapshotUrl="/snapshot.jpg"
       snapshotAlt="Camera snapshot"
       crop={crop}
+      rotate={rotate}
       onCropChange={onCropChange}
       onRefresh={() => {}}
       refreshLabel="Refresh"
@@ -193,6 +195,60 @@ describe('CameraRoiEditor', () => {
           )?.textContent
         : null,
       'Drag or use the arrow keys.',
+    );
+  });
+
+  it('marks the top interior edge as gravity-up by default', async () => {
+    await renderEditor(
+      { left: 0.2, top: 0.2, width: 0.4, height: 0.4 },
+      () => {},
+    );
+    const bar = document.querySelector('.roi-up-bar');
+    assert.equal(bar?.getAttribute('data-edge'), 'top');
+  });
+
+  it('moves the gravity-up bar to the right interior edge at -90', async () => {
+    await renderEditor(
+      { left: 0.2, top: 0.2, width: 0.4, height: 0.4 },
+      () => {},
+      -90,
+    );
+    const bar = document.querySelector('.roi-up-bar');
+    assert.equal(bar?.getAttribute('data-edge'), 'right');
+  });
+
+  it('treats stored 270 as the same right-edge mark as -90', async () => {
+    await renderEditor(
+      { left: 0.2, top: 0.2, width: 0.4, height: 0.4 },
+      () => {},
+      270,
+    );
+    assert.equal(
+      document.querySelector('.roi-up-bar')?.getAttribute('data-edge'),
+      'right',
+    );
+  });
+
+  it('marks the left interior edge at 90 and the bottom at 180', async () => {
+    const { unmount } = await renderEditor(
+      { left: 0.2, top: 0.2, width: 0.4, height: 0.4 },
+      () => {},
+      90,
+    );
+    assert.equal(
+      document.querySelector('.roi-up-bar')?.getAttribute('data-edge'),
+      'left',
+    );
+    unmount();
+
+    await renderEditor(
+      { left: 0.2, top: 0.2, width: 0.4, height: 0.4 },
+      () => {},
+      180,
+    );
+    assert.equal(
+      document.querySelector('.roi-up-bar')?.getAttribute('data-edge'),
+      'bottom',
     );
   });
 });

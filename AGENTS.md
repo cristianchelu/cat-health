@@ -44,7 +44,7 @@ This is a **Pet Assistant** application focused on cat health monitoring through
 
 **NEVER** format user-visible dates, times, or grouped numbers with raw `format(…, 'HH:mm')`, `Intl.NumberFormat(undefined)`, or hardcoded locales in components.
 
-**ALWAYS** use `useFormatters()` from `@/contexts/RegionalPreferencesProvider` for display formatting. Calendar math (`yyyy-MM-dd` ranges, API query windows) uses `date-fns` + `useRegionalPreferences().timezone` — not display prefs.
+**ALWAYS** use `useFormatters()` from `@/hooks/context/useRegionalPreferences` for display formatting. Calendar math (`yyyy-MM-dd` ranges, API query windows) uses `date-fns` + `useRegionalPreferences().timezone` — not display prefs.
 
 ### Code comments
 

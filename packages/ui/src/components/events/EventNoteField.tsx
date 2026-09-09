@@ -4,7 +4,7 @@ import { Pencil, StickyNote } from 'lucide-react';
 import { EVENT_NOTE_MAX_LENGTH } from 'shared';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/form';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 import './EventNoteField.css';
 
 interface EventNoteFieldProps {

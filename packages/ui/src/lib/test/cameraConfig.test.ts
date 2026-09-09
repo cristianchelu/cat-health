@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  CAMERA_ROTATION_OPTIONS,
   buildCameraConfig,
   cameraConfigEqual,
   clamp01,
@@ -95,6 +94,16 @@ describe('cameraConfigEqual', () => {
       cameraConfigEqual(
         draft({ cameraId: 1, rotate: undefined }),
         draft({ cameraId: 1, rotate: 0 }),
+      ),
+      true,
+    );
+  });
+
+  it('treats -90 and 270 as the same turn', () => {
+    assert.equal(
+      cameraConfigEqual(
+        draft({ cameraId: 1, rotate: -90 }),
+        draft({ cameraId: 1, rotate: 270 }),
       ),
       true,
     );
@@ -214,10 +223,30 @@ describe('buildCameraConfig', () => {
     assert.equal(config.snapshot, undefined);
   });
 
-  it('defaults to ["snapshot"] when acquisitionTypes is empty', () => {
+  it('keeps an empty acquisitionTypes so snapshot-off survives Save', () => {
     const config = buildCameraConfig(draft({ acquisitionTypes: [] }));
-    assert.deepEqual(config.acquisitionTypes, ['snapshot']);
-    assert.notEqual(config.snapshot, undefined);
+    assert.deepEqual(config.acquisitionTypes, []);
+    assert.equal(config.snapshot, undefined);
+  });
+
+  it('does not turn snapshot back on when the saved config is loaded', () => {
+    const saved = buildCameraConfig(
+      draft({ cameraId: 1, acquisitionTypes: [] }),
+    );
+    assert.equal(
+      draftFromCameraConfig(saved).acquisitionTypes.includes('snapshot'),
+      false,
+    );
+  });
+
+  it('keeps -90 as -90', () => {
+    const config = buildCameraConfig(draft({ rotate: -90 }));
+    assert.equal(config.rotate, -90);
+  });
+
+  it('rewrites stored 270 as -90', () => {
+    const config = buildCameraConfig(draft({ rotate: 270 }));
+    assert.equal(config.rotate, -90);
   });
 
   it('carries through crop, rotate and fetchDelay verbatim', () => {
@@ -265,12 +294,6 @@ describe('toggleAcquisitionType', () => {
   });
 });
 
-describe('CAMERA_ROTATION_OPTIONS', () => {
-  it('is exactly [0, 90, 180, 270]', () => {
-    assert.deepEqual(CAMERA_ROTATION_OPTIONS, [0, 90, 180, 270]);
-  });
-});
-
 describe('draftFromCameraConfig', () => {
   it('returns full defaults when config is undefined', () => {
     assert.deepEqual(draftFromCameraConfig(undefined), draft());
@@ -286,7 +309,7 @@ describe('draftFromCameraConfig', () => {
   it('carries through a fully specified config', () => {
     const config = {
       crop: { left: 0.1, top: 0.1, width: 0.5, height: 0.5 },
-      rotate: 270,
+      rotate: 90,
       acquisitionTypes: ['recording'],
       fetchDelay: 15,
       snapshot: { intervalSec: 3, firstFrameDelaySec: 1 },
@@ -296,7 +319,7 @@ describe('draftFromCameraConfig', () => {
       draftFromCameraConfig(config),
       draft({
         crop: config.crop,
-        rotate: 270,
+        rotate: 90,
         acquisitionTypes: ['recording'],
         fetchDelay: 15,
         snapshotIntervalSec: 3,
@@ -306,11 +329,19 @@ describe('draftFromCameraConfig', () => {
     );
   });
 
-  it('defaults acquisitionTypes to ["snapshot"] when the config array is empty', () => {
+  it('leaves an explicit empty acquisitionTypes empty — that is snapshot-off', () => {
     assert.deepEqual(
       draftFromCameraConfig({ acquisitionTypes: [] }),
-      draft({ acquisitionTypes: ['snapshot'] }),
+      draft({ acquisitionTypes: [] }),
     );
+  });
+
+  it('keeps stored -90', () => {
+    assert.equal(draftFromCameraConfig({ rotate: -90 }).rotate, -90);
+  });
+
+  it('maps stored 270 onto -90', () => {
+    assert.equal(draftFromCameraConfig({ rotate: 270 }).rotate, -90);
   });
 
   it('leaves cameraId null — link id comes from draftFromCameraLink', () => {

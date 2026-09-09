@@ -231,12 +231,35 @@ describe('CameraTabView', () => {
 
     const active = screen.getByRole('button', { name: '180°' });
     assert.equal(active.getAttribute('aria-pressed'), 'true');
-    assert.equal(
-      screen.getByRole('button', { name: '90°' }).getAttribute('aria-pressed'),
-      'false',
+    const ninety = screen.getByRole('button', { name: /^90°$/ });
+    assert.equal(ninety.getAttribute('aria-pressed'), 'false');
+
+    await user.click(ninety);
+    assert.deepEqual(seen, [90]);
+  });
+
+  it('marks -90 as selected when the stored angle is 270', async () => {
+    await renderWithProviders(
+      <CameraTabView
+        {...baseProps({
+          isLinked: true,
+          sourceName: 'Litterbox Camera',
+          rotate: 270,
+        })}
+      />,
     );
 
-    await user.click(screen.getByRole('button', { name: '90°' }));
-    assert.deepEqual(seen, [90]);
+    const minusNinety = screen.getByRole('button', { name: /^-90°$/ });
+    assert.equal(minusNinety.getAttribute('aria-pressed'), 'true');
+    assert.equal(
+      minusNinety.querySelector('svg')?.style.transform,
+      'rotate(90deg)',
+    );
+    assert.equal(
+      screen
+        .getByRole('button', { name: /^90°$/ })
+        .getAttribute('aria-pressed'),
+      'false',
+    );
   });
 });

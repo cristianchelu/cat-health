@@ -1,7 +1,7 @@
 import * as React from 'react';
 import Timeline, { type TimelineVariant } from '@/components/ui/Timeline';
 import type { GetEventListItemDTO } from 'shared';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 import EventDevice from './meta/EventDevice';
 import EventPet from './meta/EventPet';
 import EventVerified from './meta/EventVerified';

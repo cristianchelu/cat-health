@@ -10,7 +10,7 @@ import LitterboxDotGrid, {
   type LitterboxDotGridDot,
 } from './LitterboxDotGrid';
 import { parseCalendarDate } from '@/lib/utils';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 
 type DotType = LitterboxDotGridDot['type'];
 

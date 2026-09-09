@@ -17,5 +17,6 @@ export * from './schemas/api/integrations.ts';
 export * from './schemas/api/settings.ts';
 export * from './regional/preferences.ts';
 export * from './schemas/api/surepet.ts';
+export * from './cameraRotation.ts';
 export * from './constants/devices.ts';
 export * from './constants/recognition.ts';

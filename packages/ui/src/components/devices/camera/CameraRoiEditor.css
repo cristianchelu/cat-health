@@ -1,4 +1,7 @@
 .camera-roi-editor {
+  --roi-stroke: 2px;
+  --roi-up-bar: calc(var(--roi-stroke) * 2);
+
   display: flex;
   flex-direction: column;
 
@@ -111,7 +114,54 @@
   .roi-rect {
     fill: transparent;
     stroke: var(--color-primary);
-    stroke-width: 2;
+    stroke-width: var(--roi-stroke);
+    vector-effect: non-scaling-stroke;
+  }
+
+  .roi-up-bar {
+    position: absolute;
+    pointer-events: none;
+    z-index: 4;
+
+    &::after {
+      content: '';
+      position: absolute;
+      background: var(--color-primary);
+    }
+
+    &[data-edge='top']::after,
+    &[data-edge='bottom']::after {
+      left: 25%;
+      width: 50%;
+      height: var(--roi-up-bar);
+    }
+
+    &[data-edge='left']::after,
+    &[data-edge='right']::after {
+      top: 25%;
+      height: 50%;
+      width: var(--roi-up-bar);
+    }
+
+    &[data-edge='top']::after {
+      top: 0;
+      border-radius: 0 0 var(--roi-up-bar) var(--roi-up-bar);
+    }
+
+    &[data-edge='bottom']::after {
+      bottom: 0;
+      border-radius: var(--roi-up-bar) var(--roi-up-bar) 0 0;
+    }
+
+    &[data-edge='left']::after {
+      left: 0;
+      border-radius: 0 var(--roi-up-bar) var(--roi-up-bar) 0;
+    }
+
+    &[data-edge='right']::after {
+      right: 0;
+      border-radius: var(--roi-up-bar) 0 0 var(--roi-up-bar);
+    }
   }
 
   .roi-move-surface {

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { formatSensorNumericDisplay } from '@/lib/formatSensorNumericDisplay';
 import { cn } from '@/lib/utils';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 import './EntityControl.css';
 
 interface EntitySensorProps {

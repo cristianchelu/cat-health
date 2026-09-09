@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { GetEventListItemDTO, LitterboxUseEliminationType } from 'shared';
 
 import { SheetPageHeader } from '@/components/ui/SheetPageHeader';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 
 import type { DecodedLitterboxRawData } from './decodeLitterboxRawData';
 import type { DecodedWaterRawData } from './decodeWaterRawData';

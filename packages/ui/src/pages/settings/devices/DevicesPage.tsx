@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Settings as SettingsIcon } from 'lucide-react';
 import type { DeviceType } from 'shared';
 import { useDevices } from '@/hooks/queries/deviceQueries';
-import { useRegionalPreferences } from '@/contexts/RegionalPreferencesProvider';
+import { useRegionalPreferences } from '@/hooks/context/useRegionalPreferences';
 import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import {
   PageMainActionFab,

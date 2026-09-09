@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/form';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 
 type VerifiedFilter = 'all' | 'verified' | 'unverified';
 type EliminationFilter = LitterboxUseEliminationType | 'all';

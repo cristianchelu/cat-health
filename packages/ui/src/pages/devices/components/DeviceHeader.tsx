@@ -21,7 +21,7 @@ import {
   isMeaningfulLastSeen,
 } from '@/lib/formatRelativeTime';
 import { backState } from '@/lib/navigationBack';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 import { isVisitAnnotationEnabled } from '@/lib/deviceAnnotation';
 import { deviceInactiveReason } from '@/lib/deviceMonitoring';
 import './DeviceHeader.css';

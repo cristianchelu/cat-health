@@ -17,7 +17,7 @@ import {
   coerceEpochDate,
   formatRelativeTimeAgo,
 } from '@/lib/formatRelativeTime';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 import './ESPHomeView.css';
 
 interface ESPHomeViewProps {

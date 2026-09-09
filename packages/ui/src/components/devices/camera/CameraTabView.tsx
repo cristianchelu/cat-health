@@ -12,16 +12,16 @@ import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { EmptyState } from '@/components/ui/PageState';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { FormShell } from '@/components/ui/form';
-import { CAMERA_ROTATION_OPTIONS } from '@/lib/cameraConfig';
+import {
+  CAMERA_ROTATION_OPTIONS,
+  normalizeCameraRotation,
+} from '@/lib/cameraConfig';
 import { CameraCaptureFields } from './CameraCaptureFields';
 import { CameraPicker, type CameraPickerOption } from './CameraPicker';
 import { CameraRoiEditor, type CameraCropRect } from './CameraRoiEditor';
 import './CameraTabView.css';
 
-/**
- * Frame with a marked top edge. Rotating the glyph shows which way the image
- * will face — clearer for non-technical users than a rotated camera body.
- */
+/** CSS rotate is clockwise, so the CCW angle is negated. */
 function CameraOrientationIcon({
   degrees,
   size = 16,
@@ -37,7 +37,7 @@ function CameraOrientationIcon({
       fill="none"
       aria-hidden="true"
       className="camera-orientation-icon"
-      style={{ transform: `rotate(${degrees}deg)` }}
+      style={{ transform: `rotate(${-degrees}deg)` }}
     >
       <rect
         x="3.25"
@@ -267,6 +267,7 @@ const CameraTabView: React.FC<CameraTabViewProps> = ({
                     snapshotUrl={snapshotUrl}
                     snapshotAlt={copy.snapshotAlt}
                     crop={crop}
+                    rotate={rotate}
                     onCropChange={onCropChange}
                     onRefresh={onRefreshSnapshot}
                     refreshLabel={copy.refreshSnapshot}
@@ -289,7 +290,8 @@ const CameraTabView: React.FC<CameraTabViewProps> = ({
                       aria-labelledby={rotationLabelId}
                     >
                       {CAMERA_ROTATION_OPTIONS.map((degrees) => {
-                        const active = (rotate ?? 0) === degrees;
+                        const active =
+                          normalizeCameraRotation(rotate) === degrees;
                         return (
                           <Button
                             key={degrees}

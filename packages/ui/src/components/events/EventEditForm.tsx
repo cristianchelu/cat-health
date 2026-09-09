@@ -36,7 +36,7 @@ import { FormActions, FormError, FormField, Input } from '@/components/ui/form';
 import { usePets } from '@/hooks/queries/petQueries';
 import { useUpdateEvent } from '@/hooks/queries/eventQueries';
 import { useFoods } from '@/hooks/queries/foodQueries';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 import {
   attributionFromEvent,
   attributionFromSelectValue,

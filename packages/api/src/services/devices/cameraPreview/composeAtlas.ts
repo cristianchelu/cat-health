@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { normalizeCameraRotation } from 'shared';
 
 export const CAMERA_PREVIEW_CELL_PX = 80;
 
@@ -100,8 +101,9 @@ export async function renderPreviewCell(
   }
   // Sharp runs rotate+resize before extract in one pipeline, which swaps
   // axes and then overflows a landscape ROI. Flatten crop before rotate.
-  if (input.rotate) {
-    pipeline = sharp(await pipeline.toBuffer()).rotate(input.rotate);
+  const angle = normalizeCameraRotation(input.rotate);
+  if (angle) {
+    pipeline = sharp(await pipeline.toBuffer()).rotate(angle);
   }
   return pipeline
     .resize(cellPx, cellPx, { fit: 'cover', position: 'centre' })

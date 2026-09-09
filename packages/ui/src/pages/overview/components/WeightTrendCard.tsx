@@ -5,7 +5,7 @@ import { usePetWeightTrends } from '@/hooks/queries/petQueries';
 import {
   useRegionalPreferences,
   useFormatters,
-} from '@/contexts/RegionalPreferencesProvider';
+} from '@/hooks/context/useRegionalPreferences';
 import { formatCalendarDate } from '@/lib/utils';
 import WeightTrendCardView, {
   type WeightTrendCardState,

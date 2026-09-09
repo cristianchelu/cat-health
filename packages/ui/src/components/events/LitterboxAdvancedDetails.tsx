@@ -7,7 +7,7 @@ import { Trace } from '@/components/charts/Trace';
 import { TraceBands, TraceLine } from '@/components/charts/TraceLayers';
 import { ReadoutGrid } from '@/components/ui/ReadoutGrid';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 
 import type { DecodedLitterboxRawData } from './decodeLitterboxRawData';
 import { formatSigmaG } from './litterboxPeriodStats';

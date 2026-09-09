@@ -1,6 +1,4 @@
-/* eslint-disable react-refresh/only-export-components -- Context provider and its consumer hooks share one boundary. */
 import * as React from 'react';
-import type { Locale } from 'date-fns';
 import {
   resolveRegionalPreferences,
   createDefaultSettingsResponse,
@@ -17,24 +15,12 @@ import {
   getDateFnsLocale,
   getWeekOptions,
   resolveSystemTimezone,
-  type DateDisplayStyle,
-  type FormatNumberOptions,
 } from '@/lib/regionalFormat';
-
-interface Formatters {
-  formatTime: (date: Date) => string;
-  formatDate: (date: Date, style?: DateDisplayStyle) => string;
-  formatDateNumeric: (date: Date) => string;
-  formatDateTime: (date: Date) => string;
-  formatNumber: (value: number, options?: FormatNumberOptions) => string;
-  dateFnsLocale: Locale;
-  weekOptions: { weekStartsOn: 0 | 1 };
-  timezone: string;
-}
-
-const RegionalPreferencesContext =
-  React.createContext<ResolvedRegionalPreferences | null>(null);
-const FormattersContext = React.createContext<Formatters | null>(null);
+import {
+  FormattersContext,
+  RegionalPreferencesContext,
+  type Formatters,
+} from './RegionalPreferencesContext';
 
 function buildFormatters(prefs: ResolvedRegionalPreferences): Formatters {
   return {
@@ -82,25 +68,5 @@ const RegionalPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({
     </RegionalPreferencesContext.Provider>
   );
 };
-
-export function useRegionalPreferences(): ResolvedRegionalPreferences {
-  const context = React.useContext(RegionalPreferencesContext);
-  if (!context) {
-    throw new Error(
-      'useRegionalPreferences must be used within RegionalPreferencesProvider',
-    );
-  }
-  return context;
-}
-
-export function useFormatters(): Formatters {
-  const context = React.useContext(FormattersContext);
-  if (!context) {
-    throw new Error(
-      'useFormatters must be used within RegionalPreferencesProvider',
-    );
-  }
-  return context;
-}
 
 export default RegionalPreferencesProvider;

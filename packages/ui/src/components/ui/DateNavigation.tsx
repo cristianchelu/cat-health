@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn, parseCalendarDate } from '@/lib/utils';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 import './DateNavigation.css';
 
 interface DateNavigationProps {

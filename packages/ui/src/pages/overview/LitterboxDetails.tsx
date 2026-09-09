@@ -4,7 +4,7 @@ import type { LitterboxTrendsResponseDTO } from 'shared';
 import { usePetContext } from '@/hooks/context/usePetContext';
 import { usePetLitterboxTrends } from '@/hooks/queries/petQueries';
 import { useDateWindowNavigation } from '@/hooks/useDateWindowNavigation';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 import { daysToUntrackedIntervals } from '@/lib/untrackedIntervals';
 import { DateNavigation } from '@/components/ui/DateNavigation';
 import { SectionHeader } from '@/components/ui/SectionHeader';

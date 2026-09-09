@@ -21,7 +21,7 @@ import {
   useRecentFoodIntakes,
 } from '@/hooks/queries/petQueries';
 import { addEvent } from '@/api/pets';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 import type { DateRange } from '@/lib/utils';
 import { isBarcodeScanSupported } from '@/lib/barcodeScan';
 import { AmountStep } from './AmountStep';

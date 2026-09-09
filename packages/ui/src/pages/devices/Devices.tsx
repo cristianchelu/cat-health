@@ -5,7 +5,7 @@ import {
   useDevices,
   useCameraPreviewAtlas,
 } from '@/hooks/queries/deviceQueries';
-import { useRegionalPreferences } from '@/contexts/RegionalPreferencesProvider';
+import { useRegionalPreferences } from '@/hooks/context/useRegionalPreferences';
 import { AppHeader, AppHeaderBar } from '@/components/ui/AppHeader';
 import {
   PageMainActionFab,

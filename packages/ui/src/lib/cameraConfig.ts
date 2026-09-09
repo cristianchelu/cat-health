@@ -1,4 +1,9 @@
 import type { DeviceCameraConfigDTO } from 'shared';
+import {
+  CAMERA_ROTATION_OPTIONS,
+  normalizeCameraRotation,
+  type CameraRotationOption,
+} from 'shared';
 import { isDeviceActive, type DeviceEnablement } from '@/lib/deviceMonitoring';
 import { isRecord } from '@/lib/utils';
 
@@ -24,8 +29,8 @@ export type CameraSaveAction =
   | { type: 'link'; cameraId: number; config: DeviceCameraConfigDTO }
   | { type: 'updateConfig'; config: DeviceCameraConfigDTO };
 
-export const CAMERA_ROTATION_OPTIONS = [0, 90, 180, 270] as const;
-export type CameraRotationOption = (typeof CAMERA_ROTATION_OPTIONS)[number];
+export { CAMERA_ROTATION_OPTIONS, normalizeCameraRotation };
+export type { CameraRotationOption };
 
 const DEFAULT_CROP: Required<DeviceCameraConfigDTO>['crop'] = {
   left: 0,
@@ -63,7 +68,7 @@ export function cameraConfigEqual(
   const aTypes = [...a.acquisitionTypes].sort();
   const bTypes = [...b.acquisitionTypes].sort();
   return (
-    (a.rotate ?? 0) === (b.rotate ?? 0) &&
+    normalizeCameraRotation(a.rotate) === normalizeCameraRotation(b.rotate) &&
     a.fetchDelay === b.fetchDelay &&
     a.snapshotIntervalSec === b.snapshotIntervalSec &&
     a.snapshotFirstFrameDelaySec === b.snapshotFirstFrameDelaySec &&
@@ -79,12 +84,11 @@ export function cameraConfigEqual(
 export function buildCameraConfig(
   draft: CameraConfigDraft,
 ): DeviceCameraConfigDTO {
-  const acquisitionTypes = draft.acquisitionTypes.length
-    ? draft.acquisitionTypes
-    : ['snapshot'];
+  const acquisitionTypes = [...draft.acquisitionTypes];
+  const rotate = normalizeCameraRotation(draft.rotate);
   return {
     crop: draft.crop,
-    rotate: draft.rotate,
+    ...(rotate ? { rotate } : {}),
     acquisitionTypes,
     fetchDelay: draft.fetchDelay,
     snapshot: acquisitionTypes.includes('snapshot')
@@ -114,10 +118,14 @@ export function draftFromCameraConfig(
   return {
     cameraId: null,
     crop: normalizeCrop(config?.crop),
-    rotate: config?.rotate,
-    acquisitionTypes: config?.acquisitionTypes?.length
-      ? [...config.acquisitionTypes]
-      : ['snapshot'],
+    rotate:
+      config?.rotate == null
+        ? undefined
+        : normalizeCameraRotation(config.rotate),
+    acquisitionTypes:
+      config?.acquisitionTypes === undefined
+        ? ['snapshot']
+        : [...config.acquisitionTypes],
     fetchDelay: config?.fetchDelay ?? 60,
     snapshotIntervalSec: config?.snapshot?.intervalSec ?? 0,
     snapshotFirstFrameDelaySec: config?.snapshot?.firstFrameDelaySec ?? 0,

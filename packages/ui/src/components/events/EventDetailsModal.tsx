@@ -44,7 +44,7 @@ import { Checkbox } from '@/components/ui/form';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { causeLabelKey } from '@/lib/eventAttribution';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 
 import TimelapsePlayer from './TimelapsePlayer';
 import { buildTimelapseTimeline } from './buildTimelapseTimeline';

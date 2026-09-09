@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { RefreshCw, VideoOff } from 'lucide-react';
+import { gravityUpEdge } from 'shared';
 import { FallbackImage } from '@/components/ui/FallbackImage';
 import './CameraMediaSurface.css';
 import './CameraRoiEditor.css';
@@ -17,6 +18,7 @@ interface CameraRoiEditorProps {
   snapshotUrl?: string;
   snapshotAlt: string;
   crop: CameraCropRect;
+  rotate?: number;
   onCropChange: (crop: CameraCropRect) => void;
   onRefresh: () => void;
   refreshLabel: string;
@@ -103,6 +105,7 @@ const CameraRoiEditor: React.FC<CameraRoiEditorProps> = ({
   snapshotUrl,
   snapshotAlt,
   crop,
+  rotate,
   onCropChange,
   onRefresh,
   refreshLabel,
@@ -179,6 +182,7 @@ const CameraRoiEditor: React.FC<CameraRoiEditorProps> = ({
   const y = crop.top * VIEWBOX_HEIGHT;
   const w = crop.width * VIEWBOX_WIDTH;
   const h = crop.height * VIEWBOX_HEIGHT;
+  const upEdge = gravityUpEdge(rotate);
 
   return (
     <div className="camera-roi-editor">
@@ -211,6 +215,17 @@ const CameraRoiEditor: React.FC<CameraRoiEditorProps> = ({
         </p>
 
         <div className="roi-container" ref={containerRef}>
+          <div
+            className="roi-up-bar"
+            data-edge={upEdge}
+            aria-hidden="true"
+            style={{
+              left: `${crop.left * 100}%`,
+              top: `${crop.top * 100}%`,
+              width: `${crop.width * 100}%`,
+              height: `${crop.height * 100}%`,
+            }}
+          />
           <div
             className="roi-move-surface"
             role="button"

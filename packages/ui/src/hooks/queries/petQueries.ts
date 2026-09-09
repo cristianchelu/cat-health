@@ -29,7 +29,7 @@ import type {
   GetPetResponseDTO,
 } from 'shared';
 import { dateRangeToTimeRange, type DateRange } from '@/lib/utils';
-import { useRegionalPreferences } from '@/contexts/RegionalPreferencesProvider';
+import { useRegionalPreferences } from '@/hooks/context/useRegionalPreferences';
 
 export function usePets() {
   return useQuery({

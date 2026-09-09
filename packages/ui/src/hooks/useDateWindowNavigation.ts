@@ -7,7 +7,7 @@ import {
   type DateRange,
   type TimeRangeType,
 } from '@/lib/utils';
-import { useFormatters } from '@/contexts/RegionalPreferencesProvider';
+import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 
 interface UseDateWindowNavigationOptions {
   days?: number;
