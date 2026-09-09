@@ -327,8 +327,11 @@ export default DeviceCard;
 
 function previewStyle(preview: DeviceCardPreview): React.CSSProperties {
   const { atlasUrl, atlasWidth, atlasHeight, cellSize, x, y } = preview;
+  // A relative url() is resolved against the stylesheet, and prod CSS lives
+  // in /assets/, so absolutize against the document (and its <base href>).
+  const atlasHref = new URL(atlasUrl, document.baseURI).href;
   return {
-    '--device-card-atlas': `url(${JSON.stringify(atlasUrl)})`,
+    '--device-card-atlas': `url(${JSON.stringify(atlasHref)})`,
     '--device-card-atlas-cols': String(atlasWidth / cellSize),
     '--device-card-atlas-rows': String(atlasHeight / cellSize),
     '--device-card-atlas-col': String(x / cellSize),

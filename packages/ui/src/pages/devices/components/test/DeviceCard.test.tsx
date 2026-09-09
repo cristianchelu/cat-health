@@ -197,7 +197,12 @@ describe('DeviceCard', () => {
       },
     );
 
-    assert.ok(card().querySelector('.device-card-tile-preview'));
+    const overlay = card().querySelector('.device-card-tile-preview');
+    assert.ok(overlay instanceof HTMLElement);
+    assert.equal(
+      overlay.style.getPropertyValue('--device-card-atlas'),
+      `url(${JSON.stringify(new URL('api/devices/previews/atlas?g=1', document.baseURI).href)})`,
+    );
   });
 
   it('places a non-origin atlas cell by grid index', async () => {
