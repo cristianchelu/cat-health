@@ -16,6 +16,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { SignalValue } from '@/components/devices/SignalValue';
 import { getSignalIcon } from '@/components/devices/signalIcons';
 import { useDeviceSlots } from '@/hooks/useDeviceSlots';
+import { useHeldPrevious } from '@/hooks/useHeldPrevious';
 import type { RankedSignal } from '@/lib/deviceSignalRanking';
 import { signalStrengthText } from '@/lib/signalQuality';
 import { getDeviceModel } from './devicePageRegistry';
@@ -80,12 +81,7 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
       <div className="device-card-head">
         <span className="device-card-tile">
           {getDeviceIcon(device.type)}
-          {preview ? (
-            <span
-              className="device-card-tile-preview"
-              style={previewStyle(preview)}
-            />
-          ) : null}
+          {preview ? <DeviceCardTilePreview preview={preview} /> : null}
           <span
             className={cn(
               'device-card-status',
@@ -324,6 +320,26 @@ const batteryTone = (percent: number) =>
   }).tone;
 
 export default DeviceCard;
+
+function DeviceCardTilePreview({ preview }: { preview: DeviceCardPreview }) {
+  const { current, previous } = useHeldPrevious(preview, preview.atlasUrl);
+  return (
+    <>
+      {previous && previous.atlasUrl !== current.atlasUrl ? (
+        <span
+          key={previous.atlasUrl}
+          className="device-card-tile-preview"
+          style={previewStyle(previous)}
+        />
+      ) : null}
+      <span
+        key={current.atlasUrl}
+        className="device-card-tile-preview"
+        style={previewStyle(current)}
+      />
+    </>
+  );
+}
 
 function previewStyle(preview: DeviceCardPreview): React.CSSProperties {
   const { atlasUrl, atlasWidth, atlasHeight, cellSize, x, y } = preview;

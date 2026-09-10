@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ImageOff, Pause, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FallbackImage } from '@/components/ui/FallbackImage';
+import { useHeldPrevious } from '@/hooks/useHeldPrevious';
 import {
   frameIndexAtTimelineSec,
   type TimelapseFrameInput,
@@ -79,11 +80,11 @@ const TimelapsePlayer: React.FC<TimelapsePlayerProps> = ({
   React.useEffect(() => {
     if (!isPlaying || frameCount <= 1) return;
 
-    const timer = window.setInterval(() => {
+    const timer = setInterval(() => {
       setFrameIndex((current) => (current + 1) % frameCount);
     }, playbackIntervalMs);
 
-    return () => window.clearInterval(timer);
+    return () => clearInterval(timer);
   }, [frameCount, isPlaying, playbackIntervalMs]);
 
   const seekToClientX = React.useCallback(
@@ -162,17 +163,30 @@ const TimelapsePlayer: React.FC<TimelapsePlayerProps> = ({
     [frameCount],
   );
 
+  const currentUrl = frames[frameIndex]?.url ?? frames[0]?.url ?? '';
+  const { current, previous } = useHeldPrevious(currentUrl, currentUrl);
+
   if (frameCount === 0) {
     return null;
   }
 
-  const currentUrl = frames[frameIndex]?.url ?? frames[0].url;
-
   return (
     <div className="timelapse-player">
+      {previous && previous !== current ? (
+        <FallbackImage
+          key={previous}
+          className="timelapse-player-image"
+          src={previous}
+          alt=""
+          fit="contain"
+          fallback={<ImageOff size={24} aria-hidden="true" />}
+          aria-hidden
+        />
+      ) : null}
       <FallbackImage
+        key={current}
         className="timelapse-player-image"
-        src={currentUrl}
+        src={current}
         alt={alt}
         fit="contain"
         fallback={<ImageOff size={24} aria-hidden="true" />}

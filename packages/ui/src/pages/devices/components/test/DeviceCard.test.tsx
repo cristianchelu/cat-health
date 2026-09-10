@@ -83,7 +83,25 @@ function device(overrides: Partial<DeviceListItemDTO> = {}): DeviceListItemDTO {
  * the assertions below readable and catches a `label_key` that stops
  * resolving.
  */
-function renderCard(
+function cardTree(
+  client: QueryClient,
+  overrides: Partial<DeviceListItemDTO>,
+  preview?: DeviceCardPreview,
+) {
+  return (
+    <QueryClientProvider client={client}>
+      <RegionalPreferencesProvider>
+        {/* The drawer cells are tooltip triggers, and the app mounts the
+            provider once at its root. */}
+        <TooltipProvider>
+          <DeviceCard device={device(overrides)} preview={preview} />
+        </TooltipProvider>
+      </RegionalPreferencesProvider>
+    </QueryClientProvider>
+  );
+}
+
+async function renderCard(
   overrides: Partial<DeviceListItemDTO> = {},
   preview?: DeviceCardPreview,
 ) {
@@ -93,18 +111,15 @@ function renderCard(
   queryClients.push(client);
   client.setQueryData(['settings'], createDefaultSettingsResponse());
 
-  return renderWithProviders(
-    <QueryClientProvider client={client}>
-      <RegionalPreferencesProvider>
-        {/* The drawer cells are tooltip triggers, and the app mounts the
-            provider once at its root. */}
-        <TooltipProvider>
-          <DeviceCard device={device(overrides)} preview={preview} />
-        </TooltipProvider>
-      </RegionalPreferencesProvider>
-    </QueryClientProvider>,
-    { router: { initialEntries: ['/devices'] } },
-  );
+  const view = await renderWithProviders(cardTree(client, overrides, preview), {
+    router: { initialEntries: ['/devices'] },
+  });
+
+  return {
+    ...view,
+    rerenderPreview: (next: DeviceCardPreview) =>
+      view.rerender(cardTree(client, overrides, next)),
+  };
 }
 
 /** The card names itself, so this is also how a reader picks it out of a grid. */
@@ -202,6 +217,36 @@ describe('DeviceCard', () => {
     assert.equal(
       overlay.style.getPropertyValue('--device-card-atlas'),
       `url(${JSON.stringify(new URL('api/devices/previews/atlas?g=1', document.baseURI).href)})`,
+    );
+  });
+
+  it('keeps the previous atlas cell mounted under the next generation', async () => {
+    const first: DeviceCardPreview = {
+      atlasUrl: 'api/devices/previews/atlas?g=1',
+      atlasWidth: 80,
+      atlasHeight: 80,
+      cellSize: 80,
+      x: 0,
+      y: 0,
+    };
+    const { rerenderPreview } = await renderCard(
+      { camera_link: { camera_id: 9 } },
+      first,
+    );
+
+    rerenderPreview({ ...first, atlasUrl: 'api/devices/previews/atlas?g=2' });
+
+    const overlays = [
+      ...card().querySelectorAll('.device-card-tile-preview'),
+    ] as HTMLElement[];
+    assert.equal(overlays.length, 2);
+    assert.equal(
+      overlays[0]?.style.getPropertyValue('--device-card-atlas'),
+      `url(${JSON.stringify(new URL('api/devices/previews/atlas?g=1', document.baseURI).href)})`,
+    );
+    assert.equal(
+      overlays[1]?.style.getPropertyValue('--device-card-atlas'),
+      `url(${JSON.stringify(new URL('api/devices/previews/atlas?g=2', document.baseURI).href)})`,
     );
   });
 

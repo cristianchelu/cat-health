@@ -804,7 +804,8 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         });
       }
       reply.header('Content-Type', 'image/jpeg');
-      reply.header('Cache-Control', 'private, max-age=2');
+      // The UI cache-busts with `g`, so a given URL is fetched once.
+      reply.header('Cache-Control', 'private, max-age=60, immutable');
       return atlas.jpeg;
     },
   );

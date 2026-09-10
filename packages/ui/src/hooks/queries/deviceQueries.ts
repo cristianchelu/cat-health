@@ -52,8 +52,10 @@ export function useDevices() {
  * Layout + atlas URL for device-card sprites. Polling the layout does not
  * start camera fetches — the idle poller already does that.
  *
- * The CSS background is swapped only after the next atlas has decoded, so
- * a generation bump does not flash empty tiles for a few frames.
+ * Each generation is fetched into a blob URL and decoded before the CSS
+ * background swaps. Chrome will not reuse an `Image.decode()` of the HTTP
+ * URL for `background-image`, so a generation bump would otherwise refetch
+ * and flash empty tiles.
  */
 export function useCameraPreviewAtlas(enabled: boolean) {
   const { data: layout } = useQuery({
@@ -69,11 +71,35 @@ export function useCameraPreviewAtlas(enabled: boolean) {
   sheetRef.current = sheet;
   const layoutRef = React.useRef(layout);
   layoutRef.current = layout;
+  const blobsRef = React.useRef<string[]>([]);
+  const imagesRef = React.useRef<HTMLImageElement[]>([]);
+
+  const retainDecoded = React.useCallback(
+    (url: string, image: HTMLImageElement) => {
+      blobsRef.current.push(url);
+      imagesRef.current.push(image);
+      while (blobsRef.current.length > 2) {
+        const stale = blobsRef.current.shift();
+        imagesRef.current.shift();
+        if (stale) URL.revokeObjectURL(stale);
+      }
+    },
+    [],
+  );
+
+  const revokeAllBlobs = React.useCallback(() => {
+    for (const url of blobsRef.current) URL.revokeObjectURL(url);
+    blobsRef.current = [];
+    imagesRef.current = [];
+  }, []);
+
+  React.useEffect(() => () => revokeAllBlobs(), [revokeAllBlobs]);
 
   React.useEffect(() => {
     const nextLayout = layoutRef.current;
     if (!enabled || !nextLayout) return;
     if (nextLayout.devices.length === 0) {
+      revokeAllBlobs();
       sheetRef.current = undefined;
       setSheet(undefined);
       return;
@@ -83,11 +109,15 @@ export function useCameraPreviewAtlas(enabled: boolean) {
     const atlasUrl = previewAtlasUrl(nextLayout.generation);
     let cancelled = false;
     void decodePreviewAtlas(atlasUrl).then(
-      () => {
-        if (cancelled) return;
+      ({ objectUrl, image }) => {
+        if (cancelled) {
+          URL.revokeObjectURL(objectUrl);
+          return;
+        }
+        retainDecoded(objectUrl, image);
         const next: PreviewAtlasSheet = {
           generation: nextLayout.generation,
-          atlasUrl,
+          atlasUrl: objectUrl,
           width: nextLayout.width,
           height: nextLayout.height,
           cell_size: nextLayout.cell_size,
@@ -104,7 +134,7 @@ export function useCameraPreviewAtlas(enabled: boolean) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, layout?.generation]);
+  }, [enabled, layout?.generation, retainDecoded, revokeAllBlobs]);
 
   const cells = React.useMemo(() => {
     const map = new Map<number, { x: number; y: number }>();
@@ -134,16 +164,31 @@ function previewAtlasUrl(generation: number): string {
   return `api/devices/previews/atlas?g=${generation}`;
 }
 
-function decodePreviewAtlas(url: string): Promise<void> {
-  const img = new Image();
-  img.src = url;
-  if (typeof img.decode === 'function') {
-    return img.decode().then(() => undefined);
+async function decodePreviewAtlas(
+  url: string,
+): Promise<{ objectUrl: string; image: HTMLImageElement }> {
+  const href = new URL(url, document.baseURI).href;
+  const response = await fetch(href, { credentials: 'same-origin' });
+  if (!response.ok) {
+    throw new Error('Failed to load preview atlas');
   }
-  return new Promise((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error('Failed to load preview atlas'));
-  });
+  const objectUrl = URL.createObjectURL(await response.blob());
+  const image = new Image();
+  image.src = objectUrl;
+  try {
+    if (typeof image.decode === 'function') {
+      await image.decode();
+    } else {
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error('Failed to load preview atlas'));
+      });
+    }
+  } catch (error) {
+    URL.revokeObjectURL(objectUrl);
+    throw error;
+  }
+  return { objectUrl, image };
 }
 
 export type UseDeviceOptions = {
