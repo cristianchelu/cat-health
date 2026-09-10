@@ -1,4 +1,8 @@
-import { type Entity as EspHomeEntity } from 'esphome-client';
+import {
+  type Entity as EspHomeEntity,
+  entityId,
+  type EntityId,
+} from 'esphome-client';
 import { sql } from 'kysely';
 import sharp from 'sharp';
 import {
@@ -25,6 +29,7 @@ import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
 import {
   BaseESPHomeController,
   coerceBooleanState,
+  objectIdFromName,
   type ReconnectConfig,
 } from './BaseESPHomeController.ts';
 import { readSchedule, waterScheduleContract } from './scheduleBindings.ts';
@@ -92,6 +97,21 @@ function analyzeDrinkingSegments(
   );
 }
 
+// Heartbeat tolerance matches the litterbox. The old 3s/1s killed every
+// connection seconds after the entity list — before the post-subscribe state
+// dump could land — because an idle bowl publishes nothing between drinks, so
+// keepalive rides on ping/pong alone and one slow pong was fatal. Symptom:
+// perpetual reconnect churn (~1800 flaps in two days) and water_level stuck
+// at 0% after every server restart.
+const TUNING: ReconnectConfig = {
+  initialDelayMs: 1000,
+  maxDelayMs: 30000,
+  pingIntervalMs: 15000,
+  // 15s of quiet before a ping, then 30s for anything inbound to answer.
+  stallTimeoutMs: 45000,
+  connectTimeoutMs: 12000,
+};
+
 export class FountainController
   extends BaseESPHomeController
   implements Camera
@@ -103,9 +123,11 @@ export class FountainController
   };
   private snapshotCaptureChain: Promise<Buffer | undefined> =
     Promise.resolve(undefined);
+  /** Which camera `client.camera()` should address; null until one is listed. */
+  private cameraEntityId: EntityId<'camera'> | null = null;
 
   constructor(device: Device, deps: ProviderDeps) {
-    super(device, deps);
+    super(device, deps, TUNING);
     // Restore from a prior discovery so offline devices still advertise
     // the integrated camera in state (picker + getLinkedCamera fallback).
     if (this.config.hasCamera) {
@@ -117,22 +139,6 @@ export class FountainController
     return 'fountain';
   }
 
-  protected get reconnectConfig(): ReconnectConfig {
-    // Heartbeat tolerance matches the litterbox (30s/15s). The old 3s/1s
-    // killed every connection seconds after the entity list — before the
-    // post-subscribe state dump could land — because an idle bowl publishes
-    // nothing between drinks, so keepalive rides on ping/pong alone and one
-    // slow pong was fatal. Symptom: perpetual reconnect churn (~1800 flaps
-    // in two days) and water_level stuck at 0% after every server restart.
-    return {
-      baseDelay: 1000,
-      maxDelay: 30000,
-      heartbeatTimeout: 30000,
-      pingInterval: 15000,
-      connectHandshakeTimeout: 12000,
-    };
-  }
-
   protected onConnected(): void {
     // No additional setup needed on connect
   }
@@ -141,10 +147,16 @@ export class FountainController
     // Detect camera entities. The state flag doubles as a run-once guard so
     // multiple camera entities or a reconnect's entity dump cannot fire
     // overlapping persists.
-    const hasCameraEntity = entities.some(
+    const cameraEntity = entities.find(
       (entity) => 'type' in entity && entity.type === 'camera',
     );
-    if (hasCameraEntity && !this.state.hasCamera) {
+    const cameraObjectId =
+      cameraEntity &&
+      (cameraEntity.objectId || objectIdFromName(cameraEntity.name));
+    if (cameraObjectId) {
+      this.cameraEntityId = entityId('camera', cameraObjectId);
+    }
+    if (cameraEntity && !this.state.hasCamera) {
       this.state.hasCamera = true;
       console.log(`Detected camera in ${this.device.name}`);
       void this.persistHasCameraFlag();
@@ -355,17 +367,17 @@ export class FountainController
       // Once both values are captured, save them
       if (!!this.currentEvent && this.shouldPersistDrinkEvent(data)) {
         this.saveDrinkEvent(this.currentEvent);
-        this.client.off('sensor', onSensorUpdate);
+        subscription[Symbol.dispose]();
         this.currentEvent = null;
       }
     };
 
-    this.client.on('sensor', onSensorUpdate);
+    const subscription = this.client.on('sensor', onSensorUpdate);
 
     setTimeout(async () => {
       if (this.currentEvent) {
         console.warn('Timed out waiting for drink data.');
-        this.client.off('sensor', onSensorUpdate);
+        subscription[Symbol.dispose]();
 
         this.currentEvent = null;
       }
@@ -479,44 +491,30 @@ export class FountainController
     });
   }
 
-  private requestSnapshotBuffer(): Promise<Buffer | undefined> {
-    return new Promise<Buffer | undefined>((resolve) => {
-      const timeout = setTimeout(() => {
-        this.client.off('camera', onCameraImage);
-        console.error(`Camera snapshot timed out for ${this.device.name}`);
-        resolve(undefined);
-      }, 5000); // 5 second timeout
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const onCameraImage = (payload: any) => {
-        // Actual payload is { image: Buffer; name: string } not what types say
-        if (
-          !payload.image ||
-          !Buffer.isBuffer(payload.image) ||
-          payload.image.length === 0
-        ) {
-          return;
-        }
-
-        clearTimeout(timeout);
-        this.client.off('camera', onCameraImage);
-        resolve(payload.image);
-      };
-
-      this.client.on('camera', onCameraImage);
-
-      try {
-        this.client.sendCameraImageRequest(true);
-      } catch (error) {
-        clearTimeout(timeout);
-        this.client.off('camera', onCameraImage);
-        console.error(
-          `Failed to request camera image for ${this.device.name}:`,
-          error,
+  private async requestSnapshotBuffer(): Promise<Buffer | undefined> {
+    const cameraId = this.cameraEntityId;
+    if (cameraId === null) {
+      // hasCamera can be restored from config while the device is still
+      // offline, so there may be nothing to address yet. The idle poller
+      // asks on a schedule, so only a connected device without a camera
+      // entity is worth a line in the log.
+      if (this.status === 'online') {
+        console.warn(
+          `Camera snapshot skipped for ${this.device.name}: no camera entity listed`,
         );
-        resolve(undefined);
       }
-    });
+      return undefined;
+    }
+
+    try {
+      const image = await this.client
+        .camera(cameraId)
+        .snapshot({ timeoutMs: 5000 });
+      return image.length > 0 ? image : undefined;
+    } catch (error) {
+      console.error(`Camera snapshot failed for ${this.device.name}:`, error);
+      return undefined;
+    }
   }
 
   async captureSnapshot(options: {

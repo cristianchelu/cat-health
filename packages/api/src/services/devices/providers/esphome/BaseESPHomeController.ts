@@ -1,7 +1,10 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import {
+  defaultShouldRetry,
   type Entity as EspHomeEntity,
   EntityCategory,
   EspHomeClient,
+  EspHomeError,
   LogLevel,
 } from 'esphome-client';
 import { type Static, Type } from '@fastify/type-provider-typebox';
@@ -53,13 +56,21 @@ export const ESPHomeConfigSchema = Type.Object({
 });
 export type ESPHomeConfig = Static<typeof ESPHomeConfigSchema>;
 
+/**
+ * Connection tuning handed to `esphome-client`, which owns reconnect backoff
+ * and ping/pong liveness for an established session. Names match the
+ * library's own options.
+ */
 export interface ReconnectConfig {
-  baseDelay: number;
-  maxDelay: number;
-  heartbeatTimeout: number;
-  pingInterval: number;
-  /** If the native API handshake stalls after `client.connect()`, force a disconnect so reconnect can retry. */
-  connectHandshakeTimeout: number;
+  /** First reconnect delay; doubles per attempt up to `maxDelayMs`. */
+  initialDelayMs: number;
+  maxDelayMs: number;
+  /** Inbound silence before the client sends a ping. */
+  pingIntervalMs: number;
+  /** Inbound silence, ping included, after which the session is torn down. */
+  stallTimeoutMs: number;
+  /** Ceiling on one TCP + handshake + entity discovery round. */
+  connectTimeoutMs: number;
 }
 
 /**
@@ -124,28 +135,22 @@ export abstract class BaseESPHomeController implements DeviceController {
   protected status: DeviceStatus = 'unknown';
   protected device: Device;
   protected deps: ProviderDeps;
+  protected readonly tuning: ReconnectConfig;
   protected sensorValues: Map<number, unknown> = new Map();
   protected entityDefinitions: Map<number, EspHomeEntity> = new Map();
   protected objectIdToKeyMap: Map<string, number> = new Map();
 
-  // Connection state
-  private reconnectAttempts = 0;
-  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
-  private manualDisconnecting = false;
-  private heartbeatTimeout: ReturnType<typeof setTimeout> | null = null;
-  private inactivityCheck: ReturnType<typeof setInterval> | null = null;
+  /** Aborts the first-connect loop when the controller is torn down. */
+  private firstConnect: AbortController | null = null;
   private lastTelemetryAt: number | null = null;
-  private pingInFlight = false;
-  private connectHandshakeWatchdog: ReturnType<typeof setTimeout> | null = null;
 
   // Abstract methods for subclass customization
   protected abstract get deviceTypeName(): string;
-  protected abstract get reconnectConfig(): ReconnectConfig;
   protected abstract onConnected(): void;
   protected abstract onEntitiesReceived(entities: EspHomeEntity[]): void;
   protected abstract handleSensorUpdate(key: number, state: unknown): void;
 
-  constructor(device: Device, deps: ProviderDeps) {
+  constructor(device: Device, deps: ProviderDeps, tuning: ReconnectConfig) {
     console.log(
       `Initializing ${this.constructor.name} for device:`,
       device.name,
@@ -168,11 +173,37 @@ export abstract class BaseESPHomeController implements DeviceController {
       clientId: rawConfig.clientId ?? `cat-health-${device.id}`,
     };
 
+    this.tuning = tuning;
+    const label = () => `${this.deviceTypeName} ${this.device.name}`;
     this.client = new EspHomeClient({
       host: this.config.host,
       port: this.config.port,
       psk: this.config.encryptionKey,
       clientId: this.config.clientId,
+      connectTimeoutMs: tuning.connectTimeoutMs,
+      keepAlive: {
+        intervalMs: tuning.pingIntervalMs,
+        stallTimeoutMs: tuning.stallTimeoutMs,
+      },
+      reconnect: {
+        initialDelayMs: tuning.initialDelayMs,
+        maxDelayMs: tuning.maxDelayMs,
+        onAttempt: (attempt, delayMs) => {
+          console.warn(
+            `Reconnecting to ${label()} in ${delayMs}ms (attempt ${attempt})`,
+          );
+        },
+      },
+      // The library is silent by default. Its warnings name the cause of a
+      // stall or a dropped camera image, so keep those; skip its debug chatter.
+      logger: {
+        debug: () => {},
+        info: () => {},
+        warn: (message, ...rest) =>
+          console.warn(`[esphome ${label()}] ${message}`, ...rest),
+        error: (message, ...rest) =>
+          console.error(`[esphome ${label()}] ${message}`, ...rest),
+      },
     });
 
     this.setupListeners();
@@ -180,17 +211,10 @@ export abstract class BaseESPHomeController implements DeviceController {
 
   protected setupListeners() {
     this.client.on('connect', () => {
-      this.clearConnectHandshakeWatchdog();
       this.status = 'online';
-      this.reconnectAttempts = 0;
-      this.clearReconnectTimeout();
-      this.manualDisconnecting = false;
       const at = Date.now();
       this.lastTelemetryAt = at;
-      this.pingInFlight = false;
-      this.clearHeartbeatTimeout();
       this.deps.presence.reportOnline(this.deviceId, at);
-      this.startInactivityCheck();
       console.log(
         `Connected to ${this.deviceTypeName} ${this.device.name} (${this.config.host})`,
       );
@@ -198,25 +222,25 @@ export abstract class BaseESPHomeController implements DeviceController {
       this.onConnected();
     });
 
-    this.client.on('disconnect', () => {
-      this.clearConnectHandshakeWatchdog();
-      this.status = 'offline';
-      this.deps.presence.reportOffline(
-        this.deviceId,
-        this.lastTelemetryAt != null
-          ? { lastActivityMs: this.lastTelemetryAt }
-          : {},
-      );
-      console.error(
-        `Disconnected from ${this.deviceTypeName} ${this.device.name}`,
-      );
-      this.clearHeartbeatTimeout();
-      this.stopInactivityCheck();
-      if (this.manualDisconnecting) {
-        this.manualDisconnecting = false;
+    // `lifecycle` fires once per session that actually ends and carries the
+    // typed cause. The string `disconnect` event also fires for every failed
+    // attempt inside the library's backoff, which `onAttempt` already logs.
+    this.client.on('lifecycle', (event) => {
+      if (event.kind !== 'disconnect') {
         return;
       }
-      this.scheduleReconnect('disconnect');
+      this.markOffline();
+      const cause = event.cause
+        ? ` (${event.cause.name}: ${event.cause.message})`
+        : '';
+      console.error(
+        `Disconnected from ${this.deviceTypeName} ${this.device.name}${cause}`,
+      );
+      if (event.cause && !defaultShouldRetry(event.cause)) {
+        console.error(
+          `Not retrying ${this.deviceTypeName} ${this.device.name}: ${event.cause.name} needs a config change`,
+        );
+      }
     });
 
     this.client.on('heartbeat', this.markTelemetry.bind(this));
@@ -277,31 +301,14 @@ export abstract class BaseESPHomeController implements DeviceController {
     });
   }
 
-  private clearConnectHandshakeWatchdog() {
-    if (this.connectHandshakeWatchdog) {
-      clearTimeout(this.connectHandshakeWatchdog);
-      this.connectHandshakeWatchdog = null;
-    }
-  }
-
-  /**
-   * `esphome-client` can leave TCP + Noise handshakes pending without a reliable
-   * connection-level timeout; if `connect` never completes, recycle the client so
-   * our normal reconnect backoff can try again (e.g. after OTA while Wi‑Fi/API wake).
-   */
-  private armConnectHandshakeWatchdog() {
-    this.clearConnectHandshakeWatchdog();
-    const ms = this.reconnectConfig.connectHandshakeTimeout;
-    this.connectHandshakeWatchdog = setTimeout(() => {
-      this.connectHandshakeWatchdog = null;
-      if (this.manualDisconnecting || this.status === 'online') {
-        return;
-      }
-      console.warn(
-        `Connect handshake stalled for ${this.deviceTypeName} ${this.device.name} (${ms}ms); forcing disconnect to retry`,
-      );
-      this.client.disconnect();
-    }, ms);
+  private markOffline() {
+    this.status = 'offline';
+    this.deps.presence.reportOffline(
+      this.deviceId,
+      this.lastTelemetryAt != null
+        ? { lastActivityMs: this.lastTelemetryAt }
+        : {},
+    );
   }
 
   protected recordDeviceActivity(at: number = Date.now()) {
@@ -312,166 +319,58 @@ export abstract class BaseESPHomeController implements DeviceController {
     this.deps.presence.recordActivity(this.deviceId, at);
   }
 
-  protected clearReconnectTimeout() {
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = null;
-    }
-  }
-
-  protected clearHeartbeatTimeout() {
-    if (this.heartbeatTimeout) {
-      clearTimeout(this.heartbeatTimeout);
-      this.heartbeatTimeout = null;
-    }
-  }
-
   protected markTelemetry() {
-    this.pingInFlight = false;
-    this.clearHeartbeatTimeout();
     this.recordDeviceActivity();
   }
 
-  protected startInactivityCheck() {
-    this.stopInactivityCheck();
-    const config = this.reconnectConfig;
-    this.inactivityCheck = setInterval(() => {
-      if (this.manualDisconnecting || this.pingInFlight) {
-        return;
-      }
-
-      const lastSeen = this.lastTelemetryAt ?? 0;
-      const idleForMs = Date.now() - lastSeen;
-      if (idleForMs < config.pingInterval) {
-        return;
-      }
-
-      try {
-        this.pingInFlight = true;
-        this.client.sendPing();
-        this.scheduleHeartbeatTimeout();
-      } catch (error) {
-        console.error(
-          `Ping failed for ${this.deviceTypeName} ${this.device.name}:`,
-          error,
-        );
-        this.pingInFlight = false;
-        this.clearHeartbeatTimeout();
-        this.stopInactivityCheck();
-        this.status = 'offline';
-        this.deps.presence.reportOffline(
-          this.deviceId,
-          this.lastTelemetryAt != null
-            ? { lastActivityMs: this.lastTelemetryAt }
-            : {},
-        );
-        this.scheduleReconnect('ping-failed');
-      }
-    }, config.pingInterval);
-  }
-
-  protected stopInactivityCheck() {
-    if (this.inactivityCheck) {
-      clearInterval(this.inactivityCheck);
-      this.inactivityCheck = null;
-    }
-    this.pingInFlight = false;
-  }
-
-  protected scheduleHeartbeatTimeout() {
-    this.clearHeartbeatTimeout();
-    const config = this.reconnectConfig;
-    this.heartbeatTimeout = setTimeout(() => {
-      this.heartbeatTimeout = null;
-      console.warn(
-        `Heartbeat timeout for ${this.deviceTypeName} ${this.device.name}; reconnecting`,
-      );
-      if (!this.manualDisconnecting) {
-        this.pingInFlight = false;
-        this.status = 'offline';
-        this.deps.presence.reportOffline(
-          this.deviceId,
-          this.lastTelemetryAt != null
-            ? { lastActivityMs: this.lastTelemetryAt }
-            : {},
-        );
-        this.stopInactivityCheck();
-        this.client.disconnect();
-      }
-    }, config.heartbeatTimeout);
-  }
-
-  protected scheduleReconnect(reason: string) {
-    if (this.reconnectTimeout) {
-      return;
-    }
-
-    const attempt = this.reconnectAttempts + 1;
-    this.reconnectAttempts = attempt;
-    const config = this.reconnectConfig;
-    const delay = Math.min(
-      config.maxDelay,
-      config.baseDelay * 2 ** (attempt - 1),
-    );
-
-    console.warn(
-      `Scheduling reconnect for ${this.deviceTypeName} ${this.device.name} in ${delay}ms (${reason}, attempt ${attempt})`,
-    );
-
-    this.reconnectTimeout = setTimeout(() => {
-      this.reconnectTimeout = null;
-      try {
-        this.armConnectHandshakeWatchdog();
-        this.client.connect();
-      } catch (error) {
-        this.clearConnectHandshakeWatchdog();
-        console.error(
-          `Failed to reconnect to ${this.config.host} (${this.deviceTypeName}):`,
-          error,
-        );
-        this.scheduleReconnect('reconnect-failed');
-      }
-    }, delay);
-  }
-
+  /**
+   * Bring the first session up. `esphome-client` only supervises a session
+   * that once existed: a connect that fails before then rejects and is never
+   * retried, so a device that is unplugged at boot needs this loop. Resolves
+   * once connected, once the controller is torn down, or on an error the
+   * library itself would not retry either (wrong key, incompatible API).
+   */
   async connect(): Promise<void> {
-    this.deps.presence.reportOffline(
-      this.deviceId,
-      this.lastTelemetryAt != null
-        ? { lastActivityMs: this.lastTelemetryAt }
-        : {},
-    );
-    try {
-      this.armConnectHandshakeWatchdog();
-      this.client.connect();
-    } catch (error) {
-      this.clearConnectHandshakeWatchdog();
-      console.error(`Failed to connect to ${this.config.host}:`, error);
-      this.status = 'offline';
-      this.deps.presence.reportOffline(
-        this.deviceId,
-        this.lastTelemetryAt != null
-          ? { lastActivityMs: this.lastTelemetryAt }
-          : {},
-      );
-      this.scheduleReconnect('connect-failed');
+    this.markOffline();
+    this.firstConnect?.abort();
+    const abort = new AbortController();
+    this.firstConnect = abort;
+    const { initialDelayMs, maxDelayMs } = this.tuning;
+
+    for (let attempt = 1; !abort.signal.aborted; attempt++) {
+      try {
+        await this.client.connect({ signal: abort.signal });
+        return;
+      } catch (error) {
+        if (abort.signal.aborted) {
+          return;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        if (error instanceof EspHomeError && !defaultShouldRetry(error)) {
+          console.error(
+            `Not retrying ${this.deviceTypeName} ${this.device.name}: ${error.name}: ${message}`,
+          );
+          return;
+        }
+        const delay = Math.min(maxDelayMs, initialDelayMs * 2 ** (attempt - 1));
+        console.warn(
+          `Failed to connect to ${this.deviceTypeName} ${this.device.name} (${this.config.host}): ${message}; retrying in ${delay}ms (attempt ${attempt})`,
+        );
+        try {
+          await sleep(delay, undefined, { signal: abort.signal });
+        } catch {
+          return;
+        }
+      }
     }
   }
 
   async disconnect(): Promise<void> {
-    this.manualDisconnecting = true;
-    this.clearReconnectTimeout();
-    this.clearConnectHandshakeWatchdog();
-    this.clearHeartbeatTimeout();
-    this.stopInactivityCheck();
+    this.firstConnect?.abort();
+    this.firstConnect = null;
+    // Marks the client closed and cancels any library reconnect loop.
     this.client.disconnect();
-    this.status = 'offline';
-    this.deps.presence.reportOffline(
-      this.deviceId,
-      this.lastTelemetryAt != null
-        ? { lastActivityMs: this.lastTelemetryAt }
-        : {},
-    );
+    this.markOffline();
   }
 
   getStatus() {

@@ -52,25 +52,24 @@ interface EventSession {
   measurements: RawMeasurement[];
 }
 
+const TUNING: ReconnectConfig = {
+  initialDelayMs: 1000,
+  maxDelayMs: 30000,
+  pingIntervalMs: 15000,
+  // 15s of quiet before a ping, then 30s for anything inbound to answer.
+  stallTimeoutMs: 45000,
+  connectTimeoutMs: 20000,
+};
+
 export class LitterboxController extends BaseESPHomeController {
   private currentSession: EventSession | null = null;
 
   constructor(device: Device, deps: ProviderDeps) {
-    super(device, deps);
+    super(device, deps, TUNING);
   }
 
   protected get deviceTypeName(): string {
     return 'litterbox';
-  }
-
-  protected get reconnectConfig(): ReconnectConfig {
-    return {
-      baseDelay: 1000,
-      maxDelay: 30000,
-      heartbeatTimeout: 30000,
-      pingInterval: 15000,
-      connectHandshakeTimeout: 20000,
-    };
   }
 
   protected onConnected(): void {}

@@ -178,26 +178,16 @@ export class ESPHomeAccountManager implements AccountManager {
       port: config.port ?? 6053,
       psk: config.encryptionKey,
       clientId: 'CatHealth Validator',
+      // One probe, no retries: a wrong host should fail, not back off.
+      reconnect: false,
+      keepAlive: false,
     });
 
+    const signal = AbortSignal.timeout(5000);
     try {
-      await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Connection timed out'));
-        }, 5000);
-
-        client.on('connect', () => {
-          clearTimeout(timeout);
-          resolve();
-        });
-
-        try {
-          client.connect();
-        } catch (err) {
-          clearTimeout(timeout);
-          reject(err);
-        }
-      });
+      await client.connect({ signal });
+    } catch (err) {
+      throw signal.aborted ? new Error('Connection timed out') : err;
     } finally {
       client.disconnect();
     }
