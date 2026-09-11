@@ -12,6 +12,12 @@ import {
   inferenceToConfig,
   inferenceToFormValues,
 } from './inference/inferenceAccountConfig.ts';
+import { MqttAccountFields } from './mqtt/MqttAccountFields.tsx';
+import {
+  mqttDefaultConfigValues,
+  mqttToConfig,
+  mqttToFormValues,
+} from './mqtt/mqttAccountConfig.ts';
 
 /**
  * Per-provider account settings, keyed by provider name — the same shape as
@@ -35,9 +41,18 @@ const inferenceAccountConfig: ProviderAccountConfigModule = {
   Fields: InferenceAccountFields,
 };
 
+const mqttAccountConfig: ProviderAccountConfigModule = {
+  defaultConfigValues: mqttDefaultConfigValues,
+  toFormValues: mqttToFormValues,
+  toConfig: mqttToConfig,
+  Fields: MqttAccountFields,
+  connectSubtitleKey: 'settings.mqtt_connect_subtitle',
+};
+
 const ACCOUNT_CONFIG_MODULES: Record<string, ProviderAccountConfigModule> = {
   surepet: surepetAccountConfig,
   inference: inferenceAccountConfig,
+  mqtt: mqttAccountConfig,
 };
 
 /** Always returns a usable module; unknown providers get the generic fallback. */

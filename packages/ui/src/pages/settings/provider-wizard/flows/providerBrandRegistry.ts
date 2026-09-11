@@ -1,8 +1,9 @@
 import type { TFunction } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
-import { Bot, Cpu, PawPrint, Server, Video } from 'lucide-react';
+import { Bot, Cpu, PawPrint, Radio, Server, Video } from 'lucide-react';
 import { surepetAccountIdentity } from './surepet/surepetAccountConfig.ts';
 import { inferenceAccountIdentity } from './inference/inferenceAccountConfig.ts';
+import { mqttAccountIdentity } from './mqtt/mqttAccountConfig.ts';
 
 /**
  * Visual identity for a provider, plus the one piece of provider-specific
@@ -69,6 +70,14 @@ const PROVIDER_BRANDS: Record<string, ProviderBrand> = {
     tileTextColor: 'var(--color-text-inverted)',
     Icon: Bot,
     accountIdentity: inferenceAccountIdentity,
+  },
+  mqtt: {
+    label: 'MQTT',
+    // The MQTT mark is purple; the dark primary is the nearest token that
+    // keeps white text legible in both themes.
+    tileColor: 'var(--color-primary-dark)',
+    Icon: Radio,
+    accountIdentity: mqttAccountIdentity,
   },
   esphome: {
     label: 'ESPHome',

@@ -90,6 +90,14 @@ export class IntegrationManager
     return provider.validateAccountConfig(config);
   }
 
+  async probeAccountConfig(providerName: string, config: unknown) {
+    const provider = this.providers.get(providerName);
+    if (!provider) {
+      throw new Error(`Provider ${providerName} not found`);
+    }
+    await provider.probeAccountConfig?.(config);
+  }
+
   reconcileRuntimeState(
     providerName: string,
     args: {

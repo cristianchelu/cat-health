@@ -48,6 +48,7 @@ describe('getProviderBrand', () => {
     for (const provider of [
       'surepet',
       'inference',
+      'mqtt',
       'esphome',
       'camera',
       'thingino',
@@ -119,6 +120,14 @@ describe('getProviderBrand identities', () => {
     );
     assert.equal(inference({ base_url: 'not a url' }), 'not a url');
     assert.equal(inference({}), undefined);
+
+    const mqtt = getProviderBrand('mqtt').accountIdentity!;
+    assert.equal(
+      mqtt({ url: 'mqtts://broker.local:8883', username: 'hub' }),
+      'broker.local:8883',
+    );
+    assert.equal(mqtt({ url: 'not a url' }), 'not a url');
+    assert.equal(mqtt({}), undefined);
   });
 
   it('never surfaces a secret as the identity line', () => {
@@ -128,5 +137,15 @@ describe('getProviderBrand identities', () => {
       base_url: 'https://openrouter.ai/api/v1',
     });
     assert.ok(!identity?.includes('sk-super-secret'));
+
+    const mqtt = getProviderBrand('mqtt').accountIdentity!;
+    assert.equal(
+      mqtt({
+        url: 'mqtt://broker.local',
+        username: 'hub',
+        password: 'hunter2',
+      }),
+      'broker.local',
+    );
   });
 });

@@ -9,6 +9,7 @@ import {
   useUpdateProviderAccount,
   useDevices,
 } from '@/hooks/queries/deviceQueries';
+import { apiErrorMessage } from '@/api/apiClient';
 import { backState } from '@/lib/navigationBack';
 import { isRecord } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -183,7 +184,7 @@ const ProviderAccountPage: React.FC = () => {
       back.go();
     } catch (err) {
       console.error(err);
-      setServerError(t('settings.update_provider_error'));
+      setServerError(apiErrorMessage(err, t('settings.update_provider_error')));
     }
   };
 

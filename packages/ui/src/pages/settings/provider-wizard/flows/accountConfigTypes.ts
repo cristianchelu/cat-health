@@ -52,4 +52,9 @@ export interface ProviderAccountConfigModule {
   Fields: React.FC<ProviderAccountFieldsProps>;
   /** Optional callout shown under the fields. */
   note?: { i18nKey: string; tone: CalloutTone };
+  /**
+   * Replaces the connect card's "sign in with the provider's app" line for
+   * providers where there is no app to sign in to.
+   */
+  connectSubtitleKey?: string;
 }

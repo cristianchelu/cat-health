@@ -139,6 +139,13 @@ export interface DeviceProvider {
   ): AccountManager;
   validateAccountConfig(config: unknown): boolean;
   /**
+   * Try the config against the remote before it is written. Account create
+   * and config PATCH both call this; throw with a user-facing message to
+   * reject the write with 400. Omit when the provider has nothing to reach
+   * (ESPHome accounts hold no credentials of their own).
+   */
+  probeAccountConfig?(config: unknown): Promise<void>;
+  /**
    * Decide which provider-managed runtime state survives a config edit.
    *
    * Runtime state is derived from config, so a config change can invalidate it
@@ -184,6 +191,8 @@ export interface DeviceIntegrationContext {
   getProviders(): ProviderListing[];
   /** False when the provider is unregistered or rejects the config. */
   validateAccountConfig(providerName: string, config: unknown): boolean;
+  /** Rejects with the provider's reason when the remote refuses the config. */
+  probeAccountConfig(providerName: string, config: unknown): Promise<void>;
   /** Runtime state to keep after a config edit. See DeviceProvider.reconcileRuntimeState. */
   reconcileRuntimeState(
     providerName: string,

@@ -37,11 +37,13 @@
     "fastify": "^5.7.4",
     "kysely": "^0.28.11",
     "kysely-plugin-serialize": "^0.8.2",
+    "mqtt": "^5.15.2",
     "shared": "*",
     "sharp": "^0.34.5",
     "typebox": "^1.0.81"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13"
+    "@types/better-sqlite3": "^7.6.13",
+    "mqtt-packet": "^9.0.2"
   }
 }

@@ -8,7 +8,7 @@ import {
 
 describe('account config registry', () => {
   it('resolves providers that have a connect form', () => {
-    for (const provider of ['surepet', 'inference']) {
+    for (const provider of ['surepet', 'inference', 'mqtt']) {
       assert.equal(hasAccountConfigModule(provider), true);
       assert.ok(getAccountConfigModule(provider).Fields);
     }
@@ -56,7 +56,7 @@ describe('account config registry', () => {
   });
 
   it('tolerates junk config for every module', () => {
-    for (const provider of ['surepet', 'inference', 'esphome']) {
+    for (const provider of ['surepet', 'inference', 'mqtt', 'esphome']) {
       const module = getAccountConfigModule(provider);
       for (const junk of [null, undefined, 42, [], 'nope']) {
         assert.doesNotThrow(() => module.toFormValues(junk));
@@ -73,6 +73,67 @@ describe('account config registry', () => {
       }),
       { api_key: 'sk-abc', base_url: 'https://openrouter.ai/api/v1' },
     );
+  });
+
+  it('stores only what was set for an mqtt broker', () => {
+    const module = getAccountConfigModule('mqtt');
+    assert.deepEqual(
+      module.toConfig({
+        ...module.defaultConfigValues,
+        url: ' mqtt://broker.local:1883 ',
+        username: 'hub ',
+        password: ' keep me ',
+      }),
+      {
+        url: 'mqtt://broker.local:1883',
+        username: 'hub',
+        password: ' keep me ',
+      },
+    );
+    assert.deepEqual(
+      module.toConfig({
+        ...module.defaultConfigValues,
+        url: 'mqtts://broker.local',
+        allow_untrusted_certs: true,
+      }),
+      { url: 'mqtts://broker.local', allow_untrusted_certs: true },
+    );
+  });
+
+  it('drops TLS material once the mqtt scheme is plain', () => {
+    // The form hides those fields on mqtt://, so a stale PEM from an earlier
+    // mqtts:// edit must not ride along unseen.
+    const module = getAccountConfigModule('mqtt');
+    assert.deepEqual(
+      module.toConfig({
+        ...module.defaultConfigValues,
+        url: 'mqtt://broker.local',
+        ca_cert: 'CA',
+        client_cert: 'CERT',
+        client_key: 'KEY',
+        allow_untrusted_certs: true,
+      }),
+      { url: 'mqtt://broker.local' },
+    );
+  });
+
+  it('round-trips a full mqtt config', () => {
+    const module = getAccountConfigModule('mqtt');
+    const config = {
+      url: 'mqtts://broker.local:8883',
+      username: 'hub',
+      password: 'pw',
+      client_id: 'cat-health-1',
+      ca_cert: 'CA',
+      client_cert: 'CERT',
+      client_key: 'KEY',
+      allow_untrusted_certs: true,
+    };
+    assert.deepEqual(module.toConfig(module.toFormValues(config)), config);
+    assert.deepEqual(module.toFormValues({ url: 'mqtt://broker.local' }), {
+      ...module.defaultConfigValues,
+      url: 'mqtt://broker.local',
+    });
   });
 
   it('flags the surepet unofficial-access note', () => {

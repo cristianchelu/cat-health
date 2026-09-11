@@ -19,6 +19,7 @@ import { CameraProvider } from './services/devices/providers/camera/CameraProvid
 import { InferenceProvider } from './services/devices/providers/inference/InferenceProvider.ts';
 import { ThinginoProvider } from './services/devices/providers/thingino/ThinginoProvider.ts';
 import { SurePetProvider } from './services/devices/providers/surepet/SurePetProvider.ts';
+import { MqttProvider } from './services/devices/providers/mqtt/MqttProvider.ts';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -36,6 +37,7 @@ integrationManager.registerProvider(new CameraProvider());
 integrationManager.registerProvider(new ThinginoProvider());
 integrationManager.registerProvider(new InferenceProvider());
 integrationManager.registerProvider(new SurePetProvider());
+integrationManager.registerProvider(new MqttProvider());
 
 await integrationManager.initialize();
 

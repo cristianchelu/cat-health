@@ -297,7 +297,7 @@ const ProviderWizardPage: React.FC<ProviderWizardPageProps> = ({ entry }) => {
       setState({ step: 'discover', accountId: created.id });
     } catch (err) {
       console.error(err);
-      setServerError(t('settings.create_provider_error'));
+      setServerError(apiErrorMessage(err, t('settings.create_provider_error')));
     }
   };
 

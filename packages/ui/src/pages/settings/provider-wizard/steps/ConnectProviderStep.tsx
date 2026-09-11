@@ -92,7 +92,10 @@ export const ConnectProviderStep: React.FC<ConnectProviderStepProps> = ({
             titleAs="h2"
             tile={<ProviderBrandTile provider={provider} size="lg" />}
             title={t('settings.connect_provider_title', { provider: label })}
-            subtitle={t('settings.connect_provider_subtitle')}
+            subtitle={t(
+              configModule.connectSubtitleKey ??
+                'settings.connect_provider_subtitle',
+            )}
           />
 
           <FormCardBody>

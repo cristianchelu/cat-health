@@ -129,7 +129,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     await manager?.validateDeviceConfig?.({ type, config });
   }
 
-  function invalidDeviceConfigReply(reply: FastifyReply, error: unknown) {
+  function invalidConfigReply(reply: FastifyReply, error: unknown) {
     return reply.code(400).send({
       statusCode: 400,
       error: 'Bad Request',
@@ -444,6 +444,12 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         });
       }
 
+      try {
+        await integrationManager.probeAccountConfig(provider, config);
+      } catch (error) {
+        return invalidConfigReply(reply, error);
+      }
+
       const result = await db
         .insertInto('provider_account')
         .values({
@@ -561,6 +567,15 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
             error: 'Bad Request',
             message: rejection,
           });
+        }
+
+        try {
+          await integrationManager.probeAccountConfig(
+            existing.provider,
+            updates.config,
+          );
+        } catch (error) {
+          return invalidConfigReply(reply, error);
         }
 
         updateData.config = updates.config;
@@ -720,7 +735,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       try {
         await assertValidDeviceConfig(provider_account_id, type, config);
       } catch (error) {
-        return invalidDeviceConfigReply(reply, error);
+        return invalidConfigReply(reply, error);
       }
 
       const result = await db
@@ -941,7 +956,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
               nextConfig,
             );
           } catch (error) {
-            return invalidDeviceConfigReply(reply, error);
+            return invalidConfigReply(reply, error);
           }
         }
         updateData.config = JSON.stringify(nextConfig);
