@@ -48,6 +48,35 @@ describe('MqttProvider', () => {
   });
 });
 
+describe('MqttProvider topic prefix', () => {
+  const provider = new MqttProvider();
+  const withPrefix = (topic_prefix: string) =>
+    provider.validateAccountConfig({
+      url: 'mqtt://broker.local',
+      topic_prefix,
+    });
+
+  it('accepts plain multi-level prefixes', () => {
+    assert.equal(withPrefix('cathealth'), true);
+    assert.equal(withPrefix('cathealth/tenant-1'), true);
+  });
+
+  it('refuses wildcards, empty levels and the HA discovery root', () => {
+    for (const prefix of [
+      '',
+      'cathealth/#',
+      'cat+health',
+      '/cathealth',
+      'cathealth/',
+      '$SYS',
+      'homeassistant',
+      'homeassistant/sensor',
+    ]) {
+      assert.equal(withPrefix(prefix), false, prefix);
+    }
+  });
+});
+
 describe('buildMqttClientOptions', () => {
   it('drops empty credentials instead of presenting them', () => {
     const options = buildMqttClientOptions(

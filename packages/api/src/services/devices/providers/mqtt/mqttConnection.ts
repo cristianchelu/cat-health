@@ -7,9 +7,11 @@ import mqtt, {
 } from 'mqtt';
 import {
   isSecureMqttUrl,
+  isValidMqttTopicPrefix,
+  MQTT_DEFAULT_TOPIC_PREFIX,
+  MqttAccountConfigSchema,
   parseMqttUrl,
   parseWithSchema,
-  MqttAccountConfigSchema,
   type MqttAccountConfig,
 } from 'shared';
 
@@ -18,14 +20,25 @@ export const MQTT_CONNECT_TIMEOUT_MS = 10_000;
 
 /**
  * Account config as the manager trusts it, or `undefined`. Stricter than the
- * schema alone: the URL must be one the client can actually dial.
+ * schema alone: the URL must be one the client can actually dial, and a
+ * topic prefix, when given, must be one it may subscribe to.
  */
 export function parseMqttAccountConfig(
   config: unknown,
 ): MqttAccountConfig | undefined {
   const parsed = parseWithSchema(MqttAccountConfigSchema, config);
   if (!parsed || !parseMqttUrl(parsed.url)) return undefined;
+  if (
+    parsed.topic_prefix !== undefined &&
+    !isValidMqttTopicPrefix(parsed.topic_prefix)
+  ) {
+    return undefined;
+  }
   return parsed;
+}
+
+export function topicPrefixOf(config: MqttAccountConfig): string {
+  return config.topic_prefix ?? MQTT_DEFAULT_TOPIC_PREFIX;
 }
 
 /**

@@ -27,6 +27,19 @@ export interface DeviceMediaReadyEvent {
   linkedMediaIds?: number[];
 }
 
+/**
+ * One message received on an `mqtt` account's topic prefix, published as
+ * `mqtt.message`. Consumers filter by topic; nothing about the sender is
+ * resolved here, so a controller waiting on a device's topic and a discovery
+ * scan can share the subscription without knowing about each other.
+ */
+export interface MqttMessageEvent {
+  accountId: number;
+  topic: string;
+  payload: Buffer;
+  retain: boolean;
+}
+
 export class EventBus extends EventEmitter {
   publish(topic: string, event: unknown) {
     this.emit(topic, event);

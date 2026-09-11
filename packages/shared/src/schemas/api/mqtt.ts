@@ -28,8 +28,30 @@ export const MqttAccountConfigSchema = Type.Object({
   client_key: Type.Optional(Type.String()),
   /** Skip server certificate verification (self-signed brokers). */
   allow_untrusted_certs: Type.Optional(Type.Boolean()),
+  /**
+   * Root of every topic this account listens on and publishes under; the
+   * account subscribes to `<prefix>/#`. Defaults to
+   * {@link MQTT_DEFAULT_TOPIC_PREFIX}; worth changing only when several
+   * installations share one broker.
+   */
+  topic_prefix: Type.Optional(Type.String()),
 });
 export type MqttAccountConfig = Static<typeof MqttAccountConfigSchema>;
+
+export const MQTT_DEFAULT_TOPIC_PREFIX = 'cathealth';
+
+/**
+ * A prefix the account may subscribe to. Plain topic levels only, and never
+ * Home Assistant's own discovery root: a real HA broker carries hundreds of
+ * unrelated devices there, and once the app publishes discovery itself it
+ * would hear its own announcements back.
+ */
+export function isValidMqttTopicPrefix(prefix: string): boolean {
+  if (prefix === '' || /[#+\s\u0000]/.test(prefix)) return false;
+  if (prefix.startsWith('/') || prefix.endsWith('/')) return false;
+  if (prefix.startsWith('$')) return false;
+  return prefix.split('/')[0] !== 'homeassistant';
+}
 
 /**
  * Provider-managed state. Written only by the account manager, never sent to

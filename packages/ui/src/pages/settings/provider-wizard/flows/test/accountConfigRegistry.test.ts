@@ -128,6 +128,7 @@ describe('account config registry', () => {
       client_cert: 'CERT',
       client_key: 'KEY',
       allow_untrusted_certs: true,
+      topic_prefix: 'cathealth/home',
     };
     assert.deepEqual(module.toConfig(module.toFormValues(config)), config);
     assert.deepEqual(module.toFormValues({ url: 'mqtt://broker.local' }), {

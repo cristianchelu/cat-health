@@ -15,6 +15,7 @@ export type MqttConfigFormValues = {
   client_cert: string;
   client_key: string;
   allow_untrusted_certs: boolean;
+  topic_prefix: string;
 };
 
 export const mqttDefaultConfigValues: MqttConfigFormValues = {
@@ -26,6 +27,7 @@ export const mqttDefaultConfigValues: MqttConfigFormValues = {
   client_cert: '',
   client_key: '',
   allow_untrusted_certs: false,
+  topic_prefix: '',
 };
 
 /** Never throws — a malformed config still has to open in the form. */
@@ -40,6 +42,7 @@ export function mqttToFormValues(config: unknown): MqttConfigFormValues {
     client_cert: getStringValue(config, 'client_cert') ?? '',
     client_key: getStringValue(config, 'client_key') ?? '',
     allow_untrusted_certs: config.allow_untrusted_certs === true,
+    topic_prefix: getStringValue(config, 'topic_prefix') ?? '',
   };
 }
 
@@ -57,8 +60,15 @@ export function mqttToConfig(
   const secure = isSecureMqttUrl(url);
   const config: Record<string, unknown> = { url };
   const keys = secure
-    ? ['username', 'client_id', 'ca_cert', 'client_cert', 'client_key']
-    : ['username', 'client_id'];
+    ? [
+        'username',
+        'client_id',
+        'topic_prefix',
+        'ca_cert',
+        'client_cert',
+        'client_key',
+      ]
+    : ['username', 'client_id', 'topic_prefix'];
   for (const key of keys) {
     const value = (getStringValue(values, key) ?? '').trim();
     if (value) config[key] = value;

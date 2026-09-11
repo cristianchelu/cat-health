@@ -8,7 +8,10 @@ import {
   destroyTestDb,
   type TestDbContext,
 } from '../helpers/testDb.ts';
-import { MqttProvider } from '../../src/services/devices/providers/mqtt/MqttProvider.ts';
+import {
+  EventBus,
+  type MqttMessageEvent,
+} from '../../src/services/devices/EventBus.ts';
 import {
   startFakeBroker,
   type FakeBroker,
@@ -18,6 +21,7 @@ describe('MqttAccountManager client identity', () => {
   let ctx: TestDbContext;
   let broker: FakeBroker;
   let integrationManager: ReturnType<typeof createTestIntegrationManager>;
+  const eventBus = new EventBus();
   const accountIds: number[] = [];
 
   const readRuntime = async (id: number) => {
@@ -41,8 +45,7 @@ describe('MqttAccountManager client identity', () => {
   before(async () => {
     ctx = await createTestDb();
     broker = await startFakeBroker({ answer: () => 0 });
-    integrationManager = createTestIntegrationManager(ctx.db);
-    integrationManager.registerProvider(new MqttProvider());
+    integrationManager = createTestIntegrationManager(ctx.db, { eventBus });
   });
 
   after(async () => {
@@ -83,6 +86,36 @@ describe('MqttAccountManager client identity', () => {
     assert.equal((await readRuntime(account.id)).client_id, undefined);
   });
 
+  it('subscribes to the topic prefix and fans messages onto the bus', async () => {
+    const account = await insertProviderAccount(ctx.db, {
+      provider: 'mqtt',
+      config: { url: broker.url, topic_prefix: 'hub-a' },
+    });
+    accountIds.push(account.id);
+    const heard: MqttMessageEvent[] = [];
+    eventBus.subscribe<MqttMessageEvent>('mqtt.message', (event) =>
+      heard.push(event),
+    );
+    await integrationManager.initializeAccount(account.id);
+    await waitForConnects(4);
+    for (let i = 0; i < 50 && !broker.subscriptions.includes('hub-a/#'); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.ok(broker.subscriptions.includes('hub-a/#'));
+
+    broker.publish('hub-a/litterbox-1/last_event', '{"id":1}', true);
+    // The fake broker pushes to every connected client, so the accounts from
+    // the earlier tests hear it too, each under its own id.
+    const mine = () => heard.filter((event) => event.accountId === account.id);
+    for (let i = 0; i < 50 && mine().length === 0; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.equal(mine().length, 1);
+    assert.equal(mine()[0].topic, 'hub-a/litterbox-1/last_event');
+    assert.equal(mine()[0].payload.toString(), '{"id":1}');
+    assert.equal(mine()[0].retain, true);
+  });
+
   it('gives two accounts on one broker different ids', async () => {
     const account = await insertProviderAccount(ctx.db, {
       provider: 'mqtt',
@@ -90,7 +123,7 @@ describe('MqttAccountManager client identity', () => {
     });
     accountIds.push(account.id);
     await integrationManager.initializeAccount(account.id);
-    await waitForConnects(4);
-    assert.notEqual(broker.connects[3].clientId, broker.connects[0].clientId);
+    await waitForConnects(5);
+    assert.notEqual(broker.connects[4].clientId, broker.connects[0].clientId);
   });
 });

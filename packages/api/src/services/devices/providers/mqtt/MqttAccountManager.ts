@@ -19,16 +19,19 @@ import {
   endClient,
   mintMqttClientId,
   parseMqttAccountConfig,
+  topicPrefixOf,
 } from './mqttConnection.ts';
+import type { MqttMessageEvent } from '../../EventBus.ts';
 
 /** How long MQTT.js waits between reconnect attempts once the broker drops us. */
 const RECONNECT_PERIOD_MS = 5_000;
 
 /**
  * Owns the one connection to a broker. Ingest, Home Assistant publishing and
- * the diagnostic-blob path are all meant to multiplex over it
- * (summaries/mqtt-integration-plan.md §5.2); for now it only connects, stays
- * connected, and says so in the log. It registers no devices yet.
+ * the diagnostic-blob path all multiplex over it
+ * (summaries/mqtt-integration-plan.md §5.2). Today it subscribes to the
+ * account's topic prefix and republishes every message on the EventBus as
+ * `mqtt.message`; it registers no devices yet.
  */
 export class MqttAccountManager implements AccountManager {
   readonly accountId: number;
@@ -79,6 +82,23 @@ export class MqttAccountManager implements AccountManager {
     });
     client.on('offline', () => {
       this.deps.logger.warn(`MQTT account ${this.accountId} lost the broker`);
+    });
+    client.on('message', (topic, payload, packet) => {
+      const event: MqttMessageEvent = {
+        accountId: this.accountId,
+        topic,
+        payload,
+        retain: packet.retain,
+      };
+      this.deps.eventBus.publish('mqtt.message', event);
+    });
+    // Queued until CONNACK and re-sent by MQTT.js after every reconnect.
+    client.subscribe(`${topicPrefixOf(this.config)}/#`, { qos: 1 }, (error) => {
+      if (error) {
+        this.deps.logger.warn(
+          `MQTT account ${this.accountId} could not subscribe: ${error.message}`,
+        );
+      }
     });
     this.client = client;
   }

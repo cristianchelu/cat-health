@@ -1,7 +1,12 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWatch } from 'react-hook-form';
-import { isSecureMqttUrl, parseMqttUrl } from 'shared';
+import {
+  isSecureMqttUrl,
+  isValidMqttTopicPrefix,
+  MQTT_DEFAULT_TOPIC_PREFIX,
+  parseMqttUrl,
+} from 'shared';
 import { FormInput, FormSwitch, FormTextarea } from '@/components/ui/form';
 import type { ProviderAccountFieldsProps } from '../accountConfigTypes.ts';
 
@@ -54,6 +59,27 @@ export const MqttAccountFields: React.FC<ProviderAccountFieldsProps> = ({
         label={t('settings.mqtt_client_id_label')}
         description={t('settings.mqtt_client_id_hint')}
         placeholder={t('settings.mqtt_client_id_placeholder')}
+      />
+
+      <FormInput
+        name="config.topic_prefix"
+        control={control}
+        autoComplete="off"
+        label={t('settings.mqtt_topic_prefix_label')}
+        description={t('settings.mqtt_topic_prefix_hint', {
+          prefix: MQTT_DEFAULT_TOPIC_PREFIX,
+        })}
+        placeholder="cathealth/home"
+        rules={{
+          validate: (value: unknown) => {
+            const prefix = String(value ?? '').trim();
+            return (
+              prefix === '' ||
+              isValidMqttTopicPrefix(prefix) ||
+              t('settings.mqtt_topic_prefix_invalid')
+            );
+          },
+        }}
       />
 
       {secure && (
