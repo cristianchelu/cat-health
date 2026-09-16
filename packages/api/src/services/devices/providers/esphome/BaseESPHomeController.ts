@@ -30,6 +30,12 @@ export const ESPHomeConfigSchema = Type.Object({
    */
   projectName: Type.Optional(Type.String()),
   /**
+   * The ESPHome node name, learned on first connect and kept so the
+   * device's MQTT topics (`<prefix>/<node>/...`) can be matched before the
+   * native session is up.
+   */
+  nodeName: Type.Optional(Type.String()),
+  /**
    * Set the first time ESPHome reports a camera entity. Survives offline
    * periods so the Camera tab can still offer the integrated source.
    */

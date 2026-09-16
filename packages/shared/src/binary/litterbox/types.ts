@@ -1,3 +1,5 @@
+import type { DecodedLitterboxVisitFrame } from './visitFrame.ts';
+
 /**
  * Maintenance terminology, pinned: "scoop" = remove waste from the litter
  * (the `litterbox_maintenance/scoop` event); "deep clean" = dump the litter,
@@ -29,6 +31,8 @@ export interface DecodedLitterboxRawData {
   weights: number[];
   /** v2+: per-sample ms offsets from `startTime`. Absent on v1 blobs. */
   sampleOffsetsMs?: number[];
+  /** v3: the device's own record of the visit, decoded from its frame. */
+  deviceVisit?: DecodedLitterboxVisitFrame;
 }
 
 /** Context fields when encoding v1 (omit entire `context` to write null sentinels). */
@@ -90,6 +94,25 @@ export interface EncodeLitterboxRawDataV2Input {
   sampleOffsetsMs: number[];
 }
 
+/**
+ * v3 layout (big-endian header, then the device frame untouched):
+ * ```
+ * 0     u8   version = 3
+ * 1     u64  startTimeMs
+ * 9     context block (contextFields.ts), 18 bytes
+ * 27    the `LBV1` visit frame as the device published it
+ * ```
+ * Weights, offsets and the device verdict all come from the frame, so the
+ * record the device shipped survives verbatim for replay.
+ */
+export interface EncodeLitterboxRawDataV3Input {
+  version: 3;
+  startTimeMs: number;
+  context?: LitterboxRawDataV2Context;
+  frame: Uint8Array;
+}
+
 export type EncodeLitterboxRawDataInput =
   | EncodeLitterboxRawDataV1Input
-  | EncodeLitterboxRawDataV2Input;
+  | EncodeLitterboxRawDataV2Input
+  | EncodeLitterboxRawDataV3Input;

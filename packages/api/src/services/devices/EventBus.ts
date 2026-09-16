@@ -48,4 +48,8 @@ export class EventBus extends EventEmitter {
   subscribe<T = unknown>(topic: string, handler: (event: T) => void) {
     this.on(topic, handler);
   }
+
+  unsubscribe<T = unknown>(topic: string, handler: (event: T) => void) {
+    this.off(topic, handler);
+  }
 }

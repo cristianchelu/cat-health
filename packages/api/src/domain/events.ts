@@ -1,5 +1,6 @@
 import type {
   LitterboxAnalysisStatePeriod,
+  LitterboxDeviceVerdict,
   LitterboxUseEliminationType,
   EventProviderData,
 } from 'shared';
@@ -58,6 +59,8 @@ export interface LitterboxUseEventData {
    * `[]` = analyzed, zero periods. Per-row `elimination_type` (urination/defecation) is set on ingest/analyze.
    */
   segments?: LitterboxAnalysisStatePeriod[] | null;
+  /** Owner: `LitterboxDeviceVerdictSchema` in shared. */
+  device_verdict?: LitterboxDeviceVerdict;
 }
 
 export type FoodIntakeFoodType = 'dry' | 'wet' | 'treat' | 'unknown';

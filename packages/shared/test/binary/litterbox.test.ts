@@ -111,7 +111,7 @@ describe('encodeLitterboxRawData', () => {
     assert.throws(
       () =>
         encodeLitterboxRawData({
-          version: 3 as 1,
+          version: 4 as 1,
           startTimeMs: 0,
           weights: [],
         }),

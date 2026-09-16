@@ -92,6 +92,31 @@ moved, cleaned, or used while off, so post-boot they stay NaN until the next
 reset re-anchors them. The event log on the server is the durable memory,
 not the device.
 
+### Visit record over MQTT (optional)
+
+A litterbox that runs its own analyzer can publish the record of each visit
+on `<prefix>/<node>/visit/last` (retained) of any `mqtt` account the server
+holds, where `<prefix>` is the account's topic prefix (default `cathealth`)
+and `<node>` is the ESPHome node name the device reports on the native API.
+The payload is the `LBV1` frame described in
+[`visitFrame.ts`](../packages/shared/src/binary/litterbox/visitFrame.ts):
+the device's sample buffer verbatim plus a JSON trailer with its verdict,
+box event and configuration.
+
+When a record arrives the server prefers it to the samples it collected
+over the native API: a native session waits 20 s for the record before it
+is scored on its own, and a record that arrives later attaches itself to
+the natively scored visit. Retained redelivery after a reconnect is
+recognised and ignored. The visit is stored as `raw_data` v3 (the frame
+untouched behind the server's context block) with the device's verdict on
+`data.device_verdict`; the server's own analyzer still decides the
+canonical fields. Box verdicts become `litterbox_maintenance` events
+(`scoop`, `deep_clean`, `top_up` → `litter_addition`); a record whose
+`continued` flag is set carries the waste of the visit it continues.
+`activity` and `unfiltered_weight` stay required: presence and the
+snapshot timing depend on the live edge, and they are the fallback when the
+broker is down.
+
 ## Diagnostics (any device)
 
 Resolved by `device_class` first, conventional ids second — no contract name

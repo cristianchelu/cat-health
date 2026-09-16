@@ -4,7 +4,11 @@ import type { Database } from '../../../../database/index.ts';
 import type { LitterboxUseEventData } from '../../../../domain/events.ts';
 import type { Kysely } from 'kysely';
 
-import { decodeLitterboxRawData, deriveLitterboxSampleRateHz } from 'shared';
+import {
+  decodeLitterboxRawData,
+  deriveLitterboxSampleRateHz,
+  type LitterboxUseEliminationType,
+} from 'shared';
 import { persistedLitterboxSegments } from './persistedLitterboxSegments.ts';
 import {
   StateAnalyzer,
@@ -14,6 +18,17 @@ import {
 
 const NO_ELIMINATION_THRESHOLD = 10;
 
+/** An elimination was detected but almost nothing landed in the litter. */
+export function isStraining(
+  eliminationType: LitterboxUseEliminationType,
+  eliminationWeightG: number,
+): boolean {
+  return (
+    eliminationType !== 'no_elimination' &&
+    eliminationWeightG < NO_ELIMINATION_THRESHOLD
+  );
+}
+
 /** Merge `StateAnalyzer` output into persisted litterbox visit `data` (segments, type, straining). */
 export function mergeAnalyzerIntoLitterboxData(
   existing: LitterboxUseEventData,
@@ -21,9 +36,7 @@ export function mergeAnalyzerIntoLitterboxData(
   sampleRateHz?: number,
 ): LitterboxUseEventData {
   const eliminationType = determineEliminationType(analysis.periods);
-  const ew = existing.elimination_weight;
-  const straining =
-    eliminationType !== 'no_elimination' && ew < NO_ELIMINATION_THRESHOLD;
+  const straining = isStraining(eliminationType, existing.elimination_weight);
   const segments = persistedLitterboxSegments(analysis.periods);
 
   return {

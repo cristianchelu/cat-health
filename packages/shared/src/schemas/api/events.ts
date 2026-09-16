@@ -5,6 +5,7 @@ import {
   EventTypeSchema,
   LitterboxUseEliminationTypeSchema,
   type LitterboxAnalysisStatePeriodDTO,
+  type LitterboxDeviceVerdictDTO,
 } from './eventData.ts';
 
 /**
@@ -24,6 +25,8 @@ export const EVENT_NOTE_MAX_LENGTH = 2000;
  * Per-interval stats (variance, mean) are not persisted — UIs that need them recompute from `raw_data` weights.
  */
 export type LitterboxAnalysisStatePeriod = LitterboxAnalysisStatePeriodDTO;
+
+export type LitterboxDeviceVerdict = LitterboxDeviceVerdictDTO;
 
 /**
  * What caused the event.

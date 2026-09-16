@@ -1,37 +1,20 @@
 import {
   LITTERBOX_DELTA_ESCAPE_U16,
-  LITTERBOX_NULL_I32,
-  LITTERBOX_NULL_U16,
   LITTERBOX_RAW_DATA_VERSION_2,
 } from './constants.ts';
+import {
+  CONTEXT_BLOCK_BYTES,
+  centigrams,
+  readContextBlock,
+  writeContextBlock,
+} from './contextFields.ts';
 import type {
-  DecodedLitterboxContext,
   DecodedLitterboxRawData,
   EncodeLitterboxRawDataV2Input,
 } from './types.ts';
 
 // Layout doc lives on EncodeLitterboxRawDataV2Input in types.ts.
-const HEADER_BYTES = 1 + 8 + 4 + 4 + 2 + 2 + 2 + 2 + 2 + 4;
-
-const INT32_MAX = 2147483647;
-
-function centigrams(grams: number | undefined): number {
-  if (grams == null || !Number.isFinite(grams)) {
-    return LITTERBOX_NULL_I32;
-  }
-  // LITTERBOX_NULL_I32 is reserved as the null sentinel.
-  return Math.max(
-    LITTERBOX_NULL_I32 + 1,
-    Math.min(INT32_MAX, Math.round(grams * 100)),
-  );
-}
-
-function nullableU16(value: number | undefined): number {
-  if (value == null || !Number.isFinite(value)) {
-    return LITTERBOX_NULL_U16;
-  }
-  return Math.max(0, Math.min(LITTERBOX_NULL_U16 - 1, Math.round(value)));
-}
+const HEADER_BYTES = 1 + 8 + CONTEXT_BLOCK_BYTES + 4;
 
 export function encodeLitterboxRawDataV2(
   input: EncodeLitterboxRawDataV2Input,
@@ -69,21 +52,7 @@ export function encodeLitterboxRawDataV2(
   view.setBigUint64(offset, BigInt(Math.trunc(input.startTimeMs)));
   offset += 8;
 
-  view.setInt32(offset, centigrams(input.context?.wasteWeight));
-  offset += 4;
-  view.setInt32(offset, centigrams(input.context?.litterRemaining));
-  offset += 4;
-  view.setUint16(offset, nullableU16(input.context?.daysSinceDeepClean));
-  offset += 2;
-  view.setUint16(offset, nullableU16(input.context?.visitsSinceScoop));
-  offset += 2;
-  view.setUint16(offset, nullableU16(input.context?.urinationsSinceScoop));
-  offset += 2;
-  view.setUint16(offset, nullableU16(input.context?.defecationsSinceScoop));
-  offset += 2;
-
-  view.setUint16(offset, 0); // reserved
-  offset += 2;
+  offset = writeContextBlock(view, offset, input.context);
 
   view.setUint32(offset, count);
   offset += 4;
@@ -128,20 +97,8 @@ export function decodeLitterboxRawDataV2(
   const startTimeMs = Number(view.getBigUint64(offset));
   offset += 8;
 
-  const wasteWeightRaw = view.getInt32(offset);
-  offset += 4;
-  const litterRemainingRaw = view.getInt32(offset);
-  offset += 4;
-  const daysSinceDeepCleanRaw = view.getUint16(offset);
-  offset += 2;
-  const visitsSinceScoopRaw = view.getUint16(offset);
-  offset += 2;
-  const urinationsSinceScoopRaw = view.getUint16(offset);
-  offset += 2;
-  const defecationsSinceScoopRaw = view.getUint16(offset);
-  offset += 2;
-
-  offset += 2; // reserved
+  const context = readContextBlock(view, offset);
+  offset += CONTEXT_BLOCK_BYTES;
 
   const count = view.getUint32(offset);
   offset += 4;
@@ -177,26 +134,6 @@ export function decodeLitterboxRawDataV2(
     }
     cumulative += delta;
     sampleOffsetsMs.push(cumulative);
-  }
-
-  const context: DecodedLitterboxContext = {};
-  if (wasteWeightRaw !== LITTERBOX_NULL_I32) {
-    context.wasteWeight = wasteWeightRaw / 100;
-  }
-  if (litterRemainingRaw !== LITTERBOX_NULL_I32) {
-    context.litterRemaining = litterRemainingRaw / 100;
-  }
-  if (daysSinceDeepCleanRaw !== LITTERBOX_NULL_U16) {
-    context.daysSinceDeepClean = daysSinceDeepCleanRaw;
-  }
-  if (visitsSinceScoopRaw !== LITTERBOX_NULL_U16) {
-    context.visitsSinceScoop = visitsSinceScoopRaw;
-  }
-  if (urinationsSinceScoopRaw !== LITTERBOX_NULL_U16) {
-    context.urinationsSinceScoop = urinationsSinceScoopRaw;
-  }
-  if (defecationsSinceScoopRaw !== LITTERBOX_NULL_U16) {
-    context.defecationsSinceScoop = defecationsSinceScoopRaw;
   }
 
   return {

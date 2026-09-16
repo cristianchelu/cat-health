@@ -82,6 +82,26 @@ export const WaterIntakeEventDataSchema = Type.Object({
 });
 export type WaterIntakeEventDataDTO = Static<typeof WaterIntakeEventDataSchema>;
 
+/**
+ * The verdict the litterbox firmware reached on its own, kept beside the
+ * server's so the two can be diffed per visit. Present only on visits that
+ * arrived as a device record (raw_data v3).
+ */
+export const LitterboxDeviceVerdictSchema = Type.Object({
+  /** The device's event start, epoch seconds on its clock. */
+  visit_id: Type.Number(),
+  elimination_type: LitterboxUseEliminationTypeSchema,
+  /** Slot in the device's cat weight table; -1 when it matched none. */
+  cat_index: Type.Number(),
+  cat_weight: Type.Number(),
+  waste_weight: Type.Number(),
+  segments: Type.Array(LitterboxAnalysisStatePeriodSchema),
+  firmware: Type.String(),
+});
+export type LitterboxDeviceVerdictDTO = Static<
+  typeof LitterboxDeviceVerdictSchema
+>;
+
 export const LitterboxUseEventDataSchema = Type.Object({
   type: Type.Literal('litterbox_use'),
   elimination_type: LitterboxUseEliminationTypeSchema,
@@ -93,6 +113,7 @@ export const LitterboxUseEventDataSchema = Type.Object({
   segments: Type.Optional(
     Type.Union([Type.Array(LitterboxAnalysisStatePeriodSchema), Type.Null()]),
   ),
+  device_verdict: Type.Optional(LitterboxDeviceVerdictSchema),
 });
 export type LitterboxUseEventDataDTO = Static<
   typeof LitterboxUseEventDataSchema

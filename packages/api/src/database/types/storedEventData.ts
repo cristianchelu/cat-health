@@ -96,6 +96,23 @@ const StoredLitterboxUseSchema = Type.Object({
       Type.Null(),
     ]),
   ),
+  device_verdict: Type.Optional(
+    Type.Object({
+      visit_id: Type.Number(),
+      elimination_type: Type.Union([
+        Type.Literal('urination'),
+        Type.Literal('defecation'),
+        Type.Literal('both'),
+        Type.Literal('no_elimination'),
+        Type.Literal('unknown'),
+      ]),
+      cat_index: Type.Number(),
+      cat_weight: Type.Number(),
+      waste_weight: Type.Number(),
+      segments: Type.Array(StoredLitterboxAnalysisStatePeriodSchema),
+      firmware: Type.String(),
+    }),
+  ),
 });
 
 const StoredFoodIntakeSchema = Type.Object({
