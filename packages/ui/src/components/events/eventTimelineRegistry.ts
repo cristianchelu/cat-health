@@ -44,6 +44,11 @@ const timelineEventRegistry: TimelineEventRegistration[] = [
     component: DeviceCentricEvent,
   },
   {
+    id: 'device-enablement',
+    type: 'device_enablement',
+    component: DeviceCentricEvent,
+  },
+  {
     id: 'pet-presence',
     type: 'pet_presence',
     component: PetPresenceEvent,
@@ -58,6 +63,7 @@ const timelineEventRegistry: TimelineEventRegistration[] = [
 const PET_OVERVIEW_HIDDEN_TYPES = new Set([
   'weight_measurement',
   'device_connectivity',
+  'device_enablement',
   'litterbox_maintenance',
 ]);
 

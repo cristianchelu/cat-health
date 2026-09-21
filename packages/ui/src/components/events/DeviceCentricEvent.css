@@ -1,6 +1,7 @@
 .device-centric-event {
-  /* "from online" is a phrase, not a reading, so it is not typed like one. */
-  .device-connectivity-event-value {
+  /* "from online", "with its account": phrases, not readings, so not typed
+     like one. */
+  .device-centric-event-value {
     font-size: var(--text-sm);
     font-weight: var(--font-normal);
     color: var(--color-text-muted);

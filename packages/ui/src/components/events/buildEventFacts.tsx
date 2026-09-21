@@ -6,6 +6,7 @@ import {
   Drumstick,
   GlassWater,
   House,
+  Power,
   Scale,
   Timer,
   Toilet,
@@ -273,6 +274,21 @@ export function buildEventFacts({
           tone: 'neutral',
           value: t(`event_details.connectivity_${data.state}`),
           label: t('event_details.fact_connectivity'),
+        },
+      ];
+
+    case 'device_enablement':
+      return [
+        {
+          key: 'enablement',
+          glyph: <Power aria-hidden />,
+          tone: 'neutral',
+          value: t(
+            data.enabled
+              ? 'event_details.enablement_enabled'
+              : 'event_details.enablement_disabled',
+          ),
+          label: t('event_details.fact_enablement'),
         },
       ];
 

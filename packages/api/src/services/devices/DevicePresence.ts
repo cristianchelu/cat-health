@@ -199,9 +199,21 @@ export class DevicePresence {
   /**
    * Start listening again. Must run before the controller is rebuilt, or the
    * `online` that follows reconnection is swallowed with the noise.
+   *
+   * Until that first report the honest status is "unknown", and it is held in
+   * RAM as such: the row still says whatever the device was when switched
+   * off, and had that been "online" the reconnect would read as no change and
+   * post nothing — while coverage needs that `online` to close the interval
+   * the switch-on opened. `last_seen` is kept; only the status is in doubt.
    */
-  resume(deviceId: number): void {
+  async resume(deviceId: number): Promise<void> {
     this.suppressed.delete(deviceId);
+    const snapshot = await this.getSnapshot(deviceId);
+    this.entries.set(deviceId, {
+      status: 'unknown',
+      lastSeenMs: snapshot.lastSeenMs,
+      lastActivityPersistedAt: 0,
+    });
   }
 
   async getSnapshot(deviceId: number): Promise<DevicePresenceSnapshot> {

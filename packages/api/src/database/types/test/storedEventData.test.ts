@@ -136,6 +136,19 @@ describe('parseStoredEventData', () => {
     );
   });
 
+  it('accepts device_enablement', () => {
+    const valid = {
+      type: 'device_enablement',
+      enabled: false,
+      cause: 'device',
+    };
+    assert.deepEqual(parseStoredEventData(valid), valid);
+    assert.equal(
+      parseStoredEventData({ type: 'device_enablement', enabled: 'off' }),
+      null,
+    );
+  });
+
   it('accepts pet_presence', () => {
     const valid = {
       type: 'pet_presence',

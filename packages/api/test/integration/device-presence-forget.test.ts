@@ -140,13 +140,45 @@ describe('DevicePresence.forget', () => {
 
     presence.reportOnline(deviceId);
     presence.forget(deviceId);
-    presence.resume(deviceId);
+    await presence.resume(deviceId);
 
     // A genuine drop after re-enabling is real news again.
     presence.reportOffline(deviceId);
     t.mock.timers.tick(OFFLINE_EVENT_DELAY_MS + 1);
 
     assert.equal(offlineEvents(recorded).length, 1);
+  });
+
+  it('treats the first report after resume as a transition, whatever the row says', async () => {
+    const recorded: RecordDeviceEventInput[] = [];
+    const presence = await createPresence(recorded);
+
+    // Switched off while online, and nothing reported it offline in between
+    // (a teardown that does not disconnect). The row still says "online".
+    presence.reportOnline(deviceId);
+    presence.forget(deviceId);
+    await presence.resume(deviceId);
+
+    const listening = await presence.getSnapshot(deviceId);
+    assert.equal(listening.status, 'unknown');
+    assert.ok(listening.lastSeenMs != null, 'last_seen survives the switch');
+
+    // Coverage opens an outage on "enabled" and needs this `online` to close it.
+    presence.reportOnline(deviceId);
+
+    const online = recorded.filter(
+      (input) =>
+        input.data.type === 'device_connectivity' &&
+        input.data.state === 'online',
+    );
+    assert.equal(online.length, 2);
+    assert.equal(online[1].data.type, 'device_connectivity');
+    assert.equal(
+      online[1].data.type === 'device_connectivity'
+        ? online[1].data.previous_state
+        : null,
+      'unknown',
+    );
   });
 
   it('drops the pending offline event once the device is forgotten', async (t) => {

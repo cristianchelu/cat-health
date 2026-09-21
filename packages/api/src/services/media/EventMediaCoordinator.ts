@@ -1,4 +1,5 @@
 import type { Kysely } from 'kysely';
+import { isDeviceStatusEventType } from '../../domain/events.ts';
 import type { Database } from '../../database/index.ts';
 import type { DeviceCameraConfig } from '../../database/types/DeviceCameraTable.ts';
 import type { EventType } from 'shared';
@@ -323,7 +324,7 @@ export class EventMediaCoordinator {
   }
 
   private async handleDeviceEvent(event: DeviceEvent): Promise<void> {
-    if (event.type === 'device_connectivity') {
+    if (isDeviceStatusEventType(event.type)) {
       return;
     }
 

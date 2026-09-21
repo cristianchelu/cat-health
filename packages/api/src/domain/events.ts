@@ -102,6 +102,23 @@ export interface DeviceConnectivityEventData {
   previous_state?: DeviceConnectivityPreviousState;
 }
 
+export type DeviceEnablementCause = 'device' | 'account';
+
+export interface DeviceEnablementEventData {
+  type: 'device_enablement';
+  enabled: boolean;
+  /** Which switch moved: the device's own, or its whole account's. */
+  cause?: DeviceEnablementCause;
+}
+
+/**
+ * Events that describe the device itself rather than anything a pet did:
+ * nothing to attribute, nothing worth pointing a camera at.
+ */
+export function isDeviceStatusEventType(type: string): boolean {
+  return type === 'device_connectivity' || type === 'device_enablement';
+}
+
 export type PetPresenceState = 'away' | 'home' | 'outside';
 export type PetPresenceContext = 'vet' | 'travel' | 'friend' | 'manual';
 export type PetPresencePreviousState = PetPresenceState | 'unknown';
@@ -120,4 +137,5 @@ export type EventData =
   | FoodIntakeEventData
   | LitterboxMaintenanceEventData
   | DeviceConnectivityEventData
+  | DeviceEnablementEventData
   | PetPresenceEventData;

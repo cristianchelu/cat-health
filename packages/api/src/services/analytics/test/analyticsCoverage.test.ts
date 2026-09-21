@@ -123,6 +123,60 @@ describe('pairTransitionEvents', () => {
   });
 });
 
+describe("pairTransitionEvents with the user's switch", () => {
+  const options = {
+    startStates: new Set(['offline', 'error', 'enabled']),
+    endStates: new Set(['online', 'disabled']),
+    range: range('2026-06-01T00:00:00Z', '2026-06-10T00:00:00Z'),
+    minDurationMs: 60_000,
+  };
+
+  it('closes an outage when the device is switched off, and stays closed', () => {
+    const intervals = pairTransitionEvents(
+      [
+        { timestamp: at('2026-06-02T08:00:00Z'), state: 'offline' },
+        { timestamp: at('2026-06-05T08:00:00Z'), state: 'disabled' },
+      ],
+      options,
+    );
+
+    assert.equal(intervals.length, 1);
+    assert.equal(
+      intervals[0].end.toISOString(),
+      at('2026-06-05T08:00:00Z').toISOString(),
+    );
+  });
+
+  it('opens an outage on switch-on until the device is heard from', () => {
+    const intervals = pairTransitionEvents(
+      [
+        { timestamp: at('2026-06-02T08:00:00Z'), state: 'disabled' },
+        { timestamp: at('2026-06-04T08:00:00Z'), state: 'enabled' },
+        { timestamp: at('2026-06-06T08:00:00Z'), state: 'online' },
+      ],
+      options,
+    );
+
+    assert.deepEqual(
+      intervals.map((i) => [i.start.toISOString(), i.end.toISOString()]),
+      [['2026-06-04T08:00:00.000Z', '2026-06-06T08:00:00.000Z']],
+    );
+  });
+
+  it('keeps insertion order for an enabled/online pair on the same millisecond', () => {
+    const t = at('2026-06-04T08:00:00Z');
+    const intervals = pairTransitionEvents(
+      [
+        { timestamp: t, state: 'enabled' },
+        { timestamp: t, state: 'online' },
+      ],
+      options,
+    );
+
+    assert.deepEqual(intervals, []);
+  });
+});
+
 describe('mergeUntrackedIntervals', () => {
   it('merges overlapping pet and device intervals', () => {
     const pet: TimeInterval[] = [

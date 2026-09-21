@@ -19,6 +19,7 @@ import { isCamera } from './types.ts';
 import { isDeviceReachable } from './deviceEnablement.ts';
 import { DevicePresence } from './DevicePresence.ts';
 import { recordDeviceEvent } from '../events/recordDeviceEvent.ts';
+import { recordEnablementTransition } from './deviceEnablementEvents.ts';
 
 export class IntegrationManager
   implements DeviceDirectory, DeviceIntegrationContext
@@ -202,6 +203,18 @@ export class IntegrationManager
       await existingManager.shutdown();
     }
 
+    // After the shutdown so no suppressed teardown can trail it, and before
+    // the manager below reconnects so an `enabled` always precedes its
+    // `online`.
+    for (const device of devices) {
+      await recordEnablementTransition(
+        this.deps,
+        device.id,
+        { enabled: device.enabled, account_enabled: account.enabled },
+        'account',
+      );
+    }
+
     // Quiet rather than throwing: callers want the runtime to match the row,
     // not to start this account. `initialize()` skips disabled accounts the
     // same way at startup.
@@ -213,7 +226,7 @@ export class IntegrationManager
     // Before the manager reconnects, so the `online` that follows is heard.
     // Devices switched off individually stay suppressed.
     for (const device of devices) {
-      if (device.enabled) this.presence.resume(device.id);
+      if (device.enabled) await this.presence.resume(device.id);
     }
 
     const manager = provider.createAccountManager(account, this.deps);
@@ -279,12 +292,16 @@ export class IntegrationManager
     await this.invalidateDeviceController(deviceId);
 
     if (isDeviceReachable(device)) {
-      // Before instantiating: reconnecting reports online, and that transition
-      // is real news the user should see.
-      this.presence.resume(deviceId);
+      // Both before instantiating: reconnecting reports online, and that
+      // transition is real news the user should see — and it must land after
+      // the switch event, which a provider whose connect reports online
+      // synchronously would otherwise tie on the same millisecond.
+      await recordEnablementTransition(this.deps, deviceId, device, 'device');
+      await this.presence.resume(deviceId);
       this.instantiateDeviceController(device);
     } else {
       this.presence.forget(deviceId);
+      await recordEnablementTransition(this.deps, deviceId, device, 'device');
     }
   }
 

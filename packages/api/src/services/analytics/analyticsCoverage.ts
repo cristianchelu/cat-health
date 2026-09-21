@@ -4,10 +4,7 @@ import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import type { DeviceType } from 'shared';
 import type { Database } from '../../database/index.ts';
-import type {
-  DeviceConnectivityEventData,
-  PetPresenceEventData,
-} from '../../domain/events.ts';
+import type { EventData } from '../../domain/events.ts';
 
 export type MonitorDeviceClass = Extract<
   DeviceType,
@@ -206,6 +203,12 @@ export function isBucketTracked(
   return !untrackedBuckets.has(bucket);
 }
 
+/**
+ * Every device of the class, switched off or not. Whether a device counts
+ * towards coverage at a given moment is answered by its timeline — the
+ * `device_enablement` events below — not by the row's current switch, so the
+ * outages a retired device suffered while it was in service keep hatching.
+ */
 export async function resolveMonitorDevices(
   db: Kysely<Database>,
   deviceClass: MonitorDeviceClass,
@@ -214,35 +217,79 @@ export async function resolveMonitorDevices(
     .selectFrom('device')
     .select('id')
     .where('type', '=', deviceClass)
-    .where('enabled', '=', 1)
     .execute();
 
   return rows.map((row) => row.id);
 }
 
+/**
+ * One untracked-interval state machine: which event kinds feed it, the state
+ * each event lands in, and which of those states open or close an interval.
+ */
+interface TransitionSource {
+  eventTypes: readonly EventData['type'][];
+  stateOf: (data: unknown) => string | null;
+  startStates: ReadonlySet<string>;
+  endStates: ReadonlySet<string>;
+}
+
+const PET_AWAY: TransitionSource = {
+  eventTypes: ['pet_presence'],
+  stateOf: (data) => {
+    const record = data as Partial<EventData> | null | undefined;
+    return record?.type === 'pet_presence' ? (record.state ?? null) : null;
+  },
+  startStates: new Set(['away', 'outside']),
+  endStates: new Set(['home']),
+};
+
+/**
+ * Connectivity is what the device said; enablement is what the user did.
+ * "enabled" opens an outage until the device is next heard from, so a device
+ * switched back on that never connects reads as untracked, and "disabled"
+ * closes whatever was open: from here the device is not part of the house.
+ */
+const DEVICE_OUTAGE: TransitionSource = {
+  eventTypes: ['device_connectivity', 'device_enablement'],
+  stateOf: (data) => {
+    const record = data as Partial<EventData> | null | undefined;
+    switch (record?.type) {
+      case 'device_connectivity':
+        return record.state ?? null;
+      case 'device_enablement':
+        return record.enabled ? 'enabled' : 'disabled';
+      default:
+        return null;
+    }
+  },
+  startStates: new Set(['offline', 'error', 'enabled']),
+  endStates: new Set(['online', 'disabled']),
+};
+
 async function fetchLatestTransitionStateBeforeRange(
   db: Kysely<Database>,
   options: {
-    eventType: 'pet_presence' | 'device_connectivity';
+    source: TransitionSource;
     rangeStart: Date;
     petId?: number;
     deviceIds?: number[];
   },
 ): Promise<Map<number, string>> {
-  const { eventType, rangeStart, petId, deviceIds } = options;
+  const { source, rangeStart, petId, deviceIds } = options;
 
   if (petId != null) {
     const row = await db
       .selectFrom('event')
       .select(['data'])
       .where('pet_id', '=', petId)
-      .where(sql`json_extract(data, '$.type')`, '=', eventType)
+      .where(sql`json_extract(data, '$.type')`, 'in', source.eventTypes)
       .where('timestamp', '<', rangeStart)
       .orderBy('timestamp', 'desc')
+      .orderBy('id', 'desc')
       .limit(1)
       .executeTakeFirst();
 
-    const state = extractTransitionState(row?.data, eventType);
+    const state = source.stateOf(row?.data);
     return state == null ? new Map() : new Map([[petId, state]]);
   }
 
@@ -254,9 +301,10 @@ async function fetchLatestTransitionStateBeforeRange(
     .selectFrom('event')
     .select(['device_id', 'data', 'timestamp'])
     .where('device_id', 'in', deviceIds)
-    .where(sql`json_extract(data, '$.type')`, '=', eventType)
+    .where(sql`json_extract(data, '$.type')`, 'in', source.eventTypes)
     .where('timestamp', '<', rangeStart)
     .orderBy('timestamp', 'desc')
+    .orderBy('id', 'desc')
     .execute();
 
   const latestByDevice = new Map<number, string>();
@@ -265,29 +313,13 @@ async function fetchLatestTransitionStateBeforeRange(
       continue;
     }
 
-    const state = extractTransitionState(row.data, eventType);
+    const state = source.stateOf(row.data);
     if (state != null) {
       latestByDevice.set(row.device_id, state);
     }
   }
 
   return latestByDevice;
-}
-
-function extractTransitionState(
-  data: unknown,
-  eventType: 'pet_presence' | 'device_connectivity',
-): string | null {
-  if (!data || typeof data !== 'object') {
-    return null;
-  }
-
-  const record = data as { type?: string; state?: string };
-  if (record.type !== eventType || typeof record.state !== 'string') {
-    return null;
-  }
-
-  return record.state;
 }
 
 function seedOpenIntervalFromPriorState(
@@ -307,21 +339,21 @@ export async function buildPetAwayIntervals(
   petId: number,
   range: TimeRange,
 ): Promise<TimeInterval[]> {
-  const startStates = new Set(['away', 'outside']);
-  const endStates = new Set(['home']);
+  const source = PET_AWAY;
 
   const [events, priorStates] = await Promise.all([
     db
       .selectFrom('event')
       .select(['timestamp', 'data'])
       .where('pet_id', '=', petId)
-      .where(sql`json_extract(data, '$.type')`, '=', 'pet_presence')
+      .where(sql`json_extract(data, '$.type')`, 'in', source.eventTypes)
       .where('timestamp', '>=', range.start)
       .where('timestamp', '<=', range.end)
       .orderBy('timestamp', 'asc')
+      .orderBy('id', 'asc')
       .execute(),
     fetchLatestTransitionStateBeforeRange(db, {
-      eventType: 'pet_presence',
+      source,
       rangeStart: range.start,
       petId,
     }),
@@ -330,23 +362,18 @@ export async function buildPetAwayIntervals(
   const transitions: TransitionEvent[] = [
     ...seedOpenIntervalFromPriorState(
       priorStates.get(petId),
-      startStates,
+      source.startStates,
       range.start,
     ),
-    ...events
-      .map((row) => {
-        const data = row.data as PetPresenceEventData;
-        return {
-          timestamp: row.timestamp,
-          state: data.state,
-        };
-      })
-      .filter((row) => row.state != null),
+    ...events.flatMap((row) => {
+      const state = source.stateOf(row.data);
+      return state == null ? [] : [{ timestamp: row.timestamp, state }];
+    }),
   ];
 
   return pairTransitionEvents(transitions, {
-    startStates,
-    endStates,
+    startStates: source.startStates,
+    endStates: source.endStates,
     range,
   });
 }
@@ -361,22 +388,24 @@ export async function buildDeviceOutageIntervals(
     return [];
   }
 
-  const startStates = new Set(['offline', 'error']);
-  const endStates = new Set(['online']);
+  const source = DEVICE_OUTAGE;
   const minDurationMs = thresholdMinutes * 60_000;
 
+  // `id` breaks timestamp ties: an `enabled` and the `online` it triggers can
+  // share a millisecond, and only in insertion order do they pair up.
   const [events, priorStates] = await Promise.all([
     db
       .selectFrom('event')
       .select(['timestamp', 'data', 'device_id'])
       .where('device_id', 'in', deviceIds)
-      .where(sql`json_extract(data, '$.type')`, '=', 'device_connectivity')
+      .where(sql`json_extract(data, '$.type')`, 'in', source.eventTypes)
       .where('timestamp', '>=', range.start)
       .where('timestamp', '<=', range.end)
       .orderBy('timestamp', 'asc')
+      .orderBy('id', 'asc')
       .execute(),
     fetchLatestTransitionStateBeforeRange(db, {
-      eventType: 'device_connectivity',
+      source,
       rangeStart: range.start,
       deviceIds,
     }),
@@ -391,7 +420,7 @@ export async function buildDeviceOutageIntervals(
     eventsByDevice.set(deviceId, [
       ...seedOpenIntervalFromPriorState(
         priorStates.get(deviceId),
-        startStates,
+        source.startStates,
         range.start,
       ),
     ]);
@@ -402,23 +431,20 @@ export async function buildDeviceOutageIntervals(
       continue;
     }
 
-    const data = row.data as DeviceConnectivityEventData;
+    const state = source.stateOf(row.data);
     const bucket = eventsByDevice.get(row.device_id);
-    if (bucket == null) {
+    if (bucket == null || state == null) {
       continue;
     }
 
-    bucket.push({
-      timestamp: row.timestamp,
-      state: data.state,
-    });
+    bucket.push({ timestamp: row.timestamp, state });
   }
 
   const perDeviceIntervals = [...eventsByDevice.entries()].map(
     ([, deviceEvents]) =>
       pairTransitionEvents(deviceEvents, {
-        startStates,
-        endStates,
+        startStates: source.startStates,
+        endStates: source.endStates,
         range,
         minDurationMs,
       }),

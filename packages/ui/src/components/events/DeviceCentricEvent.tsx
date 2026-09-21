@@ -1,6 +1,13 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Brush, Wifi, WifiOff } from 'lucide-react';
+import {
+  AlertTriangle,
+  Brush,
+  Power,
+  PowerOff,
+  Wifi,
+  WifiOff,
+} from 'lucide-react';
 import type {
   DeviceConnectivityEventDataDTO,
   LitterboxMaintenanceEventTypeDTO,
@@ -55,7 +62,40 @@ const DeviceConnectivityEventRow: React.FC<EventComponentProps> = (props) => {
           : undefined
       }
       valueVariant="default"
-      valueClassName="device-connectivity-event-value"
+      valueClassName="device-centric-event-value"
+    />
+  );
+};
+
+const DeviceEnablementEventRow: React.FC<EventComponentProps> = (props) => {
+  const { t } = useTranslation();
+  const enablement =
+    props.event.data.type === 'device_enablement' ? props.event.data : null;
+  if (!enablement) {
+    return null;
+  }
+
+  const Icon = enablement.enabled ? Power : PowerOff;
+  const titleKey = enablement.enabled
+    ? 'events.device_enablement_enabled'
+    : 'events.device_enablement_disabled';
+
+  return (
+    <TimelineEventShell
+      {...props}
+      className="device-centric-event"
+      icon={<Icon aria-hidden />}
+      iconColor={
+        enablement.enabled ? 'var(--color-success)' : 'var(--color-text-muted)'
+      }
+      title={t(titleKey)}
+      value={
+        enablement.cause === 'account'
+          ? t('events.device_enablement_via_account')
+          : undefined
+      }
+      valueVariant="default"
+      valueClassName="device-centric-event-value"
     />
   );
 };
@@ -89,6 +129,10 @@ const DeviceCentricEvent: React.FC<EventComponentProps> = (props) => {
 
   if (type === 'device_connectivity') {
     return <DeviceConnectivityEventRow {...props} />;
+  }
+
+  if (type === 'device_enablement') {
+    return <DeviceEnablementEventRow {...props} />;
   }
 
   if (type === 'litterbox_maintenance') {

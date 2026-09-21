@@ -8,6 +8,7 @@ export const EventTypeSchema = Type.Union([
   Type.Literal('food_intake'),
   Type.Literal('litterbox_maintenance'),
   Type.Literal('device_connectivity'),
+  Type.Literal('device_enablement'),
   Type.Literal('pet_presence'),
 ]);
 export type EventType = Static<typeof EventTypeSchema>;
@@ -211,6 +212,28 @@ export type DeviceConnectivityEventDataDTO = Static<
   typeof DeviceConnectivityEventDataSchema
 >;
 
+/**
+ * The user's own switch, as opposed to what the device reported: a disabled
+ * device leaves the household from this moment and an enabled one rejoins it.
+ */
+export const DeviceEnablementCauseSchema = Type.Union([
+  Type.Literal('device'),
+  Type.Literal('account'),
+]);
+export type DeviceEnablementCauseDTO = Static<
+  typeof DeviceEnablementCauseSchema
+>;
+
+export const DeviceEnablementEventDataSchema = Type.Object({
+  type: Type.Literal('device_enablement'),
+  enabled: Type.Boolean(),
+  /** Which switch moved: the device's own, or its whole account's. */
+  cause: Type.Optional(DeviceEnablementCauseSchema),
+});
+export type DeviceEnablementEventDataDTO = Static<
+  typeof DeviceEnablementEventDataSchema
+>;
+
 export const PetPresenceStateSchema = Type.Union([
   Type.Literal('away'),
   Type.Literal('home'),
@@ -249,6 +272,7 @@ export const EventDataSchema = Type.Union([
   FoodIntakeEventDataSchema,
   LitterboxMaintenanceEventDataSchema,
   DeviceConnectivityEventDataSchema,
+  DeviceEnablementEventDataSchema,
   PetPresenceEventDataSchema,
 ]);
 export type EventDataDTO = Static<typeof EventDataSchema>;

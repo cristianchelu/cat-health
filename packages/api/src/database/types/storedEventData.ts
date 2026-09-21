@@ -157,6 +157,14 @@ const StoredDeviceConnectivitySchema = Type.Object({
   ),
 });
 
+const StoredDeviceEnablementSchema = Type.Object({
+  type: Type.Literal('device_enablement'),
+  enabled: Type.Boolean(),
+  cause: Type.Optional(
+    Type.Union([Type.Literal('device'), Type.Literal('account')]),
+  ),
+});
+
 const StoredPetPresenceSchema = Type.Object({
   type: Type.Literal('pet_presence'),
   state: Type.Union([
@@ -189,6 +197,7 @@ export const StoredEventDataSchema = Type.Union([
   StoredFoodIntakeSchema,
   StoredLitterboxMaintenanceSchema,
   StoredDeviceConnectivitySchema,
+  StoredDeviceEnablementSchema,
   StoredPetPresenceSchema,
 ]);
 
