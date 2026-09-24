@@ -501,6 +501,10 @@ describe('presence when a provider account is switched off', () => {
   });
 
   after(async () => {
+    // Re-enabling the account initialises a real ESPHome manager, not the stub
+    // registered above, and its client keeps dialling the fixture host. Only
+    // the integration manager can tear that down; `app.close()` does not.
+    await integrationManager.shutdown();
     await app.close();
     await destroyTestDb(ctx);
   });
