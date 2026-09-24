@@ -6,6 +6,7 @@ export const EventTypeSchema = Type.Union([
   Type.Literal('water_intake'),
   Type.Literal('litterbox_use'),
   Type.Literal('food_intake'),
+  Type.Literal('food_served'),
   Type.Literal('litterbox_maintenance'),
   Type.Literal('device_connectivity'),
   Type.Literal('device_enablement'),
@@ -167,6 +168,33 @@ export const FoodIntakeEventDataSchema = Type.Object({
 });
 export type FoodIntakeEventDataDTO = Static<typeof FoodIntakeEventDataSchema>;
 
+/**
+ * Food put into a bowl, as opposed to food taken out of one.
+ *
+ * Named for the property that separates it from stocking a hopper: after this
+ * event the food is in front of the animal. A machine dispensing on a schedule
+ * and a person tipping in a scoop are the same event here — `caused_by` says
+ * which, so the type never has to.
+ *
+ * `amount` is what went in, never the bowl's level. `level_before` and
+ * `level_after` carry the level when the device weighs its bowl, which is what
+ * makes "topped up onto leftovers" (`level_before > 0`) a reading rather than a
+ * second event type. Both absent on feeders that cannot weigh.
+ */
+export const FoodServedEventDataSchema = Type.Object({
+  type: Type.Literal('food_served'),
+  food_type: FoodIntakeFoodTypeSchema,
+  /** Grams added to the bowl by this serving. */
+  amount: Type.Number(),
+  food_id: Type.Optional(Type.Number()),
+  /** Bowl level in grams immediately before the serving, when weighed. */
+  level_before: Type.Optional(Type.Number()),
+  /** Bowl level in grams immediately after the serving, when weighed. */
+  level_after: Type.Optional(Type.Number()),
+  provider_data: Type.Optional(EventProviderDataSchema),
+});
+export type FoodServedEventDataDTO = Static<typeof FoodServedEventDataSchema>;
+
 export const LitterboxMaintenanceEventTypeSchema = Type.Union([
   Type.Literal('scoop'),
   Type.Literal('deep_clean'),
@@ -270,6 +298,7 @@ export const EventDataSchema = Type.Union([
   WaterIntakeEventDataSchema,
   LitterboxUseEventDataSchema,
   FoodIntakeEventDataSchema,
+  FoodServedEventDataSchema,
   LitterboxMaintenanceEventDataSchema,
   DeviceConnectivityEventDataSchema,
   DeviceEnablementEventDataSchema,

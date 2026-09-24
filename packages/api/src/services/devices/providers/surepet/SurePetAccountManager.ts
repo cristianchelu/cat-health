@@ -28,20 +28,25 @@ import {
 } from '../../../food/enrichFoodIntake.ts';
 import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
 import { attributionColumns } from '../../../../domain/eventAttribution.ts';
-import { SurePetClient, SurePetClientError } from './SurePetClient.ts';
+import { SurePetClient } from './SurePetClient.ts';
 import { FeederController } from './FeederController.ts';
 import {
   SUREPET_DEVICE_STATE_POLL_INTERVAL_MS,
   SUREPET_TIMELINE_POLL_INTERVAL_MS,
 } from './constants.ts';
 import {
-  extractFeedingDatapointsFromHouseholdReport,
   extractFeedingDatapointsFromTimeline,
   resolveLocalPetIdFromProviderData,
 } from './extractFeedingEvents.ts';
 import { resolveSurePetFoodCompartmentId } from './foodCompartments.ts';
-import { mapFeedingDatapointToEvent } from './mapFeedingEvent.ts';
-import type { NormalizedFeedingDatapoint } from './types.ts';
+import {
+  mapFeedingDatapointToEvent,
+  mapServedDatapointToEvent,
+} from './mapFeedingEvent.ts';
+import type {
+  NormalizedFeedingDatapoint,
+  NormalizedServedDatapoint,
+} from './types.ts';
 
 function parseAccountConfig(config: unknown): SurePetAccountConfig {
   const parsed = parseWithSchema(SurePetAccountConfigSchema, config);
@@ -411,34 +416,19 @@ export class SurePetAccountManager implements AccountManager {
       const sinceId = this.runtime.sync?.last_timeline_since_id;
       const isFirstSync = sinceId == null;
       const datapoints: NormalizedFeedingDatapoint[] = [];
+      const served: NormalizedServedDatapoint[] = [];
       let maxTimelineEntryId: number | null = null;
 
-      if (isFirstSync) {
-        try {
-          const report = await client.getHouseholdReport(householdId);
-          const reportDatapoints =
-            extractFeedingDatapointsFromHouseholdReport(report);
-          datapoints.push(...reportDatapoints);
-        } catch (error) {
-          if (error instanceof SurePetClientError && error.status === 404) {
-            this.deps.logger.log(
-              `SurePet household report not available for household ${householdId}; skipping backfill`,
-            );
-          } else {
-            this.deps.logger.error(
-              'SurePet household report backfill failed:',
-              error,
-            );
-          }
-        }
-      }
-
+      // No household-report backfill: SurePet retired that endpoint (404), and
+      // its per-pet replacement reports no fills. `backfillFeedingTimeline`
+      // walks the whole timeline instead, which sees both directions.
       try {
         const timeline = await client.getTimeline(householdId, {
           sinceId: isFirstSync ? undefined : sinceId,
         });
         const extracted = extractFeedingDatapointsFromTimeline(timeline);
         datapoints.push(...extracted.datapoints);
+        served.push(...extracted.served);
         maxTimelineEntryId = extracted.maxEntryId;
       } catch (error) {
         this.deps.logger.error('SurePet timeline fetch failed:', error);
@@ -449,6 +439,7 @@ export class SurePetAccountManager implements AccountManager {
       if (this.retired) return;
 
       await this.ingestFeedingDatapoints(datapoints);
+      await this.ingestServedDatapoints(served);
 
       if (isFirstSync) {
         const nextSinceId = maxTimelineEntryId ?? 0;
@@ -493,10 +484,16 @@ export class SurePetAccountManager implements AccountManager {
 
     const timeline = await client.getFullTimeline(householdId);
     const extracted = extractFeedingDatapointsFromTimeline(timeline);
-    const datapoints = extracted.datapoints.filter(
-      (datapoint) => datapoint.device_id === cloudDeviceId,
+    await this.ingestFeedingDatapoints(
+      extracted.datapoints.filter(
+        (datapoint) => datapoint.device_id === cloudDeviceId,
+      ),
     );
-    await this.ingestFeedingDatapoints(datapoints);
+    await this.ingestServedDatapoints(
+      extracted.served.filter(
+        (datapoint) => datapoint.device_id === cloudDeviceId,
+      ),
+    );
   }
 
   private async backfillFeedingTimeline(): Promise<{
@@ -521,6 +518,7 @@ export class SurePetAccountManager implements AccountManager {
     const ingestStats = await this.ingestFeedingDatapoints(
       extracted.datapoints,
     );
+    await this.ingestServedDatapoints(extracted.served);
 
     return {
       timelineEntryCount: timeline.length,
@@ -558,6 +556,90 @@ export class SurePetAccountManager implements AccountManager {
     }
 
     return { ingestAttempts, skippedUnmapped };
+  }
+
+  /**
+   * Servings, which need none of the meal path's machinery: no pet to resolve,
+   * no nutrients to derive, no back-fill of a pet id onto an existing row.
+   */
+  private async ingestServedDatapoints(
+    datapoints: NormalizedServedDatapoint[],
+  ): Promise<void> {
+    if (datapoints.length === 0) return;
+
+    const localDeviceMap = await this.buildLocalDeviceMap();
+
+    for (const datapoint of datapoints) {
+      const localDevice =
+        datapoint.device_id != null
+          ? localDeviceMap.get(datapoint.device_id)
+          : undefined;
+      if (localDevice == null) continue;
+
+      const controller = this.controllers.get(localDevice.id);
+      const event = mapServedDatapointToEvent({
+        datapoint,
+        localDeviceId: localDevice.id,
+        deviceControl: controller?.getDeviceControl(),
+      });
+
+      const providerData = event.data.provider_data;
+      const externalKey =
+        providerData?.provider === 'surepet'
+          ? providerData.external_key
+          : undefined;
+      if (!externalKey) continue;
+
+      const existing = await this.findEventByExternalKey(
+        localDevice.id,
+        externalKey,
+      );
+      if (existing) continue;
+
+      const compartmentId = resolveSurePetFoodCompartmentId(
+        controller?.getDeviceControl(),
+        datapoint.bowl_index,
+      );
+      const foodId = resolveFoodIdForCompartment(
+        localDevice.config,
+        compartmentId,
+      );
+
+      await recordDeviceEvent(this.deps, {
+        deviceId: localDevice.id,
+        timestamp: event.timestamp,
+        data: foodId != null ? { ...event.data, food_id: foodId } : event.data,
+        // A SureFeed has no motor. Every gram that appears in its bowl was put
+        // there by a person, and the feeder says so itself with `USER_CLOSED`.
+        //
+        // No `attributed_by`: the vocabulary there names ways of identifying a
+        // pet, and none of them describes a device reporting its own lid. A
+        // claimed source would be less honest than an absent one.
+        raw_data: event.raw_data,
+        human_verified: event.human_verified,
+      });
+    }
+  }
+
+  private async findEventByExternalKey(
+    deviceId: number,
+    externalKey: string,
+  ): Promise<{ id: number; pet_id: number | null } | undefined> {
+    return await this.deps.db
+      .selectFrom('event')
+      .select(['id', 'pet_id'])
+      .where('device_id', '=', deviceId)
+      .where(
+        sql<string>`json_extract(data, '$.provider_data.external_key')`,
+        '=',
+        externalKey,
+      )
+      .where(
+        sql<string>`json_extract(data, '$.provider_data.provider')`,
+        '=',
+        'surepet',
+      )
+      .executeTakeFirst();
   }
 
   private parseDeviceConfig(config: unknown): Record<string, unknown> {
@@ -651,21 +733,10 @@ export class SurePetAccountManager implements AccountManager {
         : undefined;
     if (!externalKey) return;
 
-    const existing = await this.deps.db
-      .selectFrom('event')
-      .select(['id', 'pet_id'])
-      .where('device_id', '=', localDevice.id)
-      .where(
-        sql<string>`json_extract(data, '$.provider_data.external_key')`,
-        '=',
-        externalKey,
-      )
-      .where(
-        sql<string>`json_extract(data, '$.provider_data.provider')`,
-        '=',
-        'surepet',
-      )
-      .executeTakeFirst();
+    const existing = await this.findEventByExternalKey(
+      localDevice.id,
+      externalKey,
+    );
 
     if (existing) {
       if (existing.pet_id == null && event.pet_id != null) {
@@ -674,13 +745,19 @@ export class SurePetAccountManager implements AccountManager {
       return;
     }
 
+    // The feeder's own `context` decides this: only a recognised pet keeps the
+    // chip read. An intruder is another animal, and a reading the hardware
+    // distrusts stays unresolved for a human to settle.
+    const cause = datapoint.cause ?? 'pet';
+
     const resultId = await recordDeviceEvent(this.deps, {
       deviceId: localDevice.id,
       timestamp: event.timestamp,
       data: event.data,
-      pet_id: event.pet_id,
+      pet_id: cause === 'pet' ? event.pet_id : null,
+      caused_by: cause,
       // SurePet identifies by the implanted chip the hardware reads, not a guess.
-      attributed_by: 'microchip',
+      attributed_by: cause === 'pet' ? 'microchip' : undefined,
       raw_data: event.raw_data,
       human_verified: event.human_verified,
     });

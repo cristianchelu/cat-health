@@ -39,6 +39,8 @@
     "previous_period": "Perioada anterioară",
     "next_period": "Perioada următoare",
     "food_intake": "Mâncare",
+    "food_served": "Mâncare pusă",
+    "food_topped_up": "Completat",
     "log_food": "Adaugă mâncare",
     "error_loading": "Datele nu au putut fi încărcate",
     "no_pets_found": "Nu s-au găsit animale",

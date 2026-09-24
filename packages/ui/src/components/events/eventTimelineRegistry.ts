@@ -5,6 +5,7 @@ import LitterboxEvent from './LitterboxEvent';
 import WeightEvent from './WeightEvent';
 import WaterEvent from './WaterEvent';
 import FoodEvent from './FoodEvent';
+import FoodServedEvent from './FoodServedEvent';
 import DeviceCentricEvent from './DeviceCentricEvent';
 import PetPresenceEvent from './PetPresenceEvent';
 import GenericEvent from './GenericEvent';
@@ -39,6 +40,11 @@ const timelineEventRegistry: TimelineEventRegistration[] = [
     component: FoodEvent,
   },
   {
+    id: 'food-served',
+    type: 'food_served',
+    component: FoodServedEvent,
+  },
+  {
     id: 'device-connectivity',
     type: 'device_connectivity',
     component: DeviceCentricEvent,
@@ -62,6 +68,9 @@ const timelineEventRegistry: TimelineEventRegistration[] = [
 
 const PET_OVERVIEW_HIDDEN_TYPES = new Set([
   'weight_measurement',
+  // A serving belongs to the bowl, not to any one pet: it is what the household
+  // put out, and every pet with access shares it.
+  'food_served',
   'device_connectivity',
   'device_enablement',
   'litterbox_maintenance',

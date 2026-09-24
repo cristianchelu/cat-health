@@ -1,14 +1,27 @@
 import { isRecord } from 'shared';
 import { createHash } from 'node:crypto';
-import type { ProviderPetLink, SurePetAccountConfig } from 'shared';
+import type {
+  EventCauseDTO,
+  ProviderPetLink,
+  SurePetAccountConfig,
+} from 'shared';
 import { getLinkRemotePetId, getLinkTagId } from './petLinkResolvers.ts';
-import type { NormalizedFeedingDatapoint } from './types.ts';
-import { SubstanceType, TimelineEventType } from './constants.ts';
+import type {
+  NormalizedFeedingDatapoint,
+  NormalizedServedDatapoint,
+} from './types.ts';
+import {
+  FoodType,
+  SubstanceType,
+  TimelineEventType,
+  WeightContext,
+} from './constants.ts';
 import type {
   SurePetConsumptionRecord,
   SurePetFeedingDatapoint,
   SurePetHouseholdReportPair,
   SurePetTimelineEntry,
+  SurePetTimelineEntryData,
   SurePetTimelineWeightRecord,
 } from './types.ts';
 
@@ -51,17 +64,102 @@ function resolvePetIdFromTimelineEntry(
   return getNumber(pet?.id);
 }
 
+/**
+ * A timeline entry's `data` arrives as a JSON string, so every read of it goes
+ * through here. Malformed payloads are simply absent rather than fatal — the
+ * weights carry the amounts, and this only enriches them.
+ */
+function parseTimelineEntryData(
+  entry: SurePetTimelineEntry,
+): SurePetTimelineEntryData | undefined {
+  const raw = getString(entry.data);
+  if (!raw) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return isRecord(parsed) ? (parsed as SurePetTimelineEntryData) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** `FoodType` configured for one hardware bowl, from the entry's own payload. */
+function foodTypeIdForBowl(
+  data: SurePetTimelineEntryData | undefined,
+  bowlIndex: number,
+): number | undefined {
+  const types = data?.weight?.food_type;
+  if (!Array.isArray(types)) return undefined;
+  return getNumber(types[bowlIndex]);
+}
+
+/**
+ * What a weight record is a record OF.
+ *
+ * `context` is the authority when present: it is the only field that separates
+ * a recognised pet from an intruder, and a fill from a tare. Records that
+ * predate it fall back to the entry type, which is how this always read.
+ */
+type WeightRecordRole =
+  | { kind: 'consumption'; cause: EventCauseDTO }
+  | { kind: 'served' }
+  | { kind: 'ignore' };
+
+function resolveWeightRecordRole(
+  record: SurePetTimelineWeightRecord,
+  entry: SurePetTimelineEntry,
+): WeightRecordRole {
+  const context = getNumber(record.context);
+
+  if (context != null) {
+    switch (context) {
+      case WeightContext.PET_CLOSED:
+        return { kind: 'consumption', cause: 'pet' };
+      case WeightContext.INTRUDER_CLOSED:
+        // The feeder saw an animal it could not identify. Recording it as a
+        // meal for whichever tag is attached would invent an identification.
+        return { kind: 'consumption', cause: 'other_animal' };
+      case WeightContext.DUBIOUS_CLOSED:
+        // The hardware distrusts its own reading; we keep the grams and leave
+        // the cause for a human to settle.
+        return { kind: 'consumption', cause: 'unknown' };
+      case WeightContext.USER_CLOSED:
+        return { kind: 'served' };
+      default:
+        // PET_OPENED / USER_OPENED carry no settled weights, and USER_ZEROED is
+        // a tare whose frames are an artefact of zeroing, not food moving.
+        return { kind: 'ignore' };
+    }
+  }
+
+  if (entry.type === TimelineEventType.PET_HAS_EATEN) {
+    return { kind: 'consumption', cause: 'pet' };
+  }
+  if (entry.type === TimelineEventType.BOWL_FILLED) {
+    return { kind: 'served' };
+  }
+  return { kind: 'ignore' };
+}
+
 export function expandTimelineWeightRecordToDatapoints(
   record: SurePetTimelineWeightRecord,
   entry: SurePetTimelineEntry,
   timelineEntryId?: number,
 ): NormalizedFeedingDatapoint[] {
+  const role = resolveWeightRecordRole(record, entry);
+  if (role.kind !== 'consumption') return [];
+
   const from = parseDate(record.created_at) ?? parseDate(entry.created_at);
   if (!from) return [];
 
   const tag_id = getNumber(record.tag_id);
   const device_id = getNumber(record.device_id);
-  const pet_id = resolvePetIdFromTimelineEntry(entry, tag_id);
+  // Only a recognised pet gets to keep the tag's identification. An intruder
+  // or a dubious reading may still carry a tag id; it just does not mean what
+  // it would on a `PET_CLOSED` record.
+  const pet_id =
+    role.cause === 'pet'
+      ? resolvePetIdFromTimelineEntry(entry, tag_id)
+      : undefined;
   const duration_s = getNumber(record.duration);
   const datapoints: NormalizedFeedingDatapoint[] = [];
 
@@ -83,10 +181,58 @@ export function expandTimelineWeightRecordToDatapoints(
       timeline_entry_id: timelineEntryId,
       source_id,
       bowl_index,
+      cause: role.cause,
     });
   }
 
   return datapoints;
+}
+
+/**
+ * A person filling the bowl, expanded per bowl that gained food.
+ *
+ * The mirror of the consumption walk above: that one keeps negative frames,
+ * this one keeps positive ones. `current_weight` is the level the bowl reached,
+ * so the level before is simply what is left once the addition is taken back
+ * out — which is what tells a fresh bowl from a top-up onto leftovers.
+ */
+export function expandTimelineWeightRecordToServed(
+  record: SurePetTimelineWeightRecord,
+  entry: SurePetTimelineEntry,
+  timelineEntryId?: number,
+): NormalizedServedDatapoint[] {
+  if (resolveWeightRecordRole(record, entry).kind !== 'served') return [];
+
+  const from = parseDate(record.created_at) ?? parseDate(entry.created_at);
+  if (!from) return [];
+
+  const device_id = getNumber(record.device_id);
+  const entryData = parseTimelineEntryData(entry);
+  const served: NormalizedServedDatapoint[] = [];
+
+  for (const frame of record.frames ?? []) {
+    const change = getNumber(frame.change);
+    if (change == null || change <= 0) continue;
+
+    const bowl_index = getNumber(frame.index) ?? 0;
+    const level_after_g = getNumber(frame.current_weight);
+    const source_id = `timeline-served:${timelineEntryId ?? ''}:${record.id ?? ''}:${from.toISOString()}:${device_id ?? ''}:${bowl_index}:${change}`;
+
+    served.push({
+      from,
+      amount_g: change,
+      device_id,
+      bowl_index,
+      ...(level_after_g != null
+        ? { level_before_g: level_after_g - change, level_after_g }
+        : {}),
+      food_type_id: foodTypeIdForBowl(entryData, bowl_index),
+      timeline_entry_id: timelineEntryId,
+      source_id,
+    });
+  }
+
+  return served;
 }
 
 export function buildFeedingExternalKey(input: {
@@ -126,43 +272,30 @@ function expandReportDatapointToDatapoints(
   const duration_s = getNumber(datapoint.duration);
   const results: NormalizedFeedingDatapoint[] = [];
 
-  if (datapoint.weights?.length) {
-    for (let i = 0; i < datapoint.weights.length; i++) {
-      const amount_g = Math.abs(getNumber(datapoint.weights[i]?.weight) ?? 0);
-      if (amount_g <= 0) continue;
+  for (let i = 0; i < (datapoint.weights?.length ?? 0); i++) {
+    // `change` is the amount; `weight` beside it is the bowl's level once the
+    // animal left. Reading the level here records a 3 g nibble from a full bowl
+    // as a 59 g meal, and `actual_weight` is worse still — the feeder's current
+    // reading, repeated identically on every datapoint in the response.
+    const change = getNumber(datapoint.weights?.[i]?.change);
+    if (change == null || change >= 0) continue;
 
-      const source_id = `${options.sourcePrefix}:${datapoint.from}:${device_id ?? ''}:${tag_id ?? ''}:${i}:${amount_g}`;
-      results.push({
-        from,
-        to,
-        duration_s,
-        amount_g,
-        tag_id,
-        device_id,
-        pet_id,
-        timeline_entry_id: options.timeline_entry_id,
-        source_id,
-        bowl_index: i,
-      });
-    }
-    if (results.length > 0) return results;
+    const amount_g = Math.abs(change);
+    const source_id = `${options.sourcePrefix}:${datapoint.from}:${device_id ?? ''}:${tag_id ?? ''}:${i}:${amount_g}`;
+    results.push({
+      from,
+      to,
+      duration_s,
+      amount_g,
+      tag_id,
+      device_id,
+      pet_id,
+      timeline_entry_id: options.timeline_entry_id,
+      source_id,
+      bowl_index: i,
+      cause: 'pet',
+    });
   }
-
-  const amount = getNumber(datapoint.actual_weight) ?? undefined;
-  if (amount == null || amount <= 0) return [];
-
-  const source_id = `${options.sourcePrefix}:${datapoint.from}:${device_id ?? ''}:${tag_id ?? ''}:${amount}`;
-  results.push({
-    from,
-    to,
-    duration_s,
-    amount_g: amount,
-    tag_id,
-    device_id,
-    pet_id,
-    timeline_entry_id: options.timeline_entry_id,
-    source_id,
-  });
 
   return results;
 }
@@ -193,6 +326,7 @@ function expandConsumptionToDatapoints(
       timeline_entry_id: timelineEntryId,
       source_id,
       bowl_index: i,
+      cause: 'pet',
     });
   }
 
@@ -210,14 +344,24 @@ function expandConsumptionToDatapoints(
       device_id,
       timeline_entry_id: timelineEntryId,
       source_id,
+      cause: 'pet',
     },
   ];
 }
 
+/**
+ * One walk of the timeline, yielding both directions food moves: what animals
+ * took out of the bowls, and what people put in.
+ */
 export function extractFeedingDatapointsFromTimeline(
   entries: SurePetTimelineEntry[],
-): { datapoints: NormalizedFeedingDatapoint[]; maxEntryId: number | null } {
+): {
+  datapoints: NormalizedFeedingDatapoint[];
+  served: NormalizedServedDatapoint[];
+  maxEntryId: number | null;
+} {
   const datapoints: NormalizedFeedingDatapoint[] = [];
+  const served: NormalizedServedDatapoint[] = [];
   let maxEntryId: number | null = null;
 
   for (const entry of entries) {
@@ -247,22 +391,33 @@ export function extractFeedingDatapointsFromTimeline(
       }
     }
 
-    if (
-      entry.type === TimelineEventType.PET_HAS_EATEN &&
-      Array.isArray(entry.weights)
-    ) {
+    // Every weights-bearing entry is walked, not just `PET_HAS_EATEN`: the
+    // record's own `context` decides what it is, and a fill lives on a
+    // `BOWL_FILLED` entry that the old type gate discarded.
+    if (Array.isArray(entry.weights)) {
       for (const weight of entry.weights) {
         datapoints.push(
           ...expandTimelineWeightRecordToDatapoints(weight, entry, entryId),
+        );
+        served.push(
+          ...expandTimelineWeightRecordToServed(weight, entry, entryId),
         );
       }
     }
   }
 
-  return { datapoints, maxEntryId };
+  return { datapoints, served, maxEntryId };
 }
 
-export function extractFeedingDatapointsFromHouseholdReport(
+/**
+ * The per-pet aggregate report, when we have one.
+ *
+ * SurePet retired `/api/report/household/{id}` and `/api/pet/{id}/report`; both
+ * answer 404. Their replacement is per-pet and carries no fills, so the full
+ * timeline walk is the backfill now and this is kept only for payloads that
+ * still arrive embedded in a timeline entry.
+ */
+export function extractFeedingDatapointsFromReportPairs(
   data: unknown,
 ): NormalizedFeedingDatapoint[] {
   if (!Array.isArray(data)) return [];
@@ -308,6 +463,15 @@ export function resolveLocalPetId(
   return null;
 }
 
+/** One bowl's `FoodType` id, as the food vocabulary the rest of the app uses. */
+export function foodTypeFromId(
+  foodTypeId: number | undefined,
+): 'dry' | 'wet' | 'unknown' {
+  if (foodTypeId === FoodType.WET) return 'wet';
+  if (foodTypeId === FoodType.DRY) return 'dry';
+  return 'unknown';
+}
+
 export function inferFoodTypeFromDeviceControl(
   control: unknown,
 ): 'dry' | 'wet' | 'unknown' {
@@ -325,8 +489,8 @@ export function inferFoodTypeFromDeviceControl(
   }
 
   if (foodTypes.size === 1) {
-    if (foodTypes.has(1)) return 'wet';
-    if (foodTypes.has(2)) return 'dry';
+    const [only] = [...foodTypes];
+    return foodTypeFromId(only);
   }
 
   return 'unknown';

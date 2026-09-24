@@ -207,27 +207,6 @@ export class SurePetClient {
     return allEntries;
   }
 
-  async getHouseholdReport(householdId: number): Promise<unknown> {
-    const response = await this.request<{ data?: unknown }>(
-      'GET',
-      `${SUREPET_API_BASE}/report/household/${householdId}`,
-    );
-    return response.data ?? [];
-  }
-
-  async getPetFeedingReport(
-    petId: number,
-    from: string,
-    to: string,
-  ): Promise<unknown> {
-    const params = new URLSearchParams({ from, to });
-    const response = await this.request<{ data?: unknown }>(
-      'GET',
-      `${SUREPET_API_BASE}/pet/${petId}/report?${params.toString()}`,
-    );
-    return response.data;
-  }
-
   private async request<T>(method: string, url: string): Promise<T> {
     await this.ensureAuthenticated();
 

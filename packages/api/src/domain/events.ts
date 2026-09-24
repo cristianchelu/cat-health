@@ -80,6 +80,28 @@ export interface FoodIntakeEventData {
   nutrients?: Record<string, number>;
 }
 
+/**
+ * Food put into a bowl. Owner: `FoodServedEventDataSchema` in shared.
+ *
+ * The counterpart to `food_intake`: that is the bowl emptying, this is it
+ * filling. `caused_by` carries whether a person or the appliance did it, so a
+ * scheduled dispense and a hand-filled bowl share one shape. Stocking a hopper
+ * is deliberately NOT this event — nothing becomes edible when a hopper is
+ * loaded, and hoppers report a state, not a weight.
+ */
+export interface FoodServedEventData {
+  type: 'food_served';
+  food_type: FoodIntakeFoodType;
+  /** Grams added to the bowl by this serving. */
+  amount: number;
+  food_id?: number;
+  /** Bowl level in grams immediately before the serving, when weighed. */
+  level_before?: number;
+  /** Bowl level in grams immediately after the serving, when weighed. */
+  level_after?: number;
+  provider_data?: EventProviderData;
+}
+
 export type LitterboxMaintenanceEventType =
   | 'scoop'
   | 'deep_clean'
@@ -135,6 +157,7 @@ export type EventData =
   | WaterIntakeEventData
   | LitterboxUseEventData
   | FoodIntakeEventData
+  | FoodServedEventData
   | LitterboxMaintenanceEventData
   | DeviceConnectivityEventData
   | DeviceEnablementEventData

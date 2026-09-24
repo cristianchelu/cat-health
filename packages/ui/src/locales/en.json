@@ -39,6 +39,8 @@
     "previous_period": "Previous period",
     "next_period": "Next period",
     "food_intake": "Food intake",
+    "food_served": "Food served",
+    "food_topped_up": "Topped up",
     "log_food": "Log Food",
     "error_loading": "Could not load data",
     "no_pets_found": "No pets found",

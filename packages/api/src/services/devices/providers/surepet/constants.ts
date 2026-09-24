@@ -40,7 +40,11 @@ export const TimelineEventType = {
   UNKNOWN_DOOR_MOVEMENT: 7,
   /** Pet-related household event (e.g. profile). Payload: `pets`. */
   PET_PROFILE: 13,
-  /** Bowl filled by a person (not a pet meal). Payload: `weights`, `data.weight`. */
+  /**
+   * Bowl filled by a person (not a pet meal). Payload: `weights`, `data.weight`.
+   * The added grams are the POSITIVE `frames[].change`; `current_weight` is the
+   * bowl level it reached.
+   */
   BOWL_FILLED: 21,
   /** Pet finished eating from a feeder. Payload: `weights` (negative frame `change`), `pets`, `tags`. */
   PET_HAS_EATEN: 22,
@@ -63,6 +67,61 @@ export const TimelineEventType = {
 export type TimelineEventTypeId =
   (typeof TimelineEventType)[keyof typeof TimelineEventType];
 
+/**
+ * Why a weight record exists — the `context` on every `weights[]` entry.
+ * Read off their app bundle's `WeightContext` enum (reverse-engineered).
+ *
+ * This is a finer instrument than the timeline entry `type`: it separates the
+ * pet we recognised from the one we did not (`IntruderClosed`) and from the
+ * reading the feeder itself distrusts (`DubiousClosed`), which the entry type
+ * lumps together. Attribution should follow this, not the type.
+ */
+export const WeightContext = {
+  /** A recognised pet opened the lid; the visit has not closed yet. */
+  PET_OPENED: 0,
+  /** A recognised pet's visit closed — the meal, with negative `change`. */
+  PET_CLOSED: 1,
+  /** An unrecognised animal's visit closed. Ours only by luck. */
+  INTRUDER_CLOSED: 2,
+  /** The feeder distrusts its own reading for this visit. */
+  DUBIOUS_CLOSED: 3,
+  /** A person opened the lid. */
+  USER_OPENED: 4,
+  /** A person closed the lid — a fill or a top-up, with positive `change`. */
+  USER_CLOSED: 5,
+  /** A person tared the bowls. Not a serving; the weights are an artefact. */
+  USER_ZEROED: 6,
+} as const;
+
+export type WeightContextId =
+  (typeof WeightContext)[keyof typeof WeightContext];
+
+/**
+ * py-surepetcare `TareType` — which bowls a `FEEDER_RESET` zeroed.
+ * Their app calls this `DeviceFeederTareType`.
+ */
+export const FeederTareType = {
+  UNKNOWN: 0,
+  LEFT: 1,
+  RIGHT: 2,
+  BOTH: 3,
+} as const;
+
+/**
+ * How their app words a fill, kept here because it explains readings that look
+ * like ours disagreeing with theirs when they do not.
+ *
+ * - "topped up" vs "filled" is `current_weight - change > 1` — whether the bowl
+ *   still held food. We store the levels instead and let the reader decide.
+ * - the grams are replaced by the phrase "portion size" when
+ *   `Math.abs(change - target) <= 1`. That is deliberate on their side, not a
+ *   missing number: a fill landing on its target prints no weight at all.
+ *
+ * Either way `frames[].change` carries the grams, so neither wording affects
+ * what we record.
+ */
+export const SUREPET_PORTION_WORDING_TOLERANCE_G = 1;
+
 /** SurePetcare timeline consumption substance types (py-surepetcare `SubstanceType`). */
 export const SubstanceType = {
   WATER: 1,
@@ -72,7 +131,11 @@ export const SubstanceType = {
 export type SubstanceTypeId =
   (typeof SubstanceType)[keyof typeof SubstanceType];
 
-/** py-surepetcare `BowlType` — feeder bowl layout. */
+/**
+ * py-surepetcare `BowlType` — feeder bowl layout. Their own app only knows
+ * `Single = 1` and `Half = 4`; `NOT_DETERMINED` is py-surepetcare's and has
+ * never been observed on the wire here.
+ */
 export const BowlType = {
   LARGE: 1,
   TWO_SMALL: 4,
