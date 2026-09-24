@@ -482,7 +482,22 @@ describe('presence when a provider account is switched off', () => {
     });
     deviceId = device.id;
 
-    integrationManager = createTestIntegrationManager(ctx.db);
+    // Switching the account back on rebuilds its manager from the provider;
+    // without an inert one that is a real ESPHome client dialling the fixture
+    // host for as long as the process lives.
+    integrationManager = createTestIntegrationManager(ctx.db, {
+      inertProviders: new Map([
+        [
+          'esphome',
+          (rebuilt) =>
+            createStubAccountManager({
+              accountId: rebuilt.id,
+              instantiateDeviceController: (device: Device) =>
+                createStubDeviceController(device),
+            }),
+        ],
+      ]),
+    });
     integrationManager.registerAccountManager(
       accountId,
       createStubAccountManager({
@@ -501,10 +516,6 @@ describe('presence when a provider account is switched off', () => {
   });
 
   after(async () => {
-    // Re-enabling the account initialises a real ESPHome manager, not the stub
-    // registered above, and its client keeps dialling the fixture host. Only
-    // the integration manager can tear that down; `app.close()` does not.
-    await integrationManager.shutdown();
     await app.close();
     await destroyTestDb(ctx);
   });
