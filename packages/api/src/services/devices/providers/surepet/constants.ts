@@ -188,8 +188,35 @@ export const SUREPET_TOKEN_MAX_LENGTH = 448;
 export const SUREPET_TIMELINE_POLL_INTERVAL_MS = 3 * 60 * 1000;
 export const SUREPET_DEVICE_STATE_POLL_INTERVAL_MS = 60 * 1000;
 
-/** Pause between paginated timeline fetches during backfill (one-time, not polling). */
-export const SUREPET_TIMELINE_PAGE_DELAY_MS = 1000;
+/**
+ * The server caps `page_size` at 25 however large a value we send, so asking
+ * for more only misstates what a walk will cost. Measured on a full backfill:
+ * 3013 entries over 121 pages, every page 25 except the last.
+ */
+export const SUREPET_TIMELINE_PAGE_SIZE = 25;
+
+/**
+ * Pause between paginated timeline fetches during backfill (one-time, not
+ * polling). Retuned once the page cap above was measured: the old 1000 ms was
+ * budgeted against pages of 100, so a full walk cost four times what the
+ * constant implied — about two minutes, blocking the account's poll timers.
+ *
+ * What actually keeps a backfill inside SurePet's rate limit is the 429 backoff
+ * in the client and the resumable cursor, not this pause; their limit is
+ * undocumented, so this stays well clear of the ~250 ms that provoked one.
+ */
+export const SUREPET_TIMELINE_PAGE_DELAY_MS = 500;
+
+/**
+ * Rate limiting. SurePet answers 429 with an HTML body and, sometimes, a
+ * `Retry-After`. Attempts include the first try, so 4 means three retries.
+ */
+export const SUREPET_RATE_LIMIT_MAX_ATTEMPTS = 4;
+export const SUREPET_RATE_LIMIT_BASE_DELAY_MS = 2000;
+export const SUREPET_RATE_LIMIT_MAX_DELAY_MS = 60_000;
+
+/** Statuses worth retrying: rate limiting, and the gateway shrugging. */
+export const SUREPET_RETRYABLE_STATUSES = new Set([429, 502, 503, 504]);
 
 export const SUREPET_REQUEST_TIMEOUT_MS = 45_000;
 

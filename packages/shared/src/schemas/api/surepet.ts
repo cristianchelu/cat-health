@@ -19,6 +19,12 @@ export const SurePetSyncConfigSchema = Type.Object({
   last_timeline_since_id: Type.Optional(Type.Number()),
   /** One-time full timeline parse after feeder payload shape support (type 22 weights). */
   feeding_timeline_backfill_done: Type.Optional(Type.Boolean()),
+  /**
+   * Resume point for that one-time walk, set after each page it stores and
+   * cleared when it finishes. A full walk is ~120 requests; without this, a
+   * rate limit or a restart at page 90 threw away all ninety.
+   */
+  timeline_backfill_before_id: Type.Optional(Type.Number()),
 });
 export type SurePetSyncConfig = Static<typeof SurePetSyncConfigSchema>;
 

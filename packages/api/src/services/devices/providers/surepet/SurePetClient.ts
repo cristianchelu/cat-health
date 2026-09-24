@@ -3,8 +3,13 @@ import {
   SUREPET_API_BASE,
   SUREPET_LOGIN_URL,
   SUREPET_ME_START_URL,
+  SUREPET_RATE_LIMIT_BASE_DELAY_MS,
+  SUREPET_RATE_LIMIT_MAX_ATTEMPTS,
+  SUREPET_RATE_LIMIT_MAX_DELAY_MS,
   SUREPET_REQUEST_TIMEOUT_MS,
+  SUREPET_RETRYABLE_STATUSES,
   SUREPET_TIMELINE_PAGE_DELAY_MS,
+  SUREPET_TIMELINE_PAGE_SIZE,
   tokenSeemsValid,
 } from './constants.ts';
 import type {
@@ -23,12 +28,53 @@ function delay(ms: number): Promise<void> {
 
 export class SurePetClientError extends Error {
   readonly status?: number;
+  /**
+   * How long the server asked us to wait, when it said. Present only on a rate
+   * limit that survived every retry, so a caller can defer rather than come
+   * straight back at its own poll interval.
+   */
+  readonly retryAfterMs?: number;
 
-  constructor(message: string, status?: number) {
+  constructor(
+    message: string,
+    status?: number,
+    options?: { retryAfterMs?: number },
+  ) {
     super(message);
     this.name = 'SurePetClientError';
     this.status = status;
+    this.retryAfterMs = options?.retryAfterMs;
   }
+}
+
+/** True when the failure is the server asking us to slow down or come back. */
+export function isRetryableSurePetError(error: unknown): boolean {
+  return (
+    error instanceof SurePetClientError &&
+    error.status != null &&
+    SUREPET_RETRYABLE_STATUSES.has(error.status)
+  );
+}
+
+/**
+ * `Retry-After` is either a delay in seconds or an HTTP date, and SurePet is
+ * not consistent about which. Anything unparseable reads as absent so the
+ * caller falls back to its own backoff.
+ */
+function parseRetryAfter(header: string | null): number | undefined {
+  if (!header) return undefined;
+
+  const seconds = Number(header);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.min(seconds * 1000, SUREPET_RATE_LIMIT_MAX_DELAY_MS);
+  }
+
+  const when = Date.parse(header);
+  if (Number.isNaN(when)) return undefined;
+  return Math.min(
+    Math.max(when - Date.now(), 0),
+    SUREPET_RATE_LIMIT_MAX_DELAY_MS,
+  );
 }
 
 export interface SurePetClientCredentials {
@@ -68,24 +114,31 @@ export class SurePetClient {
   }
 
   async login(): Promise<string> {
-    const response = await fetch(SUREPET_LOGIN_URL, {
-      method: 'POST',
-      headers: buildSurePetHeaders({ deviceId: this.deviceId }),
-      body: JSON.stringify({
-        email_address: this.email,
-        password: this.password,
-        device_id: this.deviceId,
-      }),
-      signal: AbortSignal.timeout(SUREPET_REQUEST_TIMEOUT_MS),
-    });
+    // The login endpoint is the one that rate limits first — it is the only
+    // call a fresh client makes, so a burst of short-lived clients hits it
+    // hardest. Reuse a token wherever possible; `ensureAuthenticated` does.
+    const response = await this.fetchWithBackoff(
+      SUREPET_LOGIN_URL,
+      {
+        method: 'POST',
+        headers: buildSurePetHeaders({ deviceId: this.deviceId }),
+        body: JSON.stringify({
+          email_address: this.email,
+          password: this.password,
+          device_id: this.deviceId,
+        }),
+      },
+      'login',
+    );
 
-    const body = await this.parseJson(response);
     if (!response.ok) {
       throw new SurePetClientError(
         `SurePet login failed (${response.status})`,
         response.status,
       );
     }
+
+    const body = await this.parseJson(response);
 
     const token = this.extractToken(body);
     if (!token) {
@@ -171,15 +224,41 @@ export class SurePetClient {
     return entries;
   }
 
-  /** Walk backward through timeline pages until the API returns no entries. */
+  /**
+   * Walk backward through timeline pages until the API returns no entries.
+   *
+   * A full walk of a four-month household is around 120 requests, so it is
+   * interruptible by design: `onPage` hands each page over as it lands, and
+   * `startBeforeId` picks a walk back up where one left off. A caller that
+   * persists the cursor it is given in `onPage` never repeats work it has
+   * already stored, which matters because a rate limit part way through used
+   * to throw the whole walk away.
+   */
   async getFullTimeline(
     householdId: number,
-    options?: { pageSize?: number; pageDelayMs?: number },
+    options?: {
+      pageSize?: number;
+      pageDelayMs?: number;
+      /** Resume point: the `nextBeforeId` from an interrupted walk. */
+      startBeforeId?: number;
+      /**
+       * Called with each non-empty page before the next is fetched.
+       * `nextBeforeId` is the cursor that resumes *after* this page, so
+       * persisting it means this page is never fetched again. It is undefined
+       * on the page that ends the walk — there is nothing after it to resume
+       * from — which is also the signal that the caller has now seen
+       * everything.
+       */
+      onPage?: (
+        page: SurePetTimelineEntry[],
+        nextBeforeId: number | undefined,
+      ) => Promise<void> | void;
+    },
   ): Promise<SurePetTimelineEntry[]> {
-    const pageSize = options?.pageSize ?? 100;
+    const pageSize = options?.pageSize ?? SUREPET_TIMELINE_PAGE_SIZE;
     const pageDelayMs = options?.pageDelayMs ?? SUREPET_TIMELINE_PAGE_DELAY_MS;
     const allEntries: SurePetTimelineEntry[] = [];
-    let beforeId: number | undefined;
+    let beforeId: number | undefined = options?.startBeforeId;
 
     while (true) {
       const page = await this.getTimeline(householdId, {
@@ -193,10 +272,18 @@ export class SurePetClient {
       const ids = page
         .map((entry) => entry.id)
         .filter((id): id is number => typeof id === 'number');
-      if (ids.length === 0) break;
+      const minId = ids.length > 0 ? Math.min(...ids) : undefined;
+      // A cursor that does not move would re-fetch this page forever; treat it
+      // as the end, the same as a page with no usable ids at all.
+      const advances =
+        minId !== undefined && (beforeId === undefined || minId < beforeId);
 
-      const minId = Math.min(...ids);
-      if (beforeId != null && minId >= beforeId) break;
+      // Every non-empty page is handed over, the last one included, so a
+      // consumer never has to fetch a tail of its own. A throw in here stops
+      // the walk with the cursor still pointing at this page.
+      await options?.onPage?.(page, advances ? minId : undefined);
+
+      if (!advances) break;
       beforeId = minId;
 
       if (pageDelayMs > 0) {
@@ -207,32 +294,82 @@ export class SurePetClient {
     return allEntries;
   }
 
+  /**
+   * One HTTP call, retried while the server is asking us to back off.
+   *
+   * A 429 is answered with an HTML error page, so the old flow parsed it as
+   * JSON and failed with "non-JSON response" — a message that named the symptom
+   * and hid the cause. Rate limiting is now retried here, honouring
+   * `Retry-After` when it is sent and doubling from a base delay when it is
+   * not, and only a limit that outlives every attempt reaches the caller.
+   */
+  private async fetchWithBackoff(
+    url: string,
+    init: RequestInit,
+    label: string,
+  ): Promise<Response> {
+    let lastRetryAfterMs: number | undefined;
+
+    for (
+      let attempt = 1;
+      attempt <= SUREPET_RATE_LIMIT_MAX_ATTEMPTS;
+      attempt++
+    ) {
+      const response = await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(SUREPET_REQUEST_TIMEOUT_MS),
+      });
+
+      if (!SUREPET_RETRYABLE_STATUSES.has(response.status)) return response;
+
+      lastRetryAfterMs = parseRetryAfter(response.headers.get('retry-after'));
+      if (attempt === SUREPET_RATE_LIMIT_MAX_ATTEMPTS) {
+        throw new SurePetClientError(
+          response.status === 429
+            ? `SurePet rate limited ${label} (429) after ${attempt} attempts`
+            : `SurePet ${label} failed (${response.status}) after ${attempt} attempts`,
+          response.status,
+          { retryAfterMs: lastRetryAfterMs },
+        );
+      }
+
+      const backoffMs = Math.min(
+        SUREPET_RATE_LIMIT_BASE_DELAY_MS * 2 ** (attempt - 1),
+        SUREPET_RATE_LIMIT_MAX_DELAY_MS,
+      );
+      await delay(lastRetryAfterMs ?? backoffMs);
+    }
+
+    // Unreachable: the final attempt above always returns or throws.
+    throw new SurePetClientError(`SurePet ${label} exhausted retries`);
+  }
+
   private async request<T>(method: string, url: string): Promise<T> {
     await this.ensureAuthenticated();
 
-    let response = await fetch(url, {
-      method,
-      headers: buildSurePetHeaders({
-        token: this.token,
-        deviceId: this.deviceId,
-      }),
-      signal: AbortSignal.timeout(SUREPET_REQUEST_TIMEOUT_MS),
-    });
+    const send = () =>
+      this.fetchWithBackoff(
+        url,
+        {
+          method,
+          headers: buildSurePetHeaders({
+            token: this.token,
+            deviceId: this.deviceId,
+          }),
+        },
+        `${method} ${url}`,
+      );
+
+    let response = await send();
 
     if (response.status === 401) {
       this.token = undefined;
       await this.login();
-      response = await fetch(url, {
-        method,
-        headers: buildSurePetHeaders({
-          token: this.token,
-          deviceId: this.deviceId,
-        }),
-        signal: AbortSignal.timeout(SUREPET_REQUEST_TIMEOUT_MS),
-      });
+      response = await send();
     }
 
-    const body = await this.parseJson(response);
+    // Checked before parsing: an error response is an HTML page often enough
+    // that parsing it first turns every failure into a parse failure.
     if (!response.ok) {
       throw new SurePetClientError(
         `SurePet API ${method} ${url} failed (${response.status})`,
@@ -240,7 +377,7 @@ export class SurePetClient {
       );
     }
 
-    return body as T;
+    return (await this.parseJson(response)) as T;
   }
 
   private async parseJson(response: Response): Promise<unknown> {

@@ -28,7 +28,11 @@ import {
 } from '../../../food/enrichFoodIntake.ts';
 import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
 import { attributionColumns } from '../../../../domain/eventAttribution.ts';
-import { SurePetClient } from './SurePetClient.ts';
+import {
+  isRetryableSurePetError,
+  SurePetClient,
+  SurePetClientError,
+} from './SurePetClient.ts';
 import { FeederController } from './FeederController.ts';
 import {
   SUREPET_DEVICE_STATE_POLL_INTERVAL_MS,
@@ -46,6 +50,7 @@ import {
 import type {
   NormalizedFeedingDatapoint,
   NormalizedServedDatapoint,
+  SurePetTimelineEntry,
 } from './types.ts';
 
 function parseAccountConfig(config: unknown): SurePetAccountConfig {
@@ -159,10 +164,19 @@ export class SurePetAccountManager implements AccountManager {
       this.deps.logger.error('SurePet initial feeding sync failed:', error);
     });
     await this.backfillFeedingTimelineIfNeeded().catch((error) => {
-      this.deps.logger.error(
-        'SurePet feeding timeline backfill failed:',
-        error,
-      );
+      // The walk checkpoints after every page it stores, so an interrupted
+      // backfill is paused rather than lost: the next start picks it up at the
+      // cursor instead of re-walking a hundred-odd pages.
+      if (isRetryableSurePetError(error)) {
+        this.deps.logger.log(
+          `SurePet feeding timeline backfill paused by the cloud (${(error as SurePetClientError).status}); resumes from its stored cursor`,
+        );
+      } else {
+        this.deps.logger.error(
+          'SurePet feeding timeline backfill failed:',
+          error,
+        );
+      }
     });
 
     this.timelinePollTimer = setInterval(() => {
@@ -431,7 +445,21 @@ export class SurePetAccountManager implements AccountManager {
         served.push(...extracted.served);
         maxTimelineEntryId = extracted.maxEntryId;
       } catch (error) {
-        this.deps.logger.error('SurePet timeline fetch failed:', error);
+        // A rate limit is the cloud asking us to wait, not a fault of ours.
+        // The next poll is minutes away and the backoff inside the client has
+        // already had its turn, so this only needs saying, not escalating.
+        if (isRetryableSurePetError(error)) {
+          const retryAfterMs =
+            error instanceof SurePetClientError
+              ? error.retryAfterMs
+              : undefined;
+          this.deps.logger.log(
+            `SurePet timeline fetch deferred (${(error as SurePetClientError).status})` +
+              (retryAfterMs != null ? `; asked to wait ${retryAfterMs}ms` : ''),
+          );
+        } else {
+          this.deps.logger.error('SurePet timeline fetch failed:', error);
+        }
         return;
       }
 
@@ -471,6 +499,9 @@ export class SurePetAccountManager implements AccountManager {
     this.runtime.sync = {
       ...this.runtime.sync,
       feeding_timeline_backfill_done: true,
+      // The walk is finished; a stale cursor would resume a completed backfill
+      // part way down if the flag were ever cleared to re-run it.
+      timeline_backfill_before_id: undefined,
     };
     await this.persistRuntimeState();
   }
@@ -513,18 +544,56 @@ export class SurePetAccountManager implements AccountManager {
       };
     }
 
-    const timeline = await client.getFullTimeline(householdId);
-    const extracted = extractFeedingDatapointsFromTimeline(timeline);
-    const ingestStats = await this.ingestFeedingDatapoints(
-      extracted.datapoints,
-    );
-    await this.ingestServedDatapoints(extracted.served);
+    // Ingested page by page rather than in one pass at the end: a walk this
+    // long is interrupted often enough — a rate limit, a restart, a shutdown —
+    // that holding everything until the last page means losing all of it.
+    let timelineEntryCount = 0;
+    let extractedDatapointCount = 0;
+    let ingestAttempts = 0;
+    let skippedUnmapped = 0;
+
+    const consume = async (page: SurePetTimelineEntry[]) => {
+      const extracted = extractFeedingDatapointsFromTimeline(page);
+      const stats = await this.ingestFeedingDatapoints(extracted.datapoints);
+      await this.ingestServedDatapoints(extracted.served);
+
+      timelineEntryCount += page.length;
+      extractedDatapointCount += extracted.datapoints.length;
+      ingestAttempts += stats.ingestAttempts;
+      skippedUnmapped += stats.skippedUnmapped;
+    };
+
+    await client.getFullTimeline(householdId, {
+      startBeforeId: this.runtime.sync?.timeline_backfill_before_id,
+      onPage: async (page, nextBeforeId) => {
+        // A replacement manager has taken over; stop the walk rather than
+        // keep paging on its behalf. The cursor stays where it is, so the
+        // successor resumes instead of starting again.
+        if (this.retired) {
+          throw new Error('SurePet account manager retired mid-backfill');
+        }
+        await consume(page);
+        if (nextBeforeId != null) {
+          await this.persistBackfillCursor(nextBeforeId);
+        }
+      },
+    });
 
     return {
-      timelineEntryCount: timeline.length,
-      extractedDatapointCount: extracted.datapoints.length,
-      ...ingestStats,
+      timelineEntryCount,
+      extractedDatapointCount,
+      ingestAttempts,
+      skippedUnmapped,
     };
+  }
+
+  /** Remembers how far the one-time walk got, so a failure resumes there. */
+  private async persistBackfillCursor(beforeId: number): Promise<void> {
+    this.runtime.sync = {
+      ...this.runtime.sync,
+      timeline_backfill_before_id: beforeId,
+    };
+    await this.persistRuntimeState();
   }
 
   private async ingestFeedingDatapoints(
