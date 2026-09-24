@@ -244,10 +244,10 @@ export class SurePetClient {
       /**
        * Called with each non-empty page before the next is fetched.
        * `nextBeforeId` is the cursor that resumes *after* this page, so
-       * persisting it means this page is never fetched again. It is undefined
-       * on the page that ends the walk — there is nothing after it to resume
-       * from — which is also the signal that the caller has now seen
-       * everything.
+       * persisting it means this page is never fetched again. The walk ends
+       * on the empty fetch after the last page, so returning normally is the
+       * only signal that the caller has seen everything. It is undefined only
+       * when the cursor failed to move, and the walk then throws.
        */
       onPage?: (
         page: SurePetTimelineEntry[],
@@ -273,8 +273,9 @@ export class SurePetClient {
         .map((entry) => entry.id)
         .filter((id): id is number => typeof id === 'number');
       const minId = ids.length > 0 ? Math.min(...ids) : undefined;
-      // A cursor that does not move would re-fetch this page forever; treat it
-      // as the end, the same as a page with no usable ids at all.
+      // A cursor that does not move would re-fetch this page forever. That is
+      // not the end of the timeline, so it must not read as one: a caller
+      // that took it for completion would mark a truncated walk as done.
       const advances =
         minId !== undefined && (beforeId === undefined || minId < beforeId);
 
@@ -283,7 +284,11 @@ export class SurePetClient {
       // the walk with the cursor still pointing at this page.
       await options?.onPage?.(page, advances ? minId : undefined);
 
-      if (!advances) break;
+      if (!advances) {
+        throw new SurePetClientError(
+          `SurePet timeline cursor did not advance past ${beforeId ?? 'the newest page'}`,
+        );
+      }
       beforeId = minId;
 
       if (pageDelayMs > 0) {
@@ -323,6 +328,9 @@ export class SurePetClient {
       if (!SUREPET_RETRYABLE_STATUSES.has(response.status)) return response;
 
       lastRetryAfterMs = parseRetryAfter(response.headers.get('retry-after'));
+      // Nobody reads the error page; release it so the connection is not held
+      // until the response is garbage collected.
+      await response.body?.cancel().catch(() => {});
       if (attempt === SUREPET_RATE_LIMIT_MAX_ATTEMPTS) {
         throw new SurePetClientError(
           response.status === 429

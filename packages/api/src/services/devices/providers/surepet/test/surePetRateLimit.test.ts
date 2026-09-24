@@ -136,14 +136,21 @@ describe('getFullTimeline paging', () => {
     mock.restoreAll();
   });
 
-  /** Ids descend, 25 to a page, as the real endpoint returns them. */
+  /**
+   * Ids descend, 25 to a page, as the real endpoint returns them, starting
+   * below `before_id` when one is sent.
+   */
   function pagedFetch(totalPages: number, seen: string[]) {
     let page = 0;
     return async (url: string | URL | Request) => {
       seen.push(String(url));
       if (String(url).includes('/timeline/')) {
         if (page >= totalPages) return ok({ data: [] });
-        const base = 1000 - page * SUREPET_TIMELINE_PAGE_SIZE;
+        const beforeId = new URL(String(url)).searchParams.get('before_id');
+        const base =
+          beforeId != null
+            ? Number(beforeId) - 1
+            : 1000 - page * SUREPET_TIMELINE_PAGE_SIZE;
         page++;
         return ok({
           data: Array.from({ length: SUREPET_TIMELINE_PAGE_SIZE }, (_, i) => ({
@@ -168,7 +175,7 @@ describe('getFullTimeline paging', () => {
     mock.restoreAll();
   });
 
-  it('hands over every page, the last one with no resume cursor', async () => {
+  it('hands over every page, each with its resume cursor', async () => {
     mock.method(globalThis, 'fetch', pagedFetch(3, []));
     const pages: Array<number | undefined> = [];
 
@@ -206,7 +213,7 @@ describe('getFullTimeline paging', () => {
     mock.restoreAll();
   });
 
-  it('stops rather than loop when the cursor stops advancing', async () => {
+  it('fails rather than loop, or finish, when the cursor stops advancing', async () => {
     let calls = 0;
     mock.method(globalThis, 'fetch', async () => {
       calls++;
@@ -215,13 +222,17 @@ describe('getFullTimeline paging', () => {
     });
     const pages: Array<number | undefined> = [];
 
-    await client().getFullTimeline(349965, {
-      pageDelayMs: 0,
-      startBeforeId: 10,
-      onPage: (_page, nextBeforeId) => {
-        pages.push(nextBeforeId);
-      },
-    });
+    await assert.rejects(
+      client().getFullTimeline(349965, {
+        pageDelayMs: 0,
+        startBeforeId: 10,
+        onPage: (_page, nextBeforeId) => {
+          pages.push(nextBeforeId);
+        },
+      }),
+      /did not advance/,
+      'a stalled cursor is not the end of the timeline',
+    );
 
     assert.equal(calls, 1);
     assert.deepEqual(pages, [undefined], 'consumed, but with no resume cursor');

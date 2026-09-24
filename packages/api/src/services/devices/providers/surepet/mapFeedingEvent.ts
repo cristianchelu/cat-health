@@ -35,8 +35,13 @@ export function mapFeedingDatapointToEvent(options: {
 
   const includeBowlIndex = shouldIncludeBowlIndexOnProviderData(deviceControl);
 
+  // A tag on an intruder or a dubious record is not an identification, so it
+  // must not resolve to a pet here either — the existing-row path would
+  // otherwise hand it one after the insert had correctly withheld it.
+  const identifiesPet = datapoint.cause == null || datapoint.cause === 'pet';
+
   return {
-    pet_id: resolveLocalPetId(accountConfig, datapoint),
+    pet_id: identifiesPet ? resolveLocalPetId(accountConfig, datapoint) : null,
     device_id: localDeviceId,
     timestamp: datapoint.from,
     data: {
@@ -51,6 +56,9 @@ export function mapFeedingDatapointToEvent(options: {
         pet_id: datapoint.pet_id,
         duration_s: datapoint.duration_s,
         timeline_entry_id: datapoint.timeline_entry_id,
+        ...(datapoint.weight_context != null
+          ? { weight_context: datapoint.weight_context }
+          : {}),
         ...(includeBowlIndex && datapoint.bowl_index != null
           ? { bowl_index: datapoint.bowl_index }
           : {}),

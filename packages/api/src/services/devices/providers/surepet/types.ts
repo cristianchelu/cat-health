@@ -217,6 +217,8 @@ export interface NormalizedFeedingDatapoint {
    * `context` and is assumed to be a recognised pet, as it always was.
    */
   cause?: EventCauseDTO;
+  /** The record's raw `WeightContext`, when it had one. */
+  weight_context?: number;
 }
 
 export interface SurePetDeviceDetailPayload extends SurePetCloudDevice {

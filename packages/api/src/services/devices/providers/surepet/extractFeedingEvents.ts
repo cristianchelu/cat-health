@@ -161,6 +161,7 @@ export function expandTimelineWeightRecordToDatapoints(
       ? resolvePetIdFromTimelineEntry(entry, tag_id)
       : undefined;
   const duration_s = getNumber(record.duration);
+  const weight_context = getNumber(record.context);
   const datapoints: NormalizedFeedingDatapoint[] = [];
 
   for (const frame of record.frames ?? []) {
@@ -182,6 +183,7 @@ export function expandTimelineWeightRecordToDatapoints(
       source_id,
       bowl_index,
       cause: role.cause,
+      ...(weight_context != null ? { weight_context } : {}),
     });
   }
 

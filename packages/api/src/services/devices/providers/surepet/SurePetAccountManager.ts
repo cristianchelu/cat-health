@@ -37,6 +37,7 @@ import { FeederController } from './FeederController.ts';
 import {
   SUREPET_DEVICE_STATE_POLL_INTERVAL_MS,
   SUREPET_TIMELINE_POLL_INTERVAL_MS,
+  WeightContext,
 } from './constants.ts';
 import {
   extractFeedingDatapointsFromTimeline,
@@ -110,6 +111,8 @@ export class SurePetAccountManager implements AccountManager {
   private timelinePollTimer: ReturnType<typeof setInterval> | null = null;
   private statePollTimer: ReturnType<typeof setInterval> | null = null;
   private syncInProgress = false;
+  /** A feeder registered while the walk was running; run it again after. */
+  private backfillRestartRequested = false;
   /**
    * Set by `shutdown()`. A manager is replaced (not just stopped) whenever the
    * account config is edited: the route writes the reconciled `runtime_state`
@@ -163,26 +166,18 @@ export class SurePetAccountManager implements AccountManager {
     await this.runFeedingSync().catch((error) => {
       this.deps.logger.error('SurePet initial feeding sync failed:', error);
     });
-    await this.backfillFeedingTimelineIfNeeded().catch((error) => {
-      // The walk checkpoints after every page it stores, so an interrupted
-      // backfill is paused rather than lost: the next start picks it up at the
-      // cursor instead of re-walking a hundred-odd pages.
-      if (isRetryableSurePetError(error)) {
-        this.deps.logger.log(
-          `SurePet feeding timeline backfill paused by the cloud (${(error as SurePetClientError).status}); resumes from its stored cursor`,
-        );
-      } else {
-        this.deps.logger.error(
-          'SurePet feeding timeline backfill failed:',
-          error,
-        );
-      }
-    });
+    // Not awaited: a full walk is a hundred-odd requests and, under a rate
+    // limit, minutes of backoff — none of which should hold up the pollers.
+    this.startTimelineBackfill();
 
     this.timelinePollTimer = setInterval(() => {
-      void this.runFeedingSync().catch((error) => {
-        this.deps.logger.error('SurePet timeline sync failed:', error);
-      });
+      void this.runFeedingSync()
+        .catch((error) => {
+          this.deps.logger.error('SurePet timeline sync failed:', error);
+        })
+        // An interrupted backfill picks up again here, at its stored cursor,
+        // rather than waiting for the next restart.
+        .finally(() => this.startTimelineBackfill());
     }, SUREPET_TIMELINE_POLL_INTERVAL_MS);
 
     this.statePollTimer = setInterval(() => {
@@ -276,17 +271,10 @@ export class SurePetAccountManager implements AccountManager {
     const controller = this.instantiateDeviceController(device);
     await controller.connect();
 
-    const surepetDeviceId = Number.parseInt(device.external_id, 10);
-    if (Number.isFinite(surepetDeviceId)) {
-      await this.backfillFeedingForCloudDevice(surepetDeviceId).catch(
-        (error) => {
-          this.deps.logger.error(
-            `SurePet feeding backfill failed for device ${device.name}:`,
-            error,
-          );
-        },
-      );
-    }
+    // The household walk already ingests every mapped feeder, so a new one
+    // only needs that walk run again — resumable and serialised with the poll,
+    // instead of a second walk of its own that loses everything on a 429.
+    this.requestTimelineBackfill();
   }
 
   instantiateDeviceController(device: Device): DeviceController {
@@ -492,10 +480,78 @@ export class SurePetAccountManager implements AccountManager {
     }
   }
 
+  /**
+   * Runs the one-time walk in the background if it is still owed.
+   *
+   * Shares `syncInProgress` with the poll so the two never ingest at once —
+   * both dedupe by reading before they write, which only holds when they take
+   * turns. Whichever loses simply tries again on the next tick.
+   */
+  private startTimelineBackfill(): void {
+    if (this.retired || this.syncInProgress) return;
+    if (
+      this.runtime.sync?.feeding_timeline_backfill_done &&
+      !this.backfillRestartRequested
+    ) {
+      return;
+    }
+
+    this.syncInProgress = true;
+    void (async () => {
+      if (this.backfillRestartRequested) {
+        this.backfillRestartRequested = false;
+        await this.resetTimelineBackfill();
+      }
+      await this.backfillFeedingTimelineIfNeeded();
+    })()
+      .catch((error) => {
+        if (this.retired) return;
+        // The walk checkpoints after every page it stores, so an interrupted
+        // backfill is paused rather than lost: the next poll tick resumes it.
+        if (isRetryableSurePetError(error)) {
+          this.deps.logger.log(
+            `SurePet feeding timeline backfill paused by the cloud (${(error as SurePetClientError).status}); resumes from its stored cursor`,
+          );
+        } else {
+          this.deps.logger.error(
+            'SurePet feeding timeline backfill failed:',
+            error,
+          );
+        }
+      })
+      .finally(() => {
+        this.syncInProgress = false;
+      });
+  }
+
+  /**
+   * Owes the walk again from the top — a feeder registered after the first
+   * one finished has history the earlier walk skipped as unmapped. The reset
+   * itself happens when the walk next starts, never under one in flight,
+   * whose cursor writes would otherwise race it.
+   */
+  private requestTimelineBackfill(): void {
+    this.backfillRestartRequested = true;
+    this.startTimelineBackfill();
+  }
+
+  private async resetTimelineBackfill(): Promise<void> {
+    this.runtime.sync = {
+      ...this.runtime.sync,
+      feeding_timeline_backfill_done: false,
+      timeline_backfill_before_id: undefined,
+    };
+    await this.persistRuntimeState();
+  }
+
   private async backfillFeedingTimelineIfNeeded(): Promise<void> {
     if (this.runtime.sync?.feeding_timeline_backfill_done) return;
 
     await this.backfillFeedingTimeline();
+    // A feeder arrived mid-walk, so pages before it were ingested without it.
+    // Leave the walk owed; the next start resets it and goes again.
+    if (this.retired || this.backfillRestartRequested) return;
+
     this.runtime.sync = {
       ...this.runtime.sync,
       feeding_timeline_backfill_done: true,
@@ -504,27 +560,6 @@ export class SurePetAccountManager implements AccountManager {
       timeline_backfill_before_id: undefined,
     };
     await this.persistRuntimeState();
-  }
-
-  private async backfillFeedingForCloudDevice(
-    cloudDeviceId: number,
-  ): Promise<void> {
-    const client = await this.ensureClient();
-    const householdId = this.runtime.household_id;
-    if (householdId == null) return;
-
-    const timeline = await client.getFullTimeline(householdId);
-    const extracted = extractFeedingDatapointsFromTimeline(timeline);
-    await this.ingestFeedingDatapoints(
-      extracted.datapoints.filter(
-        (datapoint) => datapoint.device_id === cloudDeviceId,
-      ),
-    );
-    await this.ingestServedDatapoints(
-      extracted.served.filter(
-        (datapoint) => datapoint.device_id === cloudDeviceId,
-      ),
-    );
   }
 
   private async backfillFeedingTimeline(): Promise<{
@@ -681,6 +716,7 @@ export class SurePetAccountManager implements AccountManager {
         // A SureFeed has no motor. Every gram that appears in its bowl was put
         // there by a person, and the feeder says so itself with `USER_CLOSED`.
         //
+        caused_by: 'human',
         // No `attributed_by`: the vocabulary there names ways of identifying a
         // pet, and none of them describes a device reporting its own lid. A
         // claimed source would be less honest than an absent one.
@@ -818,15 +854,20 @@ export class SurePetAccountManager implements AccountManager {
     // chip read. An intruder is another animal, and a reading the hardware
     // distrusts stays unresolved for a human to settle.
     const cause = datapoint.cause ?? 'pet';
+    // SurePet identifies by the implanted chip the hardware reads, not a guess.
+    const attribution = attributionColumns(
+      cause,
+      event.pet_id ?? null,
+      cause === 'pet' ? 'microchip' : null,
+    );
 
     const resultId = await recordDeviceEvent(this.deps, {
       deviceId: localDevice.id,
       timestamp: event.timestamp,
       data: event.data,
-      pet_id: cause === 'pet' ? event.pet_id : null,
-      caused_by: cause,
-      // SurePet identifies by the implanted chip the hardware reads, not a guess.
-      attributed_by: cause === 'pet' ? 'microchip' : undefined,
+      pet_id: attribution.pet_id,
+      caused_by: attribution.caused_by,
+      attributed_by: attribution.attributed_by ?? undefined,
       raw_data: event.raw_data,
       human_verified: event.human_verified,
     });
@@ -838,12 +879,9 @@ export class SurePetAccountManager implements AccountManager {
         .values(
           buildMoistureChildEventValues({
             parentEventId: resultId,
-            // Same basis as the meal it came from: the feeder read a chip.
-            attribution: attributionColumns(
-              event.pet_id != null ? 'pet' : 'unknown',
-              event.pet_id ?? null,
-              event.pet_id != null ? 'microchip' : null,
-            ),
+            // The moisture is the meal's, so it carries the meal's decision —
+            // an intruder's wet food is not our pet's hydration.
+            attribution,
             timestamp: event.timestamp,
             moistureMl,
           }),
@@ -852,21 +890,34 @@ export class SurePetAccountManager implements AccountManager {
     }
   }
 
+  /**
+   * Names the pet on a meal stored before its tag was linked.
+   *
+   * Writes the whole attribution, not just `pet_id`: the CHECK allows a pet id
+   * only beside `caused_by = 'pet'`, and a row stored as `unknown` would
+   * otherwise reject the update. Only rows still open to a chip read are
+   * touched — a cause a person or the feeder settled as not-a-pet stays put.
+   */
   private async assignPetIdToFeedingEvent(
     eventId: number,
     petId: number,
   ): Promise<void> {
+    const columns = attributionColumns('pet', petId, 'microchip');
+
     await this.deps.db
       .updateTable('event')
-      .set({ pet_id: petId })
+      .set(columns)
       .where('id', '=', eventId)
+      .where('pet_id', 'is', null)
+      .where('caused_by', 'in', ['pet', 'unknown'])
       .execute();
 
     await this.deps.db
       .updateTable('event')
-      .set({ pet_id: petId })
+      .set(columns)
       .where('parent_event_id', '=', eventId)
       .where('pet_id', 'is', null)
+      .where('caused_by', 'in', ['pet', 'unknown'])
       .execute();
   }
 
@@ -879,6 +930,7 @@ export class SurePetAccountManager implements AccountManager {
       .selectFrom('event')
       .select(['id', 'data'])
       .where('pet_id', 'is', null)
+      .where('caused_by', 'in', ['pet', 'unknown'])
       .where(sql<string>`json_extract(data, '$.type')`, '=', 'food_intake')
       .where(
         sql<string>`json_extract(data, '$.provider_data.provider')`,
@@ -894,6 +946,15 @@ export class SurePetAccountManager implements AccountManager {
       if (data?.type !== 'food_intake') continue;
       const providerData = data.provider_data;
       if (providerData?.provider !== 'surepet') continue;
+      // An intruder or a reading the feeder distrusts may still carry a tag;
+      // it is not a chip read, so it never becomes one here. Rows without a
+      // context predate it and were all chip reads.
+      if (
+        providerData.weight_context != null &&
+        providerData.weight_context !== WeightContext.PET_CLOSED
+      ) {
+        continue;
+      }
 
       const resolvedPetId = resolveLocalPetIdFromProviderData(
         this.config,

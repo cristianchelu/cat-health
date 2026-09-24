@@ -148,6 +148,12 @@ export const SurePetEventProviderDataSchema = Type.Object({
   timeline_entry_id: Type.Optional(Type.Number()),
   /** SurePet hardware bowl index (0 | 1); not a compartment id. */
   bowl_index: Type.Optional(Type.Number()),
+  /**
+   * The weight record's `WeightContext`. Kept so a later pass can tell a chip
+   * read (`PET_CLOSED`) from an intruder or a dubious reading that happens to
+   * carry a tag id — only the first may ever be resolved to a pet.
+   */
+  weight_context: Type.Optional(Type.Number()),
 });
 export type SurePetEventProviderData = Static<
   typeof SurePetEventProviderDataSchema
