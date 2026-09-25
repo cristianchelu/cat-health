@@ -136,6 +136,27 @@ describe('parseStoredEventData', () => {
     );
   });
 
+  it('accepts food_served', () => {
+    const valid = {
+      type: 'food_served',
+      food_type: 'dry',
+      amount: 42,
+      level_before: 3,
+      level_after: 45,
+      provider_data: {
+        provider: 'surepet',
+        external_key: 'timeline-served:1:2',
+        bowl_index: 0,
+        weight_context: 5,
+      },
+    };
+    assert.deepEqual(parseStoredEventData(valid), valid);
+    assert.equal(
+      parseStoredEventData({ type: 'food_served', food_type: 'dry' }),
+      null,
+    );
+  });
+
   it('accepts device_enablement', () => {
     const valid = {
       type: 'device_enablement',

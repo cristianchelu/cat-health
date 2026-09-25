@@ -28,6 +28,7 @@ const StoredSurePetProviderDataSchema = Type.Object({
   timeline_entry_id: Type.Optional(Type.Number()),
   /** SurePet hardware bowl index (0 | 1); not a compartment id. */
   bowl_index: Type.Optional(Type.Number()),
+  weight_context: Type.Optional(Type.Number()),
 });
 
 const StoredEventProviderDataSchema = Type.Union([
@@ -129,6 +130,21 @@ const StoredFoodIntakeSchema = Type.Object({
   nutrients: Type.Optional(Type.Record(Type.String(), Type.Number())),
 });
 
+const StoredFoodServedSchema = Type.Object({
+  type: Type.Literal('food_served'),
+  food_type: Type.Union([
+    Type.Literal('dry'),
+    Type.Literal('wet'),
+    Type.Literal('treat'),
+    Type.Literal('unknown'),
+  ]),
+  amount: Type.Number(),
+  food_id: Type.Optional(Type.Number()),
+  level_before: Type.Optional(Type.Number()),
+  level_after: Type.Optional(Type.Number()),
+  provider_data: Type.Optional(StoredEventProviderDataSchema),
+});
+
 const StoredLitterboxMaintenanceSchema = Type.Object({
   type: Type.Literal('litterbox_maintenance'),
   maintenance_type: Type.Union([
@@ -195,6 +211,7 @@ export const StoredEventDataSchema = Type.Union([
   StoredWaterIntakeSchema,
   StoredLitterboxUseSchema,
   StoredFoodIntakeSchema,
+  StoredFoodServedSchema,
   StoredLitterboxMaintenanceSchema,
   StoredDeviceConnectivitySchema,
   StoredDeviceEnablementSchema,
