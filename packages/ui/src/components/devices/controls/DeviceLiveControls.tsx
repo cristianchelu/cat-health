@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SettingControl } from 'shared';
-import { apiErrorMessage } from '@/api/apiClient';
+import { deviceWriteErrorMessage } from '@/lib/deviceControlErrors';
 import { useApplyDeviceSettings } from '@/hooks/queries/deviceQueries';
 import {
   fromControlDraftValue,
@@ -67,7 +67,11 @@ const DeviceLiveControls: React.FC<DeviceLiveControlsProps> = ({
       .catch((error: unknown) =>
         setErrors((current) => ({
           ...current,
-          [key]: apiErrorMessage(error, t('devices.controls.save_failed')),
+          [key]: deviceWriteErrorMessage(
+            error,
+            t,
+            t('devices.controls.save_failed'),
+          ),
         })),
       )
       .finally(() => forget(key));
@@ -88,15 +92,10 @@ const DeviceLiveControls: React.FC<DeviceLiveControlsProps> = ({
       value:
         edits[setting.key] ?? toControlDraftValue(setting.type, setting.value),
       disabled: sending.has(setting.key),
-      busyLabel:
-        setting.pending || sending.has(setting.key)
-          ? t('devices.controls.pending')
-          : undefined,
-      error:
-        errors[setting.key] ??
-        (setting.failed
-          ? t(`devices.controls.failed.${setting.failed.reason}`)
-          : undefined),
+      busyLabel: sending.has(setting.key)
+        ? t('devices.controls.pending')
+        : undefined,
+      error: errors[setting.key],
     }));
 
   return (

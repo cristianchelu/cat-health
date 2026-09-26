@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SettingControl } from 'shared';
-import { apiErrorMessage } from '@/api/apiClient';
+import { deviceWriteErrorMessage } from '@/lib/deviceControlErrors';
 import { useDraftForm } from '@/hooks/form';
 import { useApplyDeviceSettings } from '@/hooks/queries/deviceQueries';
 import {
@@ -69,7 +69,11 @@ const DeviceSettingsForm: React.FC<DeviceSettingsFormProps> = ({
       isSaving={apply.isPending}
       error={
         apply.isError
-          ? apiErrorMessage(apply.error, t('devices.controls.save_failed'))
+          ? deviceWriteErrorMessage(
+              apply.error,
+              t,
+              t('devices.controls.save_failed'),
+            )
           : null
       }
       discardConfirm={discardConfirm}

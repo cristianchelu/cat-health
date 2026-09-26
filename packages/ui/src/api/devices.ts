@@ -1,8 +1,7 @@
 import type {
   PatchDeviceSettingsRequestDTO,
-  PatchDeviceSettingsResponseDTO,
   RunDeviceActionRequestDTO,
-  RunDeviceActionResponseDTO,
+  DeviceWriteAppliedDTO,
   GetEventsResponseDTO,
   GetDeviceResponseDTO,
   GetDevicesResponseDTO,
@@ -119,7 +118,7 @@ export async function patchDeviceSettings(
   deviceId: number,
   patch: PatchDeviceSettingsRequestDTO,
 ) {
-  const { data } = await apiClient.patch<PatchDeviceSettingsResponseDTO>(
+  const { data } = await apiClient.patch<DeviceWriteAppliedDTO>(
     `/devices/${deviceId}/settings`,
     patch,
   );
@@ -131,7 +130,7 @@ export async function runDeviceAction(
   key: string,
   args: RunDeviceActionRequestDTO = {},
 ) {
-  const { data } = await apiClient.post<RunDeviceActionResponseDTO>(
+  const { data } = await apiClient.post<DeviceWriteAppliedDTO>(
     `/devices/${deviceId}/actions/${encodeURIComponent(key)}`,
     args,
   );

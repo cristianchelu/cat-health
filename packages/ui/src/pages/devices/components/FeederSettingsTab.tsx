@@ -25,7 +25,7 @@ import {
   useApplyDeviceSettings,
   useUpdateDevice,
 } from '@/hooks/queries/deviceQueries';
-import { apiErrorMessage } from '@/api/apiClient';
+import { deviceWriteErrorMessage } from '@/lib/deviceControlErrors';
 import { DeviceSettingsSections } from '@/components/devices/controls/DeviceSettingsSections';
 import {
   controlDraftBaseline,
@@ -206,7 +206,11 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
   const saveError = updateDevice.isError
     ? t('devices.feeder.food_compartment_save_error')
     : applySettings.isError
-      ? apiErrorMessage(applySettings.error, t('devices.controls.save_failed'))
+      ? deviceWriteErrorMessage(
+          applySettings.error,
+          t,
+          t('devices.controls.save_failed'),
+        )
       : null;
 
   const hasFoods = !isLoadingFoods && foods.length > 0;

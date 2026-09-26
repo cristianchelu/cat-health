@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ActionControl } from 'shared';
-import { apiErrorMessage } from '@/api/apiClient';
+import { deviceWriteErrorMessage } from '@/lib/deviceControlErrors';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useRunDeviceAction } from '@/hooks/queries/deviceQueries';
 import { controlLabel } from '@/lib/deviceControlLabels';
@@ -37,7 +37,11 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ deviceId, actions }) => {
       .catch((error: unknown) =>
         setRequestError({
           key,
-          message: apiErrorMessage(error, t('devices.controls.run_failed')),
+          message: deviceWriteErrorMessage(
+            error,
+            t,
+            t('devices.controls.run_failed'),
+          ),
         }),
       )
       .finally(() =>
@@ -62,16 +66,14 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ deviceId, actions }) => {
             onRun={() => handleRun(action.key)}
             disabled={!action.available}
             busyLabel={
-              runningKey === action.key || action.pending
+              runningKey === action.key
                 ? t('devices.controls.running')
                 : undefined
             }
             error={
               requestError?.key === action.key
                 ? requestError.message
-                : action.failed
-                  ? t(`devices.controls.failed.${action.failed.reason}`)
-                  : undefined
+                : undefined
             }
           />
         </DashboardTile>

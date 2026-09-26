@@ -89,13 +89,7 @@ const DeviceCompartmentsSetting: React.FC<DeviceCompartmentsSettingProps> = ({
         }
         chooseFoodLabel={t('devices.controls.choose_food')}
         disabled={disabled}
-        busyLabel={setting.pending ? t('devices.controls.pending') : undefined}
-        error={
-          error ??
-          (setting.failed
-            ? t(`devices.controls.failed.${setting.failed.reason}`)
-            : undefined)
-        }
+        error={error}
       />
       <FoodPickerSheet
         open={picking !== null}

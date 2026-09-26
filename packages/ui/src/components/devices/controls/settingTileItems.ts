@@ -10,8 +10,7 @@ import type { ControlTileItem } from './ControlTiles';
 
 /**
  * The single-value settings as the tiles of a draft form: the drafted value,
- * a spinner while the device has a write in flight, and why a field was
- * refused. Compartmented settings draw themselves.
+ * and why a field was refused. Compartmented settings draw themselves.
  */
 export function settingTileItems(
   settings: SettingControl[],
@@ -29,11 +28,8 @@ export function settingTileItems(
       type: resolveControlType(setting.type, t),
       value: draft[setting.key] ?? '',
       disabled,
-      busyLabel: setting.pending ? t('devices.controls.pending') : undefined,
       error: invalidKeys.includes(setting.key)
         ? t('devices.controls.invalid_value')
-        : setting.failed
-          ? t(`devices.controls.failed.${setting.failed.reason}`)
-          : undefined,
+        : undefined,
     }));
 }
