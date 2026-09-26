@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
-import { UtensilsCrossed } from 'lucide-react';
+import { SlidersHorizontal, UtensilsCrossed } from 'lucide-react';
 import type { GetDeviceResponseDTO } from 'shared';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -21,7 +21,19 @@ import {
 } from '@/components/food-picker/foodGroups';
 import { useDraftForm } from '@/hooks/form';
 import { useFoods } from '@/hooks/queries/foodQueries';
-import { useUpdateDevice } from '@/hooks/queries/deviceQueries';
+import {
+  useApplyDeviceSettings,
+  useUpdateDevice,
+} from '@/hooks/queries/deviceQueries';
+import { apiErrorMessage } from '@/api/apiClient';
+import { ControlTileGrid } from '@/components/devices/controls/ControlTileGrid';
+import { settingTileItems } from '@/components/devices/controls/settingTileItems';
+import {
+  controlDraftBaseline,
+  controlDraftPatch,
+  type ControlDraft,
+} from '@/lib/deviceControlDraft';
+import { deviceConfigSettings } from '@/lib/deviceDetailsTabs';
 import {
   mergeFeederFoodCompartmentsIntoConfig,
   readFeederFoodAssignments,
@@ -45,6 +57,8 @@ type FoodAssignments = Record<string, number | null>;
  */
 interface FeederSettingsDraft {
   foodAssignments: FoodAssignments;
+  /** The feeder's own settings, written to the device rather than stored here. */
+  deviceSettings: ControlDraft;
 }
 
 /**
@@ -58,6 +72,12 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
   const { t } = useTranslation();
   const { data: foods = [], isLoading: isLoadingFoods } = useFoods();
   const updateDevice = useUpdateDevice(device.id);
+  const applySettings = useApplyDeviceSettings(device.id);
+  const deviceSettings = React.useMemo(
+    () => deviceConfigSettings(device),
+    [device],
+  );
+  const [invalidKeys, setInvalidKeys] = React.useState<string[]>([]);
 
   const compartments = React.useMemo(
     () => resolveFeederFoodCompartments(device),
@@ -83,8 +103,9 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
       foodAssignments: Object.fromEntries(
         compartmentOrder.map((id) => [id, stored.get(id) ?? null]),
       ),
+      deviceSettings: controlDraftBaseline(deviceSettings),
     };
-  }, [device.config, compartmentOrder]);
+  }, [device.config, compartmentOrder, deviceSettings]);
 
   const baselineKey = JSON.stringify(baseline);
   const { draft, patchDraft, isDirty, commit, requestReset, discardConfirm } =
@@ -144,24 +165,75 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
       ? t(compartment.labelKey, { number: compartment.id })
       : t(compartment.labelKey);
 
+  /*
+   * One Save, two destinations: food attribution is stored here, the feeder's
+   * own settings go to the device. Each is sent only when it changed, and the
+   * draft is accepted once both have landed.
+   */
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!isDirty) return;
 
-    const config = mergeFeederFoodCompartmentsIntoConfig(
-      device.config,
-      new Map(Object.entries(draft.foodAssignments)),
-      compartmentOrder,
+    const { patch, invalid } = controlDraftPatch(
+      deviceSettings,
+      baseline.deviceSettings,
+      draft.deviceSettings,
     );
-    updateDevice.mutate({ config }, { onSuccess: () => commit() });
+    setInvalidKeys(invalid);
+    if (invalid.length > 0) return;
+
+    const writes: Promise<unknown>[] = [];
+    if (
+      JSON.stringify(draft.foodAssignments) !==
+      JSON.stringify(baseline.foodAssignments)
+    ) {
+      const config = mergeFeederFoodCompartmentsIntoConfig(
+        device.config,
+        new Map(Object.entries(draft.foodAssignments)),
+        compartmentOrder,
+      );
+      writes.push(updateDevice.mutateAsync({ config }));
+    }
+    if (Object.keys(patch).length > 0) {
+      writes.push(applySettings.mutateAsync(patch));
+    }
+    Promise.all(writes).then(
+      () => commit(),
+      () => {},
+    );
   };
+
+  const isSaving = updateDevice.isPending || applySettings.isPending;
+  const saveError = updateDevice.isError
+    ? t('devices.feeder.food_compartment_save_error')
+    : applySettings.isError
+      ? apiErrorMessage(applySettings.error, t('devices.controls.save_failed'))
+      : null;
+
+  const hasFoods = !isLoadingFoods && foods.length > 0;
+  const foodsEmpty = (
+    <Card>
+      <CardContent>
+        <p className="feeder-settings-muted">
+          {isLoadingFoods ? (
+            t('common.loading')
+          ) : (
+            <>
+              {t('devices.feeder.food_compartment_no_foods')}{' '}
+              <Link to="/settings">{t('settings.foods')}</Link>
+            </>
+          )}
+        </p>
+      </CardContent>
+    </Card>
+  );
 
   /*
    * No form until there is something to edit, so the tab does not show a Save
    * with nothing behind it — the same call the Camera tab makes when there is
    * no camera to link.
    */
-  if (isLoadingFoods || foods.length === 0) {
+  if (!hasFoods && deviceSettings.length === 0) {
     return (
       <div className="feeder-settings-tab">
         <SectionHeader
@@ -172,20 +244,7 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
         >
           {t('devices.feeder.food_compartment_settings_title')}
         </SectionHeader>
-        <Card>
-          <CardContent>
-            <p className="feeder-settings-muted">
-              {isLoadingFoods ? (
-                t('common.loading')
-              ) : (
-                <>
-                  {t('devices.feeder.food_compartment_no_foods')}{' '}
-                  <Link to="/settings">{t('settings.foods')}</Link>
-                </>
-              )}
-            </p>
-          </CardContent>
-        </Card>
+        {foodsEmpty}
       </div>
     );
   }
@@ -194,16 +253,12 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
     <div className="feeder-settings-tab">
       <FormShell
         onSubmit={handleSubmit}
-        error={
-          updateDevice.isError
-            ? t('devices.feeder.food_compartment_save_error')
-            : null
-        }
+        error={saveError}
         actions={{
           onCancel: requestReset,
           cancelLabel: t('common.cancel'),
           submitLabel: t('common.save'),
-          isSubmitting: updateDevice.isPending,
+          isSubmitting: isSaving,
           submitDisabled: !isDirty,
         }}
       >
@@ -215,88 +270,118 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
         >
           {t('devices.feeder.food_compartment_settings_title')}
         </SectionHeader>
-        <Card>
-          <CardContent>
-            <div className="feeder-settings-compartments">
-              {compartments.map((compartment) => {
-                const current = draft.foodAssignments[compartment.id];
-                const food =
-                  current != null ? (foodsById.get(current) ?? null) : null;
-                const label = compartmentLabel(compartment);
-                const density = food ? kcalPerKilogram(food) : null;
+        {hasFoods ? (
+          <Card>
+            <CardContent>
+              <div className="feeder-settings-compartments">
+                {compartments.map((compartment) => {
+                  const current = draft.foodAssignments[compartment.id];
+                  const food =
+                    current != null ? (foodsById.get(current) ?? null) : null;
+                  const label = compartmentLabel(compartment);
+                  const density = food ? kcalPerKilogram(food) : null;
 
-                return (
-                  <FormField key={compartment.id} label={label}>
-                    <CardList variant="bare">
-                      <CardListItem
-                        icon={<UtensilsCrossed aria-hidden="true" />}
-                        iconTone={food ? 'primary' : 'muted'}
-                        trailing={
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => setPickerCompartment(compartment.id)}
-                            disabled={updateDevice.isPending}
-                            /* On a multi-bowl feeder every button says the same
+                  return (
+                    <FormField key={compartment.id} label={label}>
+                      <CardList variant="bare">
+                        <CardListItem
+                          icon={<UtensilsCrossed aria-hidden="true" />}
+                          iconTone={food ? 'primary' : 'muted'}
+                          trailing={
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() =>
+                                setPickerCompartment(compartment.id)
+                              }
+                              disabled={isSaving}
+                              /* On a multi-bowl feeder every button says the same
                              word, so the name has to carry which bowl it
                              belongs to. On a single-bowl one there is nothing
                              to tell apart, and naming it would only produce
                              "Change the food in Food". */
-                            aria-label={
-                              compartments.length > 1
-                                ? t(
-                                    food
-                                      ? 'devices.feeder.food_compartment_change_aria'
-                                      : 'devices.feeder.food_compartment_choose_aria',
-                                    { compartment: label },
-                                  )
-                                : undefined
-                            }
-                          >
-                            {t(
+                              aria-label={
+                                compartments.length > 1
+                                  ? t(
+                                      food
+                                        ? 'devices.feeder.food_compartment_change_aria'
+                                        : 'devices.feeder.food_compartment_choose_aria',
+                                      { compartment: label },
+                                    )
+                                  : undefined
+                              }
+                            >
+                              {t(
+                                food
+                                  ? 'devices.feeder.food_compartment_change'
+                                  : 'devices.feeder.food_compartment_choose',
+                              )}
+                            </Button>
+                          }
+                        >
+                          <CardListContent
+                            title={
                               food
-                                ? 'devices.feeder.food_compartment_change'
-                                : 'devices.feeder.food_compartment_choose',
-                            )}
-                          </Button>
-                        }
-                      >
-                        <CardListContent
-                          title={
-                            food
-                              ? food.name
-                              : t('devices.feeder.food_compartment_unlinked')
-                          }
-                          description={
-                            food ? (
-                              <MetaLine
-                                nowrap
-                                parts={[
-                                  food.brand,
-                                  t(
-                                    `food_picker.group_${coarseFoodGroup(food.food_type)}_short`,
-                                  ),
-                                  density != null
-                                    ? t('food_picker.kcal_per_kg', {
-                                        value: density,
-                                      })
-                                    : null,
-                                ]}
-                              />
-                            ) : (
-                              t('devices.feeder.food_compartment_hint')
-                            )
-                          }
-                        />
-                      </CardListItem>
-                    </CardList>
-                  </FormField>
-                );
+                                ? food.name
+                                : t('devices.feeder.food_compartment_unlinked')
+                            }
+                            description={
+                              food ? (
+                                <MetaLine
+                                  nowrap
+                                  parts={[
+                                    food.brand,
+                                    t(
+                                      `food_picker.group_${coarseFoodGroup(food.food_type)}_short`,
+                                    ),
+                                    density != null
+                                      ? t('food_picker.kcal_per_kg', {
+                                          value: density,
+                                        })
+                                      : null,
+                                  ]}
+                                />
+                              ) : (
+                                t('devices.feeder.food_compartment_hint')
+                              )
+                            }
+                          />
+                        </CardListItem>
+                      </CardList>
+                    </FormField>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          foodsEmpty
+        )}
+
+        {deviceSettings.length > 0 ? (
+          <>
+            <SectionHeader
+              size="compact"
+              icon={<SlidersHorizontal aria-hidden="true" />}
+            >
+              {t('devices.controls.settings_title')}
+            </SectionHeader>
+            <ControlTileGrid
+              items={settingTileItems(deviceSettings, draft.deviceSettings, {
+                t,
+                invalidKeys,
+                disabled: isSaving,
               })}
-            </div>
-          </CardContent>
-        </Card>
+              onChange={(key, value) => {
+                setInvalidKeys((keys) => keys.filter((k) => k !== key));
+                patchDraft({
+                  deviceSettings: { ...draft.deviceSettings, [key]: value },
+                });
+              }}
+            />
+          </>
+        ) : null}
       </FormShell>
 
       {/* Outside the form: the picker fills a field, it does not submit one. */}
