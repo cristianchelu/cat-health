@@ -8,23 +8,22 @@ import {
   toControlDraftValue,
   type ControlDraftValue,
 } from '@/lib/deviceControlDraft';
-import { ControlTileGrid, type ControlTileGridItem } from './ControlTileGrid';
+import { ControlTiles, type ControlTileItem } from './ControlTiles';
 
 interface DeviceLiveControlsProps {
   deviceId: number;
   settings: SettingControl[];
-  className?: string;
 }
 
 /**
  * Controls that operate the device now: each writes as soon as it is set,
  * with no draft and no Save. A tile shows what it was set to until the device
- * reports back, then what the device reports.
+ * reports back, then what the device reports. Draws tiles for a grid the
+ * caller owns.
  */
 const DeviceLiveControls: React.FC<DeviceLiveControlsProps> = ({
   deviceId,
   settings,
-  className,
 }) => {
   const { t } = useTranslation();
   const apply = useApplyDeviceSettings(deviceId);
@@ -73,14 +72,14 @@ const DeviceLiveControls: React.FC<DeviceLiveControlsProps> = ({
     settings.map((setting) => [setting.key, setting]),
   );
 
-  const items: ControlTileGridItem[] = settings.map((setting) => ({
+  const items: ControlTileItem[] = settings.map((setting) => ({
     key: setting.key,
     label: setting.label.text,
     type: setting.type,
     value:
       edits[setting.key] ?? toControlDraftValue(setting.type, setting.value),
     disabled: sending.has(setting.key),
-    note:
+    busyLabel:
       setting.pending || sending.has(setting.key)
         ? t('devices.controls.pending')
         : undefined,
@@ -92,8 +91,7 @@ const DeviceLiveControls: React.FC<DeviceLiveControlsProps> = ({
   }));
 
   return (
-    <ControlTileGrid
-      className={className}
+    <ControlTiles
       items={items}
       onChange={(key, value) => {
         const setting = byKey.get(key);

@@ -729,6 +729,7 @@
       "run_failed": "Couldn’t run this action.",
       "confirm_action": "Run {{name}}?",
       "run": "Run",
+      "running": "Running…",
       "failed": {
         "invalid": "The device doesn’t accept this value",
         "offline": "The device is offline",

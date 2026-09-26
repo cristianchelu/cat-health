@@ -4,20 +4,19 @@ import type { ActionControl } from 'shared';
 import { apiErrorMessage } from '@/api/apiClient';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useRunDeviceAction } from '@/hooks/queries/deviceQueries';
-import { ActionButtonRow } from './ActionButtonRow';
+import { DashboardTile } from '@/components/layout/DashboardTile';
+import { ActionTile } from './ActionTile';
 
 interface DeviceActionsProps {
   deviceId: number;
   actions: ActionControl[];
-  className?: string;
 }
 
-/** Runs a device's actions, asking first for the ones the device marks. */
-const DeviceActions: React.FC<DeviceActionsProps> = ({
-  deviceId,
-  actions,
-  className,
-}) => {
+/**
+ * Runs a device's actions, asking first for the ones the device marks. Draws
+ * one tile per action, for a grid the caller owns.
+ */
+const DeviceActions: React.FC<DeviceActionsProps> = ({ deviceId, actions }) => {
   const { t } = useTranslation();
   const run = useRunDeviceAction(deviceId);
   const [confirming, setConfirming] = React.useState<ActionControl | null>(
@@ -54,22 +53,28 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({
 
   return (
     <>
-      <ActionButtonRow
-        className={className}
-        actions={actions.map((action) => ({
-          key: action.key,
-          label: action.label.text,
-          disabled: !action.available,
-          running: runningKey === action.key || Boolean(action.pending),
-          error:
-            requestError?.key === action.key
-              ? requestError.message
-              : action.failed
-                ? t(`devices.controls.failed.${action.failed.reason}`)
-                : undefined,
-        }))}
-        onRun={handleRun}
-      />
+      {actions.map((action) => (
+        <DashboardTile key={action.key}>
+          <ActionTile
+            label={action.label.text}
+            runLabel={t('devices.controls.run')}
+            onRun={() => handleRun(action.key)}
+            disabled={!action.available}
+            busyLabel={
+              runningKey === action.key || action.pending
+                ? t('devices.controls.running')
+                : undefined
+            }
+            error={
+              requestError?.key === action.key
+                ? requestError.message
+                : action.failed
+                  ? t(`devices.controls.failed.${action.failed.reason}`)
+                  : undefined
+            }
+          />
+        </DashboardTile>
+      ))}
       <ConfirmDialog
         open={confirming !== null}
         title={t('devices.controls.confirm_action', {

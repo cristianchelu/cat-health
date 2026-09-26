@@ -4,11 +4,12 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { FormShell } from '@/components/ui/form';
 import type { ControlDraftValue } from '@/lib/deviceControlDraft';
 import { cn } from '@/lib/utils';
-import { ControlTileGrid, type ControlTileGridItem } from './ControlTileGrid';
+import { ControlTileGrid } from './ControlTileGrid';
+import type { ControlTileItem } from './ControlTiles';
 import './DeviceSettingsFormView.css';
 
 interface DeviceSettingsFormViewProps {
-  items: ControlTileGridItem[];
+  items: ControlTileItem[];
   onFieldChange: (key: string, value: ControlDraftValue) => void;
   onSubmit: React.FormEventHandler<HTMLFormElement>;
   onCancel: () => void;

@@ -18,8 +18,8 @@ interface ControlTileProps {
    */
   onCommit?: () => void;
   disabled?: boolean;
-  /** A write in flight, already worded. */
-  note?: string;
+  /** Set while a write is in flight; what a screen reader hears. */
+  busyLabel?: string;
   error?: string;
   className?: string;
 }
@@ -32,7 +32,7 @@ const ControlTile: React.FC<ControlTileProps> = ({
   onChange,
   onCommit,
   disabled,
-  note,
+  busyLabel,
   error,
   className,
 }) => {
@@ -101,7 +101,7 @@ const ControlTile: React.FC<ControlTileProps> = ({
       className={cn('control-tile', className)}
       label={label}
       htmlFor={id}
-      note={note}
+      busyLabel={busyLabel}
       error={error}
     >
       {control}

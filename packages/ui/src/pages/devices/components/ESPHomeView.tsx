@@ -178,15 +178,12 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
   const renderControls = (group: ControlGroup) => {
     const actions = actionsIn(controls, group);
     const live = liveSettingsIn(controls, group);
+    if (actions.length + live.length === 0) return null;
     return (
-      <>
-        {actions.length > 0 ? (
-          <DeviceActions deviceId={deviceId} actions={actions} />
-        ) : null}
-        {live.length > 0 ? (
-          <DeviceLiveControls deviceId={deviceId} settings={live} />
-        ) : null}
-      </>
+      <ResponsiveTileGrid>
+        <DeviceLiveControls deviceId={deviceId} settings={live} />
+        <DeviceActions deviceId={deviceId} actions={actions} />
+      </ResponsiveTileGrid>
     );
   };
 

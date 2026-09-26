@@ -789,6 +789,7 @@
       "run_failed": "Acțiunea nu a putut fi rulată.",
       "confirm_action": "Rulezi {{name}}?",
       "run": "Rulează",
+      "running": "Se rulează…",
       "failed": {
         "invalid": "Dispozitivul nu acceptă această valoare",
         "offline": "Dispozitivul este offline",

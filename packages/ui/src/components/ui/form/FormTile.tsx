@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/lib/utils';
 import './FormTile.css';
 
@@ -6,8 +7,12 @@ interface FormTileProps extends React.ComponentProps<'div'> {
   label: string;
   /** The control's id, so the label focuses or toggles it. */
   htmlFor?: string;
-  /** A quiet line under the row, e.g. a write still in flight. */
-  note?: string;
+  /**
+   * Set while the value is on its way somewhere: a spinner joins the control,
+   * and this is what a screen reader hears. It sits in the row, so the tile
+   * keeps its height.
+   */
+  busyLabel?: string;
   error?: string;
 }
 
@@ -19,20 +24,29 @@ interface FormTileProps extends React.ComponentProps<'div'> {
  * `FormCard` goes around them.
  */
 const FormTile = React.forwardRef<HTMLDivElement, FormTileProps>(
-  ({ label, htmlFor, note, error, className, children, ...props }, ref) => (
+  (
+    { label, htmlFor, busyLabel, error, className, children, ...props },
+    ref,
+  ) => (
     <div className={cn('form-tile', className)} ref={ref} {...props}>
       <div className="form-tile-row">
         <label className="form-tile-label" htmlFor={htmlFor}>
           {label}
         </label>
-        <div className="form-tile-control">{children}</div>
+        <div className="form-tile-control">
+          {busyLabel ? (
+            <span className="form-tile-busy" role="status">
+              <Spinner />
+              <span className="sr-only">{busyLabel}</span>
+            </span>
+          ) : null}
+          {children}
+        </div>
       </div>
       {error ? (
         <p className="form-tile-error" role="alert">
           {error}
         </p>
-      ) : note ? (
-        <p className="form-tile-note">{note}</p>
       ) : null}
     </div>
   ),
