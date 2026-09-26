@@ -1,4 +1,4 @@
-import type { DeviceControlsDTO, SettingKey, WriteOutcome } from 'shared';
+import type { DeviceControlsDTO, SettingKey } from 'shared';
 
 import type { EventBus } from '../EventBus.ts';
 import type {
@@ -6,7 +6,6 @@ import type {
   DeviceIntegrationContext,
   LiveControllerFailure,
 } from '../types.ts';
-import { PendingLedger, type WriteTarget } from './PendingLedger.ts';
 import type {
   ControlCommand,
   ControlOrigin,
@@ -21,18 +20,14 @@ import {
 /** Published on the EventBus once a write is applied or has failed. */
 export const DEVICE_CONTROL_SETTLED = 'device.control.settled';
 
+/** A setting or action on one device. */
+export type WriteTarget = `setting:${string}` | `action:${string}`;
+
 export interface DeviceControlSettledEvent {
   deviceId: number;
   target: WriteTarget;
   settlement: Settlement;
   origin: ControlOrigin;
-}
-
-/** One accepted write: what to tell the caller now, and how it ends. */
-export interface WriteReceipt {
-  outcome: WriteOutcome;
-  /** Resolves when the device confirms or the write fails. Never rejects. */
-  settled: Promise<Settlement>;
 }
 
 export type ControlResult<T> =
@@ -52,48 +47,38 @@ type DeviceControlContext = Pick<
 
 /**
  * The one entry point for writing to a device, for routes and internal
- * services alike. It validates every command against the device's manifest,
- * runs one device's writes one at a time, and keeps the pending ledger the
- * read side overlays on what the device reports.
+ * services alike. It validates every command against the device's manifest
+ * and runs one device's writes one at a time. A write resolves once it is
+ * done: however many steps a provider needs to confirm it, the caller sees
+ * one promise that ends applied or failed.
  */
 export class DeviceControl {
   private readonly context: DeviceControlContext;
   private readonly eventBus: EventBus;
-  private readonly ledger: PendingLedger;
   private readonly queues = new Map<number, Promise<unknown>>();
   private readonly lifetimes = new Map<number, AbortController>();
 
-  constructor(deps: {
-    context: DeviceControlContext;
-    eventBus: EventBus;
-    now?: () => number;
-  }) {
+  constructor(deps: { context: DeviceControlContext; eventBus: EventBus }) {
     this.context = deps.context;
     this.eventBus = deps.eventBus;
-    this.ledger = new PendingLedger(deps.now);
     deps.context.onControllerRetired((deviceId) => this.retire(deviceId));
   }
 
   /**
-   * The controls a device offers, with what it last reported and any write
-   * still in flight. Sync and cheap: it reads only memory.
+   * The controls a device offers, with what it last reported. Sync and
+   * cheap: it reads only memory.
    */
   view(controller: DeviceController): DeviceControlsDTO | undefined {
     const surface = controller.controls?.();
     if (!surface) return undefined;
-    const { deviceId } = controller;
     const manifest = surface.manifest();
     const values = surface.readSettings();
     return {
       settings: manifest.settings.map((descriptor) => ({
         ...descriptor,
         value: values.get(descriptor.key) ?? null,
-        ...this.ledger.status(deviceId, `setting:${descriptor.key}`),
       })),
-      actions: manifest.actions.map((descriptor) => ({
-        ...descriptor,
-        ...this.ledger.status(deviceId, `action:${descriptor.key}`),
-      })),
+      actions: manifest.actions,
     };
   }
 
@@ -105,7 +90,7 @@ export class DeviceControl {
     deviceId: number,
     patch: Record<string, unknown>,
     origin: ControlOrigin,
-  ): Promise<ControlResult<Record<string, WriteReceipt>>> {
+  ): Promise<ControlResult<Record<string, Settlement>>> {
     const resolved = await this.resolveSurface(deviceId);
     if (!resolved.ok) return resolved;
     const { surface } = resolved;
@@ -138,16 +123,16 @@ export class DeviceControl {
       commands.push({ kind: 'setting', key: descriptor.key, value });
     }
 
-    const receipts: Record<string, WriteReceipt> = {};
+    const settlements: Record<string, Settlement> = {};
     for (const command of commands) {
-      receipts[command.key] = await this.write(
+      settlements[command.key] = await this.write(
         deviceId,
         surface,
         command,
         origin,
       );
     }
-    return { ok: true, value: receipts };
+    return { ok: true, value: settlements };
   }
 
   async runAction(
@@ -155,7 +140,7 @@ export class DeviceControl {
     key: string,
     args: Record<string, unknown>,
     origin: ControlOrigin,
-  ): Promise<ControlResult<WriteReceipt>> {
+  ): Promise<ControlResult<Settlement>> {
     const resolved = await this.resolveSurface(deviceId);
     if (!resolved.ok) return resolved;
     const { surface } = resolved;
@@ -207,54 +192,37 @@ export class DeviceControl {
   }
 
   /**
-   * Submit one command behind any earlier write to the same device. A
-   * provider that reads its state to build a write (read, modify, write)
-   * would otherwise race two quick edits into overwriting each other.
+   * Run one command to its end, behind any earlier write to the same device.
+   * A provider that reads its state to build a write (read, modify, write)
+   * would otherwise race two quick edits into overwriting each other, and
+   * waiting for the earlier one to be confirmed means the later one reads
+   * what the device now holds.
    */
   private write(
     deviceId: number,
     surface: ControlSurface,
     command: ControlCommand,
     origin: ControlOrigin,
-  ): Promise<WriteReceipt> {
-    const run = async (): Promise<WriteReceipt> => {
-      const target: WriteTarget = `${command.kind}:${command.key}`;
-      const expected = command.kind === 'setting' ? command.value : undefined;
-      const writeId = this.ledger.begin(deviceId, target, expected);
-      const finish = (settlement: Settlement): Settlement => {
-        this.ledger.settle(deviceId, target, writeId, settlement);
-        this.eventBus.publish(DEVICE_CONTROL_SETTLED, {
-          deviceId,
-          target,
-          settlement,
-          origin,
-        } satisfies DeviceControlSettledEvent);
-        return settlement;
-      };
-
+  ): Promise<Settlement> {
+    const run = async (): Promise<Settlement> => {
       const submission = await surface.submit(command);
-      if (submission.status === 'applied') {
-        return {
-          outcome: { status: 'applied' },
-          settled: Promise.resolve(finish(submission)),
-        };
-      }
-      if (submission.status === 'failed') {
-        const settlement = finish(submission);
-        return { outcome: submission, settled: Promise.resolve(settlement) };
-      }
-
-      const settled = submission
-        .settle(this.lifetime(deviceId).signal)
-        .catch(
-          (error: unknown): Settlement => ({
-            status: 'failed',
-            reason: 'unknown',
-            message: error instanceof Error ? error.message : String(error),
-          }),
-        )
-        .then(finish);
-      return { outcome: { status: 'pending', writeId }, settled };
+      const settlement =
+        submission.status === 'pending'
+          ? await submission.settle(this.lifetime(deviceId).signal).catch(
+              (error: unknown): Settlement => ({
+                status: 'failed',
+                reason: 'unknown',
+                message: error instanceof Error ? error.message : String(error),
+              }),
+            )
+          : submission;
+      this.eventBus.publish(DEVICE_CONTROL_SETTLED, {
+        deviceId,
+        target: `${command.kind}:${command.key}`,
+        settlement,
+        origin,
+      } satisfies DeviceControlSettledEvent);
+      return settlement;
     };
 
     const previous = this.queues.get(deviceId) ?? Promise.resolve();
@@ -275,10 +243,9 @@ export class DeviceControl {
     return lifetime;
   }
 
-  /** The controller is gone: stop following its writes and forget them. */
+  /** The controller is gone: stop following its writes. */
   private retire(deviceId: number): void {
     this.lifetimes.get(deviceId)?.abort();
     this.lifetimes.delete(deviceId);
-    this.ledger.forget(deviceId);
   }
 }

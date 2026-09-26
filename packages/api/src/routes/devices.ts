@@ -27,9 +27,10 @@ import {
   ReidentifyLitterboxVisitsQuerySchema,
   ReidentifyLitterboxVisitsResponseSchema,
   PatchDeviceSettingsRequestSchema,
-  PatchDeviceSettingsResponseSchema,
   RunDeviceActionRequestSchema,
-  RunDeviceActionResponseSchema,
+  DeviceWriteAppliedSchema,
+  WriteFailureSchema,
+  type WriteFailureReason,
 } from 'shared';
 import { DEVICE_SIGNAL_KEYS, isRecord } from 'shared';
 import type { Device } from '../database/types/DeviceTable.ts';
@@ -93,6 +94,17 @@ const Http503ResponseSchema = Type.Object({
   message: Type.String(),
 });
 
+/* A control route's 400 and 503 are either refused up front or a write that
+   failed at the device, which also names its reason. */
+const WriteFailureOrBadRequestSchema = Type.Union([
+  WriteFailureSchema,
+  Http400ResponseSchema,
+]);
+const WriteFailureOrUnavailableSchema = Type.Union([
+  WriteFailureSchema,
+  Http503ResponseSchema,
+]);
+
 /**
  * One answer for every route that needs a working controller, so a device the
  * user switched off never reads as a misconfiguration.
@@ -148,6 +160,30 @@ function sendControlFailure(
     default:
       return sendControllerFailure(reply, deviceId, failure.reason);
   }
+}
+
+/** HTTP status for each way a write the device got can still fail. */
+const WRITE_FAILURE_STATUS: Record<WriteFailureReason, [number, string]> = {
+  invalid: [400, 'Bad Request'],
+  busy: [409, 'Conflict'],
+  rejected: [502, 'Bad Gateway'],
+  unknown: [502, 'Bad Gateway'],
+  offline: [503, 'Service Unavailable'],
+  timeout: [504, 'Gateway Timeout'],
+};
+
+/** A write that reached the device and failed there, as HTTP. */
+function sendWriteFailure(
+  reply: FastifyReply,
+  failure: { reason: WriteFailureReason; message?: string },
+) {
+  const [statusCode, error] = WRITE_FAILURE_STATUS[failure.reason];
+  return reply.code(statusCode).send({
+    statusCode,
+    error,
+    message: failure.message ?? failure.reason,
+    reason: failure.reason,
+  });
 }
 
 const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
@@ -1053,23 +1089,28 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
   // --- Device controls ---
 
-  const controlErrorResponses = {
-    '400': Http400ResponseSchema,
+  const controlResponses = {
+    '200': DeviceWriteAppliedSchema,
+    '400': WriteFailureOrBadRequestSchema,
     '404': Http404ResponseSchema,
-    '503': Http503ResponseSchema,
+    '409': WriteFailureSchema,
+    '502': WriteFailureSchema,
+    '503': WriteFailureOrUnavailableSchema,
+    '504': WriteFailureSchema,
   };
 
+  /*
+   * Both routes answer once the write is done, however long the device takes
+   * to confirm it, so a client only ever sees "saving" and then "saved" or
+   * "failed".
+   */
   fastify.patch(
     '/:id/settings',
     {
       schema: {
         params: GetDeviceParamsSchema,
         body: PatchDeviceSettingsRequestSchema,
-        response: {
-          '200': PatchDeviceSettingsResponseSchema,
-          '202': PatchDeviceSettingsResponseSchema,
-          ...controlErrorResponses,
-        },
+        response: controlResponses,
       },
     },
     async (request, reply) => {
@@ -1083,17 +1124,11 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         { kind: 'user' },
       );
       if (!result.ok) return sendControlFailure(reply, id, result);
-
-      const outcomes = Object.fromEntries(
-        Object.entries(result.value).map(([key, receipt]) => [
-          key,
-          receipt.outcome,
-        ]),
+      const failed = Object.values(result.value).find(
+        (settlement) => settlement.status === 'failed',
       );
-      const pending = Object.values(outcomes).some(
-        (outcome) => outcome.status === 'pending',
-      );
-      return reply.code(pending ? 202 : 200).send(outcomes);
+      if (failed?.status === 'failed') return sendWriteFailure(reply, failed);
+      return { status: 'applied' as const };
     },
   );
 
@@ -1103,11 +1138,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       schema: {
         params: Type.Object({ id: Type.Number(), key: Type.String() }),
         body: RunDeviceActionRequestSchema,
-        response: {
-          '200': RunDeviceActionResponseSchema,
-          '202': RunDeviceActionResponseSchema,
-          ...controlErrorResponses,
-        },
+        response: controlResponses,
       },
     },
     async (request, reply) => {
@@ -1122,8 +1153,10 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         { kind: 'user' },
       );
       if (!result.ok) return sendControlFailure(reply, id, result);
-      const { outcome } = result.value;
-      return reply.code(outcome.status === 'pending' ? 202 : 200).send(outcome);
+      if (result.value.status === 'failed') {
+        return sendWriteFailure(reply, result.value);
+      }
+      return { status: 'applied' as const };
     },
   );
 

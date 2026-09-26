@@ -98,7 +98,18 @@ function makeHarness(options: { status?: DeviceStatus } = {}) {
         return answer ? answer() : { status: 'applied' };
       },
     },
-    confirmer: { settle: (ref) => ref.promise },
+    // A retired controller aborts the settle; the device never answers then.
+    confirmer: {
+      settle: (ref, signal) =>
+        Promise.race([
+          ref.promise,
+          new Promise<Settlement>((resolve) =>
+            signal.addEventListener('abort', () =>
+              resolve({ status: 'failed', reason: 'timeout' }),
+            ),
+          ),
+        ]),
+    },
   });
 
   const controller: DeviceController = {
@@ -129,16 +140,12 @@ function makeHarness(options: { status?: DeviceStatus } = {}) {
     eventBus,
   });
 
-  const settingView = (key: string) =>
-    control.view(controller)?.settings.find((setting) => setting.key === key);
-
   return {
     control,
     controller,
     sent,
     answers,
     settledEvents,
-    settingView,
     retire: (deviceId: number) =>
       retired.forEach((listener) => listener(deviceId)),
   };
@@ -191,9 +198,7 @@ describe('DeviceControl', () => {
     );
 
     assert.ok(result.ok);
-    assert.deepEqual(result.value['dev:number.target']?.outcome, {
-      status: 'applied',
-    });
+    assert.deepEqual(result.value['dev:number.target'], { status: 'applied' });
     assert.deepEqual(sent, [{ key: 'target', value: 45 }]);
     assert.deepEqual(settledEvents, [
       {
@@ -205,40 +210,47 @@ describe('DeviceControl', () => {
     ]);
   });
 
-  it('shows a pending write with its expected value until it settles', async () => {
-    const { control, answers, settingView } = makeHarness();
+  it('resolves a write only once the device confirms it', async () => {
+    const { control, answers } = makeHarness();
     const confirmation = deferred<Settlement>();
     answers.push(async () => ({ status: 'pending', ref: confirmation }));
 
-    const result = await control.applySettings(
-      1,
-      { 'dev:number.target': 60 },
-      USER,
-    );
-    assert.ok(result.ok);
-    const receipt = result.value['dev:number.target'];
-    assert.equal(receipt?.outcome.status, 'pending');
-    assert.equal(settingView('dev:number.target')?.pending?.expected, 60);
+    let done = false;
+    const result = control
+      .applySettings(1, { 'dev:number.target': 60 }, USER)
+      .finally(() => {
+        done = true;
+      });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(done, false);
 
     confirmation.resolve({ status: 'applied' });
-    await receipt?.settled;
+    const settled = await result;
 
-    assert.equal(settingView('dev:number.target')?.pending, undefined);
+    assert.ok(settled.ok);
+    assert.deepEqual(settled.value['dev:number.target'], { status: 'applied' });
   });
 
-  it('keeps a failed write visible on the setting', async () => {
-    const { control, answers, settingView } = makeHarness();
+  it('reports a write the device refused', async () => {
+    const { control, answers } = makeHarness();
     answers.push(async () => ({
       status: 'failed',
       reason: 'timeout',
       message: 'no echo',
     }));
 
-    await control.applySettings(1, { 'dev:switch.pump': true }, USER);
+    const result = await control.applySettings(
+      1,
+      { 'dev:switch.pump': true },
+      USER,
+    );
 
-    const failed = settingView('dev:switch.pump')?.failed;
-    assert.equal(failed?.reason, 'timeout');
-    assert.equal(failed?.message, 'no echo');
+    assert.ok(result.ok);
+    assert.deepEqual(result.value['dev:switch.pump'], {
+      status: 'failed',
+      reason: 'timeout',
+      message: 'no echo',
+    });
   });
 
   it('sends one device its writes one at a time', async () => {
@@ -262,18 +274,19 @@ describe('DeviceControl', () => {
     ]);
   });
 
-  it('forgets pending writes once the controller is retired', async () => {
-    const { control, answers, settingView, retire } = makeHarness();
+  it('ends a write still waiting on a controller that is retired', async () => {
+    const { control, answers, retire } = makeHarness();
     answers.push(async () => ({
       status: 'pending',
       ref: deferred<Settlement>(),
     }));
 
-    await control.applySettings(1, { 'dev:number.target': 70 }, USER);
-    assert.ok(settingView('dev:number.target')?.pending);
-
+    const result = control.applySettings(1, { 'dev:number.target': 70 }, USER);
+    await new Promise((resolve) => setImmediate(resolve));
     retire(1);
+    const settled = await result;
 
-    assert.equal(settingView('dev:number.target')?.pending, undefined);
+    assert.ok(settled.ok);
+    assert.equal(settled.value['dev:number.target']?.status, 'failed');
   });
 });

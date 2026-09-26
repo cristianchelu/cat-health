@@ -255,55 +255,30 @@ export const WriteFailureReasonSchema = Type.Union([
 ]);
 export type WriteFailureReason = Static<typeof WriteFailureReasonSchema>;
 
-export const WriteOutcomeSchema = Type.Union([
-  Type.Object({ status: Type.Literal('applied') }),
-  Type.Object({ status: Type.Literal('pending'), writeId: Type.String() }),
-  Type.Object({
-    status: Type.Literal('failed'),
-    reason: WriteFailureReasonSchema,
-    message: Type.Optional(Type.String()),
-  }),
-]);
-export type WriteOutcome = Static<typeof WriteOutcomeSchema>;
+/**
+ * Why a write failed, as the settings and action routes answer it. A route
+ * answers only once the write is done, so there is no in-between state.
+ */
+export const WriteFailureSchema = Type.Object({
+  statusCode: Type.Number(),
+  error: Type.String(),
+  message: Type.String(),
+  reason: WriteFailureReasonSchema,
+});
+export type WriteFailureDTO = Static<typeof WriteFailureSchema>;
 
 // --- Read model ---
-
-export const PendingWriteSchema = Type.Object({
-  writeId: Type.String(),
-  /** The value the device was asked for; absent for an action. */
-  expected: Type.Optional(Type.Unknown()),
-  /** Epoch ms. */
-  since: Type.Number(),
-});
-export type PendingWrite = Static<typeof PendingWriteSchema>;
-
-export const FailedWriteSchema = Type.Object({
-  reason: WriteFailureReasonSchema,
-  message: Type.Optional(Type.String()),
-  /** Epoch ms. */
-  at: Type.Number(),
-});
-export type FailedWrite = Static<typeof FailedWriteSchema>;
-
-const WriteStatusFields = {
-  pending: Type.Optional(PendingWriteSchema),
-  failed: Type.Optional(FailedWriteSchema),
-};
 
 export const SettingControlSchema = Type.Intersect([
   SettingDescriptorSchema,
   Type.Object({
     /** What the device last reported; null when it has not reported yet. */
     value: Type.Unknown(),
-    ...WriteStatusFields,
   }),
 ]);
 export type SettingControl = Static<typeof SettingControlSchema>;
 
-export const ActionControlSchema = Type.Intersect([
-  ActionDescriptorSchema,
-  Type.Object(WriteStatusFields),
-]);
+export const ActionControlSchema = ActionDescriptorSchema;
 export type ActionControl = Static<typeof ActionControlSchema>;
 
 /** Everything a client needs to draw and drive a device's controls. */
@@ -323,15 +298,6 @@ export type PatchDeviceSettingsRequestDTO = Static<
   typeof PatchDeviceSettingsRequestSchema
 >;
 
-/** One outcome per key in the request. */
-export const PatchDeviceSettingsResponseSchema = Type.Record(
-  Type.String(),
-  WriteOutcomeSchema,
-);
-export type PatchDeviceSettingsResponseDTO = Static<
-  typeof PatchDeviceSettingsResponseSchema
->;
-
 export const RunDeviceActionRequestSchema = Type.Record(
   Type.String(),
   Type.Unknown(),
@@ -340,5 +306,8 @@ export type RunDeviceActionRequestDTO = Static<
   typeof RunDeviceActionRequestSchema
 >;
 
-export const RunDeviceActionResponseSchema = WriteOutcomeSchema;
-export type RunDeviceActionResponseDTO = WriteOutcome;
+/** The answer to a write once the device has it. */
+export const DeviceWriteAppliedSchema = Type.Object({
+  status: Type.Literal('applied'),
+});
+export type DeviceWriteAppliedDTO = Static<typeof DeviceWriteAppliedSchema>;

@@ -38,6 +38,9 @@ describe('device controls routes', () => {
 
     // A device whose channel writes straight into `state`, as an entity that
     // echoes its new value would.
+    // A write the channel reports as unconfirmed, as a device that never
+    // echoes would.
+    const neverConfirmed = () => {};
     const surface = composeControlSurface<() => void, typeof state>({
       state: () => state,
       settings: [
@@ -59,6 +62,18 @@ describe('device controls routes', () => {
       ],
       actions: [
         {
+          key: 'dev:button.silent',
+          descriptor: () => ({
+            key: 'dev:button.silent',
+            label: { text: 'Silent' },
+            args: {},
+            confirm: false,
+            available: true,
+            group: 'primary',
+          }),
+          encode: () => [neverConfirmed],
+        },
+        {
           key: 'dev:button.press',
           descriptor: () => ({
             key: 'dev:button.press',
@@ -77,6 +92,9 @@ describe('device controls routes', () => {
       ],
       channel: {
         submit: async (write) => {
+          if (write === neverConfirmed) {
+            return { status: 'failed', reason: 'timeout' };
+          }
           write();
           return { status: 'applied' };
         },
@@ -123,7 +141,7 @@ describe('device controls routes', () => {
     assert.equal(target?.value, state.target);
     assert.deepEqual(
       body.controls?.actions.map((action) => action.key),
-      ['dev:button.press'],
+      ['dev:button.silent', 'dev:button.press'],
     );
   });
 
@@ -144,9 +162,7 @@ describe('device controls routes', () => {
     });
 
     assert.equal(res.statusCode, 200);
-    assert.deepEqual(res.json(), {
-      'dev:number.target': { status: 'applied' },
-    });
+    assert.deepEqual(res.json(), { status: 'applied' });
     assert.equal(state.target, 55);
   });
 
@@ -182,5 +198,16 @@ describe('device controls routes', () => {
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.json(), { status: 'applied' });
     assert.equal(state.presses, 1);
+  });
+
+  it('answers a write the device never confirmed as a gateway timeout', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/devices/${deviceId}/actions/${encodeURIComponent('dev:button.silent')}`,
+      payload: {},
+    });
+
+    assert.equal(res.statusCode, 504);
+    assert.equal(res.json<{ reason: string }>().reason, 'timeout');
   });
 });
