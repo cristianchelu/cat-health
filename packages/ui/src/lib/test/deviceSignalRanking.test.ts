@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { DEVICE_SIGNAL_KEYS, type DeviceSignal } from 'shared';
+import {
+  DEVICE_SIGNAL_KEYS,
+  type DeviceSignal,
+  type DeviceSignalKey,
+} from 'shared';
 import {
   deviceSlotSignature,
   projectDeviceSlots,
@@ -8,7 +12,7 @@ import {
 } from '../deviceSignalRanking.ts';
 
 function signal(
-  key: string,
+  key: DeviceSignalKey,
   overrides: Partial<DeviceSignal> = {},
 ): DeviceSignal {
   return {
@@ -23,7 +27,7 @@ function signal(
 }
 
 const percent = (
-  key: string,
+  key: DeviceSignalKey,
   value: number,
   overrides: Partial<DeviceSignal> = {},
 ) =>
@@ -34,7 +38,7 @@ const percent = (
     ...overrides,
   });
 
-const days = (key: string, value: number) =>
+const days = (key: DeviceSignalKey, value: number) =>
   signal(key, {
     value: { kind: 'days', value },
     severity: { kind: 'days', value },

@@ -7,6 +7,7 @@ import {
   DEVICE_SIGNAL_KEYS,
   type DeviceListItemDTO,
   type DeviceSignal,
+  type DeviceSignalKey,
 } from 'shared';
 
 import DeviceCard, { type DeviceCardPreview } from '../DeviceCard.tsx';
@@ -29,7 +30,7 @@ afterEach(() => {
 });
 
 function signal(
-  key: string,
+  key: DeviceSignalKey,
   overrides: Partial<DeviceSignal> = {},
 ): DeviceSignal {
   return {
@@ -44,7 +45,7 @@ function signal(
 }
 
 const percent = (
-  key: string,
+  key: DeviceSignalKey,
   value: number,
   overrides: Partial<DeviceSignal> = {},
 ) =>

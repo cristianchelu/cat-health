@@ -1,5 +1,7 @@
 import { Type, type Static } from '@fastify/type-provider-typebox';
 
+import { DEVICE_SIGNAL_KEYS } from '../../deviceSignals/scoring.ts';
+
 /**
  * A device signal: one normalized reading of device health.
  *
@@ -42,6 +44,50 @@ export type SignalIcon = Static<typeof SignalIconSchema>;
 
 // --- Value ---
 
+export type DeviceSignalKey =
+  (typeof DEVICE_SIGNAL_KEYS)[keyof typeof DEVICE_SIGNAL_KEYS];
+
+/** The words a signal's value can be, where a device names a state. */
+export const SIGNAL_VALUE_WORDS = [
+  'pump_ok',
+  'pump_error',
+  'bowl_removed',
+  'never_seen',
+  'food_wet',
+  'food_dry',
+  'bowl',
+  'recording_on',
+  'recording_idle',
+  'recording_off',
+] as const;
+export type SignalValueWord = (typeof SIGNAL_VALUE_WORDS)[number];
+
+/**
+ * Every i18n key the API sends for the client to translate. A closed set, so
+ * the API cannot emit a key the client does not know, and the client's `t()`
+ * checks each member against its locale.
+ */
+export type SignalTextKey =
+  | `devices.signals.${DeviceSignalKey}`
+  | `devices.signals.values.${SignalValueWord}`;
+
+const SIGNAL_TEXT_KEYS: SignalTextKey[] = [
+  ...Object.values(DEVICE_SIGNAL_KEYS).map(
+    (key) => `devices.signals.${key}` as const,
+  ),
+  ...SIGNAL_VALUE_WORDS.map(
+    (word) => `devices.signals.values.${word}` as const,
+  ),
+];
+
+/**
+ * Validated against the full list at runtime; `Unsafe` only names the static
+ * type, which TypeBox cannot infer from a union built from an array.
+ */
+export const SignalTextKeySchema = Type.Unsafe<SignalTextKey>(
+  Type.Union(SIGNAL_TEXT_KEYS.map((key) => Type.Literal(key))),
+);
+
 /**
  * What the signal reads, typed so the client formats it regionally.
  * `text` carries an i18n key; the API ships no user-visible English.
@@ -60,7 +106,7 @@ export const SignalValueSchema = Type.Union([
   Type.Object({ kind: Type.Literal('timestamp'), value: Type.String() }),
   Type.Object({
     kind: Type.Literal('text'),
-    key: Type.String(),
+    key: SignalTextKeySchema,
     params: Type.Optional(Type.Record(Type.String(), Type.String())),
   }),
   /** Nothing to say — renders as an em dash. Offline devices use this. */
@@ -85,7 +131,7 @@ export const SignalPipToneSchema = Type.Union([
 export type SignalPipTone = Static<typeof SignalPipToneSchema>;
 
 export const SignalSplitCellSchema = Type.Object({
-  label_key: Type.String(),
+  label_key: SignalTextKeySchema,
   value: SignalValueSchema,
   /** 0..1 */
   fill: Type.Number(),
@@ -173,7 +219,7 @@ export type SignalCategory = Static<typeof SignalCategorySchema>;
 export const DeviceSignalSchema = Type.Object({
   /** Stable metric id, and the key into the score table. */
   key: Type.String(),
-  label_key: Type.String(),
+  label_key: SignalTextKeySchema,
   value: SignalValueSchema,
   display: SignalDisplaySchema,
   icon: SignalIconSchema,

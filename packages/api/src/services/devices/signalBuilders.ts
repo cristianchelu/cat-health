@@ -1,8 +1,10 @@
 import {
   DEVICE_SIGNAL_KEYS,
   type DeviceSignal,
+  type DeviceSignalKey,
   type SignalCategory,
   type SignalIcon,
+  type SignalTextKey,
   type SignalValue,
 } from 'shared';
 import { rssiBars, type RssiLadder } from './signalStrength.ts';
@@ -15,15 +17,17 @@ import { rssiBars, type RssiLadder } from './signalStrength.ts';
  * (a feeder's fill level is a hopper on one product and a bowl on another).
  */
 
-const labelKeyFor = (key: string, override?: string) =>
-  override ?? `devices.signals.${key}`;
+const labelKeyFor = (
+  key: DeviceSignalKey,
+  override?: SignalTextKey,
+): SignalTextKey => override ?? `devices.signals.${key}`;
 
 const clampFill = (fill: number) => Math.min(1, Math.max(0, fill));
 
 interface SignalBase {
-  key: string;
+  key: DeviceSignalKey;
   icon: SignalIcon;
-  labelKey?: string;
+  labelKey?: SignalTextKey;
   category?: SignalCategory;
 }
 
@@ -162,7 +166,7 @@ export function measureSignal(
 /** A state the device names rather than measures, such as pump flow. */
 export function statusSignal(
   { key, icon, labelKey, category = 'primary' }: SignalBase,
-  valueKey: string,
+  valueKey: SignalTextKey,
   faulted: boolean,
 ): DeviceSignal {
   return {
