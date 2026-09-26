@@ -1,23 +1,36 @@
 .compartments-field {
-  .compartments-field-layout {
-    min-width: 8rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+
+  /* One row per compartment, one column per field, so a bowl's food and its
+     portion always sit side by side. */
+  .compartments-field-rows {
+    display: grid;
+    grid-template-columns: repeat(
+      var(--compartments-field-columns, 2),
+      minmax(0, 1fr)
+    );
+    gap: var(--space-lg);
+
+    @media (max-width: 767px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
-  .compartments-field-food {
-    max-width: 10rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .compartments-field-select {
+    width: 12rem;
+    max-width: 100%;
   }
 
-  .compartments-field-portion {
+  .compartments-field-number {
     display: flex;
     align-items: center;
-    gap: var(--space-2xs);
+    gap: var(--space-xs);
   }
 
-  .compartments-field-portion-input {
-    width: 5rem;
+  .compartments-field-number-input {
+    width: 6.5rem;
     text-align: right;
     font-variant-numeric: tabular-nums;
   }

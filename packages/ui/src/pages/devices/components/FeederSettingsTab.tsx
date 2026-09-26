@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
-import { SlidersHorizontal, UtensilsCrossed } from 'lucide-react';
+import { UtensilsCrossed } from 'lucide-react';
 import type { GetDeviceResponseDTO } from 'shared';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -26,7 +26,7 @@ import {
   useUpdateDevice,
 } from '@/hooks/queries/deviceQueries';
 import { apiErrorMessage } from '@/api/apiClient';
-import { DeviceSettingsGrid } from '@/components/devices/controls/DeviceSettingsGrid';
+import { DeviceSettingsSections } from '@/components/devices/controls/DeviceSettingsSections';
 import {
   controlDraftBaseline,
   controlDraftPatch,
@@ -372,28 +372,18 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
           </>
         )}
 
-        {deviceSettings.length > 0 ? (
-          <>
-            <SectionHeader
-              size="compact"
-              icon={<SlidersHorizontal aria-hidden="true" />}
-            >
-              {t('devices.controls.settings_title')}
-            </SectionHeader>
-            <DeviceSettingsGrid
-              settings={deviceSettings}
-              draft={draft.deviceSettings}
-              onChange={(key, value) => {
-                setInvalidKeys((keys) => keys.filter((k) => k !== key));
-                patchDraft({
-                  deviceSettings: { ...draft.deviceSettings, [key]: value },
-                });
-              }}
-              invalidKeys={invalidKeys}
-              disabled={isSaving}
-            />
-          </>
-        ) : null}
+        <DeviceSettingsSections
+          settings={deviceSettings}
+          draft={draft.deviceSettings}
+          onChange={(key, value) => {
+            setInvalidKeys((keys) => keys.filter((k) => k !== key));
+            patchDraft({
+              deviceSettings: { ...draft.deviceSettings, [key]: value },
+            });
+          }}
+          invalidKeys={invalidKeys}
+          disabled={isSaving}
+        />
       </FormShell>
 
       {/* Outside the form: the picker fills a field, it does not submit one. */}

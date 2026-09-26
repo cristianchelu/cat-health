@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
-import { SectionHeader } from '@/components/ui/SectionHeader';
 import { FormShell } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
 import './DeviceSettingsFormView.css';
 
 interface DeviceSettingsFormViewProps {
-  /** The settings themselves, drawn by `DeviceSettingsGrid`. */
+  /** The settings themselves, drawn by `DeviceSettingsSections`. */
   grid: React.ReactNode;
   onSubmit: React.FormEventHandler<HTMLFormElement>;
   onCancel: () => void;
@@ -14,7 +13,7 @@ interface DeviceSettingsFormViewProps {
   isSaving: boolean;
   error: string | null;
   discardConfirm: React.ComponentProps<typeof DiscardUnsavedDialog>;
-  copy: { title: string; save: string; cancel: string };
+  copy: { save: string; cancel: string };
   className?: string;
 }
 
@@ -44,7 +43,6 @@ const DeviceSettingsFormView: React.FC<DeviceSettingsFormViewProps> = ({
         cancelDisabled: !isDirty,
       }}
     >
-      <SectionHeader>{copy.title}</SectionHeader>
       {grid}
     </FormShell>
     <DiscardUnsavedDialog {...discardConfirm} />

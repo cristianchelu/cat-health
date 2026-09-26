@@ -800,7 +800,7 @@
       },
       "settings": {
         "lid_close_delay": "Întârziere închidere capac",
-        "bowls": "Boluri"
+        "bowls": "Configurarea bolurilor"
       },
       "options": {
         "lid_close_delay": {
@@ -820,9 +820,10 @@
       },
       "fields": {
         "food": "Mâncare",
-        "portion": "Porție"
+        "portion": "Porție țintă"
       },
-      "choose_food": "Alege mâncarea"
+      "choose_food": "Alege mâncarea",
+      "layout": "Aranjament"
     }
   },
   "annotation": {

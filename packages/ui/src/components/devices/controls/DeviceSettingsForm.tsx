@@ -9,7 +9,7 @@ import {
   controlDraftPatch,
 } from '@/lib/deviceControlDraft';
 import { DeviceSettingsFormView } from './DeviceSettingsFormView';
-import { DeviceSettingsGrid } from './DeviceSettingsGrid';
+import { DeviceSettingsSections } from './DeviceSettingsSections';
 
 interface DeviceSettingsFormProps {
   deviceId: number;
@@ -52,7 +52,7 @@ const DeviceSettingsForm: React.FC<DeviceSettingsFormProps> = ({
     <DeviceSettingsFormView
       className={className}
       grid={
-        <DeviceSettingsGrid
+        <DeviceSettingsSections
           settings={settings}
           draft={{ ...baseline, ...draft }}
           onChange={(key, value) => {
@@ -74,7 +74,6 @@ const DeviceSettingsForm: React.FC<DeviceSettingsFormProps> = ({
       }
       discardConfirm={discardConfirm}
       copy={{
-        title: t('devices.controls.settings_title'),
         save: t('common.save'),
         cancel: t('common.cancel'),
       }}

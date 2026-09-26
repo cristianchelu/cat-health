@@ -740,7 +740,7 @@
       },
       "settings": {
         "lid_close_delay": "Lid close delay",
-        "bowls": "Bowls"
+        "bowls": "Bowl setup"
       },
       "options": {
         "lid_close_delay": {
@@ -760,9 +760,10 @@
       },
       "fields": {
         "food": "Food",
-        "portion": "Portion"
+        "portion": "Target portion"
       },
-      "choose_food": "Choose food"
+      "choose_food": "Choose food",
+      "layout": "Layout"
     },
     "water_fountain": {
       "water_level": "Water Level",

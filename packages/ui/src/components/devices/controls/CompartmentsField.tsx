@@ -1,13 +1,14 @@
 import * as React from 'react';
 import { DashboardTile } from '@/components/layout/DashboardTile';
-import { Button } from '@/components/ui/Button';
+import { ResponsiveTileGrid } from '@/components/layout/ResponsiveTileGrid';
+import { SelectTriggerButton } from '@/components/ui/AdaptiveSelect';
 import { FormTile, Input, Select } from '@/components/ui/form';
 import type { CompartmentDraft } from '@/lib/deviceControlDraft';
 import type { ResolvedCompartmentLayout } from '@/lib/deviceControlLabels';
 import './CompartmentsField.css';
 
 interface CompartmentsFieldProps {
-  label: string;
+  layoutLabel: string;
   layouts: ResolvedCompartmentLayout[];
   layout: ResolvedCompartmentLayout;
   compartments: CompartmentDraft[];
@@ -23,11 +24,12 @@ interface CompartmentsFieldProps {
 }
 
 /**
- * A compartmented setting as tiles in the caller's grid: one for the layout,
- * then one per compartment with a control for each field it takes.
+ * A compartmented setting as a layout tile, then one row per compartment: a
+ * tile for what it holds, named by the compartment, and a tile for each
+ * number it takes.
  */
 const CompartmentsField: React.FC<CompartmentsFieldProps> = ({
-  label,
+  layoutLabel,
   layouts,
   layout,
   compartments,
@@ -42,72 +44,85 @@ const CompartmentsField: React.FC<CompartmentsFieldProps> = ({
 }) => {
   const id = React.useId();
   const { food, portion } = layout.fields;
+  const columns = (food ? 1 : 0) + (portion ? 1 : 0);
   return (
-    <>
-      <DashboardTile>
-        <FormTile
-          className="compartments-field"
-          label={label}
-          htmlFor={id}
-          busyLabel={busyLabel}
-          error={error}
-        >
-          <Select
-            id={id}
-            className="compartments-field-layout"
-            value={layout.value}
-            options={layouts.map((option) => ({
-              value: option.value,
-              label: option.label,
-            }))}
-            onChange={(event) => onLayoutChange(event.target.value)}
-            disabled={disabled}
-          />
-        </FormTile>
-      </DashboardTile>
-      {layout.compartments.map((name, index) => (
-        <DashboardTile key={`${layout.value}-${index}`}>
-          <FormTile className="compartments-field" label={name}>
-            {food ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="compartments-field-food"
-                aria-label={`${name}: ${food.label}`}
-                onClick={() => onPickFood(index)}
-                disabled={disabled}
-              >
-                {foodNames[index] ?? chooseFoodLabel}
-              </Button>
-            ) : null}
-            {portion && portion.type.kind === 'number' ? (
-              <span className="compartments-field-portion">
-                <Input
-                  className="compartments-field-portion-input"
-                  type="number"
-                  inputMode="decimal"
-                  aria-label={`${name}: ${portion.label}`}
-                  value={String(compartments[index]?.portion ?? '')}
-                  min={portion.type.min}
-                  max={portion.type.max}
-                  step={portion.type.step ?? 'any'}
-                  onChange={(event) =>
-                    onNumberChange(index, 'portion', event.target.value)
-                  }
-                  disabled={disabled}
-                />
-                {portion.type.unit ? (
-                  <span className="compartments-field-unit">
-                    {portion.type.unit}
-                  </span>
-                ) : null}
-              </span>
-            ) : null}
+    <div className="compartments-field">
+      <ResponsiveTileGrid>
+        <DashboardTile>
+          <FormTile
+            label={layoutLabel}
+            htmlFor={`${id}-layout`}
+            busyLabel={busyLabel}
+            error={error}
+          >
+            <Select
+              id={`${id}-layout`}
+              className="compartments-field-select"
+              value={layout.value}
+              options={layouts.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+              onChange={(event) => onLayoutChange(event.target.value)}
+              disabled={disabled}
+            />
           </FormTile>
         </DashboardTile>
-      ))}
-    </>
+      </ResponsiveTileGrid>
+      <div
+        className="compartments-field-rows"
+        style={
+          { '--compartments-field-columns': columns } as React.CSSProperties
+        }
+      >
+        {layout.compartments.map((name, index) => (
+          <React.Fragment key={`${layout.value}-${index}`}>
+            {food ? (
+              <FormTile label={name} htmlFor={`${id}-food-${index}`}>
+                <SelectTriggerButton
+                  id={`${id}-food-${index}`}
+                  className="compartments-field-select"
+                  label={`${name}: ${food.label}`}
+                  text={foodNames[index] ?? undefined}
+                  placeholder={chooseFoodLabel}
+                  onClick={() => onPickFood(index)}
+                  disabled={disabled}
+                />
+              </FormTile>
+            ) : null}
+            {portion && portion.type.kind === 'number' ? (
+              <FormTile
+                label={portion.label}
+                htmlFor={`${id}-portion-${index}`}
+              >
+                <span className="compartments-field-number">
+                  <Input
+                    id={`${id}-portion-${index}`}
+                    className="compartments-field-number-input"
+                    type="number"
+                    inputMode="decimal"
+                    aria-label={`${name}: ${portion.label}`}
+                    value={String(compartments[index]?.portion ?? '')}
+                    min={portion.type.min}
+                    max={portion.type.max}
+                    step={portion.type.step ?? 'any'}
+                    onChange={(event) =>
+                      onNumberChange(index, 'portion', event.target.value)
+                    }
+                    disabled={disabled}
+                  />
+                  {portion.type.unit ? (
+                    <span className="compartments-field-unit">
+                      {portion.type.unit}
+                    </span>
+                  ) : null}
+                </span>
+              </FormTile>
+            ) : null}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
   );
 };
 

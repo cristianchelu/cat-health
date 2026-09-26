@@ -8,7 +8,7 @@ import {
   resizeCompartments,
   type CompartmentsDraft,
 } from '@/lib/deviceControlDraft';
-import { controlLabel, resolveControlType } from '@/lib/deviceControlLabels';
+import { resolveControlType } from '@/lib/deviceControlLabels';
 import { CompartmentsField } from './CompartmentsField';
 
 type CompartmentsType = Extract<ControlValueType, { kind: 'compartments' }>;
@@ -73,7 +73,7 @@ const DeviceCompartmentsSetting: React.FC<DeviceCompartmentsSettingProps> = ({
   return (
     <>
       <CompartmentsField
-        label={controlLabel(setting.label, t)}
+        layoutLabel={t('devices.controls.layout')}
         layouts={resolved.layouts}
         layout={layout}
         compartments={value.compartments}
