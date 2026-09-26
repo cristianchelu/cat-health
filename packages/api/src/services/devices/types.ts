@@ -12,6 +12,7 @@ import type { Device } from '../../database/types/DeviceTable.ts';
 import type { ProviderAccount } from '../../database/types/ProviderAccountTable.ts';
 import type { MediaManager, PendingMedia } from '../media/MediaManager.ts';
 import type { DevicePresence } from './DevicePresence.ts';
+import type { ControlSurface } from './control/types.ts';
 import type { EventBus } from './EventBus.ts';
 
 export type { Device, ProviderAccount };
@@ -83,6 +84,11 @@ export interface DeviceController {
    * controller.
    */
   getSignals?(): DeviceSignal[];
+  /**
+   * What can be written to the device, and how. Absent for a device that
+   * accepts no writes. Only `DeviceControl` calls it.
+   */
+  controls?(): ControlSurface;
 }
 
 export function isCamera(controller: DeviceController): controller is Camera {
@@ -220,6 +226,8 @@ export interface DeviceIntegrationContext {
     deviceId: number,
   ): Promise<DeviceController | undefined>;
   resolveLiveController(deviceId: number): Promise<LiveControllerResult>;
+  /** See IntegrationManager.onControllerRetired. */
+  onControllerRetired(listener: (deviceId: number) => void): () => void;
 }
 
 /** Why a route asking for a working controller cannot have one. */

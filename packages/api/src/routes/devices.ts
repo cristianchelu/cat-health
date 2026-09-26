@@ -26,6 +26,10 @@ import {
   PostDeviceTestIdentifyResponseSchema,
   ReidentifyLitterboxVisitsQuerySchema,
   ReidentifyLitterboxVisitsResponseSchema,
+  PatchDeviceSettingsRequestSchema,
+  PatchDeviceSettingsResponseSchema,
+  RunDeviceActionRequestSchema,
+  RunDeviceActionResponseSchema,
 } from 'shared';
 import { DEVICE_SIGNAL_KEYS, isRecord } from 'shared';
 import type { Device } from '../database/types/DeviceTable.ts';
@@ -40,6 +44,7 @@ import { reidentifyLitterboxVisits } from '../services/litterbox/reidentifyLitte
 import { getDepositsSinceScoop } from '../services/litterbox/depositsSinceScoop.ts';
 import { presenceSignals } from '../services/devices/presenceSignals.ts';
 import type { LiveControllerFailure } from '../services/devices/types.ts';
+import type { ControlResult } from '../services/devices/control/DeviceControl.ts';
 import { isCamera } from '../services/devices/types.ts';
 import { isDeviceReachable } from '../services/devices/deviceEnablement.ts';
 import { EMPTY_ATLAS_LAYOUT } from '../services/devices/cameraPreview/composeAtlas.ts';
@@ -82,6 +87,12 @@ const Http400ResponseSchema = Type.Object({
   message: Type.String(),
 });
 
+const Http503ResponseSchema = Type.Object({
+  statusCode: Type.Literal(503),
+  error: Type.Literal('Service Unavailable'),
+  message: Type.String(),
+});
+
 /**
  * One answer for every route that needs a working controller, so a device the
  * user switched off never reads as a misconfiguration.
@@ -107,6 +118,36 @@ function sendControllerFailure(
         ? `Device ${deviceId} not found`
         : `Device ${deviceId} has no controller available`,
   });
+}
+
+/** Why `DeviceControl` refused a write, as HTTP. */
+function sendControlFailure(
+  reply: FastifyReply,
+  deviceId: number,
+  failure: Exclude<ControlResult<unknown>, { ok: true }>,
+) {
+  switch (failure.reason) {
+    case 'offline':
+      return reply.code(503).send({
+        statusCode: 503,
+        error: 'Service Unavailable',
+        message: `Device ${deviceId} is offline`,
+      });
+    case 'unknown_key':
+      return reply.code(404).send({
+        statusCode: 404,
+        error: 'Not Found',
+        message: failure.message,
+      });
+    case 'invalid':
+      return reply.code(400).send({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: failure.message,
+      });
+    default:
+      return sendControllerFailure(reply, deviceId, failure.reason);
+  }
 }
 
 const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
@@ -227,6 +268,9 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       });
       if (includeState && controller?.getState) {
         mapped.state = controller.getState();
+      }
+      if (includeState && controller && fastify.hasDecorator('deviceControl')) {
+        mapped.controls = fastify.deviceControl.view(controller);
       }
       if (controller?.getSignals) {
         providerSignals.push(...controller.getSignals());
@@ -1004,6 +1048,82 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       await enrichReferenceMedia([mapped]);
       return mapped;
+    },
+  );
+
+  // --- Device controls ---
+
+  const controlErrorResponses = {
+    '400': Http400ResponseSchema,
+    '404': Http404ResponseSchema,
+    '503': Http503ResponseSchema,
+  };
+
+  fastify.patch(
+    '/:id/settings',
+    {
+      schema: {
+        params: GetDeviceParamsSchema,
+        body: PatchDeviceSettingsRequestSchema,
+        response: {
+          '200': PatchDeviceSettingsResponseSchema,
+          '202': PatchDeviceSettingsResponseSchema,
+          ...controlErrorResponses,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      if (!fastify.hasDecorator('deviceControl')) {
+        return sendControllerFailure(reply, id, 'unavailable');
+      }
+      const result = await fastify.deviceControl.applySettings(
+        id,
+        request.body,
+        { kind: 'user' },
+      );
+      if (!result.ok) return sendControlFailure(reply, id, result);
+
+      const outcomes = Object.fromEntries(
+        Object.entries(result.value).map(([key, receipt]) => [
+          key,
+          receipt.outcome,
+        ]),
+      );
+      const pending = Object.values(outcomes).some(
+        (outcome) => outcome.status === 'pending',
+      );
+      return reply.code(pending ? 202 : 200).send(outcomes);
+    },
+  );
+
+  fastify.post(
+    '/:id/actions/:key',
+    {
+      schema: {
+        params: Type.Object({ id: Type.Number(), key: Type.String() }),
+        body: RunDeviceActionRequestSchema,
+        response: {
+          '200': RunDeviceActionResponseSchema,
+          '202': RunDeviceActionResponseSchema,
+          ...controlErrorResponses,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id, key } = request.params;
+      if (!fastify.hasDecorator('deviceControl')) {
+        return sendControllerFailure(reply, id, 'unavailable');
+      }
+      const result = await fastify.deviceControl.runAction(
+        id,
+        key,
+        request.body,
+        { kind: 'user' },
+      );
+      if (!result.ok) return sendControlFailure(reply, id, result);
+      const { outcome } = result.value;
+      return reply.code(outcome.status === 'pending' ? 202 : 200).send(outcome);
     },
   );
 

@@ -7,6 +7,7 @@ import {
 } from './inference.ts';
 import { EventCauseSchema } from './events.ts';
 import { DeviceSignalSchema } from './deviceSignals.ts';
+import { DeviceControlsSchema } from './deviceControls.ts';
 
 export const DeviceStatusSchema = Type.Union([
   Type.Literal('online'),
@@ -199,6 +200,8 @@ export const GetDeviceResponseSchema = Type.Object({
    * the devices grid ranks it without knowing the hardware.
    */
   signals: Type.Optional(Type.Array(DeviceSignalSchema)),
+  /** What can be written to the device; absent when it accepts no writes. */
+  controls: Type.Optional(DeviceControlsSchema),
   reference_media: Type.Optional(
     Type.Record(
       Type.String(),
@@ -250,14 +253,16 @@ export type PatchDeviceRecognitionRequestDTO = Static<
 >;
 
 /**
- * List items omit `state`.
+ * List items omit `state` and `controls`.
  *
  * `state` is the controller's full payload, which for an ESPHome device is its
- * entire entity table. The grid renders `signals` instead; `state` remains on
- * the single-device response for the detail page.
+ * entire entity table, and `controls` is sized like it. The grid renders
+ * `signals` instead; both remain on the single-device response for the detail
+ * page.
  */
 export const DeviceListItemSchema = Type.Omit(GetDeviceResponseSchema, [
   'state',
+  'controls',
 ]);
 export type DeviceListItemDTO = Static<typeof DeviceListItemSchema>;
 

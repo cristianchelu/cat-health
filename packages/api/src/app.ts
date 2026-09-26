@@ -18,6 +18,7 @@ import settingsRoutes from './routes/settings.ts';
 import type { DeviceIntegrationContext } from './services/devices/types.ts';
 import type { RecognitionService } from './services/recognition/RecognitionService.ts';
 import type { CameraPreviewService } from './services/devices/cameraPreview/CameraPreviewService.ts';
+import type { DeviceControl } from './services/devices/control/DeviceControl.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -25,6 +26,7 @@ declare module 'fastify' {
     integrationManager: DeviceIntegrationContext;
     recognitionService: RecognitionService;
     cameraPreview: CameraPreviewService;
+    deviceControl: DeviceControl;
   }
 }
 
@@ -33,6 +35,7 @@ export interface BuildAppOptions {
   integrationManager?: DeviceIntegrationContext;
   recognitionService?: RecognitionService;
   cameraPreview?: CameraPreviewService;
+  deviceControl?: DeviceControl;
   logger?: boolean;
 }
 
@@ -52,6 +55,7 @@ export async function buildApp({
   integrationManager,
   recognitionService,
   cameraPreview,
+  deviceControl,
   logger = true,
 }: BuildAppOptions) {
   const fastify = Fastify({
@@ -68,6 +72,9 @@ export async function buildApp({
   }
   if (cameraPreview) {
     fastify.decorate('cameraPreview', cameraPreview);
+  }
+  if (deviceControl) {
+    fastify.decorate('deviceControl', deviceControl);
   }
 
   const corsAllowedOrigins = getCorsAllowedOrigins();

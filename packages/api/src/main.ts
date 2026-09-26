@@ -20,6 +20,7 @@ import { InferenceProvider } from './services/devices/providers/inference/Infere
 import { ThinginoProvider } from './services/devices/providers/thingino/ThinginoProvider.ts';
 import { SurePetProvider } from './services/devices/providers/surepet/SurePetProvider.ts';
 import { MqttProvider } from './services/devices/providers/mqtt/MqttProvider.ts';
+import { DeviceControl } from './services/devices/control/DeviceControl.ts';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -58,11 +59,17 @@ cameraPreview.start();
 const recognitionService = new RecognitionService(db, eventBus);
 await recognitionService.initialize();
 
+const deviceControl = new DeviceControl({
+  context: integrationManager,
+  eventBus,
+});
+
 const app = await buildApp({
   db,
   integrationManager,
   recognitionService,
   cameraPreview,
+  deviceControl,
 });
 
 if (!isDev) {
