@@ -8,7 +8,11 @@ import {
   toControlDraftValue,
   type ControlDraftValue,
 } from '@/lib/deviceControlDraft';
-import { controlLabel, resolveControlType } from '@/lib/deviceControlLabels';
+import {
+  controlLabel,
+  isTileValueType,
+  resolveControlType,
+} from '@/lib/deviceControlLabels';
 import { ControlTiles, type ControlTileItem } from './ControlTiles';
 
 interface DeviceLiveControlsProps {
@@ -73,23 +77,27 @@ const DeviceLiveControls: React.FC<DeviceLiveControlsProps> = ({
     settings.map((setting) => [setting.key, setting]),
   );
 
-  const items: ControlTileItem[] = settings.map((setting) => ({
-    key: setting.key,
-    label: controlLabel(setting.label, t),
-    type: resolveControlType(setting.type, t),
-    value:
-      edits[setting.key] ?? toControlDraftValue(setting.type, setting.value),
-    disabled: sending.has(setting.key),
-    busyLabel:
-      setting.pending || sending.has(setting.key)
-        ? t('devices.controls.pending')
-        : undefined,
-    error:
-      errors[setting.key] ??
-      (setting.failed
-        ? t(`devices.controls.failed.${setting.failed.reason}`)
-        : undefined),
-  }));
+  const items: ControlTileItem[] = settings
+    .flatMap(({ type, ...setting }) =>
+      isTileValueType(type) ? [{ ...setting, type }] : [],
+    )
+    .map((setting) => ({
+      key: setting.key,
+      label: controlLabel(setting.label, t),
+      type: resolveControlType(setting.type, t),
+      value:
+        edits[setting.key] ?? toControlDraftValue(setting.type, setting.value),
+      disabled: sending.has(setting.key),
+      busyLabel:
+        setting.pending || sending.has(setting.key)
+          ? t('devices.controls.pending')
+          : undefined,
+      error:
+        errors[setting.key] ??
+        (setting.failed
+          ? t(`devices.controls.failed.${setting.failed.reason}`)
+          : undefined),
+    }));
 
   return (
     <ControlTiles

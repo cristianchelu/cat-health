@@ -3,12 +3,18 @@ import { FormTile, Input, Select } from '@/components/ui/form';
 import { Switch } from '@/components/ui/Switch';
 import type { ControlDraftValue } from '@/lib/deviceControlDraft';
 import type { ResolvedControlType } from '@/lib/deviceControlLabels';
+
+/** What fits in one tile: a single switch, number or choice. */
+export type TileControlType = Extract<
+  ResolvedControlType,
+  { kind: 'boolean' | 'number' | 'enum' }
+>;
 import { cn } from '@/lib/utils';
 import './ControlTile.css';
 
 interface ControlTileProps {
   label: string;
-  type: ResolvedControlType;
+  type: TileControlType;
   value: ControlDraftValue;
   onChange: (value: ControlDraftValue) => void;
   /**

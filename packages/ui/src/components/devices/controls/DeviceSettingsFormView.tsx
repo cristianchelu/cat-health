@@ -2,15 +2,12 @@ import * as React from 'react';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { FormShell } from '@/components/ui/form';
-import type { ControlDraftValue } from '@/lib/deviceControlDraft';
 import { cn } from '@/lib/utils';
-import { ControlTileGrid } from './ControlTileGrid';
-import type { ControlTileItem } from './ControlTiles';
 import './DeviceSettingsFormView.css';
 
 interface DeviceSettingsFormViewProps {
-  items: ControlTileItem[];
-  onFieldChange: (key: string, value: ControlDraftValue) => void;
+  /** The settings themselves, drawn by `DeviceSettingsGrid`. */
+  grid: React.ReactNode;
   onSubmit: React.FormEventHandler<HTMLFormElement>;
   onCancel: () => void;
   isDirty: boolean;
@@ -23,8 +20,7 @@ interface DeviceSettingsFormViewProps {
 
 /** A device's settings as tiles, committed by the form's one Save row. */
 const DeviceSettingsFormView: React.FC<DeviceSettingsFormViewProps> = ({
-  items,
-  onFieldChange,
+  grid,
   onSubmit,
   onCancel,
   isDirty,
@@ -49,7 +45,7 @@ const DeviceSettingsFormView: React.FC<DeviceSettingsFormViewProps> = ({
       }}
     >
       <SectionHeader>{copy.title}</SectionHeader>
-      <ControlTileGrid items={items} onChange={onFieldChange} />
+      {grid}
     </FormShell>
     <DiscardUnsavedDialog {...discardConfirm} />
   </>

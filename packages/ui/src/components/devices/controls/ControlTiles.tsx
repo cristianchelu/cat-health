@@ -1,13 +1,12 @@
 import * as React from 'react';
 import { DashboardTile } from '@/components/layout/DashboardTile';
 import type { ControlDraftValue } from '@/lib/deviceControlDraft';
-import type { ResolvedControlType } from '@/lib/deviceControlLabels';
-import { ControlTile } from './ControlTile';
+import { ControlTile, type TileControlType } from './ControlTile';
 
 interface ControlTileItem {
   key: string;
   label: string;
-  type: ResolvedControlType;
+  type: TileControlType;
   value: ControlDraftValue;
   disabled?: boolean;
   /** Set while a write is in flight; what a screen reader hears. */

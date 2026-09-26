@@ -1,0 +1,29 @@
+.compartments-field {
+  .compartments-field-layout {
+    min-width: 8rem;
+  }
+
+  .compartments-field-food {
+    max-width: 10rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .compartments-field-portion {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+  }
+
+  .compartments-field-portion-input {
+    width: 5rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .compartments-field-unit {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+}

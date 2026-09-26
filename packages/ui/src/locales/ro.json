@@ -799,15 +799,30 @@
         "unknown": "A apărut o eroare"
       },
       "settings": {
-        "lid_close_delay": "Întârziere închidere capac"
+        "lid_close_delay": "Întârziere închidere capac",
+        "bowls": "Boluri"
       },
       "options": {
         "lid_close_delay": {
           "fast": "Rapidă",
           "normal": "Normală",
           "slow": "Lentă"
+        },
+        "bowls": {
+          "single": "Un bol",
+          "split": "Două boluri"
         }
-      }
+      },
+      "compartments": {
+        "single": "Bol",
+        "left": "Bolul stâng",
+        "right": "Bolul drept"
+      },
+      "fields": {
+        "food": "Mâncare",
+        "portion": "Porție"
+      },
+      "choose_food": "Alege mâncarea"
     }
   },
   "annotation": {

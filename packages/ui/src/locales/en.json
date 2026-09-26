@@ -739,15 +739,30 @@
         "unknown": "Something went wrong"
       },
       "settings": {
-        "lid_close_delay": "Lid close delay"
+        "lid_close_delay": "Lid close delay",
+        "bowls": "Bowls"
       },
       "options": {
         "lid_close_delay": {
           "fast": "Fast",
           "normal": "Normal",
           "slow": "Slow"
+        },
+        "bowls": {
+          "single": "One bowl",
+          "split": "Two bowls"
         }
-      }
+      },
+      "compartments": {
+        "single": "Bowl",
+        "left": "Left bowl",
+        "right": "Right bowl"
+      },
+      "fields": {
+        "food": "Food",
+        "portion": "Portion"
+      },
+      "choose_food": "Choose food"
     },
     "water_fountain": {
       "water_level": "Water Level",

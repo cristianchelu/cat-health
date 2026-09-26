@@ -26,8 +26,7 @@ import {
   useUpdateDevice,
 } from '@/hooks/queries/deviceQueries';
 import { apiErrorMessage } from '@/api/apiClient';
-import { ControlTileGrid } from '@/components/devices/controls/ControlTileGrid';
-import { settingTileItems } from '@/components/devices/controls/settingTileItems';
+import { DeviceSettingsGrid } from '@/components/devices/controls/DeviceSettingsGrid';
 import {
   controlDraftBaseline,
   controlDraftPatch,
@@ -211,6 +210,12 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
       : null;
 
   const hasFoods = !isLoadingFoods && foods.length > 0;
+  /* A feeder whose settings say what each bowl holds records the food
+     itself, so the separate food-by-compartment section would be a second
+     way to set the same thing. */
+  const ownsFoods = deviceSettings.some(
+    (setting) => setting.type.kind === 'compartments',
+  );
   const foodsEmpty = (
     <Card>
       <CardContent>
@@ -262,101 +267,109 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
           submitDisabled: !isDirty,
         }}
       >
-        <SectionHeader
-          size="compact"
-          className="first"
-          icon={<UtensilsCrossed aria-hidden="true" />}
-          subtitle={t('devices.feeder.food_compartment_settings_help')}
-        >
-          {t('devices.feeder.food_compartment_settings_title')}
-        </SectionHeader>
-        {hasFoods ? (
-          <Card>
-            <CardContent>
-              <div className="feeder-settings-compartments">
-                {compartments.map((compartment) => {
-                  const current = draft.foodAssignments[compartment.id];
-                  const food =
-                    current != null ? (foodsById.get(current) ?? null) : null;
-                  const label = compartmentLabel(compartment);
-                  const density = food ? kcalPerKilogram(food) : null;
+        {ownsFoods ? null : (
+          <>
+            <SectionHeader
+              size="compact"
+              className="first"
+              icon={<UtensilsCrossed aria-hidden="true" />}
+              subtitle={t('devices.feeder.food_compartment_settings_help')}
+            >
+              {t('devices.feeder.food_compartment_settings_title')}
+            </SectionHeader>
+            {hasFoods ? (
+              <Card>
+                <CardContent>
+                  <div className="feeder-settings-compartments">
+                    {compartments.map((compartment) => {
+                      const current = draft.foodAssignments[compartment.id];
+                      const food =
+                        current != null
+                          ? (foodsById.get(current) ?? null)
+                          : null;
+                      const label = compartmentLabel(compartment);
+                      const density = food ? kcalPerKilogram(food) : null;
 
-                  return (
-                    <FormField key={compartment.id} label={label}>
-                      <CardList variant="bare">
-                        <CardListItem
-                          icon={<UtensilsCrossed aria-hidden="true" />}
-                          iconTone={food ? 'primary' : 'muted'}
-                          trailing={
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() =>
-                                setPickerCompartment(compartment.id)
-                              }
-                              disabled={isSaving}
-                              /* On a multi-bowl feeder every button says the same
+                      return (
+                        <FormField key={compartment.id} label={label}>
+                          <CardList variant="bare">
+                            <CardListItem
+                              icon={<UtensilsCrossed aria-hidden="true" />}
+                              iconTone={food ? 'primary' : 'muted'}
+                              trailing={
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() =>
+                                    setPickerCompartment(compartment.id)
+                                  }
+                                  disabled={isSaving}
+                                  /* On a multi-bowl feeder every button says the same
                              word, so the name has to carry which bowl it
                              belongs to. On a single-bowl one there is nothing
                              to tell apart, and naming it would only produce
                              "Change the food in Food". */
-                              aria-label={
-                                compartments.length > 1
-                                  ? t(
-                                      food
-                                        ? 'devices.feeder.food_compartment_change_aria'
-                                        : 'devices.feeder.food_compartment_choose_aria',
-                                      { compartment: label },
-                                    )
-                                  : undefined
+                                  aria-label={
+                                    compartments.length > 1
+                                      ? t(
+                                          food
+                                            ? 'devices.feeder.food_compartment_change_aria'
+                                            : 'devices.feeder.food_compartment_choose_aria',
+                                          { compartment: label },
+                                        )
+                                      : undefined
+                                  }
+                                >
+                                  {t(
+                                    food
+                                      ? 'devices.feeder.food_compartment_change'
+                                      : 'devices.feeder.food_compartment_choose',
+                                  )}
+                                </Button>
                               }
                             >
-                              {t(
-                                food
-                                  ? 'devices.feeder.food_compartment_change'
-                                  : 'devices.feeder.food_compartment_choose',
-                              )}
-                            </Button>
-                          }
-                        >
-                          <CardListContent
-                            title={
-                              food
-                                ? food.name
-                                : t('devices.feeder.food_compartment_unlinked')
-                            }
-                            description={
-                              food ? (
-                                <MetaLine
-                                  nowrap
-                                  parts={[
-                                    food.brand,
-                                    t(
-                                      `food_picker.group_${coarseFoodGroup(food.food_type)}_short`,
-                                    ),
-                                    density != null
-                                      ? t('food_picker.kcal_per_kg', {
-                                          value: density,
-                                        })
-                                      : null,
-                                  ]}
-                                />
-                              ) : (
-                                t('devices.feeder.food_compartment_hint')
-                              )
-                            }
-                          />
-                        </CardListItem>
-                      </CardList>
-                    </FormField>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          foodsEmpty
+                              <CardListContent
+                                title={
+                                  food
+                                    ? food.name
+                                    : t(
+                                        'devices.feeder.food_compartment_unlinked',
+                                      )
+                                }
+                                description={
+                                  food ? (
+                                    <MetaLine
+                                      nowrap
+                                      parts={[
+                                        food.brand,
+                                        t(
+                                          `food_picker.group_${coarseFoodGroup(food.food_type)}_short`,
+                                        ),
+                                        density != null
+                                          ? t('food_picker.kcal_per_kg', {
+                                              value: density,
+                                            })
+                                          : null,
+                                      ]}
+                                    />
+                                  ) : (
+                                    t('devices.feeder.food_compartment_hint')
+                                  )
+                                }
+                              />
+                            </CardListItem>
+                          </CardList>
+                        </FormField>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              foodsEmpty
+            )}
+          </>
         )}
 
         {deviceSettings.length > 0 ? (
@@ -367,18 +380,17 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
             >
               {t('devices.controls.settings_title')}
             </SectionHeader>
-            <ControlTileGrid
-              items={settingTileItems(deviceSettings, draft.deviceSettings, {
-                t,
-                invalidKeys,
-                disabled: isSaving,
-              })}
+            <DeviceSettingsGrid
+              settings={deviceSettings}
+              draft={draft.deviceSettings}
               onChange={(key, value) => {
                 setInvalidKeys((keys) => keys.filter((k) => k !== key));
                 patchDraft({
                   deviceSettings: { ...draft.deviceSettings, [key]: value },
                 });
               }}
+              invalidKeys={invalidKeys}
+              disabled={isSaving}
             />
           </>
         ) : null}

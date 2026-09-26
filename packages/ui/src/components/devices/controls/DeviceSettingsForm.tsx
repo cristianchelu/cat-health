@@ -9,7 +9,7 @@ import {
   controlDraftPatch,
 } from '@/lib/deviceControlDraft';
 import { DeviceSettingsFormView } from './DeviceSettingsFormView';
-import { settingTileItems } from './settingTileItems';
+import { DeviceSettingsGrid } from './DeviceSettingsGrid';
 
 interface DeviceSettingsFormProps {
   deviceId: number;
@@ -48,20 +48,21 @@ const DeviceSettingsForm: React.FC<DeviceSettingsFormProps> = ({
     apply.mutate(patch, { onSuccess: () => commit() });
   };
 
-  const items = settingTileItems(
-    settings,
-    { ...baseline, ...draft },
-    { t, invalidKeys, disabled: apply.isPending },
-  );
-
   return (
     <DeviceSettingsFormView
       className={className}
-      items={items}
-      onFieldChange={(key, value) => {
-        setInvalidKeys((keys) => keys.filter((k) => k !== key));
-        patchDraft({ [key]: value });
-      }}
+      grid={
+        <DeviceSettingsGrid
+          settings={settings}
+          draft={{ ...baseline, ...draft }}
+          onChange={(key, value) => {
+            setInvalidKeys((keys) => keys.filter((k) => k !== key));
+            patchDraft({ [key]: value });
+          }}
+          invalidKeys={invalidKeys}
+          disabled={apply.isPending}
+        />
+      }
       onSubmit={handleSubmit}
       onCancel={requestReset}
       isDirty={isDirty}
