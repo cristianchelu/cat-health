@@ -120,7 +120,7 @@ describe('SurePetClient', () => {
       token: 't'.repeat(400),
     });
 
-    const request = await client.putDeviceControl(123, {
+    const { request } = await client.putDeviceControl(123, {
       lid: { close_delay: 20 },
     });
 

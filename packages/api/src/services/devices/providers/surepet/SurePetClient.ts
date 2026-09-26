@@ -18,6 +18,7 @@ import type {
   SurePetCloudDevice,
   SurePetCloudPet,
   SurePetDeviceDetailPayload,
+  SurePetControlReply,
   SurePetControlRequest,
   SurePetControlWrite,
   SurePetMeStartData,
@@ -209,13 +210,13 @@ export class SurePetClient {
   async putDeviceControl(
     deviceId: number,
     control: SurePetControlWrite,
-  ): Promise<SurePetControlRequest | null> {
-    const response = await this.request<unknown>(
+  ): Promise<SurePetControlReply> {
+    const body = await this.request<unknown>(
       'PUT',
       `${SUREPET_API_BASE}/device/${deviceId}/control/async`,
       control,
     );
-    return firstControlResult(response);
+    return { request: firstControlResult(body), body };
   }
 
   /** The device's control requests the cloud has not finished with. */

@@ -402,8 +402,18 @@ export class SurePetAccountManager implements AccountManager {
       return controller.getSurePetDeviceId();
     };
     return {
-      put: async (write) =>
-        (await this.ensureClient()).putDeviceControl(cloudId(), write),
+      put: async (write) => {
+        const reply = await (
+          await this.ensureClient()
+        ).putDeviceControl(cloudId(), write);
+        if (reply.request?.request_id == null) {
+          this.deps.logger.warn(
+            `SurePet control reply for feeder ${deviceId} named no request:`,
+            JSON.stringify(reply.body),
+          );
+        }
+        return reply;
+      },
       status: async () =>
         (await this.ensureClient()).getControlStatus(cloudId()),
       refresh: async () => {

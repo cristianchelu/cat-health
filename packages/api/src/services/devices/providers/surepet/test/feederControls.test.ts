@@ -22,7 +22,12 @@ const FAST = { intervalMs: 1, timeoutMs: 200 };
 function makeFeeder(
   control: SurePetDeviceControlPayload,
   answer: SurePetControlRequest | null,
-  options: { config?: unknown; foods?: Record<number, FoodGroup> } = {},
+  options: {
+    config?: unknown;
+    foods?: Record<number, FoodGroup>;
+    /** What a re-read of the device finds, as the feeder applies a write. */
+    onRefresh?: () => void;
+  } = {},
 ) {
   const puts: SurePetControlWrite[] = [];
   const saved: unknown[] = [];
@@ -31,11 +36,12 @@ function makeFeeder(
   const writer: SurePetControlWriter = {
     put: async (write) => {
       puts.push(write);
-      return answer;
+      return { request: answer, body: {} };
     },
     status: async () => [...queue],
     refresh: async () => {
       refreshes += 1;
+      options.onRefresh?.();
     },
     foodGroups: async (ids) =>
       new Map(ids.map((id) => [id, options.foods?.[id] ?? 'unknown'])),
@@ -107,15 +113,33 @@ describe('SureFeed controls', () => {
     assert.equal(refreshes(), 1);
   });
 
-  it('fails a write the cloud answered without a queued request', async () => {
+  it('confirms a write the cloud named no request for by reading it back', async () => {
+    const control: SurePetDeviceControlPayload = { lid: { close_delay: 4 } };
+    const { surface } = makeFeeder(control, null, {
+      onRefresh: () => {
+        control.lid = { close_delay: 20 };
+      },
+    });
+
+    const submission = await surface.submit(setDelay('slow'));
+    assert.equal(submission.status, 'pending');
+    if (submission.status !== 'pending') return;
+
+    assert.deepEqual(await submission.settle(new AbortController().signal), {
+      status: 'applied',
+    });
+  });
+
+  it('times out a reply-less write the feeder never shows', async () => {
     const { surface } = makeFeeder({ lid: { close_delay: 4 } }, null);
 
     const submission = await surface.submit(setDelay('slow'));
+    const settlement =
+      submission.status === 'pending'
+        ? await submission.settle(new AbortController().signal)
+        : null;
 
-    assert.equal(
-      submission.status === 'failed' && submission.reason,
-      'unknown',
-    );
+    assert.deepEqual(settlement, { status: 'failed', reason: 'timeout' });
   });
 
   it('reports a request the feeder never picked up as a timeout', async () => {

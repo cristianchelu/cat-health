@@ -71,6 +71,15 @@ export type SurePetControlWrite = Pick<
   tare?: number;
 };
 
+/**
+ * What `control/async` answered: the request it queued when the reply names
+ * one, and the reply itself for when it does not.
+ */
+export interface SurePetControlReply {
+  request: SurePetControlRequest | null;
+  body: unknown;
+}
+
 /** One request as `control/async` returns it and `control/status` lists it. */
 export interface SurePetControlRequest {
   request_id?: string | number | null;

@@ -22,6 +22,7 @@ import {
   SUREPET_CONTROL_TIMEOUT_MS,
 } from './constants.ts';
 import type {
+  SurePetControlReply,
   SurePetControlRequest,
   SurePetControlWrite,
   SurePetDeviceControlPayload,
@@ -32,7 +33,7 @@ export type FoodGroup = 'wet' | 'dry' | 'treat' | 'unknown';
 
 /** The account's side of a feeder's writes, bound to one feeder. */
 export interface SurePetControlWriter {
-  put(write: SurePetControlWrite): Promise<SurePetControlRequest | null>;
+  put(write: SurePetControlWrite): Promise<SurePetControlReply>;
   status(): Promise<SurePetControlRequest[]>;
   /** Re-read the device, so a settled write shows what the feeder now has. */
   refresh(): Promise<void>;
@@ -254,6 +255,36 @@ function bowlsSetting(
   };
 }
 
+/** How a write that reached the cloud is confirmed. */
+type FollowUp =
+  | { kind: 'request'; id: string }
+  | { kind: 'readback'; control: SurePetControlWrite };
+
+/**
+ * Whether the device's control document now holds everything a write set:
+ * every value the write carries, compared field by field, so fields the
+ * cloud adds of its own do not count against it.
+ */
+function holds(actual: unknown, expected: unknown): boolean {
+  if (Array.isArray(expected)) {
+    return (
+      Array.isArray(actual) &&
+      actual.length === expected.length &&
+      expected.every((item, index) => holds(actual[index], item))
+    );
+  }
+  if (typeof expected === 'object' && expected !== null) {
+    return (
+      typeof actual === 'object' &&
+      actual !== null &&
+      Object.entries(expected).every(([key, value]) =>
+        holds((actual as Record<string, unknown>)[key], value),
+      )
+    );
+  }
+  return actual === expected;
+}
+
 const requestStatus = (request: SurePetControlRequest): number | undefined =>
   request.status_id ?? request.status ?? undefined;
 
@@ -285,47 +316,56 @@ export function createFeederControlSurface(
     timeoutMs: SUREPET_CONTROL_TIMEOUT_MS,
   },
 ): ControlSurface {
-  return composeControlSurface<FeederWrite, FeederControlState, string>({
+  return composeControlSurface<FeederWrite, FeederControlState, FollowUp>({
     state,
     settings: [lidCloseDelay, bowlsSetting(writer)],
     channel: {
-      async submit(write): Promise<Acceptance<string>> {
+      async submit(write): Promise<Acceptance<FollowUp>> {
         if (write.to === 'local') {
           await writer.saveFoodCompartments(write.foodCompartments);
           return { status: 'applied' };
         }
-        const request = await writer.put(write.control);
-        // Their app reads `results[0]` unguarded, so a reply without one is
-        // an error there too.
-        if (!request) {
+        const { request } = await writer.put(write.control);
+        // A bowls change can come back without a queued request; their app
+        // reads it optionally there and reloads the device instead.
+        if (request?.request_id == null) {
           return {
-            status: 'failed',
-            reason: 'unknown',
-            message: 'SurePet did not queue the change',
+            status: 'pending',
+            ref: { kind: 'readback', control: write.control },
           };
         }
         const settlement = settlementOf(requestStatus(request));
-        if (settlement === undefined && request.request_id != null) {
-          return { status: 'pending', ref: String(request.request_id) };
+        if (settlement === undefined) {
+          return {
+            status: 'pending',
+            ref: { kind: 'request', id: String(request.request_id) },
+          };
         }
         await writer.refresh().catch(() => {});
-        return settlement ?? { status: 'applied' };
+        return settlement;
       },
     },
     confirmer: {
-      async settle(requestId, signal) {
+      async settle(followUp, signal) {
         const settlement = await pollUntil(
-          async () => {
-            const requests = await writer.status();
-            const request = requests.find(
-              (candidate) => String(candidate.request_id) === requestId,
-            );
-            // Gone from the queue means the cloud is done with it; their app
-            // reloads the device at that point, and so does this.
-            return request
-              ? settlementOf(requestStatus(request))
-              : { status: 'applied' as const };
-          },
+          followUp.kind === 'request'
+            ? async () => {
+                const requests = await writer.status();
+                const request = requests.find(
+                  (candidate) => String(candidate.request_id) === followUp.id,
+                );
+                // Gone from the queue means the cloud is done with it; their
+                // app reloads the device at that point, and so does this.
+                return request
+                  ? settlementOf(requestStatus(request))
+                  : { status: 'applied' as const };
+              }
+            : async () => {
+                await writer.refresh();
+                return holds(state().control, followUp.control)
+                  ? { status: 'applied' as const }
+                  : undefined;
+              },
           { ...timing, signal },
         );
         await writer.refresh().catch(() => {});
