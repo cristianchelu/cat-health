@@ -59,6 +59,10 @@ const DeviceCompartmentsSetting: React.FC<DeviceCompartmentsSettingProps> = ({
       ? (foods.find((food) => food.id === id)?.name ?? null)
       : null;
 
+  const pickingFood =
+    picking !== null ? value.compartments[picking]?.food : null;
+  const pickedFood = typeof pickingFood === 'number' ? pickingFood : null;
+
   const patchCompartment = (
     index: number,
     patch: CompartmentsDraft['compartments'][number],
@@ -96,11 +100,7 @@ const DeviceCompartmentsSetting: React.FC<DeviceCompartmentsSettingProps> = ({
         onOpenChange={(open) => !open && setPicking(null)}
         title={picking !== null ? (layout.compartments[picking] ?? '') : ''}
         foods={pickable}
-        selectedFoodId={
-          picking !== null
-            ? ((value.compartments[picking]?.food as number | null) ?? null)
-            : null
-        }
+        selectedFoodId={pickedFood}
         noneLabel={t('devices.feeder.food_compartment_unlinked')}
         noneHint={t('devices.feeder.food_compartment_none_desc')}
         onPick={(foodId) => {

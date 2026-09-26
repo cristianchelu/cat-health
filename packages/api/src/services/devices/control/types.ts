@@ -48,7 +48,8 @@ export interface SettingBinding<W, S> {
   /**
    * The writes, in the order they must land. A write after one the device
    * has not confirmed yet waits for that confirmation, so a local record is
-   * never ahead of the device it describes. May look things up first.
+   * never ahead of the device it describes. May look things up first, and
+   * throws `InvalidControlValueError` for a value a lookup rules out.
    */
   encode(value: unknown, state: S): W[] | Promise<W[]>;
 }

@@ -12,6 +12,15 @@ import type {
   WriteChannel,
 } from './types.ts';
 
+/**
+ * Thrown by a binding's `encode` for a value that fits its descriptor but
+ * turns out unwritable once looked up, so it fails as `invalid` rather than
+ * as a fault.
+ */
+export class InvalidControlValueError extends Error {
+  override name = 'InvalidControlValueError';
+}
+
 interface ControlSurfaceParts<W, S, R> {
   /** The provider's current state, handed to every binding. */
   state: () => S;
@@ -56,7 +65,7 @@ export function composeControlSurface<W, S, R = never>(
     error: unknown,
   ): Extract<Settlement, { status: 'failed' }> => ({
     status: 'failed',
-    reason: 'unknown',
+    reason: error instanceof InvalidControlValueError ? 'invalid' : 'unknown',
     message: error instanceof Error ? error.message : String(error),
   });
 

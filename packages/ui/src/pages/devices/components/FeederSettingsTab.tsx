@@ -167,7 +167,9 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
   /*
    * One Save, two destinations: food attribution is stored here, the feeder's
    * own settings go to the device. Each is sent only when it changed, and the
-   * draft is accepted once both have landed.
+   * draft is accepted once both have landed. The device goes first, because
+   * saving the device row restarts its controller and would cut short a write
+   * still waiting on the device to confirm.
    */
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -181,22 +183,23 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
     setInvalidKeys(invalid);
     if (invalid.length > 0) return;
 
-    const writes: Promise<unknown>[] = [];
-    if (
+    const foodsChanged =
       JSON.stringify(draft.foodAssignments) !==
-      JSON.stringify(baseline.foodAssignments)
-    ) {
-      const config = mergeFeederFoodCompartmentsIntoConfig(
-        device.config,
-        new Map(Object.entries(draft.foodAssignments)),
-        compartmentOrder,
-      );
-      writes.push(updateDevice.mutateAsync({ config }));
-    }
-    if (Object.keys(patch).length > 0) {
-      writes.push(applySettings.mutateAsync(patch));
-    }
-    Promise.all(writes).then(
+      JSON.stringify(baseline.foodAssignments);
+    const save = async () => {
+      if (Object.keys(patch).length > 0) {
+        await applySettings.mutateAsync(patch);
+      }
+      if (foodsChanged) {
+        const config = mergeFeederFoodCompartmentsIntoConfig(
+          device.config,
+          new Map(Object.entries(draft.foodAssignments)),
+          compartmentOrder,
+        );
+        await updateDevice.mutateAsync({ config });
+      }
+    };
+    save().then(
       () => commit(),
       () => {},
     );

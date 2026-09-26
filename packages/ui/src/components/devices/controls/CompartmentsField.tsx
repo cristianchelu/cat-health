@@ -3,6 +3,7 @@ import { DashboardTile } from '@/components/layout/DashboardTile';
 import { ResponsiveTileGrid } from '@/components/layout/ResponsiveTileGrid';
 import { SelectTriggerButton } from '@/components/ui/AdaptiveSelect';
 import { FormTile, Input, Select } from '@/components/ui/form';
+import { cn } from '@/lib/utils';
 import type { CompartmentDraft } from '@/lib/deviceControlDraft';
 import type { ResolvedCompartmentLayout } from '@/lib/deviceControlLabels';
 import './CompartmentsField.css';
@@ -44,7 +45,6 @@ const CompartmentsField: React.FC<CompartmentsFieldProps> = ({
 }) => {
   const id = React.useId();
   const { food, portion } = layout.fields;
-  const columns = (food ? 1 : 0) + (portion ? 1 : 0);
   return (
     <div className="compartments-field">
       <ResponsiveTileGrid>
@@ -70,10 +70,10 @@ const CompartmentsField: React.FC<CompartmentsFieldProps> = ({
         </DashboardTile>
       </ResponsiveTileGrid>
       <div
-        className="compartments-field-rows"
-        style={
-          { '--compartments-field-columns': columns } as React.CSSProperties
-        }
+        className={cn(
+          'compartments-field-rows',
+          food && portion ? 'paired' : null,
+        )}
       >
         {layout.compartments.map((name, index) => (
           <React.Fragment key={`${layout.value}-${index}`}>

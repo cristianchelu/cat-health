@@ -45,6 +45,8 @@ const DeviceLiveControls: React.FC<DeviceLiveControlsProps> = ({
 
   const send = (setting: SettingControl, draft: ControlDraftValue) => {
     const { key } = setting;
+    // A number commits on Enter and again on the blur that follows.
+    if (sending.has(key)) return;
     const reported = toControlDraftValue(setting.type, setting.value);
     if (draft === reported) {
       forget(key);

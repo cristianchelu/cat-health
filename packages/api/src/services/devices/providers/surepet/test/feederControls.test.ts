@@ -142,6 +142,23 @@ describe('SureFeed controls', () => {
     assert.deepEqual(settlement, { status: 'failed', reason: 'timeout' });
   });
 
+  it('follows a request whose status the cloud left out', async () => {
+    const { surface, queue } = makeFeeder(
+      { lid: { close_delay: 4 } },
+      { request_id: 'r3' },
+    );
+    queue.push({ request_id: 'r3' });
+
+    const submission = await surface.submit(setDelay('fast'));
+    assert.equal(submission.status, 'pending');
+    if (submission.status !== 'pending') return;
+
+    assert.deepEqual(await submission.settle(new AbortController().signal), {
+      status: 'failed',
+      reason: 'timeout',
+    });
+  });
+
   it('reports a request the feeder never picked up as a timeout', async () => {
     const { surface, queue } = makeFeeder(
       { lid: { close_delay: 4 } },
@@ -274,7 +291,10 @@ describe('SureFeed bowls', () => {
       setBowls({ layout: 'single', compartments: [{ food: 3, portion: 20 }] }),
     );
 
-    assert.equal(submission.status, 'failed');
+    assert.equal(
+      submission.status === 'failed' ? submission.reason : submission.status,
+      'invalid',
+    );
     assert.deepEqual(puts, []);
   });
 });

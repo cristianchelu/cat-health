@@ -7,14 +7,17 @@
      portion always sit side by side. */
   .compartments-field-rows {
     display: grid;
-    grid-template-columns: repeat(
-      var(--compartments-field-columns, 2),
-      minmax(0, 1fr)
-    );
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-lg);
 
+    &.paired {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     @media (max-width: 767px) {
-      grid-template-columns: minmax(0, 1fr);
+      &.paired {
+        grid-template-columns: minmax(0, 1fr);
+      }
     }
   }
 

@@ -88,6 +88,15 @@ describe('buildEntityBindings', () => {
     assert.equal(action('dev:sensor.waste_weight'), undefined);
   });
 
+  it('sends nothing for a state the entity already holds', () => {
+    const pump = setting('dev:switch.pump');
+    const values = new Map<number, unknown>([[2, true]]);
+    assert.deepEqual(pump?.encode(true, values), []);
+    assert.deepEqual(pump?.encode(false, values), [
+      { type: 'switch', objectId: 'pump', state: false },
+    ]);
+  });
+
   it('reads an unknown number as null rather than NaN', () => {
     const values = new Map<number, unknown>([[1, Number.NaN]]);
     assert.equal(

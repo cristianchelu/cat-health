@@ -12,12 +12,15 @@ interface DeviceSettingsTabProps {
 const DeviceSettingsTab: React.FC<DeviceSettingsTabProps> = ({
   device,
   onDirtyChange,
-}) => (
-  <DeviceSettingsForm
-    deviceId={device.id}
-    settings={deviceConfigSettings(device)}
-    onDirtyChange={onDirtyChange}
-  />
-);
+}) => {
+  const settings = React.useMemo(() => deviceConfigSettings(device), [device]);
+  return (
+    <DeviceSettingsForm
+      deviceId={device.id}
+      settings={settings}
+      onDirtyChange={onDirtyChange}
+    />
+  );
+};
 
 export default DeviceSettingsTab;

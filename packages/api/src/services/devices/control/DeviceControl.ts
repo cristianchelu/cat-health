@@ -84,7 +84,8 @@ export class DeviceControl {
 
   /**
    * Write several settings. Every key is validated before any is written, so
-   * a bad value in the patch writes nothing.
+   * a bad value in the patch writes nothing, and the writes stop at the first
+   * that fails, so a failure leaves every key after it unwritten.
    */
   async applySettings(
     deviceId: number,
@@ -125,12 +126,9 @@ export class DeviceControl {
 
     const settlements: Record<string, Settlement> = {};
     for (const command of commands) {
-      settlements[command.key] = await this.write(
-        deviceId,
-        surface,
-        command,
-        origin,
-      );
+      const settlement = await this.write(deviceId, surface, command, origin);
+      settlements[command.key] = settlement;
+      if (settlement.status === 'failed') break;
     }
     return { ok: true, value: settlements };
   }

@@ -35,16 +35,22 @@ export type CompartmentField = (typeof COMPARTMENT_FIELDS)[number];
 /**
  * A compartmented setting's value: which layout, and per compartment the
  * value of each field its layout declares. A food is a catalog food id.
+ * Fields are optional because layouts declare different ones; `F` names
+ * the fields every layout of a setting declares.
  */
-export interface CompartmentsValue {
+export interface CompartmentsValue<F extends CompartmentField = never> {
   layout: string;
-  compartments: Array<Partial<Record<CompartmentField, number | null>>>;
+  compartments: Array<
+    Record<F, number | null> &
+      Partial<Record<Exclude<CompartmentField, F>, number | null>>
+  >;
 }
 
 /** The value each known setting holds. */
 export interface KnownSettingValues {
   lid_close_delay: (typeof KNOWN_SETTINGS)['lid_close_delay'][number];
-  bowls: CompartmentsValue & {
+  /** Every layout of `bowls` declares both fields. */
+  bowls: CompartmentsValue<'food' | 'portion'> & {
     layout: (typeof KNOWN_SETTINGS)['bowls'][number];
   };
 }

@@ -5,7 +5,10 @@ import {
   type SettingDescriptor,
 } from 'shared';
 
-import { composeControlSurface } from '../../control/composeControlSurface.ts';
+import {
+  composeControlSurface,
+  InvalidControlValueError,
+} from '../../control/composeControlSurface.ts';
 import { pollUntil } from '../../control/observe.ts';
 import type {
   Acceptance,
@@ -213,7 +216,9 @@ function bowlsSetting(
         const foodType =
           SUREPET_FOOD_TYPE[groups.get(foodIds[index]) ?? 'unknown'];
         if (foodType === undefined) {
-          throw new Error(`Food ${foodIds[index]} is neither wet nor dry`);
+          throw new InvalidControlValueError(
+            `food ${foodIds[index]} is neither wet nor dry`,
+          );
         }
         return { food_type: foodType, target: compartment.portion ?? 0 };
       });
@@ -288,18 +293,23 @@ function holds(actual: unknown, expected: unknown): boolean {
 const requestStatus = (request: SurePetControlRequest): number | undefined =>
   request.status_id ?? request.status ?? undefined;
 
-/** A request's status as a settlement, or undefined while it is pending. */
+/**
+ * A request's status as a settlement, or undefined while it is pending. Only
+ * a status that says so counts as applied; a missing or unfamiliar one is
+ * followed like a pending request until it leaves the queue or times out.
+ */
 function settlementOf(status: number | undefined): Settlement | undefined {
   switch (status) {
-    case ControlRequestStatus.PENDING:
-      return undefined;
+    case ControlRequestStatus.SUCCESS:
+    case ControlRequestStatus.NO_CHANGE:
+      return { status: 'applied' };
     case ControlRequestStatus.DEVICE_TIMEOUT:
       return { status: 'failed', reason: 'timeout' };
     case ControlRequestStatus.SERVER_ERROR:
     case ControlRequestStatus.DEVICE_ERROR:
       return { status: 'failed', reason: 'rejected' };
     default:
-      return { status: 'applied' };
+      return undefined;
   }
 }
 

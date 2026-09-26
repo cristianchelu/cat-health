@@ -253,6 +253,23 @@ describe('DeviceControl', () => {
     });
   });
 
+  it('writes no key after one that fails', async () => {
+    const { control, answers, sent } = makeHarness();
+    answers.push(async () => ({ status: 'failed', reason: 'rejected' }));
+
+    const result = await control.applySettings(
+      1,
+      { 'dev:number.target': 45, 'dev:switch.pump': true },
+      USER,
+    );
+
+    assert.ok(result.ok);
+    assert.deepEqual(result.value, {
+      'dev:number.target': { status: 'failed', reason: 'rejected' },
+    });
+    assert.deepEqual(sent, [{ key: 'target', value: 45 }]);
+  });
+
   it('sends one device its writes one at a time', async () => {
     const { control, answers, sent } = makeHarness();
     const gate = deferred<void>();
