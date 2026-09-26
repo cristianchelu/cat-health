@@ -101,6 +101,11 @@ export const coerceBooleanState = (
   missingState: unknown,
 ): unknown => (missingState === true ? undefined : (state ?? false));
 
+export const coerceStringState = (
+  state: unknown,
+  missingState: unknown,
+): unknown => (missingState === true ? undefined : (state ?? ''));
+
 /**
  * ESPHome's own object_id derivation (`sanitize(snake_case(name))`):
  * lowercase, spaces to underscores, any char outside [a-z0-9-_] to
@@ -305,6 +310,30 @@ export abstract class BaseESPHomeController implements DeviceController {
       this.recordDeviceActivity();
       this.handleSensorUpdate(data.key, state);
     });
+
+    this.client.on('select', (data) => {
+      this.sensorValues.set(
+        data.key,
+        coerceStringState(data.state, data.missingState),
+      );
+      this.recordDeviceActivity();
+    });
+
+    this.client.on('text_sensor', (data) => {
+      this.sensorValues.set(
+        data.key,
+        coerceStringState(data.state, data.missingState),
+      );
+      this.recordDeviceActivity();
+    });
+
+    this.client.on('text', (data) => {
+      this.sensorValues.set(
+        data.key,
+        coerceStringState(data.state, data.missingState),
+      );
+      this.recordDeviceActivity();
+    });
   }
 
   private markOffline() {
@@ -424,9 +453,22 @@ export abstract class BaseESPHomeController implements DeviceController {
           )
         : undefined;
 
+    // ESPHome names a number's bounds minValue / maxValue; the DTO calls them
+    // min / max, so the spread below alone would drop them.
+    const min =
+      'minValue' in entity && typeof entity.minValue === 'number'
+        ? entity.minValue
+        : undefined;
+    const max =
+      'maxValue' in entity && typeof entity.maxValue === 'number'
+        ? entity.maxValue
+        : undefined;
+
     const dto = {
       ...entity,
       id: objectId ?? entity.name,
+      min,
+      max,
       objectId: objectId ?? undefined,
       value: this.sensorValues.get(entity.key),
       unit:

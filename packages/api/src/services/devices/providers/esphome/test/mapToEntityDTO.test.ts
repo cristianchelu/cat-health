@@ -49,6 +49,22 @@ describe('BaseESPHomeController.mapToEntityDTO object_id derivation', () => {
     assert.equal(dto.objectId, 'custom_object_id');
   });
 
+  it('carries a number entity bounds as min and max', () => {
+    const dto = makeController().mapToEntityDTO({
+      key: 3,
+      type: 'number',
+      name: 'Calibration Known Weight',
+      objectId: '',
+      minValue: 1000,
+      maxValue: 10000,
+      step: 100,
+    } as unknown as EspHomeEntity);
+
+    assert.equal(dto.min, 1000);
+    assert.equal(dto.max, 10000);
+    assert.equal(dto.step, 100);
+  });
+
   it('gives entities distinct ids so dashboard tiles stay keyable', () => {
     const controller = makeController();
     const names = ['Occupancy', 'Activity', 'Vibration', 'Cat Event'];
