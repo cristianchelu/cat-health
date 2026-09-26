@@ -8,8 +8,8 @@ import {
   controlDraftBaseline,
   controlDraftPatch,
 } from '@/lib/deviceControlDraft';
-import type { ControlTileItem } from './ControlTiles';
 import { DeviceSettingsFormView } from './DeviceSettingsFormView';
+import { settingTileItems } from './settingTileItems';
 
 interface DeviceSettingsFormProps {
   deviceId: number;
@@ -48,19 +48,11 @@ const DeviceSettingsForm: React.FC<DeviceSettingsFormProps> = ({
     apply.mutate(patch, { onSuccess: () => commit() });
   };
 
-  const items: ControlTileItem[] = settings.map((setting) => ({
-    key: setting.key,
-    label: setting.label.text,
-    type: setting.type,
-    value: draft[setting.key] ?? baseline[setting.key] ?? '',
-    disabled: apply.isPending,
-    busyLabel: setting.pending ? t('devices.controls.pending') : undefined,
-    error: invalidKeys.includes(setting.key)
-      ? t('devices.controls.invalid_value')
-      : setting.failed
-        ? t(`devices.controls.failed.${setting.failed.reason}`)
-        : undefined,
-  }));
+  const items = settingTileItems(
+    settings,
+    { ...baseline, ...draft },
+    { t, invalidKeys, disabled: apply.isPending },
+  );
 
   return (
     <DeviceSettingsFormView

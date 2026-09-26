@@ -1,14 +1,14 @@
 import * as React from 'react';
-import type { ControlValueType } from 'shared';
 import { FormTile, Input, Select } from '@/components/ui/form';
 import { Switch } from '@/components/ui/Switch';
 import type { ControlDraftValue } from '@/lib/deviceControlDraft';
+import type { ResolvedControlType } from '@/lib/deviceControlLabels';
 import { cn } from '@/lib/utils';
 import './ControlTile.css';
 
 interface ControlTileProps {
   label: string;
-  type: ControlValueType;
+  type: ResolvedControlType;
   value: ControlDraftValue;
   onChange: (value: ControlDraftValue) => void;
   /**
@@ -84,10 +84,7 @@ const ControlTile: React.FC<ControlTileProps> = ({
             className="control-tile-select"
             value={typeof value === 'string' ? value : ''}
             placeholder={value === '' ? '—' : undefined}
-            options={type.options.map((option) => ({
-              value: option.value,
-              label: option.label.text,
-            }))}
+            options={type.options}
             onChange={(event) => onChange(event.target.value)}
             disabled={disabled}
             variant={error ? 'error' : 'default'}

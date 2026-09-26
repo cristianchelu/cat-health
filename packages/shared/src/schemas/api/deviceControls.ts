@@ -11,29 +11,84 @@ import { Type, type Static } from '@fastify/type-provider-typebox';
 // --- Keys ---
 
 /**
+ * Settings the app understands, each with the values it can hold. A provider
+ * that binds one of these is saying its setting means exactly this; the client
+ * labels it, and internal services may write it.
+ */
+export const KNOWN_SETTINGS = {
+  /** How long a feeder's lid stays open after the pet leaves. */
+  lid_close_delay: ['fast', 'normal', 'slow'],
+} as const;
+
+export type KnownSettingKey = keyof typeof KNOWN_SETTINGS;
+
+/** The value each known setting holds. */
+export type KnownSettingValues = {
+  [K in KnownSettingKey]: (typeof KNOWN_SETTINGS)[K][number];
+};
+
+const KNOWN_SETTING_KEYS = Object.keys(KNOWN_SETTINGS) as KnownSettingKey[];
+
+/**
  * A key a device declared itself, labelled by the device. Opaque to everyone
  * but the controller that minted it: nothing outside the provider may parse it
- * or depend on it. Keys with a meaning the app understands, typed and
- * labelled by the client, join `SettingKey` / `ActionKey` beside it.
+ * or depend on it.
  */
 export type DeviceControlKey = `dev:${string}`;
 
 export const isDeviceControlKey = (key: string): key is DeviceControlKey =>
   key.startsWith('dev:') && key.length > 4;
 
-export type SettingKey = DeviceControlKey;
+export type SettingKey = KnownSettingKey | DeviceControlKey;
 export type ActionKey = DeviceControlKey;
 
 const DeviceControlKeySchema = Type.Unsafe<DeviceControlKey>(
   Type.String({ pattern: '^dev:.+$' }),
 );
-export const SettingKeySchema = DeviceControlKeySchema;
+
+/**
+ * Validated against the known keys plus the device-key pattern at runtime;
+ * `Unsafe` only names the static type, which TypeBox cannot infer from a union
+ * built from an array.
+ */
+export const SettingKeySchema = Type.Unsafe<SettingKey>(
+  Type.Union([
+    ...KNOWN_SETTING_KEYS.map((key) => Type.Literal(key)),
+    DeviceControlKeySchema,
+  ]),
+);
 export const ActionKeySchema = DeviceControlKeySchema;
 
 // --- Labels ---
 
-/** A device key is labelled by the device, verbatim. */
-export const ControlLabelSchema = Type.Object({ text: Type.String() });
+/** Every i18n key the API sends for a control's label or an option's. */
+export type ControlTextKey =
+  | `devices.controls.settings.${KnownSettingKey}`
+  | {
+      [K in KnownSettingKey]: `devices.controls.options.${K}.${KnownSettingValues[K]}`;
+    }[KnownSettingKey];
+
+const CONTROL_TEXT_KEYS: ControlTextKey[] = KNOWN_SETTING_KEYS.flatMap(
+  (key) => [
+    `devices.controls.settings.${key}` as const,
+    ...KNOWN_SETTINGS[key].map(
+      (value) => `devices.controls.options.${key}.${value}` as const,
+    ),
+  ],
+);
+
+/**
+ * A known setting is labelled by the client's locale, a device key by the
+ * device, verbatim.
+ */
+export const ControlLabelSchema = Type.Union([
+  Type.Object({
+    i18n: Type.Unsafe<ControlTextKey>(
+      Type.Union(CONTROL_TEXT_KEYS.map((key) => Type.Literal(key))),
+    ),
+  }),
+  Type.Object({ text: Type.String() }),
+]);
 export type ControlLabel = Static<typeof ControlLabelSchema>;
 
 // --- Value types ---

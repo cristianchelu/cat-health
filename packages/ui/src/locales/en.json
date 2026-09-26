@@ -737,6 +737,16 @@
         "rejected": "The device refused the change",
         "busy": "Still busy with the last request",
         "unknown": "Something went wrong"
+      },
+      "settings": {
+        "lid_close_delay": "Lid close delay"
+      },
+      "options": {
+        "lid_close_delay": {
+          "fast": "Fast",
+          "normal": "Normal",
+          "slow": "Slow"
+        }
       }
     },
     "water_fountain": {

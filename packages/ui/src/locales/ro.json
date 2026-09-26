@@ -797,6 +797,16 @@
         "rejected": "Dispozitivul a refuzat modificarea",
         "busy": "Dispozitivul încă procesează cererea anterioară",
         "unknown": "A apărut o eroare"
+      },
+      "settings": {
+        "lid_close_delay": "Întârziere închidere capac"
+      },
+      "options": {
+        "lid_close_delay": {
+          "fast": "Rapidă",
+          "normal": "Normală",
+          "slow": "Lentă"
+        }
       }
     }
   },

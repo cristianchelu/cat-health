@@ -4,6 +4,7 @@ import type { ActionControl } from 'shared';
 import { apiErrorMessage } from '@/api/apiClient';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useRunDeviceAction } from '@/hooks/queries/deviceQueries';
+import { controlLabel } from '@/lib/deviceControlLabels';
 import { DashboardTile } from '@/components/layout/DashboardTile';
 import { ActionTile } from './ActionTile';
 
@@ -56,7 +57,7 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ deviceId, actions }) => {
       {actions.map((action) => (
         <DashboardTile key={action.key}>
           <ActionTile
-            label={action.label.text}
+            label={controlLabel(action.label, t)}
             runLabel={t('devices.controls.run')}
             onRun={() => handleRun(action.key)}
             disabled={!action.available}
@@ -78,7 +79,7 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ deviceId, actions }) => {
       <ConfirmDialog
         open={confirming !== null}
         title={t('devices.controls.confirm_action', {
-          name: confirming?.label.text ?? '',
+          name: confirming ? controlLabel(confirming.label, t) : '',
         })}
         confirmLabel={t('devices.controls.run')}
         variant="danger"

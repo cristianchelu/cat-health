@@ -8,6 +8,7 @@ import {
   toControlDraftValue,
   type ControlDraftValue,
 } from '@/lib/deviceControlDraft';
+import { controlLabel, resolveControlType } from '@/lib/deviceControlLabels';
 import { ControlTiles, type ControlTileItem } from './ControlTiles';
 
 interface DeviceLiveControlsProps {
@@ -74,8 +75,8 @@ const DeviceLiveControls: React.FC<DeviceLiveControlsProps> = ({
 
   const items: ControlTileItem[] = settings.map((setting) => ({
     key: setting.key,
-    label: setting.label.text,
-    type: setting.type,
+    label: controlLabel(setting.label, t),
+    type: resolveControlType(setting.type, t),
     value:
       edits[setting.key] ?? toControlDraftValue(setting.type, setting.value),
     disabled: sending.has(setting.key),
