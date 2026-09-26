@@ -719,8 +719,24 @@
       "subsection_controls": "Controls",
       "subsection_sensors": "Sensors",
       "raw_payload": "Raw state",
-      "press": "Press",
       "no_reading": "No reading"
+    },
+    "controls": {
+      "settings_title": "Device settings",
+      "pending": "Waiting for the device…",
+      "invalid_value": "Enter a valid value",
+      "save_failed": "Couldn’t save the settings.",
+      "run_failed": "Couldn’t run this action.",
+      "confirm_action": "Run {{name}}?",
+      "run": "Run",
+      "failed": {
+        "invalid": "The device doesn’t accept this value",
+        "offline": "The device is offline",
+        "timeout": "The device didn’t confirm the change",
+        "rejected": "The device refused the change",
+        "busy": "Still busy with the last request",
+        "unknown": "Something went wrong"
+      }
     },
     "water_fountain": {
       "water_level": "Water Level",

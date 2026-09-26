@@ -1,0 +1,19 @@
+.control-field {
+  .control-field-number {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+
+    .control-field-unit {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      white-space: nowrap;
+    }
+  }
+
+  .control-field-status {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+}

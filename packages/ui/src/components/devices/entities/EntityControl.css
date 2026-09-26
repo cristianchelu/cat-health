@@ -81,27 +81,4 @@
       color: var(--color-text-muted);
     }
   }
-
-  .entity-input-group {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-
-    input {
-      width: 6.5rem;
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .entity-unit {
-      font-size: var(--text-sm);
-      color: var(--color-text-muted);
-      white-space: nowrap;
-    }
-  }
-
-  .entity-select {
-    min-width: 10rem;
-    max-width: 14rem;
-  }
 }

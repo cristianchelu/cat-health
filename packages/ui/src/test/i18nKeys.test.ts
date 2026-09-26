@@ -23,7 +23,6 @@ const UNTRANSLATED_RO = new Set([
   'annotation.mark_as_maintenance_aria',
   'devices.esphome.empty_entities',
   'devices.esphome.no_reading',
-  'devices.esphome.press',
   'devices.esphome.raw_payload',
   'devices.esphome.section_config',
   'devices.esphome.section_diagnostic',

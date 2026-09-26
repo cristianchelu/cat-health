@@ -19,6 +19,8 @@ import {
   linkDeviceRecognition,
   updateDeviceRecognitionConfig,
   unlinkDeviceRecognition,
+  patchDeviceSettings,
+  runDeviceAction,
 } from '@/api/devices';
 import { deleteEvent, updateEvent } from '@/api/pets';
 import * as React from 'react';
@@ -39,6 +41,7 @@ import type {
   PatchDeviceRecognitionRequestDTO,
   PatchDeviceCameraRequestDTO,
   GetEventsResponseDTO,
+  PatchDeviceSettingsRequestDTO,
 } from 'shared';
 
 export function useDevices() {
@@ -358,6 +361,32 @@ export function useUpdateDevice(deviceId: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
       queryClient.invalidateQueries({ queryKey: ['devices'] });
+    },
+  });
+}
+
+/**
+ * Write device settings. Refetches the device whether the write landed or
+ * not, so the controls show what the device reports now, pending markers and
+ * failures included.
+ */
+export function useApplyDeviceSettings(deviceId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: PatchDeviceSettingsRequestDTO) =>
+      patchDeviceSettings(deviceId, patch),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
+    },
+  });
+}
+
+export function useRunDeviceAction(deviceId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string) => runDeviceAction(deviceId, key),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
     },
   });
 }

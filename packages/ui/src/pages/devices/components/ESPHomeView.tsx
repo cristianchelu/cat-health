@@ -1,15 +1,13 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import type { EntityDTO } from 'shared';
+import type { ActionControl, DeviceControlsDTO, EntityDTO } from 'shared';
 import { DashboardTile } from '@/components/layout/DashboardTile';
 import { ResponsiveTileGrid } from '@/components/layout/ResponsiveTileGrid';
 import { DetailMetricRow } from '@/components/devices/DetailMetricRow';
 import { EntitySensor } from '@/components/devices/entities/EntitySensor';
 import { EntityBinarySensor } from '@/components/devices/entities/EntityBinarySensor';
-import { EntitySwitch } from '@/components/devices/entities/EntitySwitch';
-import { EntityNumber } from '@/components/devices/entities/EntityNumber';
-import { EntitySelect } from '@/components/devices/entities/EntitySelect';
-import { EntityButton } from '@/components/devices/entities/EntityButton';
+import { DeviceActions } from '@/components/devices/controls/DeviceActions';
+import { DeviceSettingsForm } from '@/components/devices/controls/DeviceSettingsForm';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { groupEntitiesForDashboard } from '@/lib/deviceEntityDashboard';
 import { formatStructuredValue } from '@/lib/formatStructuredValue';
@@ -21,9 +19,16 @@ import { useFormatters } from '@/hooks/context/useRegionalPreferences';
 import './ESPHomeView.css';
 
 interface ESPHomeViewProps {
+  deviceId: number;
   entities: EntityDTO[];
   sensors?: Record<string, unknown>;
+  controls?: DeviceControlsDTO;
 }
+
+const actionsIn = (
+  controls: DeviceControlsDTO | undefined,
+  group: ActionControl['group'],
+) => controls?.actions.filter((action) => action.group === group) ?? [];
 
 /**
  * Stable per-tile identity. `entity.id` is the ESPHome object_id, which is
@@ -46,8 +51,10 @@ function mergeEntityValue(
 }
 
 export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
+  deviceId,
   entities,
   sensors,
+  controls,
 }) => {
   const { t } = useTranslation();
   const { formatDateTime, dateFnsLocale, formatNumber } = useFormatters();
@@ -104,36 +111,6 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
               offLabel={entity.offLabel}
             />
           );
-        case 'switch':
-          return (
-            <EntitySwitch
-              label={entity.name}
-              checked={Boolean(value)}
-              onChange={() => {}}
-            />
-          );
-        case 'number':
-          return (
-            <EntityNumber
-              label={entity.name}
-              value={value as number}
-              min={entity.min}
-              max={entity.max}
-              step={entity.step}
-              unit={entity.unit}
-              deviceClass={entity.deviceClass}
-              onChange={() => {}}
-            />
-          );
-        case 'select':
-          return (
-            <EntitySelect
-              label={entity.name}
-              value={value as string}
-              options={entity.options || []}
-              onChange={() => {}}
-            />
-          );
         case 'text_sensor':
           return (
             <EntitySensor
@@ -144,13 +121,6 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
                   : String(value)
               }
               valueVariant="body"
-            />
-          );
-        case 'button':
-          return (
-            <EntityButton
-              label={entity.name}
-              pressLabel={t('devices.esphome.press')}
             />
           );
         default: {
@@ -196,7 +166,19 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
     [renderEntityTile],
   );
 
-  if (entities.length === 0) {
+  const renderActions = (group: ActionControl['group']) => {
+    const actions = actionsIn(controls, group);
+    return actions.length > 0 ? (
+      <DeviceActions deviceId={deviceId} actions={actions} />
+    ) : null;
+  };
+
+  const primaryActions = actionsIn(controls, 'primary');
+  const configActions = actionsIn(controls, 'config');
+  const diagnosticActions = actionsIn(controls, 'diagnostic');
+  const settings = controls?.settings ?? [];
+
+  if (entities.length === 0 && !controls) {
     return (
       <div className="esphome-view">
         <p className="esphome-view-empty">
@@ -207,13 +189,15 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
   }
 
   const {
-    primary: { controls, sensors: sensorEntities, other: primaryOther },
+    primary: { sensors: sensorEntities, other: primaryOther },
     config,
     diagnostic,
   } = grouped;
 
   const showPrimary =
-    controls.length > 0 || sensorEntities.length > 0 || primaryOther.length > 0;
+    primaryActions.length > 0 ||
+    sensorEntities.length > 0 ||
+    primaryOther.length > 0;
 
   return (
     <div className="esphome-view">
@@ -226,12 +210,12 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
             <SectionHeader>
               {t('devices.esphome.section_primary')}
             </SectionHeader>
-            {controls.length > 0 ? (
+            {primaryActions.length > 0 ? (
               <div className="esphome-view-subsection">
                 <h3 className="section-label esphome-view-subsection-title">
                   {t('devices.esphome.subsection_controls')}
                 </h3>
-                {renderGrid(controls)}
+                {renderActions('primary')}
               </div>
             ) : null}
             {sensorEntities.length > 0 ? (
@@ -251,19 +235,20 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
         </section>
       ) : null}
 
-      {config.length > 0 ? (
+      {config.length > 0 || configActions.length > 0 ? (
         <section
           className="esphome-view-section"
           aria-label={t('devices.esphome.section_config')}
         >
           <div className="esphome-view-panel">
             <SectionHeader>{t('devices.esphome.section_config')}</SectionHeader>
-            {renderGrid(config)}
+            {renderActions('config')}
+            {config.length > 0 ? renderGrid(config) : null}
           </div>
         </section>
       ) : null}
 
-      {diagnostic.length > 0 ? (
+      {diagnostic.length > 0 || diagnosticActions.length > 0 ? (
         <section
           className="esphome-view-section"
           aria-label={t('devices.esphome.section_diagnostic')}
@@ -272,9 +257,14 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
             <SectionHeader>
               {t('devices.esphome.section_diagnostic')}
             </SectionHeader>
-            {renderGrid(diagnostic)}
+            {renderActions('diagnostic')}
+            {diagnostic.length > 0 ? renderGrid(diagnostic) : null}
           </div>
         </section>
+      ) : null}
+
+      {settings.length > 0 ? (
+        <DeviceSettingsForm deviceId={deviceId} settings={settings} />
       ) : null}
     </div>
   );

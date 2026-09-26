@@ -780,6 +780,23 @@
         "very_weak": "Foarte slab"
       },
       "signal_strength_summary": "{{quality}} ({{dbm}} dBm)"
+    },
+    "controls": {
+      "settings_title": "Setările dispozitivului",
+      "pending": "Se așteaptă dispozitivul…",
+      "invalid_value": "Introdu o valoare validă",
+      "save_failed": "Setările nu au putut fi salvate.",
+      "run_failed": "Acțiunea nu a putut fi rulată.",
+      "confirm_action": "Rulezi {{name}}?",
+      "run": "Rulează",
+      "failed": {
+        "invalid": "Dispozitivul nu acceptă această valoare",
+        "offline": "Dispozitivul este offline",
+        "timeout": "Dispozitivul nu a confirmat modificarea",
+        "rejected": "Dispozitivul a refuzat modificarea",
+        "busy": "Dispozitivul încă procesează cererea anterioară",
+        "unknown": "A apărut o eroare"
+      }
     }
   },
   "annotation": {

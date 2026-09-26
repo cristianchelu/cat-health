@@ -1,5 +1,9 @@
 import type { EntityDTO, EntityDisplayCategory } from 'shared';
 
+/**
+ * Writable entities. A device offers them as controls instead, so the
+ * read-only dashboard leaves them out.
+ */
 const CONTROL_TYPES = new Set(['switch', 'number', 'select', 'button']);
 
 const SENSOR_TYPES = new Set(['sensor', 'binary_sensor', 'text_sensor']);
@@ -15,7 +19,6 @@ export function getEntityDashboardCategory(
 }
 
 export interface PrimaryPartition {
-  controls: EntityDTO[];
   sensors: EntityDTO[];
   /** Tier B and unknown types with category primary */
   other: EntityDTO[];
@@ -24,25 +27,21 @@ export interface PrimaryPartition {
 export function partitionPrimaryEntities(
   entities: EntityDTO[],
 ): PrimaryPartition {
-  const controls: EntityDTO[] = [];
   const sensors: EntityDTO[] = [];
   const other: EntityDTO[] = [];
 
   for (const e of entities) {
-    if (CONTROL_TYPES.has(e.type)) {
-      controls.push(e);
-    } else if (SENSOR_TYPES.has(e.type)) {
+    if (SENSOR_TYPES.has(e.type)) {
       sensors.push(e);
     } else {
       other.push(e);
     }
   }
 
-  controls.sort(compareEntitiesByName);
   sensors.sort(compareEntitiesByName);
   other.sort(compareEntitiesByName);
 
-  return { controls, sensors, other };
+  return { sensors, other };
 }
 
 export interface GroupedDashboardEntities {
@@ -59,6 +58,7 @@ export function groupEntitiesForDashboard(
   const diagnostic: EntityDTO[] = [];
 
   for (const e of entities) {
+    if (CONTROL_TYPES.has(e.type)) continue;
     const c = getEntityDashboardCategory(e);
     if (c === 'primary') {
       primaryRaw.push(e);

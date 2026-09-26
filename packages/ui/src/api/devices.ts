@@ -1,4 +1,8 @@
 import type {
+  PatchDeviceSettingsRequestDTO,
+  PatchDeviceSettingsResponseDTO,
+  RunDeviceActionRequestDTO,
+  RunDeviceActionResponseDTO,
   GetEventsResponseDTO,
   GetDeviceResponseDTO,
   GetDevicesResponseDTO,
@@ -107,6 +111,29 @@ export async function updateDevice(
   const { data } = await apiClient.patch<GetDeviceResponseDTO>(
     `/devices/${deviceId}`,
     input,
+  );
+  return data;
+}
+
+export async function patchDeviceSettings(
+  deviceId: number,
+  patch: PatchDeviceSettingsRequestDTO,
+) {
+  const { data } = await apiClient.patch<PatchDeviceSettingsResponseDTO>(
+    `/devices/${deviceId}/settings`,
+    patch,
+  );
+  return data;
+}
+
+export async function runDeviceAction(
+  deviceId: number,
+  key: string,
+  args: RunDeviceActionRequestDTO = {},
+) {
+  const { data } = await apiClient.post<RunDeviceActionResponseDTO>(
+    `/devices/${deviceId}/actions/${encodeURIComponent(key)}`,
+    args,
   );
   return data;
 }
