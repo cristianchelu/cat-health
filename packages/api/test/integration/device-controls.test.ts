@@ -46,7 +46,7 @@ describe('device controls routes', () => {
             key: 'dev:number.target',
             label: { text: 'Target' },
             type: { kind: 'number', min: 0, max: 100, step: 5, unit: 'g' },
-            presentation: 'setting',
+            placement: 'setting',
             group: 'config',
           },
           read: (s) => s.target,

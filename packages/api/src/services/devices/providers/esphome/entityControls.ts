@@ -93,12 +93,15 @@ function settingBinding(
   entity: EspHomeEntity,
   objectId: string,
 ): SettingBinding<EntityWrite, EntityValues> {
+  const group = mapEspHomeEntityCategory(entity);
   const descriptor: SettingDescriptor = {
     key: controlKey(type, objectId),
     label: { text: entity.name },
     type: valueType(type, entity),
-    presentation: 'setting',
-    group: mapEspHomeEntityCategory(entity),
+    // ESPHome files what configures the device under the config category;
+    // everything else (a pump switch, a debug toggle) operates it.
+    placement: group === 'config' ? 'setting' : 'control',
+    group,
   };
   return {
     descriptor,

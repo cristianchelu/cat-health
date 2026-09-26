@@ -65,14 +65,16 @@ export type ControlValueType = Static<typeof ControlValueTypeSchema>;
 // --- Descriptors ---
 
 /**
- * How a setting is edited. `control` writes as soon as it changes; `setting`
- * joins the draft that Save commits. Both reach the device the same way.
+ * Where a setting lives. A `control` operates the device now and writes as
+ * soon as it changes, beside the readings; a `setting` configures how it
+ * behaves and joins the draft that the Settings tab's Save commits. Both
+ * reach the device the same way.
  */
-export const ControlPresentationSchema = Type.Union([
-  Type.Literal('setting'),
+export const ControlPlacementSchema = Type.Union([
   Type.Literal('control'),
+  Type.Literal('setting'),
 ]);
-export type ControlPresentation = Static<typeof ControlPresentationSchema>;
+export type ControlPlacement = Static<typeof ControlPlacementSchema>;
 
 export const ControlGroupSchema = Type.Union([
   Type.Literal('primary'),
@@ -85,7 +87,7 @@ export const SettingDescriptorSchema = Type.Object({
   key: SettingKeySchema,
   label: ControlLabelSchema,
   type: ControlValueTypeSchema,
-  presentation: ControlPresentationSchema,
+  placement: ControlPlacementSchema,
   group: ControlGroupSchema,
 });
 export type SettingDescriptor = Static<typeof SettingDescriptorSchema>;

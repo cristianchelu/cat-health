@@ -62,6 +62,14 @@ describe('buildEntityBindings', () => {
     assert.deepEqual(descriptor?.label, { text: 'Calibration Known Weight' });
   });
 
+  it('places config entities in settings and the rest beside the readings', () => {
+    assert.equal(
+      setting('dev:number.calibration_known_weight')?.descriptor.placement,
+      'setting',
+    );
+    assert.equal(setting('dev:switch.pump')?.descriptor.placement, 'control');
+  });
+
   it('lists a select entity options as its choices', () => {
     const type = setting('dev:select.mode')?.descriptor.type;
     assert.deepEqual(

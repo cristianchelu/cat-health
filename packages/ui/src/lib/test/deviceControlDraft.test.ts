@@ -14,7 +14,7 @@ const setting = (
   label: { text: key },
   type,
   value,
-  presentation: 'setting',
+  placement: 'setting',
   group: 'config',
 });
 
