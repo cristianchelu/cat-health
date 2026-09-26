@@ -9,7 +9,7 @@ export function shouldBlockDeviceDetailsTabLeave(args: {
   nextTab: DeviceDetailsTabId;
   cameraDirty: boolean;
   recognitionDirty: boolean;
-  feederDirty: boolean;
+  settingsDirty: boolean;
 }): boolean {
   if (args.activeTab === args.nextTab) return false;
 
@@ -19,7 +19,7 @@ export function shouldBlockDeviceDetailsTabLeave(args: {
     case 'recognition':
       return args.recognitionDirty;
     case 'settings':
-      return args.feederDirty;
+      return args.settingsDirty;
     default:
       return false;
   }

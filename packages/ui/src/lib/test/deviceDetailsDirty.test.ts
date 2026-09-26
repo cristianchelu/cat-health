@@ -6,7 +6,7 @@ import { shouldBlockDeviceDetailsTabLeave } from '../deviceDetailsDirty.ts';
 const clean = {
   cameraDirty: false,
   recognitionDirty: false,
-  feederDirty: false,
+  settingsDirty: false,
 };
 
 describe('shouldBlockDeviceDetailsTabLeave', () => {
@@ -38,7 +38,7 @@ describe('shouldBlockDeviceDetailsTabLeave', () => {
         activeTab: 'camera',
         nextTab: 'overview',
         recognitionDirty: true,
-        feederDirty: true,
+        settingsDirty: true,
       }),
       false,
     );
@@ -60,19 +60,19 @@ describe('shouldBlockDeviceDetailsTabLeave', () => {
         activeTab: 'recognition',
         nextTab: 'camera',
         cameraDirty: true,
-        feederDirty: true,
+        settingsDirty: true,
       }),
       false,
     );
   });
 
-  it('blocks leaving settings only when the feeder draft is dirty', () => {
+  it('blocks leaving settings only when the settings draft is dirty', () => {
     assert.equal(
       shouldBlockDeviceDetailsTabLeave({
         ...clean,
         activeTab: 'settings',
         nextTab: 'history',
-        feederDirty: true,
+        settingsDirty: true,
       }),
       true,
     );
@@ -96,7 +96,7 @@ describe('shouldBlockDeviceDetailsTabLeave', () => {
         nextTab: 'camera',
         cameraDirty: true,
         recognitionDirty: true,
-        feederDirty: true,
+        settingsDirty: true,
       }),
       false,
     );
@@ -110,7 +110,7 @@ describe('shouldBlockDeviceDetailsTabLeave', () => {
         nextTab: 'recognition',
         cameraDirty: true,
         recognitionDirty: true,
-        feederDirty: true,
+        settingsDirty: true,
       }),
       false,
     );

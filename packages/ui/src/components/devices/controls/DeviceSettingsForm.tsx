@@ -8,14 +8,13 @@ import {
   controlDraftBaseline,
   controlDraftPatch,
 } from '@/lib/deviceControlDraft';
-import {
-  DeviceSettingsFormView,
-  type DeviceSettingsFormField,
-} from './DeviceSettingsFormView';
+import type { ControlTileGridItem } from './ControlTileGrid';
+import { DeviceSettingsFormView } from './DeviceSettingsFormView';
 
 interface DeviceSettingsFormProps {
   deviceId: number;
   settings: SettingControl[];
+  onDirtyChange?: (dirty: boolean) => void;
   className?: string;
 }
 
@@ -23,6 +22,7 @@ interface DeviceSettingsFormProps {
 const DeviceSettingsForm: React.FC<DeviceSettingsFormProps> = ({
   deviceId,
   settings,
+  onDirtyChange,
   className,
 }) => {
   const { t } = useTranslation();
@@ -36,6 +36,10 @@ const DeviceSettingsForm: React.FC<DeviceSettingsFormProps> = ({
   const { draft, patchDraft, isDirty, commit, requestReset, discardConfirm } =
     useDraftForm(baseline, { baselineKey: JSON.stringify(baseline) });
 
+  React.useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const { patch, invalid } = controlDraftPatch(settings, baseline, draft);
@@ -44,12 +48,13 @@ const DeviceSettingsForm: React.FC<DeviceSettingsFormProps> = ({
     apply.mutate(patch, { onSuccess: () => commit() });
   };
 
-  const fields: DeviceSettingsFormField[] = settings.map((setting) => ({
+  const items: ControlTileGridItem[] = settings.map((setting) => ({
     key: setting.key,
     label: setting.label.text,
     type: setting.type,
     value: draft[setting.key] ?? baseline[setting.key] ?? '',
-    status: setting.pending ? t('devices.controls.pending') : undefined,
+    disabled: apply.isPending,
+    note: setting.pending ? t('devices.controls.pending') : undefined,
     error: invalidKeys.includes(setting.key)
       ? t('devices.controls.invalid_value')
       : setting.failed
@@ -60,7 +65,7 @@ const DeviceSettingsForm: React.FC<DeviceSettingsFormProps> = ({
   return (
     <DeviceSettingsFormView
       className={className}
-      fields={fields}
+      items={items}
       onFieldChange={(key, value) => {
         setInvalidKeys((keys) => keys.filter((k) => k !== key));
         patchDraft({ [key]: value });

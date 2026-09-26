@@ -368,16 +368,16 @@ export function useUpdateDevice(deviceId: number) {
 /**
  * Write device settings. Refetches the device whether the write landed or
  * not, so the controls show what the device reports now, pending markers and
- * failures included.
+ * failures included. The refetch is returned so a caller's own `onSettled`
+ * runs once the new reading is in, not before.
  */
 export function useApplyDeviceSettings(deviceId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (patch: PatchDeviceSettingsRequestDTO) =>
       patchDeviceSettings(deviceId, patch),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
-    },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] }),
   });
 }
 
@@ -385,9 +385,8 @@ export function useRunDeviceAction(deviceId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (key: string) => runDeviceAction(deviceId, key),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
-    },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] }),
   });
 }
 

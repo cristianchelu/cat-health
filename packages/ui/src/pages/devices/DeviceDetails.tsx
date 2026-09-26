@@ -17,6 +17,7 @@ import { DeviceHeader } from './components/DeviceHeader';
 import { ProviderDeviceView } from './components/ProviderDeviceView';
 import { DeviceTimeline } from './components/DeviceTimeline';
 import CameraTab from './components/CameraTab';
+import DeviceSettingsTab from './components/DeviceSettingsTab';
 import FeederSettingsTab from './components/FeederSettingsTab';
 import RecognitionTab from './components/RecognitionTab';
 import './DeviceDetails.css';
@@ -47,9 +48,9 @@ const DeviceDetails: React.FC = () => {
   );
   const [cameraDirty, setCameraDirty] = React.useState(false);
   const [recognitionDirty, setRecognitionDirty] = React.useState(false);
-  const [feederDirty, setFeederDirty] = React.useState(false);
+  const [settingsDirty, setSettingsDirty] = React.useState(false);
   const { blockerOpen, onConfirmLeave, onCancelLeave } = useUnsavedBlocker(
-    cameraDirty || recognitionDirty || feederDirty,
+    cameraDirty || recognitionDirty || settingsDirty,
   );
 
   const {
@@ -101,7 +102,7 @@ const DeviceDetails: React.FC = () => {
         nextTab: next,
         cameraDirty,
         recognitionDirty,
-        feederDirty,
+        settingsDirty,
       })
     ) {
       setPendingTab(next);
@@ -183,10 +184,17 @@ const DeviceDetails: React.FC = () => {
         {visibleTabs.includes('settings') && (
           <TabsContent value="settings">
             <div className="device-content device-settings-content">
-              <FeederSettingsTab
-                device={device}
-                onDirtyChange={setFeederDirty}
-              />
+              {device.type === 'feeder' ? (
+                <FeederSettingsTab
+                  device={device}
+                  onDirtyChange={setSettingsDirty}
+                />
+              ) : (
+                <DeviceSettingsTab
+                  device={device}
+                  onDirtyChange={setSettingsDirty}
+                />
+              )}
             </div>
           </TabsContent>
         )}
@@ -198,7 +206,7 @@ const DeviceDetails: React.FC = () => {
           setPendingTab(null);
           setCameraDirty(false);
           setRecognitionDirty(false);
-          setFeederDirty(false);
+          setSettingsDirty(false);
           if (nextTab) setActiveTab(nextTab);
         }}
         onCancel={() => setPendingTab(null)}

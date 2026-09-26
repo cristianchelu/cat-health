@@ -1,35 +1,38 @@
 import * as React from 'react';
 import type { ControlValueType } from 'shared';
-import {
-  FormField,
-  Input,
-  LabeledSwitchField,
-  Select,
-} from '@/components/ui/form';
+import { FormTile, Input, Select } from '@/components/ui/form';
+import { Switch } from '@/components/ui/Switch';
 import type { ControlDraftValue } from '@/lib/deviceControlDraft';
 import { cn } from '@/lib/utils';
-import './ControlField.css';
+import './ControlTile.css';
 
-interface ControlFieldProps {
+interface ControlTileProps {
   label: string;
   type: ControlValueType;
   value: ControlDraftValue;
   onChange: (value: ControlDraftValue) => void;
+  /**
+   * A number is typed a character at a time, so it is only final once the
+   * field loses focus or Enter is pressed. Switches and selects are final on
+   * change.
+   */
+  onCommit?: () => void;
   disabled?: boolean;
   /** A write in flight, already worded. */
-  status?: string;
+  note?: string;
   error?: string;
   className?: string;
 }
 
-/** One device setting as a field, drawn from its value type. */
-const ControlField: React.FC<ControlFieldProps> = ({
+/** One device setting as a tile, drawn from its value type. */
+const ControlTile: React.FC<ControlTileProps> = ({
   label,
   type,
   value,
   onChange,
+  onCommit,
   disabled,
-  status,
+  note,
   error,
   className,
 }) => {
@@ -39,7 +42,7 @@ const ControlField: React.FC<ControlFieldProps> = ({
     switch (type.kind) {
       case 'boolean':
         return (
-          <LabeledSwitchField
+          <Switch
             id={id}
             checked={value === true}
             onCheckedChange={onChange}
@@ -48,9 +51,10 @@ const ControlField: React.FC<ControlFieldProps> = ({
         );
       case 'number':
         return (
-          <div className="control-field-number">
+          <div className="control-tile-number">
             <Input
               id={id}
+              className="control-tile-input"
               type="number"
               inputMode="decimal"
               value={typeof value === 'string' ? value : ''}
@@ -58,11 +62,18 @@ const ControlField: React.FC<ControlFieldProps> = ({
               max={type.max}
               step={type.step ?? 'any'}
               onChange={(event) => onChange(event.target.value)}
+              onBlur={onCommit}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && onCommit) {
+                  event.preventDefault();
+                  onCommit();
+                }
+              }}
               disabled={disabled}
               variant={error ? 'error' : 'default'}
             />
             {type.unit ? (
-              <span className="control-field-unit">{type.unit}</span>
+              <span className="control-tile-unit">{type.unit}</span>
             ) : null}
           </div>
         );
@@ -70,6 +81,7 @@ const ControlField: React.FC<ControlFieldProps> = ({
         return (
           <Select
             id={id}
+            className="control-tile-select"
             value={typeof value === 'string' ? value : ''}
             placeholder={value === '' ? '—' : undefined}
             options={type.options.map((option) => ({
@@ -85,16 +97,16 @@ const ControlField: React.FC<ControlFieldProps> = ({
   })();
 
   return (
-    <FormField
-      className={cn('control-field', className)}
+    <FormTile
+      className={cn('control-tile', className)}
       label={label}
       htmlFor={id}
+      note={note}
       error={error}
     >
       {control}
-      {status ? <p className="control-field-status">{status}</p> : null}
-    </FormField>
+    </FormTile>
   );
 };
 
-export { ControlField, type ControlFieldProps };
+export { ControlTile, type ControlTileProps };

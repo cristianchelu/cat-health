@@ -32,14 +32,17 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({
   const start = (key: string) => {
     setRunningKey(key);
     setRequestError(null);
-    run.mutate(key, {
-      onError: (error) =>
+    run
+      .mutateAsync(key)
+      .catch((error: unknown) =>
         setRequestError({
           key,
           message: apiErrorMessage(error, t('devices.controls.run_failed')),
         }),
-      onSettled: () => setRunningKey(null),
-    });
+      )
+      .finally(() =>
+        setRunningKey((current) => (current === key ? null : current)),
+      );
   };
 
   const handleRun = (key: string) => {

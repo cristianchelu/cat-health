@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { DeviceType } from 'shared';
+import type { DeviceType, SettingControl } from 'shared';
 
 import { getDeviceDetailsTabs } from '../deviceDetailsTabs.ts';
 
@@ -35,6 +35,25 @@ describe('getDeviceDetailsTabs', () => {
       'recognition',
       'settings',
     ]);
+  });
+
+  it('adds settings for any device with settings that configure it', () => {
+    const setting = (placement: 'setting' | 'control'): SettingControl => ({
+      key: 'dev:number.interval',
+      label: { text: 'Interval' },
+      type: { kind: 'number' },
+      placement,
+      group: 'config',
+      value: 12,
+    });
+    const withSettings = (placement: 'setting' | 'control') =>
+      getDeviceDetailsTabs({
+        type: 'water_fountain',
+        controls: { settings: [setting(placement)], actions: [] },
+      });
+
+    assert.ok(withSettings('setting').includes('settings'));
+    assert.ok(!withSettings('control').includes('settings'));
   });
 
   it('returns overview and history only for camera', () => {
