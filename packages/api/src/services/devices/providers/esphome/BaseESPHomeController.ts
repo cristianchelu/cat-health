@@ -2,7 +2,6 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import {
   defaultShouldRetry,
   type Entity as EspHomeEntity,
-  EntityCategory,
   EspHomeClient,
   EspHomeError,
   LogLevel,
@@ -18,6 +17,13 @@ import type { DeviceController, ProviderDeps, Device } from '../../types.ts';
 import { batterySignal, signalStrengthSignal } from '../../signalBuilders.ts';
 import { WIFI_RSSI_LADDER } from '../../signalStrength.ts';
 import type { ScheduleSensorReader } from './scheduleBindings.ts';
+import {
+  mapEspHomeEntityCategory,
+  objectIdFromName,
+} from './entityIdentity.ts';
+import { composeControlSurface } from '../../control/composeControlSurface.ts';
+import type { ControlSurface } from '../../control/types.ts';
+import { buildEntityBindings, createEntityChannel } from './entityControls.ts';
 
 export const ESPHomeConfigSchema = Type.Object({
   host: Type.String({ minLength: 1 }),
@@ -106,38 +112,7 @@ export const coerceStringState = (
   missingState: unknown,
 ): unknown => (missingState === true ? undefined : (state ?? ''));
 
-/**
- * ESPHome's own object_id derivation (`sanitize(snake_case(name))`):
- * lowercase, spaces to underscores, any char outside [a-z0-9-_] to
- * underscore. Firmware ≥2025.10 omits object_id from ListEntities when it
- * equals this derivation, so the client must reproduce it exactly.
- */
-export function objectIdFromName(name: unknown): string | null {
-  if (typeof name !== 'string' || name.length === 0) {
-    return null;
-  }
-  return name
-    .toLowerCase()
-    .replace(/ /g, '_')
-    .replace(/[^a-z0-9-_]/g, '_');
-}
-
-function mapEspHomeEntityCategory(
-  entity: EspHomeEntity,
-): 'primary' | 'config' | 'diagnostic' {
-  const raw =
-    'entityCategory' in entity &&
-    typeof (entity as { entityCategory?: unknown }).entityCategory === 'number'
-      ? (entity as { entityCategory: number }).entityCategory
-      : undefined;
-  if (raw === EntityCategory.CONFIG) {
-    return 'config';
-  }
-  if (raw === EntityCategory.DIAGNOSTIC) {
-    return 'diagnostic';
-  }
-  return 'primary';
-}
+export { objectIdFromName };
 
 export abstract class BaseESPHomeController implements DeviceController {
   readonly deviceId: number;
@@ -153,6 +128,8 @@ export abstract class BaseESPHomeController implements DeviceController {
 
   /** Aborts the first-connect loop when the controller is torn down. */
   private firstConnect: AbortController | null = null;
+  /** Built from the entity list on first use; dropped when it changes. */
+  private controlSurface: ControlSurface | null | undefined;
   private lastTelemetryAt: number | null = null;
 
   // Abstract methods for subclass customization
@@ -274,6 +251,7 @@ export abstract class BaseESPHomeController implements DeviceController {
         }
       }
 
+      this.controlSurface = undefined;
       this.onEntitiesReceived(data);
       this.recordDeviceActivity();
     });
@@ -565,6 +543,24 @@ export abstract class BaseESPHomeController implements DeviceController {
 
   getSignals(): DeviceSignal[] {
     return this.diagnosticSignals();
+  }
+
+  controls(): ControlSurface | undefined {
+    if (this.controlSurface === undefined) {
+      const { settings, actions } = buildEntityBindings(
+        this.entityDefinitions.values(),
+      );
+      this.controlSurface =
+        settings.length + actions.length === 0
+          ? null
+          : composeControlSurface({
+              state: () => this.sensorValues,
+              settings,
+              actions,
+              channel: createEntityChannel(this.client),
+            });
+    }
+    return this.controlSurface ?? undefined;
   }
 
   getState() {

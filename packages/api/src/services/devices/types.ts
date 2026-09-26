@@ -85,10 +85,10 @@ export interface DeviceController {
    */
   getSignals?(): DeviceSignal[];
   /**
-   * What can be written to the device, and how. Absent for a device that
-   * accepts no writes. Only `DeviceControl` calls it.
+   * What can be written to the device, and how. Absent, or undefined, while
+   * the device offers nothing writable. Only `DeviceControl` calls it.
    */
-  controls?(): ControlSurface;
+  controls?(): ControlSurface | undefined;
 }
 
 export function isCamera(controller: DeviceController): controller is Camera {
