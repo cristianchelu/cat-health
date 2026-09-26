@@ -4,12 +4,13 @@ import {
   parseFeederFoodCompartments,
 } from 'shared';
 import { isRecord } from '@/lib/utils';
+import type { TranslationKey } from '@/lib/translationKey';
 import { resolveSurePetFeederFoodCompartments } from './surepet/resolveSurePetFeederFoodCompartments';
 
 export interface FeederFoodCompartmentDescriptor {
   id: string;
   /** i18n key for compartment label */
-  labelKey: string;
+  labelKey: TranslationKey;
 }
 
 interface FeederFoodCompartmentsRegistration {

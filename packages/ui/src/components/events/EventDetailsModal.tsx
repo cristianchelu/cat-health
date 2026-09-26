@@ -45,7 +45,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { causeLabelKey } from '@/lib/eventAttribution';
 import { useFormatters } from '@/hooks/context/useRegionalPreferences';
-import { EVENT_TITLE_KEYS } from '@/lib/eventTitles';
+import { EVENT_TITLE_KEYS } from '@/lib/eventLabels';
 
 import TimelapsePlayer from './TimelapsePlayer';
 import { buildTimelapseTimeline } from './buildTimelapseTimeline';

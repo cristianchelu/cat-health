@@ -1,4 +1,6 @@
 import { NON_PET_CAUSES } from 'shared';
+
+import type { TranslationKey } from '@/lib/translationKey';
 import type {
   EventCauseDTO,
   PatchEventRequestDTO,
@@ -84,11 +86,13 @@ export function attributionSelectOptions(
 }
 
 /** i18n key for a cause, e.g. `event_attribution.cause_robot_vacuum`. */
-export function causeLabelKey(cause: EventCauseDTO): string {
+export function causeLabelKey(cause: EventCauseDTO): TranslationKey {
   return `event_attribution.cause_${cause}`;
 }
 
 /** i18n key for a source, e.g. `event_attribution.source_microchip`. */
-export function sourceLabelKey(source: EventAttributionSourceDTO): string {
+export function sourceLabelKey(
+  source: EventAttributionSourceDTO,
+): TranslationKey {
   return `event_attribution.source_${source}`;
 }

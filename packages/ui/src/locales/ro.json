@@ -390,6 +390,7 @@
     "yesterday": "Ieri"
   },
   "event_attribution": {
+    "cause_unknown": "Necunoscut",
     "cause_pet": "Un animal de companie",
     "cause_robot_vacuum": "Aspirator robot",
     "cause_human": "O persoană",

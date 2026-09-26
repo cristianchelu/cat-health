@@ -1,9 +1,11 @@
 import {
   deriveLitterboxSampleRateHz,
+  type LitterboxAnalysisStatePeriodDTO,
   type LitterboxUseEventDataDTO,
 } from 'shared';
 
 import type { TraceBand } from '@/components/charts/TraceLayers';
+import type { TranslationKey } from '@/lib/translationKey';
 
 import type { DecodedLitterboxRawData } from './decodeLitterboxRawData';
 import { trimmedSliceMeanSigma } from './litterboxPeriodStats';
@@ -16,16 +18,11 @@ export const LITTERBOX_STATE_COLORS: Record<string, string> = {
   gap: 'var(--color-signal-gap)',
 };
 
-export const LITTERBOX_STATE_LABEL_KEYS: Record<string, string> = {
+export const LITTERBOX_STATE_LABEL_KEYS: Record<string, TranslationKey> = {
   entering: 'event_details.legend_entering',
   occupied: 'event_details.legend_occupied',
   eliminating: 'event_details.legend_eliminating',
   gap: 'event_details.legend_gap',
-};
-
-export const ELIMINATION_LABEL_KEYS: Record<string, string> = {
-  urination: 'overview.urination',
-  defecation: 'overview.defecation',
 };
 
 /** One analyzer period, measured. */
@@ -41,7 +38,7 @@ export interface LitterboxSection {
    */
   sigma: number | null;
   /** The verdict that σ produced, where the analyzer recorded one. */
-  eliminationType: string | null;
+  eliminationType: LitterboxAnalysisStatePeriodDTO['elimination_type'] | null;
 }
 
 export interface LitterboxAdvancedModel {

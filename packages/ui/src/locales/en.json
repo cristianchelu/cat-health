@@ -442,6 +442,7 @@
     "yesterday": "Yesterday"
   },
   "event_attribution": {
+    "cause_unknown": "Unknown",
     "cause_pet": "A pet",
     "cause_robot_vacuum": "Robot vacuum",
     "cause_human": "A person",

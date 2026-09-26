@@ -1,6 +1,7 @@
 import type * as React from 'react';
 import type { Control, FieldValues } from 'react-hook-form';
 import type { CalloutTone } from '@/components/ui/Callout';
+import type { TranslationKey } from '@/lib/translationKey';
 
 /**
  * Form shape shared by the connect step and the provider edit page.
@@ -51,10 +52,10 @@ export interface ProviderAccountConfigModule {
   /** Field block rendered inside the shared FormShell. Not a `<form>`. */
   Fields: React.FC<ProviderAccountFieldsProps>;
   /** Optional callout shown under the fields. */
-  note?: { i18nKey: string; tone: CalloutTone };
+  note?: { i18nKey: TranslationKey; tone: CalloutTone };
   /**
    * Replaces the connect card's "sign in with the provider's app" line for
    * providers where there is no app to sign in to.
    */
-  connectSubtitleKey?: string;
+  connectSubtitleKey?: TranslationKey;
 }

@@ -13,12 +13,16 @@ import {
   TriangleAlert,
   Wifi,
 } from 'lucide-react';
+import type { TFunction } from 'i18next';
 import * as React from 'react';
 import type {
   GetEventChildDTO,
   GetEventListItemDTO,
   LitterboxUseEliminationType,
 } from 'shared';
+
+import { ELIMINATION_LABEL_KEYS } from '@/lib/eventLabels';
+
 import { ELIMINATION_KIND_ICONS } from './litterboxEventIcons';
 import { gramsToKgInput } from './useLitterboxWeightEdit';
 
@@ -32,14 +36,6 @@ const ELIMINATION_ICONS: Record<
   both: Toilet,
   no_elimination: Toilet,
   unknown: Toilet,
-};
-
-const ELIMINATION_LABEL_KEYS: Record<LitterboxUseEliminationType, string> = {
-  urination: 'overview.urination',
-  defecation: 'overview.defecation',
-  both: 'overview.both',
-  no_elimination: 'overview.no_elimination',
-  unknown: 'common.unknown',
 };
 
 /**
@@ -86,7 +82,7 @@ export interface BuildFactsOptions {
   event: GetEventListItemDTO;
   /** Child rows of the visit; the cat's weight is one of them. */
   children: GetEventChildDTO[] | undefined;
-  t: (key: string, options?: Record<string, unknown>) => string;
+  t: TFunction;
 }
 
 /**

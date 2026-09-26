@@ -12,6 +12,8 @@ import type {
   DeviceConnectivityEventDataDTO,
   LitterboxMaintenanceEventTypeDTO,
 } from 'shared';
+import type { TranslationKey } from '@/lib/translationKey';
+
 import type { EventComponentProps } from './types';
 import TimelineEventShell from './TimelineEventShell';
 import './DeviceCentricEvent.css';
@@ -30,13 +32,15 @@ const CONNECTIVITY_COLOR: Record<ConnectivityState, string> = {
   error: 'var(--color-error)',
 };
 
-const MAINTENANCE_LABEL_KEY: Record<LitterboxMaintenanceEventTypeDTO, string> =
-  {
-    scoop: 'events.litterbox_maintenance_scoop',
-    deep_clean: 'events.litterbox_maintenance_deep_clean',
-    litter_change: 'events.litterbox_maintenance_litter_change',
-    litter_addition: 'events.litterbox_maintenance_litter_addition',
-  };
+const MAINTENANCE_LABEL_KEY: Record<
+  LitterboxMaintenanceEventTypeDTO,
+  TranslationKey
+> = {
+  scoop: 'events.litterbox_maintenance_scoop',
+  deep_clean: 'events.litterbox_maintenance_deep_clean',
+  litter_change: 'events.litterbox_maintenance_litter_change',
+  litter_addition: 'events.litterbox_maintenance_litter_addition',
+};
 
 const DeviceConnectivityEventRow: React.FC<EventComponentProps> = (props) => {
   const { t } = useTranslation();
@@ -47,7 +51,7 @@ const DeviceConnectivityEventRow: React.FC<EventComponentProps> = (props) => {
   }
 
   const Icon = CONNECTIVITY_ICON[connectivity.state];
-  const titleKey = `events.device_connectivity_${connectivity.state}`;
+  const titleKey: TranslationKey = `events.device_connectivity_${connectivity.state}`;
 
   return (
     <TimelineEventShell

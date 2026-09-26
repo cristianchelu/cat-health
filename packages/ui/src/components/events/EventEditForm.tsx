@@ -51,6 +51,8 @@ import {
   buildFoodBrowseTree,
   type BrowseStep,
 } from '@/components/food-picker/foodLadder';
+import { ELIMINATION_LABEL_KEYS } from '@/lib/eventLabels';
+import type { TranslationKey } from '@/lib/translationKey';
 import {
   gramsToKgInput,
   MAX_WEIGHT_G,
@@ -86,15 +88,7 @@ const ELIMINATION_TYPES: LitterboxUseEliminationType[] = [
   'unknown',
 ];
 
-const ELIMINATION_LABEL_KEYS: Record<LitterboxUseEliminationType, string> = {
-  urination: 'overview.urination',
-  defecation: 'overview.defecation',
-  both: 'overview.both',
-  no_elimination: 'overview.no_elimination',
-  unknown: 'common.unknown',
-};
-
-const RANGE_ERROR_KEYS: Record<EditableMeasure, string> = {
+const RANGE_ERROR_KEYS: Record<EditableMeasure, TranslationKey> = {
   weight: 'event_details.weight_out_of_range',
   food: 'event_details.edit_food_out_of_range',
   water: 'event_details.edit_water_out_of_range',

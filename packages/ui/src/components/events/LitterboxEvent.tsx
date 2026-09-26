@@ -11,6 +11,7 @@ import SplitIcon from '../icons/SplitIcon';
 import { LITTERBOX_SAMPLE_HZ, type LitterboxUseEliminationType } from 'shared';
 import { eliminationBadgeRowsFromSegments } from '@/lib/litterboxEliminationBadges';
 import { hasPersistedLitterboxAnnotation } from '@/types/litterbox';
+import type { TranslationKey } from '@/lib/translationKey';
 import EventEliminationSegments from './meta/EventEliminationSegments';
 import TimelineEventShell from './TimelineEventShell';
 
@@ -41,7 +42,7 @@ const ELIMINATION_BOTH_HALVES = [
   { icon: PoopIcon, color: 'var(--color-litterbox-defecation)' },
 ] as const;
 
-const TITLE_KEY: Record<LitterboxUseEliminationType, string> = {
+const TITLE_KEY: Record<LitterboxUseEliminationType, TranslationKey> = {
   urination: 'overview.urination',
   defecation: 'overview.defecation',
   both: 'overview.both',

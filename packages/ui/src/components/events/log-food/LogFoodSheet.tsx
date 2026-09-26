@@ -12,6 +12,7 @@ import { LoadingState } from '@/components/ui/PageState';
 import { FoodBrowseLevel } from '@/components/food-picker/FoodBrowseLevel';
 import { PickerRow } from '@/components/ui/PickerRow';
 import {
+  coarseFoodGroup,
   intakeFoodType,
   kcalPerKilogram,
 } from '@/components/food-picker/foodGroups';
@@ -175,7 +176,7 @@ const LogFoodSheet: React.FC<LogFoodSheetProps> = ({
             nowrap
             parts={[
               amountFood.brand,
-              t(`food_picker.group_${intakeFoodType(amountFood)}`),
+              t(`food_picker.group_${coarseFoodGroup(amountFood.food_type)}`),
               amountFood.serving_size_g != null
                 ? t('log_food.portion_pouch', {
                     size: amountFood.serving_size_g,
@@ -282,7 +283,9 @@ const LogFoodSheet: React.FC<LogFoodSheetProps> = ({
                         nowrap
                         parts={[
                           food.brand,
-                          t(`food_picker.group_${intakeFoodType(food)}_short`),
+                          t(
+                            `food_picker.group_${coarseFoodGroup(food.food_type)}_short`,
+                          ),
                         ]}
                       />
                     }

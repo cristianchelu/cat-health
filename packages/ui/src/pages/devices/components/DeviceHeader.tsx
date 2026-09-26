@@ -84,7 +84,7 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({
             time: lastSeenRelative ?? lastSeenAbsolute ?? '—',
           })
         : t('devices.never_seen')
-      : t(`devices.status.${device.status}`);
+      : t(`devices.status.${device.status ?? 'unknown'}`);
 
   return (
     <AppHeader className={cn('device-header', className)}>

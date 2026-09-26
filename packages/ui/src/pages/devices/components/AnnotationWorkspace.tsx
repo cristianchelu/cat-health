@@ -47,6 +47,7 @@ import {
   parseLitterboxUseEliminationType,
 } from 'shared';
 import type { LitterboxBoutAnnotation } from '@/types/litterbox';
+import { ELIMINATION_LABEL_KEYS } from '@/lib/eventLabels';
 import './AnnotationWorkspace.css';
 
 /** Stable fallback so `periods` stays referentially equal when there are no analyzer segments. */
@@ -70,15 +71,12 @@ const BOUT_TYPES: LitterboxBoutAnnotation['bout_type'][] = [
   'unknown',
 ];
 
-const ELIMINATION_TYPES: {
-  value: LitterboxUseEliminationType;
-  label: string;
-}[] = [
-  { value: 'urination', label: 'overview.urination' },
-  { value: 'defecation', label: 'overview.defecation' },
-  { value: 'both', label: 'overview.both' },
-  { value: 'no_elimination', label: 'overview.no_elimination' },
-  { value: 'unknown', label: 'common.unknown' },
+const ELIMINATION_TYPES: LitterboxUseEliminationType[] = [
+  'urination',
+  'defecation',
+  'both',
+  'no_elimination',
+  'unknown',
 ];
 
 function getLitterboxData(
@@ -504,9 +502,9 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
     cause: (cause) => t(causeLabelKey(cause)),
   });
 
-  const eliminationOptions = ELIMINATION_TYPES.map(({ value, label }) => ({
+  const eliminationOptions = ELIMINATION_TYPES.map((value) => ({
     value,
-    label: t(label),
+    label: t(ELIMINATION_LABEL_KEYS[value]),
   }));
 
   const hasRawData = weights.length > 0;

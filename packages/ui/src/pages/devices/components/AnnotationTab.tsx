@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/form';
 import { useFormatters } from '@/hooks/context/useRegionalPreferences';
+import { ELIMINATION_LABEL_KEYS } from '@/lib/eventLabels';
 
 type VerifiedFilter = 'all' | 'verified' | 'unverified';
 type EliminationFilter = LitterboxUseEliminationType | 'all';
@@ -265,7 +266,7 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
     { value: 'all', label: t('annotation.filter_all_types') },
     ...ELIMINATION_TYPES.map((et) => ({
       value: et,
-      label: t(`overview.${et}`),
+      label: t(ELIMINATION_LABEL_KEYS[et]),
     })),
   ];
 
@@ -789,7 +790,7 @@ const AnnotationTab: React.FC<AnnotationTabProps> = ({ deviceId }) => {
                         <span
                           className={`annotation-elim-badge elim-${d.elimination_type}`}
                         >
-                          {t(`overview.${d.elimination_type}`)}
+                          {t(ELIMINATION_LABEL_KEYS[d.elimination_type])}
                         </span>
                       )}
                     </div>

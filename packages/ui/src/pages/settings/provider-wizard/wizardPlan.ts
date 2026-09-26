@@ -3,6 +3,7 @@ import type {
   ProviderCapabilities,
   ProviderInfoDTO,
 } from 'shared';
+import type { TranslationKey } from '@/lib/translationKey';
 import type {
   RegisterSource,
   WizardEntry,
@@ -13,7 +14,7 @@ import type {
 export interface WizardPlanStep {
   id: WizardStep;
   /** i18n key for the stepper label. */
-  labelKey: string;
+  labelKey: TranslationKey;
 }
 
 export interface WizardPlan {
@@ -236,7 +237,7 @@ export function getBackTarget(
 export function getBackTargetLabelKey(
   plan: WizardPlan | null,
   state: WizardState,
-): string | null {
+): TranslationKey | null {
   const target = getBackTarget(plan, state);
   if (target === 'exit') return null;
   return plan?.steps.find((step) => step.id === target.step)?.labelKey ?? null;

@@ -1,15 +1,12 @@
-import type { EventType } from 'shared';
+import type { EventType, LitterboxUseEliminationType } from 'shared';
 
-import type en from '@/locales/en.json';
-
-type EventDetailsKey = `event_details.${keyof typeof en.event_details}`;
+import type { TranslationKey } from '@/lib/translationKey';
 
 /**
- * The name of each kind of event. Keyed by the full `EventType` union and
- * typed against `en.json`, so a new event type without a title, or a title
- * missing from the base locale, fails the build instead of rendering the key.
+ * The name of each kind of event. Keyed by the full `EventType` union, so a new
+ * event type without a title fails the build instead of rendering the key.
  */
-export const EVENT_TITLE_KEYS: Record<EventType, EventDetailsKey> = {
+export const EVENT_TITLE_KEYS: Record<EventType, TranslationKey> = {
   weight_measurement: 'event_details.title_weight_measurement',
   water_intake: 'event_details.title_water_intake',
   litterbox_use: 'event_details.title_litterbox_use',
@@ -19,4 +16,16 @@ export const EVENT_TITLE_KEYS: Record<EventType, EventDetailsKey> = {
   device_connectivity: 'event_details.title_device_connectivity',
   device_enablement: 'event_details.title_device_enablement',
   pet_presence: 'event_details.title_pet_presence',
+};
+
+/** What a litterbox visit left behind, as a label. */
+export const ELIMINATION_LABEL_KEYS: Record<
+  LitterboxUseEliminationType,
+  TranslationKey
+> = {
+  urination: 'overview.urination',
+  defecation: 'overview.defecation',
+  both: 'overview.both',
+  no_elimination: 'overview.no_elimination',
+  unknown: 'common.unknown',
 };

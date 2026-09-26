@@ -8,13 +8,13 @@ import { TraceBands, TraceLine } from '@/components/charts/TraceLayers';
 import { ReadoutGrid } from '@/components/ui/ReadoutGrid';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useFormatters } from '@/hooks/context/useRegionalPreferences';
+import { ELIMINATION_LABEL_KEYS } from '@/lib/eventLabels';
 
 import type { DecodedLitterboxRawData } from './decodeLitterboxRawData';
 import { formatSigmaG } from './litterboxPeriodStats';
 import { formatClock } from './advancedDetailsFormat';
 import {
   buildLitterboxAdvancedModel,
-  ELIMINATION_LABEL_KEYS,
   LITTERBOX_STATE_COLORS,
   LITTERBOX_STATE_LABEL_KEYS,
 } from './litterboxAdvancedModel';

@@ -1,10 +1,10 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import type { GetEventListItemDTO, LitterboxUseEliminationType } from 'shared';
+import type { GetEventListItemDTO } from 'shared';
 
 import { SheetPageHeader } from '@/components/ui/SheetPageHeader';
 import { useFormatters } from '@/hooks/context/useRegionalPreferences';
-import { EVENT_TITLE_KEYS } from '@/lib/eventTitles';
+import { ELIMINATION_LABEL_KEYS, EVENT_TITLE_KEYS } from '@/lib/eventLabels';
 
 import type { DecodedLitterboxRawData } from './decodeLitterboxRawData';
 import type { DecodedWaterRawData } from './decodeWaterRawData';
@@ -22,14 +22,6 @@ import './EventAdvancedDetails.css';
 export type AdvancedSignal =
   | { type: 'litterbox_use'; decoded: DecodedLitterboxRawData }
   | { type: 'water_intake'; decoded: DecodedWaterRawData };
-
-const ELIMINATION_LABEL_KEYS: Record<LitterboxUseEliminationType, string> = {
-  urination: 'overview.urination',
-  defecation: 'overview.defecation',
-  both: 'overview.both',
-  no_elimination: 'overview.no_elimination',
-  unknown: 'common.unknown',
-};
 
 export interface EventAdvancedDetailsProps {
   event: GetEventListItemDTO;

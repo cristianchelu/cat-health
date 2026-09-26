@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import { DEVICE_SIGNAL_KEYS, type DeviceSignal } from 'shared';
+import type { TranslationKey } from '@/lib/translationKey';
 
 /**
  * A link strength in words.
@@ -13,7 +14,7 @@ import { DEVICE_SIGNAL_KEYS, type DeviceSignal } from 'shared';
  * again here would put WiFi's idea of "good" onto radios that do not share it,
  * which is the whole thing `RssiLadder` exists to prevent.
  */
-function signalQualityKey(lit: number, of: number): string {
+function signalQualityKey(lit: number, of: number): TranslationKey {
   if (of <= 0) {
     return 'devices.signals.quality.very_weak';
   }

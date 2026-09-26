@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 import { Bot, Cpu, PawPrint, Radio, Server, Video } from 'lucide-react';
+import type { TranslationKey } from '@/lib/translationKey';
 import { surepetAccountIdentity } from './surepet/surepetAccountConfig.ts';
 import { inferenceAccountIdentity } from './inference/inferenceAccountConfig.ts';
 import { mqttAccountIdentity } from './mqtt/mqttAccountConfig.ts';
@@ -27,7 +28,7 @@ export interface ProviderBrand {
    * Set when the label is a common noun rather than a brand name, so it can be
    * translated. Brand names (Sure Petcare, ESPHome, Thingino) have none.
    */
-  labelKey?: string;
+  labelKey?: TranslationKey;
   /** Tile background. */
   tileColor: string;
   /**

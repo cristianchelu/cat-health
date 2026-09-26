@@ -115,9 +115,8 @@ const EXTRA_KEYS: Record<string, Set<string>> = {
 };
 
 /**
- * `t('some.key')` renders the key itself when it is missing, so a typo ships
- * as literal "settings.title" on screen rather than failing anywhere. This
- * catches statically-written keys before that happens.
+ * Every source file outside the tests. Whether a key exists is the compiler's
+ * job (`src/i18next.d.ts`); this only feeds the unreferenced-key report.
  */
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -166,30 +165,6 @@ function loadLocale(name: string): Set<string> {
 }
 
 describe('i18n keys', () => {
-  it(`every literal t() key exists in ${BASE_LOCALE}.json`, () => {
-    const declared = loadLocale(BASE_LOCALE);
-
-    const missing: string[] = [];
-    for (const file of sourceFiles(SRC)) {
-      const source = readFileSync(file, 'utf8');
-      for (const [, key] of source.matchAll(T_CALL)) {
-        // i18next pluralization: `count` picks a _one/_other variant.
-        const pluralised = [`${key}_one`, `${key}_other`].some((k) =>
-          declared.has(k),
-        );
-        if (!declared.has(key) && !pluralised) {
-          missing.push(`${path.relative(SRC, file)}: ${key}`);
-        }
-      }
-    }
-
-    assert.deepEqual(
-      [...new Set(missing)].sort(),
-      [],
-      `Missing translations — these render as the raw key on screen:\n${missing.join('\n')}`,
-    );
-  });
-
   it('every locale carries every key, bar the frozen untranslated set', () => {
     const base = loadLocale(BASE_LOCALE);
 
