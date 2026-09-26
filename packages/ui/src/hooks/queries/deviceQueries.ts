@@ -71,9 +71,10 @@ export function useCameraPreviewAtlas(enabled: boolean) {
 
   const [sheet, setSheet] = React.useState<PreviewAtlasSheet | undefined>();
   const sheetRef = React.useRef(sheet);
-  sheetRef.current = sheet;
   const layoutRef = React.useRef(layout);
-  layoutRef.current = layout;
+  React.useEffect(() => {
+    layoutRef.current = layout;
+  });
   const blobsRef = React.useRef<string[]>([]);
   const imagesRef = React.useRef<HTMLImageElement[]>([]);
 
