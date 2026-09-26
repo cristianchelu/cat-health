@@ -30,7 +30,7 @@ export class IntegrationManager
   private mediaManager: MediaManager;
   private readonly presence: DevicePresence;
   private onSnapshotBuffer?: (deviceId: number, buffer: Buffer) => void;
-  private onSnapshotForget?: (deviceId: number) => void;
+  private readonly retiredListeners = new Set<(deviceId: number) => void>();
 
   constructor(db: Kysely<Database>, eventBus: EventBus) {
     this.mediaManager = new MediaManager(db);
@@ -62,7 +62,22 @@ export class IntegrationManager
   }): void {
     this.onSnapshotBuffer = (deviceId, buffer) =>
       cache.remember(deviceId, buffer);
-    this.onSnapshotForget = (deviceId) => cache.forget(deviceId);
+    this.onControllerRetired((deviceId) => cache.forget(deviceId));
+  }
+
+  /**
+   * Hear about every controller this manager tears down, whether one device
+   * was invalidated or its whole account was reinitialized. Anything holding
+   * per-controller state (cached frames, in-flight writes) drops it here.
+   * Returns the unsubscribe.
+   */
+  onControllerRetired(listener: (deviceId: number) => void): () => void {
+    this.retiredListeners.add(listener);
+    return () => this.retiredListeners.delete(listener);
+  }
+
+  private retireController(deviceId: number): void {
+    for (const listener of this.retiredListeners) listener(deviceId);
   }
 
   getPresence(): DevicePresence {
@@ -196,6 +211,7 @@ export class IntegrationManager
     // That is our own doing, so it must not reach the timeline as an outage.
     for (const device of devices) {
       this.presence.forget(device.id);
+      this.retireController(device.id);
     }
 
     const existingManager = this.accountManagers.get(accountId);
@@ -246,7 +262,7 @@ export class IntegrationManager
 
   /** Teardown cached controller for a device so next use gets fresh config (e.g. after PATCH device). */
   async invalidateDeviceController(deviceId: number): Promise<void> {
-    this.onSnapshotForget?.(deviceId);
+    this.retireController(deviceId);
     const device = await this.deps.db
       .selectFrom('device')
       .select(['provider_account_id'])
