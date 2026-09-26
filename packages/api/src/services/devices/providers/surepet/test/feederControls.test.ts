@@ -95,6 +95,17 @@ describe('SureFeed controls', () => {
     assert.equal(refreshes(), 1);
   });
 
+  it('fails a write the cloud answered without a queued request', async () => {
+    const { surface } = makeFeeder({ lid: { close_delay: 4 } }, null);
+
+    const submission = await surface.submit(setDelay('slow'));
+
+    assert.equal(
+      submission.status === 'failed' && submission.reason,
+      'unknown',
+    );
+  });
+
   it('reports a request the feeder never picked up as a timeout', async () => {
     const { surface, queue } = makeFeeder(
       { lid: { close_delay: 4 } },

@@ -106,9 +106,17 @@ export function createFeederControlSurface(
     channel: {
       async submit(write): Promise<Acceptance<string>> {
         const request = await writer.put(write);
-        const status = request ? requestStatus(request) : undefined;
-        const settlement = settlementOf(status);
-        if (settlement === undefined && request?.request_id != null) {
+        // Their app reads `results[0]` unguarded, so a reply without one is
+        // an error there too.
+        if (!request) {
+          return {
+            status: 'failed',
+            reason: 'unknown',
+            message: 'SurePet did not queue the change',
+          };
+        }
+        const settlement = settlementOf(requestStatus(request));
+        if (settlement === undefined && request.request_id != null) {
           return { status: 'pending', ref: String(request.request_id) };
         }
         await writer.refresh().catch(() => {});
