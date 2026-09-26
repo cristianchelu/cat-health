@@ -1,4 +1,5 @@
 export { FormField, type FormFieldProps } from './FormField';
+export { FormTile, type FormTileProps } from './FormTile';
 export { Checkbox, type CheckboxProps } from './Checkbox';
 export { Input, type InputProps } from './Input';
 export { Textarea, type TextareaProps } from './Textarea';

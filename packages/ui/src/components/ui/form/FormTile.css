@@ -1,0 +1,51 @@
+.form-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  width: 100%;
+  padding: var(--space-xs) var(--space-lg);
+  background-color: var(--color-surface);
+  border: var(--border-thin);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-fast);
+
+  &:focus-within {
+    border-color: var(--color-border-hover);
+  }
+
+  .form-tile-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    min-height: var(--control-height-md);
+  }
+
+  .form-tile-label {
+    min-width: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text-light);
+    line-height: var(--line-height-tight);
+  }
+
+  .form-tile-control {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .form-tile-note,
+  .form-tile-error {
+    margin: 0;
+    font-size: var(--text-xs);
+  }
+
+  .form-tile-note {
+    color: var(--color-text-muted);
+  }
+
+  .form-tile-error {
+    color: var(--color-error);
+  }
+}

@@ -291,7 +291,7 @@ export default ComponentName;
 
 **The commit row** — the reference build is _Form Actions.dc.html_ in the Pet Assistant design project, and a screen that disagrees with it is wrong:
 
-- One row per screen, after the last card, **in the page column** — `FormShell` wraps `FormCard`, never the other way round. A `FormActions` inside a `FormCard` is a bug, and so is a second Save in the page header.
+- One row per screen, after the last card (or `FormTile` grid), **in the page column** — `FormShell` wraps `FormCard`, never the other way round. A `FormActions` inside a `FormCard` is a bug, and so is a second Save in the page header.
 - `Cancel` (`neutral`) · primary, right-aligned, `padding-top: --space-lg`, **no hairline above it**. One filled button per row.
 - **Navigation is not a form action.** Page back and step back are the `AppHeaderBar` back control; the row never grows a Back. `leading` is the far end of the row: the page's destructive, or state (“2 new selected”). Never a second commit.
 - **Card-local buttons are tools** — Test recognition, Rescan, Scan barcode. Left-aligned inside the card at the point of use, `size="sm"`, `secondary` for the real tool and `ghost` for the incidental one. Never in the commit row.
@@ -303,6 +303,7 @@ export default ComponentName;
 
 - `FormShell` — `<form>` + optional `FormError` + `FormActions`; wraps the card
 - `FormCard` / `FormCardHead` / `FormCardBody` — the card the fields sit on, its tile + title + subtitle header (provider brand tile, or `DeviceTypeTile` for devices), and the field stack
+- `FormTile` — one field as a mini-card, label left and a compact control right, laid out in a `ResponsiveTileGrid` inside `FormShell`. For forms made of many small values (a device's settings), where a full-width field per value stretches a three-digit number across the page. The tile is the surface, so no `FormCard` goes around the grid; the section heading is a `SectionHeader` above it, outside any tile
 - `FormActions` — `Cancel` (`neutral`) left, Save/Create/Register (`primary`) right, optional `leading` at the far end; `cancelVariant` only where the default is genuinely wrong
 - `FormInlineDiscard` — a `FormActions` preset (Keep editing `neutral` · Discard `danger`) that swaps into a dirty modal's footer; **never** a second `Dialog` over the form modal
 - `FormError` — mutation error banner
