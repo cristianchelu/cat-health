@@ -9,7 +9,15 @@ import {
 } from 'shared';
 import type { SurePetFeederConfig } from 'shared';
 import type { DeviceController, Device, ProviderDeps } from '../../types.ts';
-import type { SurePetDeviceDetailPayload } from './types.ts';
+import type { ControlSurface } from '../../control/types.ts';
+import type {
+  SurePetDeviceControlPayload,
+  SurePetDeviceDetailPayload,
+} from './types.ts';
+import {
+  createFeederControlSurface,
+  type SurePetControlWriter,
+} from './feederControls.ts';
 import { computeFillPercentages } from './mapFeedingEvent.ts';
 import {
   computeBatteryPercent,
@@ -62,12 +70,21 @@ export class FeederController implements DeviceController {
   private config: SurePetFeederConfig;
   private status: DeviceStatus = 'unknown';
   private feederState: SureFeederState = { bowl_status: [] };
-  private lastControl: unknown;
+  private lastControl: SurePetDeviceControlPayload | undefined;
+  private readonly controlSurface: ControlSurface | undefined;
 
-  constructor(device: Device, deps: ProviderDeps) {
+  /** Without a writer the feeder is read-only, as it is in tests. */
+  constructor(
+    device: Device,
+    deps: ProviderDeps,
+    writer?: SurePetControlWriter,
+  ) {
     this.device = device;
     this.deps = deps;
     this.deviceId = device.id;
+    this.controlSurface = writer
+      ? createFeederControlSurface(() => this.lastControl, writer)
+      : undefined;
     this.config = requireWithSchema(
       SurePetFeederConfigSchema,
       device.config,
@@ -91,6 +108,10 @@ export class FeederController implements DeviceController {
 
   getState(): Record<string, unknown> {
     return { provider: 'surepet', ...this.feederState };
+  }
+
+  controls(): ControlSurface | undefined {
+    return this.controlSurface;
   }
 
   getSignals(): DeviceSignal[] {
@@ -205,7 +226,7 @@ export class FeederController implements DeviceController {
       battery_percent: batteryPercent,
       last_refreshed_at: new Date().toISOString(),
     };
-    this.lastControl = payload.control;
+    this.lastControl = payload.control ?? undefined;
 
     const online = payload.status?.online;
     if (online === false) {
@@ -221,7 +242,7 @@ export class FeederController implements DeviceController {
     return Number.parseInt(this.device.external_id, 10);
   }
 
-  getDeviceControl(): unknown {
+  getDeviceControl(): SurePetDeviceControlPayload | undefined {
     return this.lastControl;
   }
 

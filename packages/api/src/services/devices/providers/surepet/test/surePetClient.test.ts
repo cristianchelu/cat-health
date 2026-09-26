@@ -90,4 +90,43 @@ describe('SurePetClient', () => {
       },
     );
   });
+
+  it('writes a control change and returns the request it queued', async () => {
+    const calls: Array<{ url: string; method?: string; body?: unknown }> = [];
+    mock.method(
+      globalThis,
+      'fetch',
+      async (url: string | URL | Request, init?: RequestInit) => {
+        calls.push({
+          url: String(url),
+          method: init?.method,
+          body: typeof init?.body === 'string' ? JSON.parse(init.body) : null,
+        });
+        return new Response(
+          JSON.stringify({
+            data: { lid: { close_delay: 20 } },
+            results: [{ request_id: 'req-1', status_id: 5 }],
+          }),
+          { status: 200 },
+        );
+      },
+    );
+
+    const client = new SurePetClient({
+      email: 'cat@example.com',
+      password: 'secret',
+      deviceId: 'device-1',
+      // Long enough that the client takes it as live and skips the login.
+      token: 't'.repeat(400),
+    });
+
+    const request = await client.putDeviceControl(123, {
+      lid: { close_delay: 20 },
+    });
+
+    assert.deepEqual(request, { request_id: 'req-1', status_id: 5 });
+    const write = calls.find((call) => call.method === 'PUT');
+    assert.ok(write?.url.endsWith('/device/123/control/async'));
+    assert.deepEqual(write?.body, { lid: { close_delay: 20 } });
+  });
 });

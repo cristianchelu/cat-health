@@ -59,6 +59,26 @@ export interface SurePetDeviceControlPayload {
   } | null;
 }
 
+/**
+ * A partial control document for `control/async`. Their app sends one
+ * top-level key per request and always the whole sub-object under it.
+ */
+export type SurePetControlWrite = Pick<
+  SurePetDeviceControlPayload,
+  'lid' | 'bowls'
+> & {
+  /** `FeederTareType` on a feeder. */
+  tare?: number;
+};
+
+/** One request as `control/async` returns it and `control/status` lists it. */
+export interface SurePetControlRequest {
+  request_id?: string | number | null;
+  /** `ControlRequestStatus`; their app reads either field. */
+  status_id?: number | null;
+  status?: number | null;
+}
+
 export interface SurePetBowlStatusPayload {
   position?: number | null;
   current_weight?: number | null;

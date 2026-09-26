@@ -44,6 +44,7 @@ import {
   resolveLocalPetIdFromProviderData,
 } from './extractFeedingEvents.ts';
 import { resolveSurePetFoodCompartmentId } from './foodCompartments.ts';
+import type { SurePetControlWriter } from './feederControls.ts';
 import {
   mapFeedingDatapointToEvent,
   mapServedDatapointToEvent,
@@ -287,7 +288,11 @@ export class SurePetAccountManager implements AccountManager {
       );
     }
 
-    const controller = new FeederController(device, this.deps);
+    const controller = new FeederController(
+      device,
+      this.deps,
+      this.controlWriter(device.id),
+    );
     this.controllers.set(device.id, controller);
     return controller;
   }
@@ -386,6 +391,29 @@ export class SurePetAccountManager implements AccountManager {
 
     const config = parseAccountConfig(row.config);
     this.config.pet_links = config.pet_links;
+  }
+
+  /** Writes for one feeder, through this account's client. */
+  private controlWriter(deviceId: number): SurePetControlWriter {
+    const cloudId = () => {
+      const controller = this.controllers.get(deviceId);
+      if (!controller) throw new Error(`No SurePet feeder ${deviceId}`);
+      return controller.getSurePetDeviceId();
+    };
+    return {
+      put: async (write) =>
+        (await this.ensureClient()).putDeviceControl(cloudId(), write),
+      status: async () =>
+        (await this.ensureClient()).getControlStatus(cloudId()),
+      refresh: async () => {
+        const controller = this.controllers.get(deviceId);
+        if (!controller || this.retired) return;
+        const client = await this.ensureClient();
+        controller.updateFromCloudPayload(
+          await client.getDevice(controller.getSurePetDeviceId()),
+        );
+      },
+    };
   }
 
   private async refreshFeederStates(): Promise<void> {

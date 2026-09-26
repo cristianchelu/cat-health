@@ -166,6 +166,30 @@ export const FeederTrainingMode = {
   STEP_4: 4,
 } as const;
 
+/**
+ * Where a `control/async` request stands, as their app reads `status_id` off
+ * the write's result and off `control/status`. Their app calls this
+ * `DeviceStatusIDs`; 1–3 are failures.
+ */
+export const ControlRequestStatus = {
+  SUCCESS: 0,
+  SERVER_ERROR: 1,
+  DEVICE_TIMEOUT: 2,
+  DEVICE_ERROR: 3,
+  NO_CHANGE: 4,
+  PENDING: 5,
+} as const;
+
+/** How often their app polls `control/status` while a request is pending. */
+export const SUREPET_CONTROL_POLL_INTERVAL_MS = 3_000;
+
+/**
+ * How long a request may stay pending before it is reported as timed out.
+ * Their app gives up after about fifteen polls; a feeder that sleeps between
+ * check-ins can take longer, and the write may still land.
+ */
+export const SUREPET_CONTROL_TIMEOUT_MS = 90_000;
+
 /** py-surepetcare `CloseDelay` — lid close delay in seconds. */
 export const CloseDelay = {
   FASTER: 0,

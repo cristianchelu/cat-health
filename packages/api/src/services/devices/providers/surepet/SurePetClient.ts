@@ -18,6 +18,8 @@ import type {
   SurePetCloudDevice,
   SurePetCloudPet,
   SurePetDeviceDetailPayload,
+  SurePetControlRequest,
+  SurePetControlWrite,
   SurePetMeStartData,
   SurePetTimelineEntry,
 } from './types.ts';
@@ -200,6 +202,30 @@ export class SurePetClient {
     return response.data;
   }
 
+  /**
+   * Ask a device to change part of its control document. Returns the request
+   * the cloud queued, whose status says whether the device already has it.
+   */
+  async putDeviceControl(
+    deviceId: number,
+    control: SurePetControlWrite,
+  ): Promise<SurePetControlRequest | null> {
+    const response = await this.request<unknown>(
+      'PUT',
+      `${SUREPET_API_BASE}/device/${deviceId}/control/async`,
+      control,
+    );
+    return firstControlResult(response);
+  }
+
+  /** The device's control requests the cloud has not finished with. */
+  async getControlStatus(deviceId: number): Promise<SurePetControlRequest[]> {
+    const response = await this.request<
+      SurePetApiListResponse<SurePetControlRequest>
+    >('GET', `${SUREPET_API_BASE}/device/${deviceId}/control/status`);
+    return Array.isArray(response?.data) ? response.data : [];
+  }
+
   async getTimeline(
     householdId: number,
     options?: { sinceId?: number; beforeId?: number; pageSize?: number },
@@ -352,7 +378,11 @@ export class SurePetClient {
     throw new SurePetClientError(`SurePet ${label} exhausted retries`);
   }
 
-  private async request<T>(method: string, url: string): Promise<T> {
+  private async request<T>(
+    method: string,
+    url: string,
+    body?: unknown,
+  ): Promise<T> {
     await this.ensureAuthenticated();
 
     const send = () =>
@@ -364,6 +394,7 @@ export class SurePetClient {
             token: this.token,
             deviceId: this.deviceId,
           }),
+          body: body === undefined ? undefined : JSON.stringify(body),
         },
         `${method} ${url}`,
       );
@@ -406,4 +437,18 @@ export class SurePetClient {
     const data = (body as { data?: { token?: string } }).data;
     return typeof data?.token === 'string' ? data.token : undefined;
   }
+}
+
+/**
+ * The request a `control/async` write queued. Their app reads it off
+ * `results[0]`, which sits beside `data` at the top of the body.
+ */
+function firstControlResult(body: unknown): SurePetControlRequest | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const results: unknown = (body as { results?: unknown }).results;
+  if (!Array.isArray(results)) return null;
+  const first: unknown = results[0];
+  return typeof first === 'object' && first !== null
+    ? (first as SurePetControlRequest)
+    : null;
 }
