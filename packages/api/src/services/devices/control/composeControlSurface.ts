@@ -1,6 +1,7 @@
 import type { ActionKey, SettingKey } from 'shared';
 
 import type {
+  Acceptance,
   ActionBinding,
   Confirmer,
   ControlCommand,
@@ -36,12 +37,64 @@ export function composeControlSurface<W, S, R = never>(
     (parts.actions ?? []).map((binding) => [binding.key, binding]),
   );
 
-  const encode = (command: ControlCommand): W[] | null => {
+  const bindingFor = (command: ControlCommand) =>
+    command.kind === 'setting'
+      ? settings.get(command.key)
+      : actions.get(command.key);
+
+  const encode = async (command: ControlCommand): Promise<W[] | null> => {
     const state = parts.state();
     if (command.kind === 'setting') {
-      return settings.get(command.key)?.encode(command.value, state) ?? null;
+      return (
+        (await settings.get(command.key)?.encode(command.value, state)) ?? null
+      );
     }
     return actions.get(command.key)?.encode(command.args, state) ?? null;
+  };
+
+  const failure = (
+    error: unknown,
+  ): Extract<Settlement, { status: 'failed' }> => ({
+    status: 'failed',
+    reason: 'unknown',
+    message: error instanceof Error ? error.message : String(error),
+  });
+
+  /**
+   * Send `writes` in order, stopping at the first refusal so a half-applied
+   * command never looks like a whole one. A write the device has not
+   * confirmed holds back the ones after it until it settles.
+   */
+  const run = async (writes: W[]): Promise<Submission> => {
+    for (const [index, write] of writes.entries()) {
+      let acceptance: Acceptance<R>;
+      try {
+        acceptance = await parts.channel.submit(write);
+      } catch (error) {
+        return failure(error);
+      }
+      if (acceptance.status === 'failed') return acceptance;
+      if (acceptance.status === 'pending') {
+        const { confirmer } = parts;
+        if (!confirmer) {
+          throw new Error('A channel answered pending with no confirmer');
+        }
+        const { ref } = acceptance;
+        const rest = writes.slice(index + 1);
+        return {
+          status: 'pending',
+          settle: async (signal): Promise<Settlement> => {
+            const settlement = await confirmer.settle(ref, signal);
+            if (settlement.status === 'failed' || rest.length === 0) {
+              return settlement;
+            }
+            const next = await run(rest);
+            return next.status === 'pending' ? next.settle(signal) : next;
+          },
+        };
+      }
+    }
+    return { status: 'applied' };
   };
 
   return {
@@ -62,53 +115,29 @@ export function composeControlSurface<W, S, R = never>(
       );
     },
 
+    validate(command) {
+      if (command.kind !== 'setting') return null;
+      return (
+        settings.get(command.key)?.validate?.(command.value, parts.state()) ??
+        null
+      );
+    },
+
     async submit(command): Promise<Submission> {
-      const writes = encode(command);
-      if (writes === null) {
+      if (!bindingFor(command)) {
         return {
           status: 'failed',
           reason: 'invalid',
           message: `Unknown ${command.kind} ${command.key}`,
         };
       }
-
-      // A command's writes go out in order and stop at the first refusal, so
-      // a half-applied command never looks like a whole one.
-      const refs: R[] = [];
-      for (const write of writes) {
-        let acceptance;
-        try {
-          acceptance = await parts.channel.submit(write);
-        } catch (error) {
-          return {
-            status: 'failed',
-            reason: 'unknown',
-            message: error instanceof Error ? error.message : String(error),
-          };
-        }
-        if (acceptance.status === 'failed') return acceptance;
-        if (acceptance.status === 'pending') refs.push(acceptance.ref);
+      let writes: W[] | null;
+      try {
+        writes = await encode(command);
+      } catch (error) {
+        return failure(error);
       }
-
-      if (refs.length === 0) return { status: 'applied' };
-
-      const { confirmer } = parts;
-      if (!confirmer) {
-        throw new Error('A channel answered pending with no confirmer');
-      }
-      return {
-        status: 'pending',
-        settle: async (signal): Promise<Settlement> => {
-          const settlements = await Promise.all(
-            refs.map((ref) => confirmer.settle(ref, signal)),
-          );
-          return (
-            settlements.find(
-              (settlement) => settlement.status === 'failed',
-            ) ?? { status: 'applied' }
-          );
-        },
-      };
+      return run(writes ?? []);
     },
   };
 }

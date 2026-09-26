@@ -24,6 +24,7 @@ import type {
 import {
   buildMoistureChildEventValues,
   enrichFoodIntakeEventData,
+  foodCatalogTypeToIntakeType,
   resolveFoodIdForCompartment,
 } from '../../../food/enrichFoodIntake.ts';
 import { recordDeviceEvent } from '../../../events/recordDeviceEvent.ts';
@@ -412,6 +413,36 @@ export class SurePetAccountManager implements AccountManager {
         controller.updateFromCloudPayload(
           await client.getDevice(controller.getSurePetDeviceId()),
         );
+      },
+      foodGroups: async (foodIds) => {
+        if (foodIds.length === 0) return new Map();
+        const foods = await this.deps.db
+          .selectFrom('food')
+          .select(['id', 'food_type'])
+          .where('id', 'in', foodIds)
+          .execute();
+        return new Map(
+          foods.map((food) => [
+            food.id,
+            foodCatalogTypeToIntakeType(food.food_type),
+          ]),
+        );
+      },
+      saveFoodCompartments: async (rows) => {
+        await this.deps.db
+          .updateTable('device')
+          .set({
+            config: sql`json_set(coalesce(config, '{}'), '$.food_compartments', json(${JSON.stringify(rows)}))`,
+            updated_at: Date.now(),
+          })
+          .where('id', '=', deviceId)
+          .execute();
+        const device = await this.deps.db
+          .selectFrom('device')
+          .selectAll()
+          .where('id', '=', deviceId)
+          .executeTakeFirst();
+        if (device) this.controllers.get(deviceId)?.updateDevice(device);
       },
     };
   }

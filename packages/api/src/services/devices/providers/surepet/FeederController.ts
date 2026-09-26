@@ -83,7 +83,10 @@ export class FeederController implements DeviceController {
     this.deps = deps;
     this.deviceId = device.id;
     this.controlSurface = writer
-      ? createFeederControlSurface(() => this.lastControl, writer)
+      ? createFeederControlSurface(
+          () => ({ control: this.lastControl, config: this.device.config }),
+          writer,
+        )
       : undefined;
     this.config = requireWithSchema(
       SurePetFeederConfigSchema,

@@ -1,4 +1,4 @@
-import type { ControlValueType } from 'shared';
+import { isRecord, type ControlValueType } from 'shared';
 
 /** Float slack for step alignment, so 0.1 + 0.2 still sits on a 0.1 step. */
 const STEP_EPSILON = 1e-6;
@@ -36,7 +36,45 @@ export function validateControlValue(
       return type.options.some((option) => option.value === value)
         ? null
         : `must be one of ${type.options.map((option) => option.value).join(', ')}`;
+    case 'food':
+      return value === null || (Number.isInteger(value) && Number(value) > 0)
+        ? null
+        : 'must be a food id or null';
+    case 'compartments':
+      return validateCompartments(type, value);
   }
+}
+
+function validateCompartments(
+  type: Extract<ControlValueType, { kind: 'compartments' }>,
+  value: unknown,
+): string | null {
+  if (!isRecord(value)) return 'must be a layout and its compartments';
+  const layout = type.layouts.find((option) => option.value === value.layout);
+  if (!layout) {
+    return `layout must be one of ${type.layouts.map((option) => option.value).join(', ')}`;
+  }
+  const { compartments } = value;
+  if (
+    !Array.isArray(compartments) ||
+    compartments.length !== layout.compartments.length
+  ) {
+    return `${layout.value} needs ${layout.compartments.length} compartments`;
+  }
+  for (const [index, compartment] of compartments.entries()) {
+    if (!isRecord(compartment))
+      return `compartment ${index + 1} is not an object`;
+    for (const name of Object.keys(compartment)) {
+      if (!(name in layout.fields)) {
+        return `compartment ${index + 1} has no field ${name}`;
+      }
+    }
+    for (const [name, field] of Object.entries(layout.fields)) {
+      const problem = validateControlValue(field.type, compartment[name]);
+      if (problem) return `compartment ${index + 1} ${name} ${problem}`;
+    }
+  }
+  return null;
 }
 
 /** Why `args` do not match an action's declared arguments, or null. */

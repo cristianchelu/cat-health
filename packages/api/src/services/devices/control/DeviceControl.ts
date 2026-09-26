@@ -124,7 +124,9 @@ export class DeviceControl {
           message: `Device ${deviceId} has no setting ${key}`,
         };
       }
-      const problem = validateControlValue(descriptor.type, value);
+      const problem =
+        validateControlValue(descriptor.type, value) ??
+        surface.validate({ kind: 'setting', key: descriptor.key, value });
       if (problem) {
         return {
           ok: false,

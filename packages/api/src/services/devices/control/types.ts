@@ -40,7 +40,17 @@ export interface Confirmer<R> {
 export interface SettingBinding<W, S> {
   descriptor: SettingDescriptor;
   read(state: S): unknown;
-  encode(value: unknown, state: S): W[];
+  /**
+   * Why a value that fits the descriptor still cannot be written: a rule of
+   * this provider's that no value type states. Null when it can.
+   */
+  validate?(value: unknown, state: S): string | null;
+  /**
+   * The writes, in the order they must land. A write after one the device
+   * has not confirmed yet waits for that confirmation, so a local record is
+   * never ahead of the device it describes. May look things up first.
+   */
+  encode(value: unknown, state: S): W[] | Promise<W[]>;
 }
 
 /** One action, owned by a provider. Its descriptor may depend on state. */
@@ -74,6 +84,8 @@ export type Submission =
 export interface ControlSurface {
   manifest(): ControlManifest;
   readSettings(): ReadonlyMap<SettingKey, unknown>;
+  /** A provider rule the command breaks, or null. See SettingBinding.validate. */
+  validate(command: ControlCommand): string | null;
   submit(command: ControlCommand): Promise<Submission>;
 }
 

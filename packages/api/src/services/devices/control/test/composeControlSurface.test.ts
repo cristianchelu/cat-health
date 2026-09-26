@@ -92,4 +92,52 @@ describe('composeControlSurface', () => {
       message: 'socket closed',
     });
   });
+
+  it('holds back the writes after a pending one until it settles', async () => {
+    let release!: (settlement: Settlement) => void;
+    const confirmation = new Promise<Settlement>((resolve) => {
+      release = resolve;
+    });
+    const sent: Write[] = [];
+    const surface = composeControlSurface<Write, null, Promise<Settlement>>({
+      state: () => null,
+      actions: [
+        {
+          key: 'dev:button.go',
+          descriptor: () => ({
+            key: 'dev:button.go',
+            label: { text: 'Go' },
+            args: {},
+            confirm: false,
+            available: true,
+            group: 'primary',
+          }),
+          encode: () => ['device', 'record'],
+        },
+      ],
+      channel: {
+        submit: async (write) => {
+          sent.push(write);
+          return write === 'device'
+            ? { status: 'pending', ref: confirmation }
+            : { status: 'applied' };
+        },
+      },
+      confirmer: { settle: (ref) => ref },
+    });
+
+    const submission = await surface.submit({
+      kind: 'action',
+      key: 'dev:button.go',
+      args: {},
+    });
+    assert.deepEqual(sent, ['device']);
+    assert.equal(submission.status, 'pending');
+    if (submission.status !== 'pending') return;
+
+    const settled = submission.settle(new AbortController().signal);
+    release({ status: 'applied' });
+    assert.deepEqual(await settled, { status: 'applied' });
+    assert.deepEqual(sent, ['device', 'record']);
+  });
 });

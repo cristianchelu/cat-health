@@ -11,21 +11,43 @@ import { Type, type Static } from '@fastify/type-provider-typebox';
 // --- Keys ---
 
 /**
- * Settings the app understands, each with the values it can hold. A provider
- * that binds one of these is saying its setting means exactly this; the client
- * labels it, and internal services may write it.
+ * Settings the app understands, each with the words its options are labelled
+ * by. A provider that binds one of these is saying its setting means exactly
+ * this; the client labels it, and internal services may write it.
  */
 export const KNOWN_SETTINGS = {
   /** How long a feeder's lid stays open after the pet leaves. */
   lid_close_delay: ['fast', 'normal', 'slow'],
+  /** How a feeder's tray is divided, and what each part holds. */
+  bowls: ['single', 'split'],
 } as const;
 
 export type KnownSettingKey = keyof typeof KNOWN_SETTINGS;
 
+/** The names a compartment is labelled by. */
+export const COMPARTMENT_NAMES = ['single', 'left', 'right'] as const;
+export type CompartmentName = (typeof COMPARTMENT_NAMES)[number];
+
+/** What a compartment can be told it holds. */
+export const COMPARTMENT_FIELDS = ['food', 'portion'] as const;
+export type CompartmentField = (typeof COMPARTMENT_FIELDS)[number];
+
+/**
+ * A compartmented setting's value: which layout, and per compartment the
+ * value of each field its layout declares. A food is a catalog food id.
+ */
+export interface CompartmentsValue {
+  layout: string;
+  compartments: Array<Partial<Record<CompartmentField, number | null>>>;
+}
+
 /** The value each known setting holds. */
-export type KnownSettingValues = {
-  [K in KnownSettingKey]: (typeof KNOWN_SETTINGS)[K][number];
-};
+export interface KnownSettingValues {
+  lid_close_delay: (typeof KNOWN_SETTINGS)['lid_close_delay'][number];
+  bowls: CompartmentsValue & {
+    layout: (typeof KNOWN_SETTINGS)['bowls'][number];
+  };
+}
 
 const KNOWN_SETTING_KEYS = Object.keys(KNOWN_SETTINGS) as KnownSettingKey[];
 
@@ -65,17 +87,27 @@ export const ActionKeySchema = DeviceControlKeySchema;
 export type ControlTextKey =
   | `devices.controls.settings.${KnownSettingKey}`
   | {
-      [K in KnownSettingKey]: `devices.controls.options.${K}.${KnownSettingValues[K]}`;
-    }[KnownSettingKey];
+      [K in KnownSettingKey]: `devices.controls.options.${K}.${(typeof KNOWN_SETTINGS)[K][number]}`;
+    }[KnownSettingKey]
+  | `devices.controls.compartments.${CompartmentName}`
+  | `devices.controls.fields.${CompartmentField}`;
 
-const CONTROL_TEXT_KEYS: ControlTextKey[] = KNOWN_SETTING_KEYS.flatMap(
-  (key) => [
-    `devices.controls.settings.${key}` as const,
+// Built at runtime from the same tables the type is; TypeScript cannot pair
+// each key with only its own options inside `flatMap`, hence the casts.
+const CONTROL_TEXT_KEYS: ControlTextKey[] = [
+  ...KNOWN_SETTING_KEYS.flatMap((key): ControlTextKey[] => [
+    `devices.controls.settings.${key}`,
     ...KNOWN_SETTINGS[key].map(
-      (value) => `devices.controls.options.${key}.${value}` as const,
+      (value) => `devices.controls.options.${key}.${value}` as ControlTextKey,
     ),
-  ],
-);
+  ]),
+  ...COMPARTMENT_NAMES.map(
+    (name) => `devices.controls.compartments.${name}` as const,
+  ),
+  ...COMPARTMENT_FIELDS.map(
+    (field) => `devices.controls.fields.${field}` as const,
+  ),
+];
 
 /**
  * A known setting is labelled by the client's locale, a device key by the
@@ -99,23 +131,71 @@ export const ControlOptionSchema = Type.Object({
 });
 export type ControlOption = Static<typeof ControlOptionSchema>;
 
+const NumberValueTypeSchema = Type.Object({
+  kind: Type.Literal('number'),
+  min: Type.Optional(Type.Number()),
+  max: Type.Optional(Type.Number()),
+  step: Type.Optional(Type.Number()),
+  /** Rendered verbatim after the number, e.g. `g`, `kg`, `s`. */
+  unit: Type.Optional(Type.String()),
+});
+
+/**
+ * A food from the app's catalog, by id, or null for none. `groups` are the
+ * coarse groups the device can be told about; the picker offers only those.
+ */
+const FoodValueTypeSchema = Type.Object({
+  kind: Type.Literal('food'),
+  groups: Type.Array(
+    Type.Union([
+      Type.Literal('wet'),
+      Type.Literal('dry'),
+      Type.Literal('treat'),
+    ]),
+  ),
+});
+
+const CompartmentFieldSchema = Type.Object({
+  label: ControlLabelSchema,
+  type: Type.Union([NumberValueTypeSchema, FoodValueTypeSchema]),
+});
+
+/** One way to divide a compartmented device, and what each part takes. */
+export const CompartmentLayoutSchema = Type.Object({
+  value: Type.String(),
+  label: ControlLabelSchema,
+  /** One label per compartment; their count is the layout's size. */
+  compartments: Type.Array(ControlLabelSchema),
+  /** What each compartment of this layout takes; one entry per field. */
+  fields: Type.Object({
+    food: Type.Optional(CompartmentFieldSchema),
+    portion: Type.Optional(CompartmentFieldSchema),
+  }),
+});
+export type CompartmentLayout = Static<typeof CompartmentLayoutSchema>;
+
 /** What a setting holds or an action argument takes, and its bounds. */
 export const ControlValueTypeSchema = Type.Union([
-  Type.Object({
-    kind: Type.Literal('number'),
-    min: Type.Optional(Type.Number()),
-    max: Type.Optional(Type.Number()),
-    step: Type.Optional(Type.Number()),
-    /** Rendered verbatim after the number, e.g. `g`, `kg`, `s`. */
-    unit: Type.Optional(Type.String()),
-  }),
+  NumberValueTypeSchema,
   Type.Object({ kind: Type.Literal('boolean') }),
   Type.Object({
     kind: Type.Literal('enum'),
     options: Type.Array(ControlOptionSchema),
   }),
+  FoodValueTypeSchema,
+  /**
+   * A device divided into parts (a feeder's bowls, a dispenser's hoppers):
+   * which layout it is in, and per part the fields that layout declares.
+   * Holds a `CompartmentsValue`.
+   */
+  Type.Object({
+    kind: Type.Literal('compartments'),
+    layouts: Type.Array(CompartmentLayoutSchema),
+  }),
 ]);
 export type ControlValueType = Static<typeof ControlValueTypeSchema>;
+export type NumberValueType = Static<typeof NumberValueTypeSchema>;
+export type FoodValueType = Static<typeof FoodValueTypeSchema>;
 
 // --- Descriptors ---
 

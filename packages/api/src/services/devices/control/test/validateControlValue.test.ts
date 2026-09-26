@@ -43,3 +43,60 @@ describe('validateActionArgs', () => {
     assert.ok(validateActionArgs(dispense, { portions: 11 }));
   });
 });
+
+describe('validateControlValue compartments', () => {
+  const bowls: ControlValueType = {
+    kind: 'compartments',
+    layouts: [
+      {
+        value: 'split',
+        label: { text: 'Split' },
+        compartments: [{ text: 'Left' }, { text: 'Right' }],
+        fields: {
+          food: {
+            label: { text: 'Food' },
+            type: { kind: 'food', groups: ['wet'] },
+          },
+          portion: {
+            label: { text: 'Portion' },
+            type: { kind: 'number', min: 0, max: 100 },
+          },
+        },
+      },
+    ],
+  };
+
+  it('accepts one entry per compartment of a known layout', () => {
+    assert.equal(
+      validateControlValue(bowls, {
+        layout: 'split',
+        compartments: [
+          { food: 1, portion: 20 },
+          { food: null, portion: 0 },
+        ],
+      }),
+      null,
+    );
+  });
+
+  it('rejects the wrong count, an unknown layout and an out-of-range field', () => {
+    assert.ok(
+      validateControlValue(bowls, {
+        layout: 'split',
+        compartments: [{ food: 1, portion: 20 }],
+      }),
+    );
+    assert.ok(
+      validateControlValue(bowls, { layout: 'triple', compartments: [] }),
+    );
+    assert.ok(
+      validateControlValue(bowls, {
+        layout: 'split',
+        compartments: [
+          { food: 1, portion: 200 },
+          { food: 1, portion: 0 },
+        ],
+      }),
+    );
+  });
+});
