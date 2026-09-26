@@ -4,6 +4,7 @@ import type { GetEventListItemDTO, LitterboxUseEliminationType } from 'shared';
 
 import { SheetPageHeader } from '@/components/ui/SheetPageHeader';
 import { useFormatters } from '@/hooks/context/useRegionalPreferences';
+import { EVENT_TITLE_KEYS } from '@/lib/eventTitles';
 
 import type { DecodedLitterboxRawData } from './decodeLitterboxRawData';
 import type { DecodedWaterRawData } from './decodeWaterRawData';
@@ -65,7 +66,7 @@ const EventAdvancedDetails: React.FC<EventAdvancedDetailsProps> = ({
   const kind =
     event.data.type === 'litterbox_use'
       ? t(ELIMINATION_LABEL_KEYS[event.data.elimination_type ?? 'unknown'])
-      : t(`event_details.title_${event.data.type}`);
+      : t(EVENT_TITLE_KEYS[event.data.type]);
   const subtitle = [kind, formatTime(new Date(event.timestamp)), deviceName]
     .filter(Boolean)
     .join(' · ');

@@ -45,6 +45,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { causeLabelKey } from '@/lib/eventAttribution';
 import { useFormatters } from '@/hooks/context/useRegionalPreferences';
+import { EVENT_TITLE_KEYS } from '@/lib/eventTitles';
 
 import TimelapsePlayer from './TimelapsePlayer';
 import { buildTimelapseTimeline } from './buildTimelapseTimeline';
@@ -278,7 +279,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
    * English subject-verb grammar. The cat moved to where every other fact
    * about the event already lives.
    */
-  const title = t(`event_details.title_${displayEvent.data.type}`);
+  const title = t(EVENT_TITLE_KEYS[displayEvent.data.type]);
 
   /* One glyph either way — a person settled it. Which way they settled it is
      the badge's name, not a second mark. */
