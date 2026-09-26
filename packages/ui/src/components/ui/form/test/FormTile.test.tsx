@@ -1,4 +1,3 @@
-import * as React from 'react';
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import { cleanup, screen } from '@testing-library/react';
