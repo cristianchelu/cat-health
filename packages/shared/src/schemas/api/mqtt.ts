@@ -47,7 +47,9 @@ export const MQTT_DEFAULT_TOPIC_PREFIX = 'cathealth';
  * would hear its own announcements back.
  */
 export function isValidMqttTopicPrefix(prefix: string): boolean {
-  if (prefix === '' || /[#+\s\u0000]/.test(prefix)) return false;
+  if (prefix === '' || /[#+\s]/.test(prefix) || prefix.includes('\0')) {
+    return false;
+  }
   if (prefix.startsWith('/') || prefix.endsWith('/')) return false;
   if (prefix.startsWith('$')) return false;
   return prefix.split('/')[0] !== 'homeassistant';
