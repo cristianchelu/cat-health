@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SureFeederState } from 'shared';
+import type { ActionControl, SureFeederState } from 'shared';
 import { DashboardTile } from '@/components/layout/DashboardTile';
 import { ResponsiveTileGrid } from '@/components/layout/ResponsiveTileGrid';
 import { EntitySensor } from '@/components/devices/entities/EntitySensor';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { DeviceActions } from '@/components/devices/controls/DeviceActions';
 import {
   coerceEpochDate,
   formatRelativeTimeAgo,
@@ -20,7 +21,10 @@ import {
 import './SureFeederView.css';
 
 interface SureFeederViewProps {
+  deviceId: number;
   state?: SureFeederState;
+  /** Drawn beside the bowls they act on. */
+  actions: ActionControl[];
 }
 
 function formatFillPercent(value: number | null | undefined): string {
@@ -30,7 +34,11 @@ function formatFillPercent(value: number | null | undefined): string {
   return `${Math.round(value)}%`;
 }
 
-export const SureFeederView: React.FC<SureFeederViewProps> = ({ state }) => {
+export const SureFeederView: React.FC<SureFeederViewProps> = ({
+  deviceId,
+  state,
+  actions,
+}) => {
   const { t } = useTranslation();
   const { formatDateTime, dateFnsLocale } = useFormatters();
 
@@ -106,6 +114,7 @@ export const SureFeederView: React.FC<SureFeederViewProps> = ({ state }) => {
                   </DashboardTile>
                 );
               })}
+              <DeviceActions deviceId={deviceId} actions={actions} />
             </ResponsiveTileGrid>
           </div>
         </section>

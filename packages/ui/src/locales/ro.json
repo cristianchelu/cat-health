@@ -813,6 +813,18 @@
           "split": "Două boluri"
         }
       },
+      "actions": {
+        "tare": "Tarează cântarul"
+      },
+      "args": {
+        "tare": {
+          "side": {
+            "left": "Bolul stâng",
+            "right": "Bolul drept",
+            "both": "Ambele boluri"
+          }
+        }
+      },
       "compartments": {
         "single": "Bol",
         "left": "Bolul stâng",

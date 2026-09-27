@@ -42,6 +42,7 @@ import type {
   PatchDeviceCameraRequestDTO,
   GetEventsResponseDTO,
   PatchDeviceSettingsRequestDTO,
+  RunDeviceActionRequestDTO,
 } from 'shared';
 
 export function useDevices() {
@@ -385,7 +386,13 @@ export function useApplyDeviceSettings(deviceId: number) {
 export function useRunDeviceAction(deviceId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (key: string) => runDeviceAction(deviceId, key),
+    mutationFn: ({
+      key,
+      args,
+    }: {
+      key: string;
+      args?: RunDeviceActionRequestDTO;
+    }) => runDeviceAction(deviceId, key, args),
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: ['device', deviceId] }),
   });

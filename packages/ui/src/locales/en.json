@@ -753,6 +753,18 @@
           "split": "Two bowls"
         }
       },
+      "actions": {
+        "tare": "Zero scale"
+      },
+      "args": {
+        "tare": {
+          "side": {
+            "left": "Left bowl",
+            "right": "Right bowl",
+            "both": "Both bowls"
+          }
+        }
+      },
       "compartments": {
         "single": "Bowl",
         "left": "Left bowl",

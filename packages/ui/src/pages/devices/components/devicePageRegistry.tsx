@@ -79,7 +79,13 @@ const ESPHomeDevicePage: DevicePageComponent = ({
 
 const SureFeederDevicePage: DevicePageComponent = ({ device }) => {
   const state = parseWithSchema(SurePetDeviceStateSchema, device.state);
-  return <SureFeederView state={state} />;
+  return (
+    <SureFeederView
+      deviceId={device.id}
+      state={state}
+      actions={device.controls?.actions ?? []}
+    />
+  );
 };
 
 const devicePageRegistry: DevicePageRegistration[] = [
