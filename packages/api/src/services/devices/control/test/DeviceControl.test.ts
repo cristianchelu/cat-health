@@ -84,6 +84,44 @@ function makeHarness(options: { status?: DeviceStatus } = {}) {
         encode: () => [{ key: 'reset', value: null }],
       },
     ],
+    procedures: [
+      {
+        key: 'scale_calibration',
+        descriptor: () => ({
+          key: 'scale_calibration',
+          label: {
+            i18n: 'devices.controls.procedures.scale_calibration.title',
+          },
+          steps: [
+            {
+              key: 'zero',
+              instruction: {
+                i18n: 'devices.controls.procedures.scale_calibration.steps.zero',
+              },
+              inputs: [],
+            },
+            {
+              key: 'span',
+              instruction: {
+                i18n: 'devices.controls.procedures.scale_calibration.steps.span',
+              },
+              inputs: [
+                {
+                  key: 'known_weight_g',
+                  label: { text: 'Known weight' },
+                  type: { kind: 'number', min: 1 },
+                },
+              ],
+            },
+          ],
+          available: true,
+          group: 'config',
+        }),
+        encode: (step, inputs) => [
+          { key: step, value: inputs.known_weight_g ?? null },
+        ],
+      },
+    ],
     channel: {
       submit: async (write) => {
         sent.push(write);
@@ -268,5 +306,47 @@ describe('DeviceControl', () => {
 
     assert.ok(settled.ok);
     assert.equal(settled.value['dev:number.target']?.status, 'failed');
+  });
+
+  it('runs a procedure step with its inputs', async () => {
+    const { control, sent } = makeHarness();
+
+    const result = await control.runProcedureStep(
+      1,
+      'scale_calibration',
+      'span',
+      { known_weight_g: 5000 },
+    );
+
+    assert.deepEqual(result, { ok: true, value: { status: 'applied' } });
+    assert.deepEqual(sent, [{ key: 'span', value: 5000 }]);
+  });
+
+  it('refuses a step the procedure does not have', async () => {
+    const { control, sent } = makeHarness();
+
+    const result = await control.runProcedureStep(
+      1,
+      'scale_calibration',
+      'finish',
+      {},
+    );
+
+    assert.equal(!result.ok && result.reason, 'unknown_key');
+    assert.deepEqual(sent, []);
+  });
+
+  it('refuses a step whose inputs do not fit', async () => {
+    const { control, sent } = makeHarness();
+
+    const result = await control.runProcedureStep(
+      1,
+      'scale_calibration',
+      'span',
+      { known_weight_g: 0 },
+    );
+
+    assert.equal(!result.ok && result.reason, 'invalid');
+    assert.deepEqual(sent, []);
   });
 });

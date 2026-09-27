@@ -28,6 +28,7 @@ import {
   ReidentifyLitterboxVisitsResponseSchema,
   PatchDeviceSettingsRequestSchema,
   RunDeviceActionRequestSchema,
+  RunProcedureStepRequestSchema,
   DeviceWriteAppliedSchema,
   WriteFailureSchema,
   type WriteFailureReason,
@@ -1148,6 +1149,38 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const result = await fastify.deviceControl.runAction(
         id,
         key,
+        request.body,
+      );
+      if (!result.ok) return sendControlFailure(reply, id, result);
+      if (result.value.status === 'failed') {
+        return sendWriteFailure(reply, result.value);
+      }
+      return { status: 'applied' as const };
+    },
+  );
+
+  fastify.post(
+    '/:id/procedures/:key/steps/:step',
+    {
+      schema: {
+        params: Type.Object({
+          id: Type.Number(),
+          key: Type.String(),
+          step: Type.String(),
+        }),
+        body: RunProcedureStepRequestSchema,
+        response: controlResponses,
+      },
+    },
+    async (request, reply) => {
+      const { id, key, step } = request.params;
+      if (!fastify.hasDecorator('deviceControl')) {
+        return sendControllerFailure(reply, id, 'unavailable');
+      }
+      const result = await fastify.deviceControl.runProcedureStep(
+        id,
+        key,
+        step,
         request.body,
       );
       if (!result.ok) return sendControlFailure(reply, id, result);

@@ -1,6 +1,8 @@
 import type {
   ActionDescriptor,
   ActionKey,
+  KnownProcedureKey,
+  ProcedureDescriptor,
   SettingDescriptor,
   SettingKey,
   WriteFailureReason,
@@ -61,15 +63,32 @@ export interface ActionBinding<W, S> {
   encode(args: Record<string, unknown>, state: S): W[];
 }
 
+/**
+ * One known procedure, owned by a provider. Each step encodes to the writes
+ * that carry it out; the step answers once they have all landed.
+ */
+export interface ProcedureBinding<W, S> {
+  key: KnownProcedureKey;
+  descriptor(state: S): ProcedureDescriptor;
+  encode(step: string, inputs: Record<string, unknown>, state: S): W[];
+}
+
 export interface ControlManifest {
   settings: SettingDescriptor[];
   actions: ActionDescriptor[];
+  procedures: ProcedureDescriptor[];
 }
 
 /** One write, already validated against the manifest. */
 export type ControlCommand =
   | { kind: 'setting'; key: SettingKey; value: unknown }
-  | { kind: 'action'; key: ActionKey; args: Record<string, unknown> };
+  | { kind: 'action'; key: ActionKey; args: Record<string, unknown> }
+  | {
+      kind: 'procedure';
+      key: KnownProcedureKey;
+      step: string;
+      inputs: Record<string, unknown>;
+    };
 
 /** A submitted command, before the device has necessarily confirmed it. */
 export type Submission =

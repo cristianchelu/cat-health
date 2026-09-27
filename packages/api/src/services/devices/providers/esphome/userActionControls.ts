@@ -27,8 +27,13 @@ export interface UserActionWrite {
  */
 export const USER_ACTION_ANSWER_TIMEOUT_MS = 35_000;
 
-/** ESPHome `SupportsResponseType` none: the action never answers a call. */
-const SUPPORTS_RESPONSE_NONE = 0;
+/**
+ * Whether an action answers a call that carries a call id. It is read from
+ * the action's own listing, where ESPHome's `SupportsResponseType` none (0)
+ * is also what firmware predating answers reads as.
+ */
+export const answersCalls = (service: ServiceEntity): boolean =>
+  service.supportsResponse !== 0;
 
 /** Argument types a control can collect and validate; the rest have no value type. */
 const ARG_VALUE_TYPES: Partial<Record<ServiceArgType, ControlValueType>> = {
@@ -60,13 +65,16 @@ const labelOf = (name: string) => {
 /**
  * An action per user-defined action whose arguments all have a value type,
  * under `dev:action.<name>`. One taking a string or an array has nothing to
- * collect its arguments with, so it is left out.
+ * collect its arguments with, so it is left out, as is one a procedure has
+ * `claimed`.
  */
 export function buildUserActionBindings<S>(
   services: Iterable<ServiceEntity>,
+  claimed: ReadonlySet<string> = new Set(),
 ): ActionBinding<UserActionWrite, S>[] {
   const bindings: ActionBinding<UserActionWrite, S>[] = [];
   for (const service of services) {
+    if (claimed.has(service.name)) continue;
     const args: Record<string, ControlValueType> = {};
     for (const arg of service.args) {
       const type = ARG_VALUE_TYPES[arg.type];
@@ -127,7 +135,7 @@ export function createUserActionChannel(
           message: `The device has no action ${write.name}`,
         };
       }
-      if (service.supportsResponse === SUPPORTS_RESPONSE_NONE) {
+      if (!answersCalls(service)) {
         client.services.execute(service.key, write.args);
         return { status: 'applied' };
       }

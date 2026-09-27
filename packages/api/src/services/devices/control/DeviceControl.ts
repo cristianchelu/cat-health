@@ -58,6 +58,7 @@ export class DeviceControl {
         value: values.get(descriptor.key) ?? null,
       })),
       actions: manifest.actions,
+      procedures: manifest.procedures,
     };
   }
 
@@ -147,6 +148,60 @@ export class DeviceControl {
       ok: true,
       value: await this.write(deviceId, surface, command),
     };
+  }
+
+  /**
+   * Run one step of a procedure. Steps keep no session between them: each is
+   * validated against the step's own inputs and answers once done, and a step
+   * the device cannot take yet is the device's to refuse.
+   */
+  async runProcedureStep(
+    deviceId: number,
+    key: string,
+    step: string,
+    inputs: Record<string, unknown>,
+  ): Promise<ControlResult<Settlement>> {
+    const resolved = await this.resolveSurface(deviceId);
+    if (!resolved.ok) return resolved;
+    const { surface } = resolved;
+
+    const descriptor = surface
+      .manifest()
+      .procedures.find((procedure) => procedure.key === key);
+    const stepDescriptor = descriptor?.steps.find(
+      (candidate) => candidate.key === step,
+    );
+    if (!descriptor || !stepDescriptor) {
+      return {
+        ok: false,
+        reason: 'unknown_key',
+        key,
+        message: `Device ${deviceId} has no procedure step ${key}/${step}`,
+      };
+    }
+    if (!descriptor.available) {
+      return {
+        ok: false,
+        reason: 'invalid',
+        key,
+        message: `${key} is not available right now`,
+      };
+    }
+    const problem = validateActionArgs(
+      Object.fromEntries(
+        stepDescriptor.inputs.map((input) => [input.key, input.type]),
+      ),
+      inputs,
+    );
+    if (problem) return { ok: false, reason: 'invalid', key, message: problem };
+
+    const command = {
+      kind: 'procedure',
+      key: descriptor.key,
+      step,
+      inputs,
+    } as const;
+    return { ok: true, value: await this.write(deviceId, surface, command) };
   }
 
   private async resolveSurface(

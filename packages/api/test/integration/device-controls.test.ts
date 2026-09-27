@@ -22,7 +22,7 @@ describe('device controls routes', () => {
   let ctx: TestDbContext;
   let app: FastifyInstance;
   let deviceId: number;
-  const state = { target: 40, presses: 0 };
+  const state = { target: 40, presses: 0, knownWeightG: 0 };
 
   before(async () => {
     ctx = await createTestDb();
@@ -40,6 +40,8 @@ describe('device controls routes', () => {
     // A write the channel reports as unconfirmed, as a device that never
     // echoes would.
     const neverConfirmed = () => {};
+    // A zero the device refuses, as one taken on a shaking scale is.
+    const unstable = () => {};
     const surface = composeControlSurface<() => void, typeof state>({
       state: () => state,
       settings: [
@@ -89,10 +91,60 @@ describe('device controls routes', () => {
           ],
         },
       ],
+      procedures: [
+        {
+          key: 'scale_calibration',
+          descriptor: () => ({
+            key: 'scale_calibration',
+            label: {
+              i18n: 'devices.controls.procedures.scale_calibration.title',
+            },
+            steps: [
+              {
+                key: 'zero',
+                instruction: {
+                  i18n: 'devices.controls.procedures.scale_calibration.steps.zero',
+                },
+                inputs: [],
+              },
+              {
+                key: 'span',
+                instruction: {
+                  i18n: 'devices.controls.procedures.scale_calibration.steps.span',
+                },
+                inputs: [
+                  {
+                    key: 'known_weight_g',
+                    label: { text: 'Known weight' },
+                    type: { kind: 'number', min: 1 },
+                  },
+                ],
+              },
+            ],
+            available: true,
+            group: 'config',
+          }),
+          encode: (step, inputs) =>
+            step === 'zero'
+              ? [unstable]
+              : [
+                  () => {
+                    state.knownWeightG = Number(inputs.known_weight_g);
+                  },
+                ],
+        },
+      ],
       channel: {
         submit: async (write) => {
           if (write === neverConfirmed) {
             return { status: 'failed', reason: 'timeout' };
+          }
+          if (write === unstable) {
+            return {
+              status: 'failed',
+              reason: 'rejected',
+              message: 'Reading was not stable',
+            };
           }
           write();
           return { status: 'applied' };
@@ -205,5 +257,43 @@ describe('device controls routes', () => {
 
     assert.equal(res.statusCode, 504);
     assert.equal(res.json<{ reason: string }>().reason, 'timeout');
+  });
+
+  it('runs a procedure step with its inputs', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/devices/${deviceId}/procedures/scale_calibration/steps/span`,
+      payload: { known_weight_g: 5000 },
+    });
+
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json(), { status: 'applied' });
+    assert.equal(state.knownWeightG, 5000);
+  });
+
+  it('answers a step the device refused with its reason', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/devices/${deviceId}/procedures/scale_calibration/steps/zero`,
+      payload: {},
+    });
+
+    const body = res.json<{ reason: string; message: string }>();
+    assert.equal(body.reason, 'rejected');
+    assert.equal(body.message, 'Reading was not stable');
+  });
+
+  it('lists the device procedures on the detail', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/devices/${deviceId}`,
+    });
+
+    assert.deepEqual(
+      res
+        .json<{ controls: { procedures: { key: string }[] } }>()
+        .controls.procedures.map((procedure) => procedure.key),
+      ['scale_calibration'],
+    );
   });
 });

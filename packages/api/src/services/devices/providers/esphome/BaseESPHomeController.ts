@@ -29,6 +29,7 @@ import {
   type EntityValues,
   type EntityWrite,
 } from './entityControls.ts';
+import { buildProcedureBindings } from './procedureBindings.ts';
 import {
   buildUserActionBindings,
   createUserActionChannel,
@@ -568,16 +569,26 @@ export abstract class BaseESPHomeController implements DeviceController {
       const { settings, actions } = buildEntityBindings(
         this.entityDefinitions.values(),
       );
+      const services = this.client.services.list();
+      const { procedures, claimed } =
+        buildProcedureBindings<EntityValues>(services);
       const userActions = buildUserActionBindings<EntityValues>(
-        this.client.services.list(),
+        services,
+        claimed,
       );
+      const count =
+        settings.length +
+        actions.length +
+        userActions.length +
+        procedures.length;
       this.controlSurface =
-        settings.length + actions.length + userActions.length === 0
+        count === 0
           ? null
           : composeControlSurface<EntityWrite | UserActionWrite, EntityValues>({
               state: () => this.sensorValues,
               settings,
               actions: [...actions, ...userActions],
+              procedures,
               channel: this.channel(),
             });
     }

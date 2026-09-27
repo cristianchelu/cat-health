@@ -1,8 +1,9 @@
-import type { ActionKey, SettingKey } from 'shared';
+import type { ActionKey, KnownProcedureKey, SettingKey } from 'shared';
 
 import type {
   Acceptance,
   ActionBinding,
+  ProcedureBinding,
   Confirmer,
   ControlCommand,
   ControlSurface,
@@ -26,6 +27,7 @@ interface ControlSurfaceParts<W, S, R> {
   state: () => S;
   settings?: readonly SettingBinding<W, S>[];
   actions?: readonly ActionBinding<W, S>[];
+  procedures?: readonly ProcedureBinding<W, S>[];
   channel: WriteChannel<W, R>;
   /** Required as soon as the channel can answer `pending`. */
   confirmer?: Confirmer<R>;
@@ -45,20 +47,38 @@ export function composeControlSurface<W, S, R = never>(
   const actions = new Map<ActionKey, ActionBinding<W, S>>(
     (parts.actions ?? []).map((binding) => [binding.key, binding]),
   );
+  const procedures = new Map<KnownProcedureKey, ProcedureBinding<W, S>>(
+    (parts.procedures ?? []).map((binding) => [binding.key, binding]),
+  );
 
-  const bindingFor = (command: ControlCommand) =>
-    command.kind === 'setting'
-      ? settings.get(command.key)
-      : actions.get(command.key);
+  const bindingFor = (command: ControlCommand) => {
+    switch (command.kind) {
+      case 'setting':
+        return settings.get(command.key);
+      case 'action':
+        return actions.get(command.key);
+      case 'procedure':
+        return procedures.get(command.key);
+    }
+  };
 
   const encode = async (command: ControlCommand): Promise<W[] | null> => {
     const state = parts.state();
-    if (command.kind === 'setting') {
-      return (
-        (await settings.get(command.key)?.encode(command.value, state)) ?? null
-      );
+    switch (command.kind) {
+      case 'setting':
+        return (
+          (await settings.get(command.key)?.encode(command.value, state)) ??
+          null
+        );
+      case 'action':
+        return actions.get(command.key)?.encode(command.args, state) ?? null;
+      case 'procedure':
+        return (
+          procedures
+            .get(command.key)
+            ?.encode(command.step, command.inputs, state) ?? null
+        );
     }
-    return actions.get(command.key)?.encode(command.args, state) ?? null;
   };
 
   const failure = (
@@ -112,6 +132,9 @@ export function composeControlSurface<W, S, R = never>(
       return {
         settings: [...settings.values()].map((binding) => binding.descriptor),
         actions: [...actions.values()].map((binding) =>
+          binding.descriptor(state),
+        ),
+        procedures: [...procedures.values()].map((binding) =>
           binding.descriptor(state),
         ),
       };
