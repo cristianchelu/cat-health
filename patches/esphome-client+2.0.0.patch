@@ -1,3 +1,42 @@
+diff --git a/node_modules/esphome-client/dist/discovery.js b/node_modules/esphome-client/dist/discovery.js
+index 34a1937..84b3489 100644
+--- a/node_modules/esphome-client/dist/discovery.js
++++ b/node_modules/esphome-client/dist/discovery.js
+@@ -279,6 +279,9 @@ export function decodeServiceEntity(options) {
+             }
+         }
+     }
+-    return { args, key, name };
++    // supports_response (4) says whether the action answers an EXECUTE_SERVICE_REQUEST that carries a call id. Firmware that predates action responses never
++    // sends it, and proto3 elides the default, so an absent field reads as 0 (none).
++    const supportsResponse = extractNumberField(fields, 4) ?? 0;
++    return { args, key, name, supportsResponse };
+ }
+ //# sourceMappingURL=discovery.js.map
+\ No newline at end of file
+diff --git a/node_modules/esphome-client/dist/types.d.ts b/node_modules/esphome-client/dist/types.d.ts
+index 13df66f..74935e9 100644
+--- a/node_modules/esphome-client/dist/types.d.ts
++++ b/node_modules/esphome-client/dist/types.d.ts
+@@ -117,10 +117,17 @@ export interface ServiceArgument {
+  * @property key - The unique numeric identifier for the service.
+  * @property name - The name of the service.
+  * @property args - The list of arguments the service accepts.
++ * @property supportsResponse - Whether the service answers a call that carries a call id; see {@link ServiceSupportsResponse}.
+  */
+ export interface ServiceEntity {
+     args: ServiceArgument[];
+     key: number;
+     name: string;
++    supportsResponse: ServiceSupportsResponse;
+ }
++/**
++ * ESPHome `SupportsResponseType`: 0 none (fire-and-forget), 1 optional (status, plus data when asked), 2 only (always data), 100 status (success or an error
++ * message, no data).
++ */
++export type ServiceSupportsResponse = 0 | 1 | 2 | 100;
+ //# sourceMappingURL=types.d.ts.map
+\ No newline at end of file
 diff --git a/node_modules/esphome-client/dist/user-services.d.ts b/node_modules/esphome-client/dist/user-services.d.ts
 index 95f3f2a..5dc2a8e 100644
 --- a/node_modules/esphome-client/dist/user-services.d.ts

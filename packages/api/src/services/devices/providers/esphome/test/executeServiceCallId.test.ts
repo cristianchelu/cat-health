@@ -15,6 +15,7 @@ describe('esphome-client service execution', () => {
     key: 0x01020304,
     name: 'calibration_tare',
     args: [],
+    supportsResponse: 100,
   };
 
   function execute(options?: ExecuteServiceOptions): string | undefined {
