@@ -22,8 +22,18 @@ import {
   objectIdFromName,
 } from './entityIdentity.ts';
 import { composeControlSurface } from '../../control/composeControlSurface.ts';
-import type { ControlSurface } from '../../control/types.ts';
-import { buildEntityBindings, createEntityChannel } from './entityControls.ts';
+import type { ControlSurface, WriteChannel } from '../../control/types.ts';
+import {
+  buildEntityBindings,
+  createEntityChannel,
+  type EntityValues,
+  type EntityWrite,
+} from './entityControls.ts';
+import {
+  buildUserActionBindings,
+  createUserActionChannel,
+  type UserActionWrite,
+} from './userActionControls.ts';
 
 export const ESPHomeConfigSchema = Type.Object({
   host: Type.String({ minLength: 1 }),
@@ -130,6 +140,8 @@ export abstract class BaseESPHomeController implements DeviceController {
   private firstConnect: AbortController | null = null;
   /** Built from the entity list on first use; dropped when it changes. */
   private controlSurface: ControlSurface | null | undefined;
+  /** Kept across rebuilds, so a call id in flight is never handed out again. */
+  private writeChannel: WriteChannel<EntityWrite | UserActionWrite> | undefined;
   private lastTelemetryAt: number | null = null;
 
   // Abstract methods for subclass customization
@@ -254,6 +266,12 @@ export abstract class BaseESPHomeController implements DeviceController {
       this.controlSurface = undefined;
       this.onEntitiesReceived(data);
       this.recordDeviceActivity();
+    });
+
+    // Discovery reports user-defined actions apart from entities, and either
+    // can arrive last.
+    this.client.on('services', () => {
+      this.controlSurface = undefined;
     });
 
     this.client.on('telemetry', this.markTelemetry.bind(this));
@@ -550,17 +568,34 @@ export abstract class BaseESPHomeController implements DeviceController {
       const { settings, actions } = buildEntityBindings(
         this.entityDefinitions.values(),
       );
+      const userActions = buildUserActionBindings<EntityValues>(
+        this.client.services.list(),
+      );
       this.controlSurface =
-        settings.length + actions.length === 0
+        settings.length + actions.length + userActions.length === 0
           ? null
-          : composeControlSurface({
+          : composeControlSurface<EntityWrite | UserActionWrite, EntityValues>({
               state: () => this.sensorValues,
               settings,
-              actions,
-              channel: createEntityChannel(this.client),
+              actions: [...actions, ...userActions],
+              channel: this.channel(),
             });
     }
     return this.controlSurface ?? undefined;
+  }
+
+  private channel(): WriteChannel<EntityWrite | UserActionWrite> {
+    if (!this.writeChannel) {
+      const entities = createEntityChannel(this.client);
+      const userActions = createUserActionChannel(this.client);
+      this.writeChannel = {
+        submit: (write) =>
+          write.type === 'action'
+            ? userActions.submit(write)
+            : entities.submit(write),
+      };
+    }
+    return this.writeChannel;
   }
 
   getState() {
