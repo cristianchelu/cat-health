@@ -775,7 +775,23 @@
         "portion": "Target portion"
       },
       "choose_food": "Choose food",
-      "layout": "Layout"
+      "layout": "Layout",
+      "start": "Start",
+      "continue": "Continue",
+      "finish": "Finish",
+      "step_progress": "Step {{current}} of {{total}}",
+      "procedures": {
+        "scale_calibration": {
+          "title": "Calibrate scale",
+          "steps": {
+            "zero": "Empty the scale and keep it still, then continue.",
+            "span": "Place a known weight on the scale, enter it, and keep it still."
+          },
+          "inputs": {
+            "known_weight_g": "Known weight"
+          }
+        }
+      }
     },
     "water_fountain": {
       "water_level": "Water Level",

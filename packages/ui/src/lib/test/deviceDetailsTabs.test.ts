@@ -49,7 +49,11 @@ describe('getDeviceDetailsTabs', () => {
     const withSettings = (placement: 'setting' | 'control') =>
       getDeviceDetailsTabs({
         type: 'water_fountain',
-        controls: { settings: [setting(placement)], actions: [] },
+        controls: {
+          settings: [setting(placement)],
+          actions: [],
+          procedures: [],
+        },
       });
 
     assert.ok(withSettings('setting').includes('settings'));

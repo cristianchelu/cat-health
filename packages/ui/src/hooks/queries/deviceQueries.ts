@@ -21,6 +21,7 @@ import {
   unlinkDeviceRecognition,
   patchDeviceSettings,
   runDeviceAction,
+  runProcedureStep,
 } from '@/api/devices';
 import { deleteEvent, updateEvent } from '@/api/pets';
 import * as React from 'react';
@@ -43,6 +44,7 @@ import type {
   GetEventsResponseDTO,
   PatchDeviceSettingsRequestDTO,
   RunDeviceActionRequestDTO,
+  RunProcedureStepRequestDTO,
 } from 'shared';
 
 export function useDevices() {
@@ -393,6 +395,23 @@ export function useRunDeviceAction(deviceId: number) {
       key: string;
       args?: RunDeviceActionRequestDTO;
     }) => runDeviceAction(deviceId, key, args),
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] }),
+  });
+}
+
+export function useRunProcedureStep(deviceId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      key,
+      step,
+      inputs,
+    }: {
+      key: string;
+      step: string;
+      inputs?: RunProcedureStepRequestDTO;
+    }) => runProcedureStep(deviceId, key, step, inputs),
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: ['device', deviceId] }),
   });

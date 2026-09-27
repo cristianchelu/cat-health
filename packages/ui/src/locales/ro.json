@@ -835,7 +835,23 @@
         "portion": "Porție țintă"
       },
       "choose_food": "Alege mâncarea",
-      "layout": "Aranjament"
+      "layout": "Aranjament",
+      "start": "Pornește",
+      "continue": "Continuă",
+      "finish": "Finalizează",
+      "step_progress": "Pasul {{current}} din {{total}}",
+      "procedures": {
+        "scale_calibration": {
+          "title": "Calibrează cântarul",
+          "steps": {
+            "zero": "Golește cântarul și ține-l nemișcat, apoi continuă.",
+            "span": "Pune o greutate cunoscută pe cântar, introdu-o și ține-o nemișcată."
+          },
+          "inputs": {
+            "known_weight_g": "Greutate cunoscută"
+          }
+        }
+      }
     }
   },
   "annotation": {

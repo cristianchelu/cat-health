@@ -8,6 +8,7 @@ import { EntitySensor } from '@/components/devices/entities/EntitySensor';
 import { EntityBinarySensor } from '@/components/devices/entities/EntityBinarySensor';
 import { DeviceActions } from '@/components/devices/controls/DeviceActions';
 import { DeviceLiveControls } from '@/components/devices/controls/DeviceLiveControls';
+import { DeviceProcedures } from '@/components/devices/controls/DeviceProcedures';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { groupEntitiesForDashboard } from '@/lib/deviceEntityDashboard';
 import { formatStructuredValue } from '@/lib/formatStructuredValue';
@@ -29,6 +30,12 @@ const actionsIn = (
   controls: DeviceControlsDTO | undefined,
   group: ControlGroup,
 ) => controls?.actions.filter((action) => action.group === group) ?? [];
+
+const proceduresIn = (
+  controls: DeviceControlsDTO | undefined,
+  group: ControlGroup,
+) =>
+  controls?.procedures.filter((procedure) => procedure.group === group) ?? [];
 
 /** Settings that operate the device; the ones that configure it live on the Settings tab. */
 const liveSettingsIn = (
@@ -178,18 +185,21 @@ export const ESPHomeView: React.FC<ESPHomeViewProps> = ({
   const renderControls = (group: ControlGroup) => {
     const actions = actionsIn(controls, group);
     const live = liveSettingsIn(controls, group);
-    if (actions.length + live.length === 0) return null;
+    const procedures = proceduresIn(controls, group);
+    if (actions.length + live.length + procedures.length === 0) return null;
     return (
       <ResponsiveTileGrid>
         <DeviceLiveControls deviceId={deviceId} settings={live} />
         <DeviceActions deviceId={deviceId} actions={actions} />
+        <DeviceProcedures deviceId={deviceId} procedures={procedures} />
       </ResponsiveTileGrid>
     );
   };
 
   const hasControls = (group: ControlGroup) =>
     actionsIn(controls, group).length > 0 ||
-    liveSettingsIn(controls, group).length > 0;
+    liveSettingsIn(controls, group).length > 0 ||
+    proceduresIn(controls, group).length > 0;
 
   if (entities.length === 0 && !controls) {
     return (

@@ -1,6 +1,7 @@
 import type {
   PatchDeviceSettingsRequestDTO,
   RunDeviceActionRequestDTO,
+  RunProcedureStepRequestDTO,
   DeviceWriteAppliedDTO,
   GetEventsResponseDTO,
   GetDeviceResponseDTO,
@@ -133,6 +134,19 @@ export async function runDeviceAction(
   const { data } = await apiClient.post<DeviceWriteAppliedDTO>(
     `/devices/${deviceId}/actions/${encodeURIComponent(key)}`,
     args,
+  );
+  return data;
+}
+
+export async function runProcedureStep(
+  deviceId: number,
+  key: string,
+  step: string,
+  inputs: RunProcedureStepRequestDTO = {},
+) {
+  const { data } = await apiClient.post<DeviceWriteAppliedDTO>(
+    `/devices/${deviceId}/procedures/${encodeURIComponent(key)}/steps/${encodeURIComponent(step)}`,
+    inputs,
   );
   return data;
 }
