@@ -45,6 +45,13 @@ const PopoverContent = React.forwardRef<
      * which is why it is off by default.
      */
     showArrow?: boolean;
+    /**
+     * `tip` dresses the panel as a {@link Tooltip}, for a glyph's note that
+     * must also open on tap, where a hover label cannot. It wears the
+     * tooltip's own classes, so the skin has one owner; only what is inside
+     * differs (a tooltip's text cannot be pressed, a tip's can).
+     */
+    variant?: 'panel' | 'tip';
   }
 >(
   (
@@ -52,6 +59,7 @@ const PopoverContent = React.forwardRef<
       className,
       children,
       showArrow = false,
+      variant = 'panel',
       align = 'center',
       sideOffset = 6,
       collisionPadding = 8,
@@ -65,11 +73,15 @@ const PopoverContent = React.forwardRef<
         align={align}
         sideOffset={sideOffset}
         collisionPadding={collisionPadding}
-        className={cn('popover', className)}
+        className={cn(variant === 'tip' ? 'tooltip tip' : 'popover', className)}
         {...props}
       >
         {children}
-        {showArrow && <PopoverPrimitive.Arrow className="popover-arrow" />}
+        {showArrow && (
+          <PopoverPrimitive.Arrow
+            className={variant === 'tip' ? 'tooltip-arrow' : 'popover-arrow'}
+          />
+        )}
       </PopoverPrimitive.Content>
     </PopoverPrimitive.Portal>
   ),

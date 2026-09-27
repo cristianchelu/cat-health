@@ -1,7 +1,9 @@
 /*
  * Radix portals the content to the body and places it against whichever edge
  * it settled on after avoiding collisions, so there is no positioning to do
- * here — only what the label looks like.
+ * here — only what the label looks like. `PopoverContent variant="tip"` wears
+ * these classes too, so a note that opens on tap looks like the one that
+ * opens on hover.
  */
 .tooltip {
   z-index: var(--z-index-tooltip);
@@ -18,6 +20,20 @@
 
   .tooltip-arrow {
     fill: var(--color-text);
+  }
+
+  /* A tip (PopoverContent variant="tip") is read, not glanced at, and may be
+     pressed, so it gets a panel's room where a label gets a sliver. */
+  &.tip {
+    max-width: 18rem;
+    padding: var(--space-sm) var(--space-md);
+    line-height: var(--line-height-normal);
+  }
+
+  /* A tip's action sits under its words, on a line of its own. */
+  .tooltip-action {
+    display: block;
+    margin-top: var(--space-sm);
   }
 }
 

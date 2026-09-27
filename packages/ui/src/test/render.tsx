@@ -4,6 +4,7 @@ import { render, type RenderOptions } from '@testing-library/react';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import i18n from 'i18next';
 import { MemoryRouter, type MemoryRouterProps } from 'react-router';
+import { TooltipProvider } from '@/components/ui/Tooltip';
 
 /**
  * Minimal keys used by ConfirmDialog / FormInlineDiscard / Dialog close /
@@ -76,7 +77,11 @@ function Providers({ children, router }: ProvidersProps) {
     children
   );
 
-  return <I18nextProvider i18n={i18n}>{content}</I18nextProvider>;
+  return (
+    <I18nextProvider i18n={i18n}>
+      <TooltipProvider>{content}</TooltipProvider>
+    </I18nextProvider>
+  );
 }
 
 interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {

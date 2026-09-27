@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import { cleanup, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { FormTile } from '../FormTile.tsx';
 import { renderWithProviders } from '@/test/render.tsx';
@@ -10,26 +11,37 @@ afterEach(() => {
 });
 
 describe('FormTile', () => {
-  it('names its control by its label', async () => {
+  it('keeps an error behind a mark in the row and announces it', async () => {
     await renderWithProviders(
-      <FormTile label="Pump" htmlFor="pump">
-        <input id="pump" type="checkbox" />
+      <FormTile label="Zero scale" error="The device refused the change">
+        <button type="button">Run</button>
       </FormTile>,
     );
 
-    assert.ok(screen.getByRole('checkbox', { name: 'Pump' }));
+    assert.equal(
+      screen.getByRole('alert').textContent,
+      'The device refused the change',
+    );
+    const mark = screen.getByRole('button', {
+      name: 'The device refused the change',
+    });
+    await userEvent.setup().click(mark);
+
+    const panel = await screen.findByRole('dialog', {
+      name: 'The device refused the change',
+    });
+    assert.ok(panel.textContent?.includes('The device refused the change'));
   });
 
-  it('announces a busy value inside the row, not on a line of its own', async () => {
-    const { container } = await renderWithProviders(
-      <FormTile label="Pump" busyLabel="Waiting for the device…">
-        <input type="checkbox" />
+  it('shows no mark without an error', async () => {
+    await renderWithProviders(
+      <FormTile label="Zero scale">
+        <button type="button">Run</button>
       </FormTile>,
     );
-
-    const status = screen.getByRole('status');
-    assert.equal(status.textContent, 'Waiting for the device…');
-    assert.ok(status.closest('.form-tile-row'));
-    assert.equal(container.querySelectorAll('.form-tile > p').length, 0);
+    assert.deepEqual(
+      screen.getAllByRole('button').map((button) => button.textContent),
+      ['Run'],
+    );
   });
 });

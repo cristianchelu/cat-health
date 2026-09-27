@@ -1,0 +1,10 @@
+.tile-note {
+  &.error {
+    color: var(--color-error);
+
+    &:hover,
+    &:focus {
+      color: var(--color-error);
+    }
+  }
+}

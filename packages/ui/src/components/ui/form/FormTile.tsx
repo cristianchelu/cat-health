@@ -1,10 +1,12 @@
 import * as React from 'react';
 import { Spinner } from '@/components/ui/Spinner';
+import { TileNote } from '@/components/ui/TileNote';
 import { cn } from '@/lib/utils';
 import './FormTile.css';
 
 interface FormTileProps extends React.ComponentProps<'div'> {
-  label: string;
+  /** Text, or a small composition such as an avatar beside a name. */
+  label: React.ReactNode;
   /** The control's id, so the label focuses or toggles it. */
   htmlFor?: string;
   /**
@@ -13,6 +15,7 @@ interface FormTileProps extends React.ComponentProps<'div'> {
    * keeps its height.
    */
   busyLabel?: string;
+  /** What went wrong, behind a mark in the row; announced as it lands. */
   error?: string;
 }
 
@@ -40,14 +43,17 @@ const FormTile = React.forwardRef<HTMLDivElement, FormTileProps>(
               <span className="sr-only">{busyLabel}</span>
             </span>
           ) : null}
+          {error ? (
+            <>
+              <span className="sr-only" role="alert">
+                {error}
+              </span>
+              <TileNote tone="error" label={error} body={error} />
+            </>
+          ) : null}
           {children}
         </div>
       </div>
-      {error ? (
-        <p className="form-tile-error" role="alert">
-          {error}
-        </p>
-      ) : null}
     </div>
   ),
 );
