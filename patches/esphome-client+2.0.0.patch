@@ -1,0 +1,84 @@
+diff --git a/node_modules/esphome-client/dist/user-services.d.ts b/node_modules/esphome-client/dist/user-services.d.ts
+index 95f3f2a..5dc2a8e 100644
+--- a/node_modules/esphome-client/dist/user-services.d.ts
++++ b/node_modules/esphome-client/dist/user-services.d.ts
+@@ -18,6 +18,17 @@ import type { EspHomeLogging, ServiceEntity } from "./types.ts";
+ import { Buffer } from "node:buffer";
+ import type { ExecuteServiceArgumentValue } from "./esphome-client.ts";
+ import type { ServiceRegistry } from "./registries/service-registry.ts";
++/**
++ * Correlation options for a service execution. A non-zero `callId` asks the device to answer with an `EXECUTE_SERVICE_RESPONSE`, emitted as `serviceCallResult` with
++ * the same `callId`; firmware without `USE_API_USER_DEFINED_ACTION_RESPONSES` ignores both fields.
++ *
++ * @property callId - Client-chosen, non-zero id echoed back on the response.
++ * @property returnResponse - Ask for the response data as well as the status, for actions declared with `supports_response: optional`.
++ */
++export interface ExecuteServiceOptions {
++    callId?: number;
++    returnResponse?: boolean;
++}
+ /**
+  * Narrow seam the {@link UserServicesApi} consumes from the host. Mirrors the other sub-API seams (a few primitives plus the host's `frameAndSend` hook). The api
+  * never reaches into host private state - everything it needs flows through this object.
+@@ -70,7 +81,7 @@ export declare class UserServicesApi {
+      * @param args - An array of argument values matching the service definition.
+      *
+      */
+-    execute(key: number, args?: ExecuteServiceArgumentValue[]): void;
++    execute(key: number, args?: ExecuteServiceArgumentValue[], options?: ExecuteServiceOptions): void;
+     /**
+      * Execute a user-defined service on the ESPHome device by name. Looks up the service in the discovery registry and dispatches to {@link execute}.
+      *
+@@ -82,6 +93,6 @@ export declare class UserServicesApi {
+      * @param args - An array of argument values matching the service definition.
+      *
+      */
+-    executeByName(name: string, args?: ExecuteServiceArgumentValue[]): void;
++    executeByName(name: string, args?: ExecuteServiceArgumentValue[], options?: ExecuteServiceOptions): void;
+ }
+ //# sourceMappingURL=user-services.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/esphome-client/dist/user-services.js b/node_modules/esphome-client/dist/user-services.js
+index c17305c..5bb491e 100644
+--- a/node_modules/esphome-client/dist/user-services.js
++++ b/node_modules/esphome-client/dist/user-services.js
+@@ -51,7 +51,7 @@ export class UserServicesApi {
+      * @param args - An array of argument values matching the service definition.
+      *
+      */
+-    execute(key, args = []) {
++    execute(key, args = [], options = {}) {
+         // Validate the service exists in the discovery registry. Unknown keys are a consumer-side bug; log and skip rather than write garbage to the wire.
+         const service = this.host.serviceRegistry.byKey(key);
+         if (!service) {
+@@ -79,6 +79,14 @@ export class UserServicesApi {
+                 fields.push({ fieldNumber: 2, value: argPayload, wireType: WireType.LENGTH_DELIMITED });
+             }
+         }
++        // call_id (3) and return_response (4) ask a device built with `USE_API_USER_DEFINED_ACTION_RESPONSES` to answer with an `EXECUTE_SERVICE_RESPONSE`
++        // carrying the same call id. The device only tracks a call whose id is non-zero, so 0 is left off the wire.
++        if (options.callId) {
++            fields.push({ fieldNumber: 3, value: options.callId, wireType: WireType.VARINT });
++        }
++        if (options.returnResponse) {
++            fields.push({ fieldNumber: 4, value: 1, wireType: WireType.VARINT });
++        }
+         this.host.send(MessageType.EXECUTE_SERVICE_REQUEST, encodeProtoFields(fields));
+     }
+     /**
+@@ -92,13 +100,13 @@ export class UserServicesApi {
+      * @param args - An array of argument values matching the service definition.
+      *
+      */
+-    executeByName(name, args = []) {
++    executeByName(name, args = [], options = {}) {
+         const service = this.host.serviceRegistry.byName(name);
+         if (!service) {
+             this.host.log.error("Service with name '" + name + "' not found.");
+             return;
+         }
+-        this.execute(service.key, args);
++        this.execute(service.key, args, options);
+     }
+ }
+ /**
