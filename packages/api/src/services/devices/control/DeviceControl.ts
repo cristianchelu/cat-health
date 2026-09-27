@@ -1,34 +1,15 @@
 import type { DeviceControlsDTO, SettingKey } from 'shared';
 
-import type { EventBus } from '../EventBus.ts';
 import type {
   DeviceController,
   DeviceIntegrationContext,
   LiveControllerFailure,
 } from '../types.ts';
-import type {
-  ControlCommand,
-  ControlOrigin,
-  ControlSurface,
-  Settlement,
-} from './types.ts';
+import type { ControlCommand, ControlSurface, Settlement } from './types.ts';
 import {
   validateActionArgs,
   validateControlValue,
 } from './validateControlValue.ts';
-
-/** Published on the EventBus once a write is applied or has failed. */
-export const DEVICE_CONTROL_SETTLED = 'device.control.settled';
-
-/** A setting or action on one device. */
-export type WriteTarget = `setting:${string}` | `action:${string}`;
-
-export interface DeviceControlSettledEvent {
-  deviceId: number;
-  target: WriteTarget;
-  settlement: Settlement;
-  origin: ControlOrigin;
-}
 
 export type ControlResult<T> =
   | { ok: true; value: T }
@@ -54,13 +35,11 @@ type DeviceControlContext = Pick<
  */
 export class DeviceControl {
   private readonly context: DeviceControlContext;
-  private readonly eventBus: EventBus;
   private readonly queues = new Map<number, Promise<unknown>>();
   private readonly lifetimes = new Map<number, AbortController>();
 
-  constructor(deps: { context: DeviceControlContext; eventBus: EventBus }) {
+  constructor(deps: { context: DeviceControlContext }) {
     this.context = deps.context;
-    this.eventBus = deps.eventBus;
     deps.context.onControllerRetired((deviceId) => this.retire(deviceId));
   }
 
@@ -90,7 +69,6 @@ export class DeviceControl {
   async applySettings(
     deviceId: number,
     patch: Record<string, unknown>,
-    origin: ControlOrigin,
   ): Promise<ControlResult<Record<string, Settlement>>> {
     const resolved = await this.resolveSurface(deviceId);
     if (!resolved.ok) return resolved;
@@ -126,7 +104,7 @@ export class DeviceControl {
 
     const settlements: Record<string, Settlement> = {};
     for (const command of commands) {
-      const settlement = await this.write(deviceId, surface, command, origin);
+      const settlement = await this.write(deviceId, surface, command);
       settlements[command.key] = settlement;
       if (settlement.status === 'failed') break;
     }
@@ -137,7 +115,6 @@ export class DeviceControl {
     deviceId: number,
     key: string,
     args: Record<string, unknown>,
-    origin: ControlOrigin,
   ): Promise<ControlResult<Settlement>> {
     const resolved = await this.resolveSurface(deviceId);
     if (!resolved.ok) return resolved;
@@ -168,7 +145,7 @@ export class DeviceControl {
     const command = { kind: 'action', key: descriptor.key, args } as const;
     return {
       ok: true,
-      value: await this.write(deviceId, surface, command, origin),
+      value: await this.write(deviceId, surface, command),
     };
   }
 
@@ -200,27 +177,18 @@ export class DeviceControl {
     deviceId: number,
     surface: ControlSurface,
     command: ControlCommand,
-    origin: ControlOrigin,
   ): Promise<Settlement> {
     const run = async (): Promise<Settlement> => {
       const submission = await surface.submit(command);
-      const settlement =
-        submission.status === 'pending'
-          ? await submission.settle(this.lifetime(deviceId).signal).catch(
-              (error: unknown): Settlement => ({
-                status: 'failed',
-                reason: 'unknown',
-                message: error instanceof Error ? error.message : String(error),
-              }),
-            )
-          : submission;
-      this.eventBus.publish(DEVICE_CONTROL_SETTLED, {
-        deviceId,
-        target: `${command.kind}:${command.key}`,
-        settlement,
-        origin,
-      } satisfies DeviceControlSettledEvent);
-      return settlement;
+      return submission.status === 'pending'
+        ? submission.settle(this.lifetime(deviceId).signal).catch(
+            (error: unknown): Settlement => ({
+              status: 'failed',
+              reason: 'unknown',
+              message: error instanceof Error ? error.message : String(error),
+            }),
+          )
+        : submission;
     };
 
     const previous = this.queues.get(deviceId) ?? Promise.resolve();

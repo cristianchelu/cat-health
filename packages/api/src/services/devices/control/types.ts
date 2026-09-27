@@ -89,8 +89,3 @@ export interface ControlSurface {
   validate(command: ControlCommand): string | null;
   submit(command: ControlCommand): Promise<Submission>;
 }
-
-/** Who asked, carried on every settlement event. */
-export type ControlOrigin =
-  | { kind: 'user' }
-  | { kind: 'service'; name: string };

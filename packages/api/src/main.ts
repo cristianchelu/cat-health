@@ -59,10 +59,7 @@ cameraPreview.start();
 const recognitionService = new RecognitionService(db, eventBus);
 await recognitionService.initialize();
 
-const deviceControl = new DeviceControl({
-  context: integrationManager,
-  eventBus,
-});
+const deviceControl = new DeviceControl({ context: integrationManager });
 
 const app = await buildApp({
   db,

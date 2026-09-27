@@ -3,7 +3,6 @@ import { after, before, describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
 import type { GetDeviceResponseDTO, GetDevicesResponseDTO } from 'shared';
 
-import { EventBus } from '../../src/services/devices/EventBus.ts';
 import { composeControlSurface } from '../../src/services/devices/control/composeControlSurface.ts';
 import { DeviceControl } from '../../src/services/devices/control/DeviceControl.ts';
 import {
@@ -115,10 +114,7 @@ describe('device controls routes', () => {
     });
     app = await createTestApp(ctx, {
       integrationManager,
-      deviceControl: new DeviceControl({
-        context: integrationManager,
-        eventBus: new EventBus(),
-      }),
+      deviceControl: new DeviceControl({ context: integrationManager }),
     });
   });
 

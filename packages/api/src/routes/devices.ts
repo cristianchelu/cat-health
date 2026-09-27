@@ -1121,7 +1121,6 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       const result = await fastify.deviceControl.applySettings(
         id,
         request.body,
-        { kind: 'user' },
       );
       if (!result.ok) return sendControlFailure(reply, id, result);
       const failed = Object.values(result.value).find(
@@ -1150,7 +1149,6 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         id,
         key,
         request.body,
-        { kind: 'user' },
       );
       if (!result.ok) return sendControlFailure(reply, id, result);
       if (result.value.status === 'failed') {

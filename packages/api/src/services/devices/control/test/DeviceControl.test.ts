@@ -3,14 +3,9 @@ import { describe, it } from 'node:test';
 
 import type { DeviceStatus } from 'shared';
 
-import { EventBus } from '../../EventBus.ts';
 import type { DeviceController, LiveControllerResult } from '../../types.ts';
 import { composeControlSurface } from '../composeControlSurface.ts';
-import {
-  DEVICE_CONTROL_SETTLED,
-  DeviceControl,
-  type DeviceControlSettledEvent,
-} from '../DeviceControl.ts';
+import { DeviceControl } from '../DeviceControl.ts';
 import type { Acceptance, Settlement } from '../types.ts';
 
 interface Write {
@@ -30,8 +25,6 @@ function deferred<T>(): Deferred<T> {
   });
   return { promise, resolve };
 }
-
-const USER = { kind: 'user' } as const;
 
 /**
  * A device with one number setting, one switch and one button, whose channel
@@ -120,12 +113,6 @@ function makeHarness(options: { status?: DeviceStatus } = {}) {
     controls: () => surface,
   };
 
-  const eventBus = new EventBus();
-  const settledEvents: DeviceControlSettledEvent[] = [];
-  eventBus.subscribe<DeviceControlSettledEvent>(DEVICE_CONTROL_SETTLED, (e) =>
-    settledEvents.push(e),
-  );
-
   const control = new DeviceControl({
     context: {
       resolveLiveController: async (): Promise<LiveControllerResult> => ({
@@ -137,7 +124,6 @@ function makeHarness(options: { status?: DeviceStatus } = {}) {
         return () => {};
       },
     },
-    eventBus,
   });
 
   return {
@@ -145,7 +131,6 @@ function makeHarness(options: { status?: DeviceStatus } = {}) {
     controller,
     sent,
     answers,
-    settledEvents,
     retire: (deviceId: number) =>
       retired.forEach((listener) => listener(deviceId)),
   };
@@ -155,11 +140,10 @@ describe('DeviceControl', () => {
   it('writes nothing when any key in a patch is invalid', async () => {
     const { control, sent } = makeHarness();
 
-    const result = await control.applySettings(
-      1,
-      { 'dev:switch.pump': true, 'dev:number.target': 42 },
-      USER,
-    );
+    const result = await control.applySettings(1, {
+      'dev:switch.pump': true,
+      'dev:number.target': 42,
+    });
 
     assert.equal(result.ok, false);
     assert.equal(!result.ok && result.reason, 'invalid');
@@ -169,11 +153,7 @@ describe('DeviceControl', () => {
   it('refuses a key the device does not offer', async () => {
     const { control, sent } = makeHarness();
 
-    const result = await control.applySettings(
-      1,
-      { 'dev:number.nope': 1 },
-      USER,
-    );
+    const result = await control.applySettings(1, { 'dev:number.nope': 1 });
 
     assert.equal(!result.ok && result.reason, 'unknown_key');
     assert.deepEqual(sent, []);
@@ -182,32 +162,20 @@ describe('DeviceControl', () => {
   it('refuses to write to an offline device', async () => {
     const { control, sent } = makeHarness({ status: 'offline' });
 
-    const result = await control.runAction(1, 'dev:button.reset', {}, USER);
+    const result = await control.runAction(1, 'dev:button.reset', {});
 
     assert.equal(!result.ok && result.reason, 'offline');
     assert.deepEqual(sent, []);
   });
 
-  it('reports an applied write and publishes its settlement', async () => {
-    const { control, sent, settledEvents } = makeHarness();
+  it('reports an applied write', async () => {
+    const { control, sent } = makeHarness();
 
-    const result = await control.applySettings(
-      1,
-      { 'dev:number.target': 45 },
-      USER,
-    );
+    const result = await control.applySettings(1, { 'dev:number.target': 45 });
 
     assert.ok(result.ok);
     assert.deepEqual(result.value['dev:number.target'], { status: 'applied' });
     assert.deepEqual(sent, [{ key: 'target', value: 45 }]);
-    assert.deepEqual(settledEvents, [
-      {
-        deviceId: 1,
-        target: 'setting:dev:number.target',
-        settlement: { status: 'applied' },
-        origin: USER,
-      },
-    ]);
   });
 
   it('resolves a write only once the device confirms it', async () => {
@@ -217,7 +185,7 @@ describe('DeviceControl', () => {
 
     let done = false;
     const result = control
-      .applySettings(1, { 'dev:number.target': 60 }, USER)
+      .applySettings(1, { 'dev:number.target': 60 })
       .finally(() => {
         done = true;
       });
@@ -239,11 +207,7 @@ describe('DeviceControl', () => {
       message: 'no echo',
     }));
 
-    const result = await control.applySettings(
-      1,
-      { 'dev:switch.pump': true },
-      USER,
-    );
+    const result = await control.applySettings(1, { 'dev:switch.pump': true });
 
     assert.ok(result.ok);
     assert.deepEqual(result.value['dev:switch.pump'], {
@@ -257,11 +221,10 @@ describe('DeviceControl', () => {
     const { control, answers, sent } = makeHarness();
     answers.push(async () => ({ status: 'failed', reason: 'rejected' }));
 
-    const result = await control.applySettings(
-      1,
-      { 'dev:number.target': 45, 'dev:switch.pump': true },
-      USER,
-    );
+    const result = await control.applySettings(1, {
+      'dev:number.target': 45,
+      'dev:switch.pump': true,
+    });
 
     assert.ok(result.ok);
     assert.deepEqual(result.value, {
@@ -278,8 +241,8 @@ describe('DeviceControl', () => {
       return { status: 'applied' };
     });
 
-    const first = control.applySettings(1, { 'dev:number.target': 50 }, USER);
-    const second = control.runAction(1, 'dev:button.reset', {}, USER);
+    const first = control.applySettings(1, { 'dev:number.target': 50 });
+    const second = control.runAction(1, 'dev:button.reset', {});
     await new Promise((resolve) => setImmediate(resolve));
     assert.deepEqual(sent, [{ key: 'target', value: 50 }]);
 
@@ -298,7 +261,7 @@ describe('DeviceControl', () => {
       ref: deferred<Settlement>(),
     }));
 
-    const result = control.applySettings(1, { 'dev:number.target': 70 }, USER);
+    const result = control.applySettings(1, { 'dev:number.target': 70 });
     await new Promise((resolve) => setImmediate(resolve));
     retire(1);
     const settled = await result;
