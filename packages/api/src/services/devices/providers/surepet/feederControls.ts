@@ -1,5 +1,7 @@
 import {
+  KNOWN_ACTIONS,
   parseFeederFoodCompartments,
+  type ActionDescriptor,
   type FeederFoodCompartmentsDTO,
   type KnownSettingValues,
   type SettingDescriptor,
@@ -12,6 +14,7 @@ import {
 import { pollUntil } from '../../control/observe.ts';
 import type {
   Acceptance,
+  ActionBinding,
   ControlSurface,
   SettingBinding,
   Settlement,
@@ -20,6 +23,7 @@ import {
   BowlType,
   CloseDelay,
   ControlRequestStatus,
+  FeederTareType,
   FoodType,
   SUREPET_CONTROL_POLL_INTERVAL_MS,
   SUREPET_CONTROL_TIMEOUT_MS,
@@ -260,9 +264,66 @@ function bowlsSetting(
   };
 }
 
+type TareSide = (typeof KNOWN_ACTIONS)['tare']['side'][number];
+
+const TARE_TYPE: Record<TareSide, number> = {
+  left: FeederTareType.LEFT,
+  right: FeederTareType.RIGHT,
+  both: FeederTareType.BOTH,
+};
+
+/**
+ * Zero the scale. A split tray picks a side, as their app's zero sheet
+ * offers; a single bowl has nothing to pick and is zeroed as the left one,
+ * which is what their app sends for it.
+ */
+const tare: ActionBinding<FeederWrite, FeederControlState> = {
+  key: 'tare',
+  descriptor: ({ control }): ActionDescriptor => {
+    const layout = layoutOf(control?.bowls?.type);
+    return {
+      key: 'tare',
+      label: { i18n: 'devices.controls.actions.tare' },
+      args:
+        layout === 'split'
+          ? {
+              side: {
+                kind: 'enum',
+                options: KNOWN_ACTIONS.tare.side.map((side) => ({
+                  value: side,
+                  label: { i18n: `devices.controls.args.tare.side.${side}` },
+                })),
+              },
+            }
+          : {},
+      confirm: false,
+      available: layout !== null,
+      group: 'primary',
+    };
+  },
+  encode: (args) => {
+    const side = KNOWN_ACTIONS.tare.side.find((name) => name === args.side);
+    return [
+      {
+        to: 'cloud',
+        control: { tare: side ? TARE_TYPE[side] : FeederTareType.LEFT },
+      },
+    ];
+  },
+};
+
+/**
+ * Whether a write asks the feeder to do something rather than hold a value.
+ * The cloud answering "no change" to one means it did nothing, which their
+ * app reports as a failed zero (usually a closed lid); to a setting it means
+ * the value was already there.
+ */
+const isCommand = (control: SurePetControlWrite): boolean =>
+  control.tare !== undefined;
+
 /** How a write that reached the cloud is confirmed. */
 type FollowUp =
-  | { kind: 'request'; id: string }
+  | { kind: 'request'; id: string; control: SurePetControlWrite }
   | { kind: 'readback'; control: SurePetControlWrite };
 
 /**
@@ -298,11 +359,21 @@ const requestStatus = (request: SurePetControlRequest): number | undefined =>
  * a status that says so counts as applied; a missing or unfamiliar one is
  * followed like a pending request until it leaves the queue or times out.
  */
-function settlementOf(status: number | undefined): Settlement | undefined {
+function settlementOf(
+  status: number | undefined,
+  control: SurePetControlWrite,
+): Settlement | undefined {
   switch (status) {
     case ControlRequestStatus.SUCCESS:
-    case ControlRequestStatus.NO_CHANGE:
       return { status: 'applied' };
+    case ControlRequestStatus.NO_CHANGE:
+      return isCommand(control)
+        ? {
+            status: 'failed',
+            reason: 'rejected',
+            message: 'the feeder reported no change',
+          }
+        : { status: 'applied' };
     case ControlRequestStatus.DEVICE_TIMEOUT:
       return { status: 'failed', reason: 'timeout' };
     case ControlRequestStatus.SERVER_ERROR:
@@ -329,6 +400,7 @@ export function createFeederControlSurface(
   return composeControlSurface<FeederWrite, FeederControlState, FollowUp>({
     state,
     settings: [lidCloseDelay, bowlsSetting(writer)],
+    actions: [tare],
     channel: {
       async submit(write): Promise<Acceptance<FollowUp>> {
         if (write.to === 'local') {
@@ -337,18 +409,30 @@ export function createFeederControlSurface(
         }
         const { request } = await writer.put(write.control);
         // A bowls change can come back without a queued request; their app
-        // reads it optionally there and reloads the device instead.
+        // reads it optionally there and reloads the device instead. A command
+        // leaves nothing in the control document to read back.
         if (request?.request_id == null) {
+          if (isCommand(write.control)) {
+            return {
+              status: 'failed',
+              reason: 'timeout',
+              message: 'the cloud queued no request to follow',
+            };
+          }
           return {
             status: 'pending',
             ref: { kind: 'readback', control: write.control },
           };
         }
-        const settlement = settlementOf(requestStatus(request));
+        const settlement = settlementOf(requestStatus(request), write.control);
         if (settlement === undefined) {
           return {
             status: 'pending',
-            ref: { kind: 'request', id: String(request.request_id) },
+            ref: {
+              kind: 'request',
+              id: String(request.request_id),
+              control: write.control,
+            },
           };
         }
         await writer.refresh().catch(() => {});
@@ -367,7 +451,7 @@ export function createFeederControlSurface(
                 // Gone from the queue means the cloud is done with it; their
                 // app reloads the device at that point, and so does this.
                 return request
-                  ? settlementOf(requestStatus(request))
+                  ? settlementOf(requestStatus(request), followUp.control)
                   : { status: 'applied' as const };
               }
             : async () => {

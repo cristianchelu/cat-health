@@ -298,3 +298,72 @@ describe('SureFeed bowls', () => {
     assert.deepEqual(puts, []);
   });
 });
+
+describe('SureFeed tare', () => {
+  const tare = (args: Record<string, unknown> = {}) =>
+    ({ kind: 'action', key: 'tare', args }) as const;
+  const actionOf = (control: SurePetDeviceControlPayload) =>
+    makeFeeder(control, null).surface.manifest().actions[0];
+
+  it('offers a side to zero on a split tray and none on a single bowl', () => {
+    const split = actionOf({ bowls: { type: 4 } });
+    assert.deepEqual(
+      split.args.side?.kind === 'enum' &&
+        split.args.side.options.map((option) => option.value),
+      ['left', 'right', 'both'],
+    );
+    assert.deepEqual(actionOf({ bowls: { type: 1 } }).args, {});
+  });
+
+  it('is unavailable until the feeder reports its layout', () => {
+    assert.equal(actionOf({}).available, false);
+  });
+
+  it('sends the side as their tare type, and a single bowl as the left', async () => {
+    const answer = {
+      request_id: 'r1',
+      status_id: ControlRequestStatus.SUCCESS,
+    };
+    const split = makeFeeder({ bowls: { type: 4 } }, answer);
+    await split.surface.submit(tare({ side: 'right' }));
+    await split.surface.submit(tare({ side: 'both' }));
+    const single = makeFeeder({ bowls: { type: 1 } }, answer);
+    await single.surface.submit(tare());
+
+    assert.deepEqual(split.puts, [{ tare: 2 }, { tare: 3 }]);
+    assert.deepEqual(single.puts, [{ tare: 1 }]);
+  });
+
+  it('fails a zero the feeder answers with no change', async () => {
+    const { surface, queue } = makeFeeder(
+      { bowls: { type: 1 } },
+      { request_id: 'r2', status_id: ControlRequestStatus.PENDING },
+    );
+    queue.push({ request_id: 'r2', status_id: ControlRequestStatus.NO_CHANGE });
+
+    const submission = await surface.submit(tare());
+    const settlement =
+      submission.status === 'pending'
+        ? await submission.settle(new AbortController().signal)
+        : submission;
+
+    assert.equal(settlement.status, 'failed');
+    assert.equal(
+      settlement.status === 'failed' && settlement.reason,
+      'rejected',
+    );
+  });
+
+  it('times out a zero the cloud named no request for, without waiting', async () => {
+    const { surface, refreshes } = makeFeeder({ bowls: { type: 1 } }, null);
+
+    const settlement = await surface.submit(tare());
+
+    assert.equal(settlement.status, 'failed');
+    assert.equal(
+      settlement.status === 'failed' && settlement.reason,
+      'timeout',
+    );
+    assert.equal(refreshes(), 0);
+  });
+});
