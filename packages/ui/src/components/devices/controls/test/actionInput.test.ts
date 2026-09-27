@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { ActionControl } from 'shared';
+import type { ActionControl, ControlValueType } from 'shared';
 import { actionInput } from '../actionInput';
 
 const action = (args: ActionControl['args']): ActionControl => ({
@@ -12,10 +12,10 @@ const action = (args: ActionControl['args']): ActionControl => ({
   group: 'primary',
 });
 
-const side = {
+const side: Extract<ControlValueType, { kind: 'enum' }> = {
   kind: 'enum',
   options: [{ value: 'left', label: { text: 'Left' } }],
-} as const;
+};
 
 describe('actionInput', () => {
   it('asks for nothing when the action takes no arguments', () => {
