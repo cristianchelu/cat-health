@@ -31,14 +31,15 @@ describe('buildEntityBindings', () => {
     entity({ key: 6, type: 'sensor', name: 'Waste Weight' }),
     entity({ key: 7, type: 'switch', name: 'Debug', disabledByDefault: true }),
   ]);
-  const setting = (key: string) =>
-    settings.find((binding) => binding.descriptor.key === key);
+  const binding = (key: string) =>
+    settings.find((candidate) => candidate.key === key);
+  const setting = (key: string) => binding(key)?.descriptor(new Map());
   const action = (key: string) =>
     actions.find((binding) => binding.key === key)?.descriptor(new Map());
 
   it('offers switches, numbers and selects as settings under typed keys', () => {
     assert.deepEqual(
-      settings.map((binding) => binding.descriptor.key),
+      settings.map((binding) => binding.key),
       [
         'dev:number.calibration_known_weight',
         'dev:switch.pump',
@@ -48,9 +49,7 @@ describe('buildEntityBindings', () => {
   });
 
   it('carries a number entity bounds, step, unit and category', () => {
-    const descriptor = setting(
-      'dev:number.calibration_known_weight',
-    )?.descriptor;
+    const descriptor = setting('dev:number.calibration_known_weight');
     assert.deepEqual(descriptor?.type, {
       kind: 'number',
       min: 1000,
@@ -64,14 +63,14 @@ describe('buildEntityBindings', () => {
 
   it('places config entities in settings and the rest beside the readings', () => {
     assert.equal(
-      setting('dev:number.calibration_known_weight')?.descriptor.placement,
+      setting('dev:number.calibration_known_weight')?.placement,
       'setting',
     );
-    assert.equal(setting('dev:switch.pump')?.descriptor.placement, 'control');
+    assert.equal(setting('dev:switch.pump')?.placement, 'control');
   });
 
   it('lists a select entity options as its choices', () => {
-    const type = setting('dev:select.mode')?.descriptor.type;
+    const type = setting('dev:select.mode')?.type;
     assert.deepEqual(
       type?.kind === 'enum' ? type.options.map((option) => option.value) : [],
       ['Eco', 'Boost'],
@@ -89,7 +88,7 @@ describe('buildEntityBindings', () => {
   });
 
   it('sends nothing for a state the entity already holds', () => {
-    const pump = setting('dev:switch.pump');
+    const pump = binding('dev:switch.pump');
     const values = new Map<number, unknown>([[2, true]]);
     assert.deepEqual(pump?.encode(true, values), []);
     assert.deepEqual(pump?.encode(false, values), [
@@ -100,7 +99,7 @@ describe('buildEntityBindings', () => {
   it('reads an unknown number as null rather than NaN', () => {
     const values = new Map<number, unknown>([[1, Number.NaN]]);
     assert.equal(
-      setting('dev:number.calibration_known_weight')?.read(values),
+      binding('dev:number.calibration_known_weight')?.read(values),
       null,
     );
   });

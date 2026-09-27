@@ -141,3 +141,41 @@ describe('composeControlSurface', () => {
     assert.deepEqual(sent, ['device', 'record']);
   });
 });
+
+describe('composeControlSurface manifest', () => {
+  it('describes a setting from the state it is asked with', () => {
+    const surface = composeControlSurface<string, { known: string[] }>({
+      state: () => ({ known: ['x', 'y'] }),
+      settings: [
+        {
+          key: 'pets',
+          descriptor: (state) => ({
+            key: 'pets',
+            label: { i18n: 'devices.controls.settings.pets' },
+            type: {
+              kind: 'identities',
+              options: state.known.map((id) => ({
+                id,
+                label: id,
+                pet_id: null,
+              })),
+            },
+            placement: 'setting',
+            group: 'primary',
+          }),
+          read: () => [],
+          encode: () => [],
+        },
+      ],
+      channel: { submit: async () => ({ status: 'applied' }) },
+    });
+
+    assert.deepEqual(surface.manifest().settings[0]?.type, {
+      kind: 'identities',
+      options: [
+        { id: 'x', label: 'x', pet_id: null },
+        { id: 'y', label: 'y', pet_id: null },
+      ],
+    });
+  });
+});

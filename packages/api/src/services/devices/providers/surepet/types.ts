@@ -34,6 +34,14 @@ export interface SurePetCloudDevice {
   parent_device_id?: number | null;
   status?: SurePetDeviceStatusPayload;
   control?: SurePetDeviceControlPayload;
+  /** The pet tags assigned to this device; `id` is a pet's `tag_id`. */
+  tags?: Array<SurePetDeviceTag | null> | null;
+}
+
+export interface SurePetDeviceTag {
+  id: number;
+  /** A flap's per-tag profile; feeders carry whatever the cloud defaults to. */
+  profile?: number | null;
 }
 
 export interface SurePetDeviceSignal {
@@ -70,6 +78,12 @@ export type SurePetControlWrite = Pick<
   /** `FeederTareType` on a feeder. */
   tare?: number;
 };
+
+/** One entry of a `device/{id}/tag/async` body. `TagRequestAction`. */
+export interface SurePetTagWrite {
+  tag_id: number;
+  request_action: number;
+}
 
 /**
  * What `control/async` answered: the request it queued when the reply names

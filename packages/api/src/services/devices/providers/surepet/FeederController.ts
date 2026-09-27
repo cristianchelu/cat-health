@@ -13,6 +13,7 @@ import type { ControlSurface } from '../../control/types.ts';
 import type {
   SurePetDeviceControlPayload,
   SurePetDeviceDetailPayload,
+  SurePetDeviceTag,
 } from './types.ts';
 import {
   createFeederControlSurface,
@@ -71,6 +72,7 @@ export class FeederController implements DeviceController {
   private status: DeviceStatus = 'unknown';
   private feederState: SureFeederState = { bowl_status: [] };
   private lastControl: SurePetDeviceControlPayload | undefined;
+  private lastTags: SurePetDeviceTag[] = [];
   private readonly controlSurface: ControlSurface | undefined;
 
   /** Without a writer the feeder is read-only, as it is in tests. */
@@ -84,7 +86,13 @@ export class FeederController implements DeviceController {
     this.deviceId = device.id;
     this.controlSurface = writer
       ? createFeederControlSurface(
-          () => ({ control: this.lastControl, config: this.device.config }),
+          () => ({
+            control: this.lastControl,
+            tags: this.lastTags,
+            config: this.device.config,
+            petLinks: writer.petLinks(),
+            householdPets: writer.householdPets(),
+          }),
           writer,
         )
       : undefined;
@@ -230,6 +238,9 @@ export class FeederController implements DeviceController {
       last_refreshed_at: new Date().toISOString(),
     };
     this.lastControl = payload.control ?? undefined;
+    this.lastTags = (payload.tags ?? []).filter(
+      (tag): tag is SurePetDeviceTag => tag != null,
+    );
 
     const online = payload.status?.online;
     if (online === false) {

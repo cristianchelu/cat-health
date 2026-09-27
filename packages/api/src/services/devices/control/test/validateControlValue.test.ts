@@ -79,6 +79,24 @@ describe('validateControlValue compartments', () => {
     );
   });
 
+  it('accepts known identities and rejects the rest', () => {
+    const pets: ControlValueType = {
+      kind: 'identities',
+      options: [
+        { id: 'a', label: 'A', pet_id: 1 },
+        { id: 'b', label: 'B', pet_id: null },
+      ],
+      max: 1,
+    };
+    assert.equal(validateControlValue(pets, []), null);
+    assert.equal(validateControlValue(pets, ['b']), null);
+    assert.ok(validateControlValue(pets, ['c']));
+    assert.ok(validateControlValue(pets, ['a', 'b']));
+    assert.ok(validateControlValue({ ...pets, max: 5 }, ['a', 'a']));
+    assert.ok(validateControlValue(pets, [1]));
+    assert.ok(validateControlValue(pets, 'a'));
+  });
+
   it('rejects the wrong count, an unknown layout and an out-of-range field', () => {
     assert.ok(
       validateControlValue(bowls, {

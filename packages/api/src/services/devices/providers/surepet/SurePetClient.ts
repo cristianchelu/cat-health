@@ -1,6 +1,7 @@
 import {
   buildSurePetHeaders,
   SUREPET_API_BASE,
+  SUREPET_API_V2_BASE,
   SUREPET_LOGIN_URL,
   SUREPET_ME_START_URL,
   SUREPET_RATE_LIMIT_BASE_DELAY_MS,
@@ -18,9 +19,11 @@ import type {
   SurePetCloudDevice,
   SurePetCloudPet,
   SurePetDeviceDetailPayload,
+  SurePetDeviceTag,
   SurePetControlReply,
   SurePetControlRequest,
   SurePetControlWrite,
+  SurePetTagWrite,
   SurePetMeStartData,
   SurePetTimelineEntry,
 } from './types.ts';
@@ -183,6 +186,7 @@ export class SurePetClient {
     const params = new URLSearchParams();
     params.append('with[]', 'status');
     params.append('with[]', 'control');
+    params.append('with[]', 'tags');
     if (householdId != null) {
       params.set('HouseholdId', String(householdId));
     }
@@ -201,6 +205,39 @@ export class SurePetClient {
       throw new SurePetClientError(`Device ${deviceId} not found`, 404);
     }
     return response.data;
+  }
+
+  /**
+   * The pet tags one device is assigned. The single-device route ignores
+   * `with[]=tags`; only the device list and this route carry them.
+   */
+  async getDeviceTags(deviceId: number): Promise<SurePetDeviceTag[]> {
+    const response = await this.request<
+      SurePetApiListResponse<SurePetDeviceTag | null>
+    >('GET', `${SUREPET_API_BASE}/device/${deviceId}/tag`);
+    return (response.data ?? []).filter(
+      (tag): tag is SurePetDeviceTag => tag != null,
+    );
+  }
+
+  /**
+   * Assign or unassign one pet tag on a device. The cloud answers one entry
+   * per tag, each naming the request it queued for the device, which is
+   * followed on `control/status` like any control write.
+   */
+  async putDeviceTag(
+    deviceId: number,
+    write: SurePetTagWrite,
+  ): Promise<SurePetControlReply> {
+    const body = await this.request<unknown>(
+      'PUT',
+      `${SUREPET_API_V2_BASE}/device/${deviceId}/tag/async`,
+      [write],
+    );
+    return {
+      request: firstControlResult(Array.isArray(body) ? body[0] : body),
+      body,
+    };
   }
 
   /**

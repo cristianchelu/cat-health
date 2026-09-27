@@ -20,6 +20,10 @@ export const SUREPET_API_BASE = 'https://app-api.production.surehub.io/api';
 export const SUREPET_LOGIN_URL = `${SUREPET_API_BASE}/auth/login`;
 export const SUREPET_ME_START_URL = `${SUREPET_API_BASE}/me/start`;
 
+/** `/api/v2/...` routes: device tag assignment lives here. */
+export const SUREPET_API_V2_BASE =
+  'https://app-api.production.surehub.io/api/v2';
+
 export const SUREPET_USER_AGENT =
   'pet-assistant https://github.com/cristianchelu/cat-health';
 
@@ -108,6 +112,16 @@ export const FeederTareType = {
 } as const;
 
 /**
+ * What a `device/{id}/tag/async` entry asks for. Their app assigns and
+ * unassigns pets with these; `0` with a `profile` updates a flap's tag
+ * profile, which feeders do not have.
+ */
+export const TagRequestAction = {
+  ASSIGN: 1,
+  UNASSIGN: 2,
+} as const;
+
+/**
  * How their app words a fill, kept here because it explains readings that look
  * like ours disagreeing with theirs when they do not.
  *
@@ -189,6 +203,12 @@ export const SUREPET_CONTROL_POLL_INTERVAL_MS = 3_000;
  * check-ins can take longer, and the write may still land.
  */
 export const SUREPET_CONTROL_TIMEOUT_MS = 90_000;
+
+/**
+ * How long a feeder gets to meet a new pet once its button is pressed. Their
+ * app polls the device's tags twenty times, three seconds apart.
+ */
+export const SUREPET_LEARN_TIMEOUT_MS = 60_000;
 
 /** py-surepetcare `CloseDelay` — lid close delay in seconds. */
 export const CloseDelay = {

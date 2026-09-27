@@ -40,7 +40,9 @@ export interface Confirmer<R> {
  * Pure over `S`, so a binding is tested without a device.
  */
 export interface SettingBinding<W, S> {
-  descriptor: SettingDescriptor;
+  key: SettingKey;
+  /** May depend on state: what a setting offers can change with what the device knows. */
+  descriptor(state: S): SettingDescriptor;
   read(state: S): unknown;
   /**
    * Why a value that fits the descriptor still cannot be written: a rule of

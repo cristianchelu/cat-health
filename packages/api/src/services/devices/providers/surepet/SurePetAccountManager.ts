@@ -53,8 +53,25 @@ import {
 import type {
   NormalizedFeedingDatapoint,
   NormalizedServedDatapoint,
+  SurePetCloudPet,
+  SurePetDeviceDetailPayload,
   SurePetTimelineEntry,
 } from './types.ts';
+
+/**
+ * A feeder's detail with its tags, which the detail route leaves out. Both
+ * reads are independent, so they go out together.
+ */
+async function fetchFeederPayload(
+  client: SurePetClient,
+  cloudDeviceId: number,
+): Promise<SurePetDeviceDetailPayload> {
+  const [detail, tags] = await Promise.all([
+    client.getDevice(cloudDeviceId),
+    client.getDeviceTags(cloudDeviceId),
+  ]);
+  return { ...detail, tags };
+}
 
 function parseAccountConfig(config: unknown): SurePetAccountConfig {
   const parsed = parseWithSchema(SurePetAccountConfigSchema, config);
@@ -107,6 +124,7 @@ export class SurePetAccountManager implements AccountManager {
   private account: ProviderAccount;
   private deps: ProviderDeps;
   private config: SurePetAccountConfig;
+  private householdPets: SurePetCloudPet[] = [];
   private runtime: SurePetRuntimeState;
   private client: SurePetClient | null = null;
   private controllers = new Map<number, FeederController>();
@@ -258,6 +276,7 @@ export class SurePetAccountManager implements AccountManager {
   async listRemotePets(): Promise<ProviderRemotePet[]> {
     const client = await this.ensureClient();
     const pets = await client.getPets(this.runtime.household_id ?? undefined);
+    this.householdPets = pets;
     return pets.map((pet) => {
       const tagId = pet.tag_id ?? pet.tag?.id ?? null;
       return {
@@ -414,15 +433,24 @@ export class SurePetAccountManager implements AccountManager {
         }
         return reply;
       },
+      putTag: async (write) =>
+        (await this.ensureClient()).putDeviceTag(cloudId(), write),
+      tags: async () => (await this.ensureClient()).getDeviceTags(cloudId()),
+      petLinks: () => this.config.pet_links ?? [],
+      householdPets: () => this.householdPets,
       status: async () =>
         (await this.ensureClient()).getControlStatus(cloudId()),
+      // The household too: a learned tag becomes a household pet, which the
+      // feeder's identities are named after.
       refresh: async () => {
         const controller = this.controllers.get(deviceId);
         if (!controller || this.retired) return;
         const client = await this.ensureClient();
-        controller.updateFromCloudPayload(
-          await client.getDevice(controller.getSurePetDeviceId()),
-        );
+        const [payload] = await Promise.all([
+          fetchFeederPayload(client, controller.getSurePetDeviceId()),
+          this.refreshHouseholdPets(client),
+        ]);
+        controller.updateFromCloudPayload(payload);
       },
       foodGroups: async (foodIds) => {
         if (foodIds.length === 0) return new Map();
@@ -457,14 +485,29 @@ export class SurePetAccountManager implements AccountManager {
     };
   }
 
+  /** The household's pets, kept for naming what a feeder is assigned. */
+  private async refreshHouseholdPets(client: SurePetClient): Promise<void> {
+    try {
+      this.householdPets = await client.getPets(
+        this.runtime.household_id ?? undefined,
+      );
+    } catch (error) {
+      this.deps.logger.error(
+        'Failed to refresh SurePet household pets:',
+        error,
+      );
+    }
+  }
+
   private async refreshFeederStates(): Promise<void> {
     if (this.retired) return;
     const client = await this.ensureClient();
+    await this.refreshHouseholdPets(client);
 
     for (const controller of this.controllers.values()) {
       try {
         const surepetDeviceId = controller.getSurePetDeviceId();
-        const payload = await client.getDevice(surepetDeviceId);
+        const payload = await fetchFeederPayload(client, surepetDeviceId);
         controller.updateFromCloudPayload(payload);
       } catch (error) {
         this.deps.logger.error(

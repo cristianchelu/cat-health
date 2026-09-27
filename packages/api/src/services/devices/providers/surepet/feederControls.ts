@@ -3,7 +3,10 @@ import {
   parseFeederFoodCompartments,
   type ActionDescriptor,
   type FeederFoodCompartmentsDTO,
+  type IdentityOption,
   type KnownSettingValues,
+  type ProcedureDescriptor,
+  type ProviderPetLink,
   type SettingDescriptor,
 } from 'shared';
 
@@ -16,6 +19,7 @@ import type {
   Acceptance,
   ActionBinding,
   ControlSurface,
+  ProcedureBinding,
   SettingBinding,
   Settlement,
 } from '../../control/types.ts';
@@ -27,21 +31,34 @@ import {
   FoodType,
   SUREPET_CONTROL_POLL_INTERVAL_MS,
   SUREPET_CONTROL_TIMEOUT_MS,
+  SUREPET_LEARN_TIMEOUT_MS,
+  TagRequestAction,
 } from './constants.ts';
+import { getLinkRemotePetId, getLinkTagId } from './petLinkResolvers.ts';
 import type {
+  SurePetCloudPet,
   SurePetControlReply,
   SurePetControlRequest,
   SurePetControlWrite,
   SurePetDeviceControlPayload,
+  SurePetDeviceTag,
+  SurePetTagWrite,
 } from './types.ts';
 
 /** A food's coarse group, as feeding events record it. */
 export type FoodGroup = 'wet' | 'dry' | 'treat' | 'unknown';
 
-/** The account's side of a feeder's writes, bound to one feeder. */
+/** The account's side of a feeder's controls, bound to one feeder. */
 export interface SurePetControlWriter {
   put(write: SurePetControlWrite): Promise<SurePetControlReply>;
+  putTag(write: SurePetTagWrite): Promise<SurePetControlReply>;
   status(): Promise<SurePetControlRequest[]>;
+  /** The feeder's tags as the cloud lists them right now. */
+  tags(): Promise<SurePetDeviceTag[]>;
+  /** The account's pet links, which say whose tag each device tag is. */
+  petLinks(): ProviderPetLink[];
+  /** The household's pets as last read, each the owner of a tag. */
+  householdPets(): SurePetCloudPet[];
   /** Re-read the device, so a settled write shows what the feeder now has. */
   refresh(): Promise<void>;
   foodGroups(foodIds: number[]): Promise<Map<number, FoodGroup>>;
@@ -52,17 +69,30 @@ export interface SurePetControlWriter {
 /** What a feeder's settings are read from and written against. */
 export interface FeederControlState {
   control: SurePetDeviceControlPayload | undefined;
+  /** The pet tags the feeder is assigned. */
+  tags: SurePetDeviceTag[];
   /** `device.config`, which carries the local food attribution. */
   config: unknown;
+  /** The account's pet links, which say whose tag each device tag is. */
+  petLinks: ProviderPetLink[];
+  /** The household's pets, each the owner of a tag. */
+  householdPets: SurePetCloudPet[];
 }
 
-/** Where one write goes: the feeder, through the cloud, or our own record. */
+/**
+ * Where one write goes: the feeder, through the cloud, or our own record. A
+ * `learn` write sends nothing; it waits for the feeder to meet a tag it did
+ * not have.
+ */
 export type FeederWrite =
   | { to: 'cloud'; control: SurePetControlWrite }
+  | { to: 'tag'; tag: SurePetTagWrite }
+  | { to: 'learn'; before: number[] }
   | { to: 'local'; foodCompartments: FeederFoodCompartmentsDTO };
 
 type LidCloseDelay = KnownSettingValues['lid_close_delay'];
 type Bowls = KnownSettingValues['bowls'];
+type Identities = KnownSettingValues['pets'];
 
 const CLOSE_DELAY_SECONDS: Record<LidCloseDelay, number> = {
   fast: CloseDelay.FASTER,
@@ -71,7 +101,8 @@ const CLOSE_DELAY_SECONDS: Record<LidCloseDelay, number> = {
 };
 
 const lidCloseDelay: SettingBinding<FeederWrite, FeederControlState> = {
-  descriptor: {
+  key: 'lid_close_delay',
+  descriptor: () => ({
     key: 'lid_close_delay',
     label: { i18n: 'devices.controls.settings.lid_close_delay' },
     type: {
@@ -83,7 +114,7 @@ const lidCloseDelay: SettingBinding<FeederWrite, FeederControlState> = {
     },
     placement: 'setting',
     group: 'config',
-  } satisfies SettingDescriptor,
+  }),
   read: ({ control }) => {
     const seconds = control?.lid?.close_delay;
     const entry = Object.entries(CLOSE_DELAY_SECONDS).find(
@@ -138,7 +169,8 @@ function bowlsSetting(
   writer: SurePetControlWriter,
 ): SettingBinding<FeederWrite, FeederControlState> {
   return {
-    descriptor: {
+    key: 'bowls',
+    descriptor: () => ({
       key: 'bowls',
       label: { i18n: 'devices.controls.settings.bowls' },
       type: {
@@ -171,7 +203,7 @@ function bowlsSetting(
       },
       placement: 'setting',
       group: 'config',
-    } satisfies SettingDescriptor,
+    }),
 
     read: ({ control, config }) => {
       const layout = layoutOf(control?.bowls?.type);
@@ -264,6 +296,115 @@ function bowlsSetting(
   };
 }
 
+const tagLabel = (tagId: number): string => `Tag ${tagId}`;
+
+/**
+ * Every identity the feeder can be assigned, in the household's terms: each
+ * pet that owns a tag, named as the household names it, and any tag on the
+ * feeder that no household pet owns, so nothing the feeder opens for goes
+ * unlisted. An identity's id is its tag id, which is what the feeder is
+ * assigned. A link claims an identity by its tag, or by its remote pet.
+ */
+function identityOptions({
+  tags,
+  householdPets,
+  petLinks,
+}: FeederControlState): IdentityOption[] {
+  const petByTag = new Map<number, number>();
+  const petByRemoteId = new Map<number, number>();
+  for (const link of petLinks) {
+    if (link.pet_id <= 0) continue;
+    const tagId = getLinkTagId(link);
+    if (tagId !== undefined) petByTag.set(tagId, link.pet_id);
+    const remoteId = getLinkRemotePetId(link);
+    if (remoteId !== undefined) petByRemoteId.set(remoteId, link.pet_id);
+  }
+  const options: IdentityOption[] = [];
+  const listed = new Set<number>();
+  for (const pet of householdPets) {
+    const tagId = pet.tag_id ?? pet.tag?.id ?? null;
+    if (tagId == null || listed.has(tagId)) continue;
+    listed.add(tagId);
+    options.push({
+      id: String(tagId),
+      label: pet.name?.trim() || tagLabel(tagId),
+      pet_id: petByTag.get(tagId) ?? petByRemoteId.get(pet.id) ?? null,
+    });
+  }
+  for (const tag of tags) {
+    if (listed.has(tag.id)) continue;
+    listed.add(tag.id);
+    options.push({
+      id: String(tag.id),
+      label: tagLabel(tag.id),
+      pet_id: petByTag.get(tag.id) ?? null,
+    });
+  }
+  return options;
+}
+
+const readIdentities = ({ tags }: FeederControlState): Identities =>
+  [...new Set(tags.map((tag) => String(tag.id)))].sort();
+
+/** Which identities the feeder opens for: its assigned tags, one write each. */
+const petsSetting: SettingBinding<FeederWrite, FeederControlState> = {
+  key: 'pets',
+  descriptor: (state): SettingDescriptor => ({
+    key: 'pets',
+    label: { i18n: 'devices.controls.settings.pets' },
+    type: { kind: 'identities', options: identityOptions(state) },
+    placement: 'setting',
+    group: 'primary',
+  }),
+  read: readIdentities,
+  encode: (value, state) => {
+    const wanted = new Set(value as Identities);
+    const current = new Set(readIdentities(state));
+    const op = (id: string, request_action: number): FeederWrite => ({
+      to: 'tag',
+      tag: { tag_id: Number(id), request_action },
+    });
+    return [
+      ...[...wanted]
+        .filter((id) => !current.has(id))
+        .map((id) => op(id, TagRequestAction.ASSIGN)),
+      ...[...current]
+        .filter((id) => !wanted.has(id))
+        .map((id) => op(id, TagRequestAction.UNASSIGN)),
+    ];
+  },
+};
+
+const learnPetDescriptor: ProcedureDescriptor = {
+  key: 'learn_pet',
+  label: { i18n: 'devices.controls.procedures.learn_pet.title' },
+  steps: [
+    {
+      key: 'present',
+      instruction: {
+        i18n: 'devices.controls.procedures.learn_pet.steps.present',
+      },
+      inputs: [],
+    },
+  ],
+  available: true,
+  group: 'primary',
+};
+
+/**
+ * Meet a new pet. The feeder learns a tag on its own once its button is
+ * pressed, and the cloud makes a household pet for it; all this step does is
+ * wait for a tag the feeder did not have, as their app does.
+ */
+const learnPet: ProcedureBinding<FeederWrite, FeederControlState> = {
+  key: 'learn_pet',
+  descriptor: () => learnPetDescriptor,
+  encode: (step, _inputs, { tags }) =>
+    step === 'present'
+      ? [{ to: 'learn', before: tags.map((tag) => tag.id) }]
+      : [],
+};
+
 type TareSide = (typeof KNOWN_ACTIONS)['tare']['side'][number];
 
 const TARE_TYPE: Record<TareSide, number> = {
@@ -321,10 +462,33 @@ const tare: ActionBinding<FeederWrite, FeederControlState> = {
 const isCommand = (control: SurePetControlWrite): boolean =>
   control.tare !== undefined;
 
-/** How a write that reached the cloud is confirmed. */
+/**
+ * How a write is confirmed. A tag write leaves no control document to read
+ * back, so it is only ever followed by request; a learn waits on the tags.
+ */
 type FollowUp =
   | { kind: 'request'; id: string; control: SurePetControlWrite }
-  | { kind: 'readback'; control: SurePetControlWrite };
+  | { kind: 'readback'; control: SurePetControlWrite }
+  | { kind: 'learn'; before: number[] };
+
+/** A tag write's reply, as a follow-up or a settlement. */
+function acceptTag(
+  request: SurePetControlRequest | null,
+): Acceptance<FollowUp> {
+  if (request?.request_id == null) {
+    return {
+      status: 'failed',
+      reason: 'timeout',
+      message: 'the cloud queued no request to follow',
+    };
+  }
+  return (
+    settlementOf(requestStatus(request), {}) ?? {
+      status: 'pending',
+      ref: { kind: 'request', id: String(request.request_id), control: {} },
+    }
+  );
+}
 
 /**
  * Whether the device's control document now holds everything a write set:
@@ -395,17 +559,42 @@ export function createFeederControlSurface(
   timing = {
     intervalMs: SUREPET_CONTROL_POLL_INTERVAL_MS,
     timeoutMs: SUREPET_CONTROL_TIMEOUT_MS,
+    learnTimeoutMs: SUREPET_LEARN_TIMEOUT_MS,
   },
 ): ControlSurface {
+  /** Resolves once the feeder lists a tag it did not have, or never. */
+  const learned = (before: Set<number>) => async () => {
+    const tags = await writer.tags();
+    return tags.some((tag) => !before.has(tag.id))
+      ? { status: 'applied' as const }
+      : undefined;
+  };
+
   return composeControlSurface<FeederWrite, FeederControlState, FollowUp>({
     state,
-    settings: [lidCloseDelay, bowlsSetting(writer)],
+    settings: [lidCloseDelay, bowlsSetting(writer), petsSetting],
     actions: [tare],
+    procedures: [learnPet],
     channel: {
       async submit(write): Promise<Acceptance<FollowUp>> {
         if (write.to === 'local') {
           await writer.saveFoodCompartments(write.foodCompartments);
           return { status: 'applied' };
+        }
+        if (write.to === 'learn') {
+          return {
+            status: 'pending',
+            ref: { kind: 'learn', before: write.before },
+          };
+        }
+        if (write.to === 'tag') {
+          const acceptance = acceptTag(
+            (await writer.putTag(write.tag)).request,
+          );
+          if (acceptance.status === 'applied') {
+            await writer.refresh().catch(() => {});
+          }
+          return acceptance;
         }
         const { request } = await writer.put(write.control);
         // A bowls change can come back without a queued request; their app
@@ -441,6 +630,24 @@ export function createFeederControlSurface(
     },
     confirmer: {
       async settle(followUp, signal) {
+        if (followUp.kind === 'learn') {
+          const settlement = await pollUntil(
+            learned(new Set(followUp.before)),
+            {
+              intervalMs: timing.intervalMs,
+              timeoutMs: timing.learnTimeoutMs,
+              signal,
+            },
+          );
+          await writer.refresh().catch(() => {});
+          return (
+            settlement ?? {
+              status: 'failed',
+              reason: 'timeout',
+              message: 'the feeder met no new tag',
+            }
+          );
+        }
         const settlement = await pollUntil(
           followUp.kind === 'request'
             ? async () => {

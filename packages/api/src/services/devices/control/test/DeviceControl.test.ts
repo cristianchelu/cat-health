@@ -48,24 +48,26 @@ function makeHarness(options: { status?: DeviceStatus } = {}) {
     state: () => state,
     settings: [
       {
-        descriptor: {
+        key: 'dev:number.target',
+        descriptor: () => ({
           key: 'dev:number.target',
           label: { text: 'Target' },
           type: { kind: 'number', min: 0, max: 100, step: 5 },
           placement: 'setting',
           group: 'config',
-        },
+        }),
         read: (s) => s.get('dev:number.target'),
         encode: (value) => [{ key: 'target', value }],
       },
       {
-        descriptor: {
+        key: 'dev:switch.pump',
+        descriptor: () => ({
           key: 'dev:switch.pump',
           label: { text: 'Pump' },
           type: { kind: 'boolean' },
           placement: 'setting',
           group: 'primary',
-        },
+        }),
         read: (s) => s.get('dev:switch.pump'),
         encode: (value) => [{ key: 'pump', value }],
       },

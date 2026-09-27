@@ -104,7 +104,8 @@ function settingBinding(
     group,
   };
   return {
-    descriptor,
+    key: descriptor.key,
+    descriptor: () => descriptor,
     read: (values) => readValue(values, entity.key),
     // DeviceControl validated `value` against `descriptor.type` already.
     // ESPHome publishes a state only when it changes, so a write of the state

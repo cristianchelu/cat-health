@@ -42,7 +42,7 @@ export function composeControlSurface<W, S, R = never>(
   parts: ControlSurfaceParts<W, S, R>,
 ): ControlSurface {
   const settings = new Map<SettingKey, SettingBinding<W, S>>(
-    (parts.settings ?? []).map((binding) => [binding.descriptor.key, binding]),
+    (parts.settings ?? []).map((binding) => [binding.key, binding]),
   );
   const actions = new Map<ActionKey, ActionBinding<W, S>>(
     (parts.actions ?? []).map((binding) => [binding.key, binding]),
@@ -130,7 +130,9 @@ export function composeControlSurface<W, S, R = never>(
     manifest() {
       const state = parts.state();
       return {
-        settings: [...settings.values()].map((binding) => binding.descriptor),
+        settings: [...settings.values()].map((binding) =>
+          binding.descriptor(state),
+        ),
         actions: [...actions.values()].map((binding) =>
           binding.descriptor(state),
         ),

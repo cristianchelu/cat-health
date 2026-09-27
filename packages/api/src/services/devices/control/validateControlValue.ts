@@ -40,9 +40,29 @@ export function validateControlValue(
       return value === null || (Number.isInteger(value) && Number(value) > 0)
         ? null
         : 'must be a food id or null';
+    case 'identities':
+      return validateIdentities(type, value);
     case 'compartments':
       return validateCompartments(type, value);
   }
+}
+
+function validateIdentities(
+  type: Extract<ControlValueType, { kind: 'identities' }>,
+  value: unknown,
+): string | null {
+  if (!Array.isArray(value)) return 'must be a list of identity ids';
+  if (new Set(value).size !== value.length) return 'lists an identity twice';
+  if (type.max !== undefined && value.length > type.max) {
+    return `must name at most ${type.max} identities`;
+  }
+  for (const id of value) {
+    if (typeof id !== 'string') return 'must be identity ids';
+    if (!type.options.some((option) => option.id === id)) {
+      return `${id} is not an identity this device knows`;
+    }
+  }
+  return null;
 }
 
 function validateCompartments(

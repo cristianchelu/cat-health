@@ -1,19 +1,24 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { ControlRequestStatus } from '../constants.ts';
+import type { ProviderPetLink } from 'shared';
+
+import { ControlRequestStatus, TagRequestAction } from '../constants.ts';
 import {
   createFeederControlSurface,
   type FoodGroup,
   type SurePetControlWriter,
 } from '../feederControls.ts';
 import type {
+  SurePetCloudPet,
   SurePetControlRequest,
   SurePetControlWrite,
   SurePetDeviceControlPayload,
+  SurePetDeviceTag,
+  SurePetTagWrite,
 } from '../types.ts';
 
-const FAST = { intervalMs: 1, timeoutMs: 200 };
+const FAST = { intervalMs: 1, timeoutMs: 200, learnTimeoutMs: 200 };
 
 /**
  * A feeder whose cloud answers each write from `answer`, and whose status
@@ -25,11 +30,16 @@ function makeFeeder(
   options: {
     config?: unknown;
     foods?: Record<number, FoodGroup>;
+    /** Mutable: a learn test adds a tag while the feeder waits. */
+    tags?: SurePetDeviceTag[];
+    petLinks?: ProviderPetLink[];
+    householdPets?: SurePetCloudPet[];
     /** What a re-read of the device finds, as the feeder applies a write. */
     onRefresh?: () => void;
   } = {},
 ) {
   const puts: SurePetControlWrite[] = [];
+  const tagPuts: SurePetTagWrite[] = [];
   const saved: unknown[] = [];
   let refreshes = 0;
   const queue: SurePetControlRequest[] = [];
@@ -38,6 +48,13 @@ function makeFeeder(
       puts.push(write);
       return { request: answer, body: {} };
     },
+    putTag: async (write) => {
+      tagPuts.push(write);
+      return { request: answer, body: {} };
+    },
+    tags: async () => [...(options.tags ?? [])],
+    petLinks: () => options.petLinks ?? [],
+    householdPets: () => options.householdPets ?? [],
     status: async () => [...queue],
     refresh: async () => {
       refreshes += 1;
@@ -50,11 +67,17 @@ function makeFeeder(
     },
   };
   const surface = createFeederControlSurface(
-    () => ({ control, config: options.config ?? {} }),
+    () => ({
+      control,
+      tags: options.tags ?? [],
+      config: options.config ?? {},
+      petLinks: options.petLinks ?? [],
+      householdPets: options.householdPets ?? [],
+    }),
     writer,
     FAST,
   );
-  return { surface, puts, saved, queue, refreshes: () => refreshes };
+  return { surface, puts, tagPuts, saved, queue, refreshes: () => refreshes };
 }
 
 const setDelay = (value: string) =>
@@ -365,5 +388,180 @@ describe('SureFeed tare', () => {
       'timeout',
     );
     assert.equal(refreshes(), 0);
+  });
+});
+
+describe('SureFeed pets', () => {
+  const link = (pet_id: number, tag_id?: number): ProviderPetLink => ({
+    external_pet_id: String(pet_id * 100),
+    pet_id,
+    ...(tag_id === undefined ? {} : { metadata: { tag_id } }),
+  });
+  // Luna's link names her tag, Jazz's link names only his remote pet, and the
+  // household's third "pet" is a spare tag linked to nobody.
+  const petLinks = [link(2, 22), link(1)];
+  const householdPets: SurePetCloudPet[] = [
+    { id: 200, name: 'Luna', tag_id: 22 },
+    { id: 100, name: 'Jazzy', tag_id: 11 },
+    { id: 300, name: 'Spare tag', tag_id: 99 },
+  ];
+  const tags = [{ id: 22 }, { id: 99 }];
+  const setPets = (value: string[]) =>
+    ({ kind: 'setting', key: 'pets', value }) as const;
+  const petsType = (surface: { manifest(): { settings: unknown[] } }) =>
+    (
+      surface
+        .manifest()
+        .settings.find(
+          (setting) => (setting as { key: string }).key === 'pets',
+        ) as { type: unknown } | undefined
+    )?.type;
+
+  it('offers every household tag, naming the pet each link claims', () => {
+    const { surface } = makeFeeder({}, null, {
+      petLinks,
+      householdPets,
+      tags,
+    });
+    assert.deepEqual(petsType(surface), {
+      kind: 'identities',
+      options: [
+        { id: '22', label: 'Luna', pet_id: 2 },
+        { id: '11', label: 'Jazzy', pet_id: 1 },
+        { id: '99', label: 'Spare tag', pet_id: null },
+      ],
+    });
+  });
+
+  it('lists a tag the feeder holds that the household does not', () => {
+    const { surface } = makeFeeder({}, null, {
+      petLinks,
+      householdPets,
+      tags: [...tags, { id: 7 }],
+    });
+    const type = petsType(surface) as { options: { id: string }[] };
+    assert.deepEqual(type.options.at(-1), {
+      id: '7',
+      label: 'Tag 7',
+      pet_id: null,
+    });
+  });
+
+  it('reads the assigned tags as identities', () => {
+    const { surface } = makeFeeder({}, null, { petLinks, householdPets, tags });
+    assert.deepEqual(surface.readSettings().get('pets'), ['22', '99']);
+  });
+
+  it('assigns and unassigns by tag, one request each', async () => {
+    const { surface, tagPuts } = makeFeeder(
+      {},
+      { request_id: 'r1', status_id: ControlRequestStatus.SUCCESS },
+      { petLinks, householdPets, tags },
+    );
+
+    const submission = await surface.submit(setPets(['11', '22']));
+
+    assert.deepEqual(submission, { status: 'applied' });
+    assert.deepEqual(tagPuts, [
+      { tag_id: 11, request_action: TagRequestAction.ASSIGN },
+      { tag_id: 99, request_action: TagRequestAction.UNASSIGN },
+    ]);
+  });
+
+  it('sends nothing when the feeder already has the chosen identities', async () => {
+    const { surface, tagPuts } = makeFeeder({}, null, {
+      petLinks,
+      householdPets,
+      tags,
+    });
+
+    assert.deepEqual(await surface.submit(setPets(['99', '22'])), {
+      status: 'applied',
+    });
+    assert.deepEqual(tagPuts, []);
+  });
+
+  it('follows a queued tag request and counts no change as applied', async () => {
+    const { surface, queue, refreshes } = makeFeeder(
+      {},
+      { request_id: 5, status_id: ControlRequestStatus.PENDING },
+      { petLinks, householdPets, tags },
+    );
+    queue.push({ request_id: 5, status_id: ControlRequestStatus.NO_CHANGE });
+
+    const submission = await surface.submit(setPets(['11', '22', '99']));
+    assert.equal(submission.status, 'pending');
+    if (submission.status !== 'pending') return;
+
+    assert.deepEqual(await submission.settle(new AbortController().signal), {
+      status: 'applied',
+    });
+    assert.equal(refreshes(), 1);
+  });
+
+  it('fails a tag write the cloud queued no request for', async () => {
+    const { surface } = makeFeeder({}, null, { petLinks, householdPets, tags });
+
+    const submission = await surface.submit(setPets(['11', '22', '99']));
+
+    assert.equal(submission.status, 'failed');
+    assert.equal(
+      submission.status === 'failed' && submission.reason,
+      'timeout',
+    );
+  });
+});
+
+describe('SureFeed learn a pet', () => {
+  const present = () =>
+    ({
+      kind: 'procedure',
+      key: 'learn_pet',
+      step: 'present',
+      inputs: {},
+    }) as const;
+
+  it('is offered as one step with nothing to enter', () => {
+    const { surface } = makeFeeder({}, null);
+    const [procedure] = surface.manifest().procedures;
+    assert.equal(procedure?.key, 'learn_pet');
+    assert.deepEqual(
+      procedure?.steps.map((step) => [step.key, step.inputs.length]),
+      [['present', 0]],
+    );
+  });
+
+  it('settles once the feeder lists a tag it did not have', async () => {
+    const tags: SurePetDeviceTag[] = [{ id: 22 }];
+    const { surface, tagPuts, puts, refreshes } = makeFeeder({}, null, {
+      tags,
+    });
+
+    const submission = await surface.submit(present());
+    assert.equal(submission.status, 'pending');
+    if (submission.status !== 'pending') return;
+
+    const settled = submission.settle(new AbortController().signal);
+    tags.push({ id: 31 });
+
+    assert.deepEqual(await settled, { status: 'applied' });
+    assert.deepEqual([...tagPuts, ...puts], []);
+    assert.equal(refreshes(), 1);
+  });
+
+  it('times out when no new tag turns up', async () => {
+    const { surface } = makeFeeder({}, null, { tags: [{ id: 22 }] });
+
+    const submission = await surface.submit(present());
+    const settlement =
+      submission.status === 'pending'
+        ? await submission.settle(new AbortController().signal)
+        : submission;
+
+    assert.equal(settlement.status, 'failed');
+    assert.equal(
+      settlement.status === 'failed' && settlement.reason,
+      'timeout',
+    );
   });
 });

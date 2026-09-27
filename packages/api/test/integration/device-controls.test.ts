@@ -46,13 +46,14 @@ describe('device controls routes', () => {
       state: () => state,
       settings: [
         {
-          descriptor: {
+          key: 'dev:number.target',
+          descriptor: () => ({
             key: 'dev:number.target',
             label: { text: 'Target' },
             type: { kind: 'number', min: 0, max: 100, step: 5, unit: 'g' },
             placement: 'setting',
             group: 'config',
-          },
+          }),
           read: (s) => s.target,
           encode: (value) => [
             () => {
