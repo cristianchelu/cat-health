@@ -23,14 +23,24 @@ export interface CompartmentsDraft {
 
 /**
  * A setting as its field holds it: the text of a number or an option, a
- * switch's state, or a compartmented layout. Text lets a number be half-typed
- * without being coerced.
+ * switch's state, a compartmented layout, or a set of identity ids. Text
+ * lets a number be half-typed without being coerced.
  */
-export type ControlDraftValue = string | boolean | CompartmentsDraft;
+export type ControlDraftValue = string | boolean | CompartmentsDraft | string[];
 
 export const isCompartmentsDraft = (
   value: ControlDraftValue | undefined,
 ): value is CompartmentsDraft => isRecord(value);
+
+export const isIdentitiesDraft = (
+  value: ControlDraftValue | undefined,
+): value is string[] => Array.isArray(value);
+
+/** Identity ids in one order, so the same set always reads as the same draft. */
+export const identitiesDraft = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((id): id is string => typeof id === 'string').sort()
+    : [];
 
 function numberDraft(
   type: { step?: number; unit?: string },
@@ -152,6 +162,8 @@ export function toControlDraftValue(
       return typeof value === 'string' ? value : '';
     case 'food':
       return typeof value === 'number' ? String(value) : '';
+    case 'identities':
+      return identitiesDraft(value);
     case 'compartments':
       return compartmentsDraft(type, value);
   }
@@ -171,6 +183,8 @@ export function fromControlDraftValue(
       return typeof draft === 'string' && draft !== '' ? draft : undefined;
     case 'food':
       return typeof draft === 'string' && draft !== '' ? Number(draft) : null;
+    case 'identities':
+      return isIdentitiesDraft(draft) ? identitiesDraft(draft) : undefined;
     case 'compartments':
       return compartmentsValue(type, draft);
   }

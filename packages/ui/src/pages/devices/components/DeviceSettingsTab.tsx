@@ -19,6 +19,7 @@ const DeviceSettingsTab: React.FC<DeviceSettingsTabProps> = ({
       deviceId={device.id}
       settings={settings}
       onDirtyChange={onDirtyChange}
+      accountId={device.provider_account_id}
     />
   );
 };

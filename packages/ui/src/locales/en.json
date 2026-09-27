@@ -740,7 +740,8 @@
       },
       "settings": {
         "lid_close_delay": "Lid close delay",
-        "bowls": "Bowl setup"
+        "bowls": "Bowl setup",
+        "pets": "Pets"
       },
       "options": {
         "lid_close_delay": {
@@ -774,6 +775,11 @@
         "food": "Food",
         "portion": "Target portion"
       },
+      "pets_identity_unlinked": "The device knows this tag, but it isn't linked to one of your pets.",
+      "pets_not_linked": "{{name}} isn't linked to anything this account knows, so the device can't recognise them.",
+      "pets_link_account": "Link pets",
+      "pets_toggle_aria": "Let {{name}} use this device",
+      "pets_empty": "No pets yet.",
       "choose_food": "Choose food",
       "layout": "Layout",
       "start": "Start",
@@ -781,6 +787,12 @@
       "finish": "Finish",
       "step_progress": "Step {{current}} of {{total}}",
       "procedures": {
+        "learn_pet": {
+          "title": "Add a pet",
+          "steps": {
+            "present": "Press the feeder's Add Pet button, then let the pet put its head in or hold its tag to the feeder. The feeder has a minute to find it."
+          }
+        },
         "scale_calibration": {
           "title": "Calibrate scale",
           "steps": {
@@ -791,7 +803,8 @@
             "known_weight_g": "Known weight"
           }
         }
-      }
+      },
+      "pets_help_aria": "About {{name}}"
     },
     "water_fountain": {
       "water_level": "Water Level",

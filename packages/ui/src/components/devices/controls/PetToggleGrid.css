@@ -1,0 +1,42 @@
+.pet-toggle-grid {
+  .pet-toggle-identity {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+  }
+
+  .pet-toggle-avatar {
+    flex-shrink: 0;
+  }
+
+  .pet-toggle-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    min-width: 0;
+  }
+
+  .pet-toggle-name {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    line-height: var(--line-height-tight);
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pet-toggle-subtitle {
+    font-size: var(--text-xs);
+    font-weight: var(--font-normal);
+    color: var(--color-text-light);
+  }
+
+  .pet-toggle-tile.is-locked {
+    .pet-toggle-name,
+    .pet-toggle-avatar {
+      opacity: 0.5;
+    }
+  }
+}

@@ -115,6 +115,11 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
     return () => onDirtyChange?.(false);
   }, [isDirty, onDirtyChange]);
 
+  // A discarded draft takes its refused fields with it.
+  React.useEffect(() => {
+    if (!isDirty) setInvalidKeys([]);
+  }, [isDirty]);
+
   const foodsById = React.useMemo(
     () => new Map(foods.map((food) => [food.id, food])),
     [foods],
@@ -390,6 +395,7 @@ const FeederSettingsTab: React.FC<FeederSettingsTabProps> = ({
           }}
           invalidKeys={invalidKeys}
           disabled={isSaving}
+          accountId={device.provider_account_id}
         />
       </FormShell>
 

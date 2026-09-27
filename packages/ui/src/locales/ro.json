@@ -800,7 +800,8 @@
       },
       "settings": {
         "lid_close_delay": "Întârziere închidere capac",
-        "bowls": "Configurarea bolurilor"
+        "bowls": "Configurarea bolurilor",
+        "pets": "Animale"
       },
       "options": {
         "lid_close_delay": {
@@ -834,6 +835,11 @@
         "food": "Mâncare",
         "portion": "Porție țintă"
       },
+      "pets_identity_unlinked": "Dispozitivul cunoaște această etichetă, dar nu este asociată cu niciunul dintre animalele tale.",
+      "pets_not_linked": "{{name}} nu este asociat cu nimic cunoscut de acest cont, așa că dispozitivul nu îl poate recunoaște.",
+      "pets_link_account": "Asociază animalele",
+      "pets_toggle_aria": "Permite lui {{name}} să folosească acest dispozitiv",
+      "pets_empty": "Niciun animal încă.",
       "choose_food": "Alege mâncarea",
       "layout": "Aranjament",
       "start": "Pornește",
@@ -841,6 +847,12 @@
       "finish": "Finalizează",
       "step_progress": "Pasul {{current}} din {{total}}",
       "procedures": {
+        "learn_pet": {
+          "title": "Adaugă un animal",
+          "steps": {
+            "present": "Apasă butonul Add Pet de pe hrănitor, apoi lasă animalul să-și bage capul sau ține eticheta lângă hrănitor. Hrănitorul are un minut să o găsească."
+          }
+        },
         "scale_calibration": {
           "title": "Calibrează cântarul",
           "steps": {
@@ -851,7 +863,8 @@
             "known_weight_g": "Greutate cunoscută"
           }
         }
-      }
+      },
+      "pets_help_aria": "Despre {{name}}"
     }
   },
   "annotation": {

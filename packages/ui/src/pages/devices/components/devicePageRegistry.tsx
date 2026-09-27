@@ -84,6 +84,7 @@ const SureFeederDevicePage: DevicePageComponent = ({ device }) => {
       deviceId={device.id}
       state={state}
       actions={device.controls?.actions ?? []}
+      procedures={device.controls?.procedures ?? []}
     />
   );
 };

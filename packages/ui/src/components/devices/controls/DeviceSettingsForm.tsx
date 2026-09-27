@@ -16,6 +16,7 @@ interface DeviceSettingsFormProps {
   settings: SettingControl[];
   onDirtyChange?: (dirty: boolean) => void;
   className?: string;
+  accountId?: number;
 }
 
 /** Drafts a device's settings locally and sends the changed ones on Save. */
@@ -24,6 +25,7 @@ const DeviceSettingsForm: React.FC<DeviceSettingsFormProps> = ({
   settings,
   onDirtyChange,
   className,
+  accountId,
 }) => {
   const { t } = useTranslation();
   const apply = useApplyDeviceSettings(deviceId);
@@ -39,6 +41,11 @@ const DeviceSettingsForm: React.FC<DeviceSettingsFormProps> = ({
   React.useEffect(() => {
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
+
+  // A discarded draft takes its refused fields with it.
+  React.useEffect(() => {
+    if (!isDirty) setInvalidKeys([]);
+  }, [isDirty]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -61,6 +68,7 @@ const DeviceSettingsForm: React.FC<DeviceSettingsFormProps> = ({
           }}
           invalidKeys={invalidKeys}
           disabled={apply.isPending}
+          accountId={accountId}
         />
       }
       onSubmit={handleSubmit}

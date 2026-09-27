@@ -134,3 +134,35 @@ describe('compartments drafts', () => {
     assert.deepEqual(invalid, ['dev:compartments.bowls']);
   });
 });
+
+describe('identities drafts', () => {
+  const pets = setting(
+    'dev:pets.served',
+    {
+      kind: 'identities',
+      options: [
+        { id: 'a', label: 'A', pet_id: 1 },
+        { id: 'b', label: 'B', pet_id: null },
+      ],
+    },
+    ['b', 'a'],
+  );
+
+  it('starts from the reported identities in a fixed order', () => {
+    assert.deepEqual(controlDraftBaseline([pets]), {
+      'dev:pets.served': ['a', 'b'],
+    });
+  });
+
+  it('sends the chosen identities in a fixed order and skips an unchanged set', () => {
+    const baseline = controlDraftBaseline([pets]);
+    assert.deepEqual(
+      controlDraftPatch([pets], baseline, { 'dev:pets.served': ['a', 'b'] }),
+      { patch: {}, invalid: [] },
+    );
+    assert.deepEqual(
+      controlDraftPatch([pets], baseline, { 'dev:pets.served': ['b'] }).patch,
+      { 'dev:pets.served': ['b'] },
+    );
+  });
+});
