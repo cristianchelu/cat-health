@@ -58,6 +58,26 @@ export interface KnownSettingValues {
 const KNOWN_SETTING_KEYS = Object.keys(KNOWN_SETTINGS) as KnownSettingKey[];
 
 /**
+ * Actions the app understands, each with its arguments and the words their
+ * options are labelled by. A device may declare fewer arguments than listed
+ * when its hardware leaves nothing to choose.
+ */
+export const KNOWN_ACTIONS = {
+  /** Zero a feeder's scale, for one bowl or all of them. */
+  tare: { side: ['left', 'right', 'both'] },
+} as const;
+
+export type KnownActionKey = keyof typeof KNOWN_ACTIONS;
+
+const KNOWN_ACTION_KEYS = Object.keys(KNOWN_ACTIONS) as KnownActionKey[];
+
+type KnownActionArgText = {
+  [K in KnownActionKey]: {
+    [A in keyof (typeof KNOWN_ACTIONS)[K]]: `devices.controls.args.${K}.${A & string}.${(typeof KNOWN_ACTIONS)[K][A] extends readonly (infer V extends string)[] ? V : never}`;
+  }[keyof (typeof KNOWN_ACTIONS)[K]];
+}[KnownActionKey];
+
+/**
  * A key a device declared itself, labelled by the device. Opaque to everyone
  * but the controller that minted it: nothing outside the provider may parse it
  * or depend on it.
@@ -68,15 +88,15 @@ export const isDeviceControlKey = (key: string): key is DeviceControlKey =>
   key.startsWith('dev:') && key.length > 4;
 
 export type SettingKey = KnownSettingKey | DeviceControlKey;
-export type ActionKey = DeviceControlKey;
+export type ActionKey = KnownActionKey | DeviceControlKey;
 
 const DeviceControlKeySchema = Type.Unsafe<DeviceControlKey>(
   Type.String({ pattern: '^dev:.+$' }),
 );
 
 /**
- * Validated against the known keys plus the device-key pattern at runtime;
- * `Unsafe` only names the static type, which TypeBox cannot infer from a union
+ * Both key schemas are validated against the known keys plus the device-key
+ * pattern at runtime; `Unsafe` only names the static type, which TypeBox cannot infer from a union
  * built from an array.
  */
 export const SettingKeySchema = Type.Unsafe<SettingKey>(
@@ -85,7 +105,12 @@ export const SettingKeySchema = Type.Unsafe<SettingKey>(
     DeviceControlKeySchema,
   ]),
 );
-export const ActionKeySchema = DeviceControlKeySchema;
+export const ActionKeySchema = Type.Unsafe<ActionKey>(
+  Type.Union([
+    ...KNOWN_ACTION_KEYS.map((key) => Type.Literal(key)),
+    DeviceControlKeySchema,
+  ]),
+);
 
 // --- Labels ---
 
@@ -95,6 +120,8 @@ export type ControlTextKey =
   | {
       [K in KnownSettingKey]: `devices.controls.options.${K}.${(typeof KNOWN_SETTINGS)[K][number]}`;
     }[KnownSettingKey]
+  | `devices.controls.actions.${KnownActionKey}`
+  | KnownActionArgText
   | `devices.controls.compartments.${CompartmentName}`
   | `devices.controls.fields.${CompartmentField}`;
 
@@ -105,6 +132,15 @@ const CONTROL_TEXT_KEYS: ControlTextKey[] = [
     `devices.controls.settings.${key}`,
     ...KNOWN_SETTINGS[key].map(
       (value) => `devices.controls.options.${key}.${value}` as ControlTextKey,
+    ),
+  ]),
+  ...KNOWN_ACTION_KEYS.flatMap((key): ControlTextKey[] => [
+    `devices.controls.actions.${key}`,
+    ...Object.entries(KNOWN_ACTIONS[key]).flatMap(([arg, values]) =>
+      values.map(
+        (value) =>
+          `devices.controls.args.${key}.${arg}.${value}` as ControlTextKey,
+      ),
     ),
   ]),
   ...COMPARTMENT_NAMES.map(
