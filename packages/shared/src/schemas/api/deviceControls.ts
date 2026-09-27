@@ -78,6 +78,32 @@ type KnownActionArgText = {
 }[KnownActionKey];
 
 /**
+ * Procedures the app understands: each step in order, with the names of the
+ * inputs it takes. A procedure is always known, never device-declared,
+ * because its steps carry instructions only the app can word.
+ */
+export const KNOWN_PROCEDURES = {
+  /** Zero an empty scale, then weigh a known weight to set its span. */
+  scale_calibration: { zero: [], span: ['known_weight_g'] },
+} as const;
+
+export type KnownProcedureKey = keyof typeof KNOWN_PROCEDURES;
+
+const KNOWN_PROCEDURE_KEYS = Object.keys(
+  KNOWN_PROCEDURES,
+) as KnownProcedureKey[];
+
+type KnownProcedureText = {
+  [K in KnownProcedureKey]:
+    | `devices.controls.procedures.${K}.title`
+    | {
+        [S in keyof (typeof KNOWN_PROCEDURES)[K]]:
+          | `devices.controls.procedures.${K}.steps.${S & string}`
+          | `devices.controls.procedures.${K}.inputs.${(typeof KNOWN_PROCEDURES)[K][S] extends readonly (infer I extends string)[] ? I : never}`;
+      }[keyof (typeof KNOWN_PROCEDURES)[K]];
+}[KnownProcedureKey];
+
+/**
  * A key a device declared itself, labelled by the device. Opaque to everyone
  * but the controller that minted it: nothing outside the provider may parse it
  * or depend on it.
@@ -122,6 +148,7 @@ export type ControlTextKey =
     }[KnownSettingKey]
   | `devices.controls.actions.${KnownActionKey}`
   | KnownActionArgText
+  | KnownProcedureText
   | `devices.controls.compartments.${CompartmentName}`
   | `devices.controls.fields.${CompartmentField}`;
 
@@ -141,6 +168,18 @@ const CONTROL_TEXT_KEYS: ControlTextKey[] = [
         (value) =>
           `devices.controls.args.${key}.${arg}.${value}` as ControlTextKey,
       ),
+    ),
+  ]),
+  ...KNOWN_PROCEDURE_KEYS.flatMap((key): ControlTextKey[] => [
+    `devices.controls.procedures.${key}.title`,
+    ...Object.entries(KNOWN_PROCEDURES[key]).flatMap(
+      ([step, inputs]): ControlTextKey[] => [
+        `devices.controls.procedures.${key}.steps.${step}` as ControlTextKey,
+        ...inputs.map(
+          (input: string) =>
+            `devices.controls.procedures.${key}.inputs.${input}` as ControlTextKey,
+        ),
+      ],
     ),
   ]),
   ...COMPARTMENT_NAMES.map(
@@ -281,6 +320,40 @@ export const ActionDescriptorSchema = Type.Object({
 });
 export type ActionDescriptor = Static<typeof ActionDescriptorSchema>;
 
+export const ProcedureKeySchema = Type.Unsafe<KnownProcedureKey>(
+  Type.Union(KNOWN_PROCEDURE_KEYS.map((key) => Type.Literal(key))),
+);
+
+/** One value a procedure step asks for before it runs. */
+export const ProcedureInputSchema = Type.Object({
+  key: Type.String(),
+  label: ControlLabelSchema,
+  type: ControlValueTypeSchema,
+});
+export type ProcedureInput = Static<typeof ProcedureInputSchema>;
+
+export const ProcedureStepSchema = Type.Object({
+  key: Type.String(),
+  /** What the person does before running the step. */
+  instruction: ControlLabelSchema,
+  inputs: Type.Array(ProcedureInputSchema),
+});
+export type ProcedureStep = Static<typeof ProcedureStepSchema>;
+
+/**
+ * A known procedure: steps run one at a time, in order, each answering once
+ * the device is done with it. There is no session; a step the device cannot
+ * take yet is refused by the device.
+ */
+export const ProcedureDescriptorSchema = Type.Object({
+  key: ProcedureKeySchema,
+  label: ControlLabelSchema,
+  steps: Type.Array(ProcedureStepSchema),
+  available: Type.Boolean(),
+  group: ControlGroupSchema,
+});
+export type ProcedureDescriptor = Static<typeof ProcedureDescriptorSchema>;
+
 // --- Outcomes ---
 
 export const WriteFailureReasonSchema = Type.Union([
@@ -327,6 +400,7 @@ export type ActionControl = Static<typeof ActionControlSchema>;
 export const DeviceControlsSchema = Type.Object({
   settings: Type.Array(SettingControlSchema),
   actions: Type.Array(ActionControlSchema),
+  procedures: Type.Array(ProcedureDescriptorSchema),
 });
 export type DeviceControlsDTO = Static<typeof DeviceControlsSchema>;
 
@@ -346,6 +420,14 @@ export const RunDeviceActionRequestSchema = Type.Record(
 );
 export type RunDeviceActionRequestDTO = Static<
   typeof RunDeviceActionRequestSchema
+>;
+
+export const RunProcedureStepRequestSchema = Type.Record(
+  Type.String(),
+  Type.Unknown(),
+);
+export type RunProcedureStepRequestDTO = Static<
+  typeof RunProcedureStepRequestSchema
 >;
 
 /** The answer to a write once the device has it. */
