@@ -20,6 +20,8 @@ export const KNOWN_SETTINGS = {
   lid_close_delay: ['fast', 'normal', 'slow'],
   /** How a feeder's tray is divided, and what each part holds. */
   bowls: ['single', 'split'],
+  /** Which identities a device acts for: the pets it opens or records for. */
+  pets: [],
 } as const;
 
 export type KnownSettingKey = keyof typeof KNOWN_SETTINGS;
@@ -53,6 +55,8 @@ export interface KnownSettingValues {
   bowls: CompartmentsValue<'food' | 'portion'> & {
     layout: (typeof KNOWN_SETTINGS)['bowls'][number];
   };
+  /** Identity ids, as the setting's `identities` options name them, sorted. */
+  pets: string[];
 }
 
 const KNOWN_SETTING_KEYS = Object.keys(KNOWN_SETTINGS) as KnownSettingKey[];
@@ -85,6 +89,8 @@ type KnownActionArgText = {
 export const KNOWN_PROCEDURES = {
   /** Zero an empty scale, then weigh a known weight to set its span. */
   scale_calibration: { zero: [], span: ['known_weight_g'] },
+  /** Have the device meet a pet it has not met, so it learns to recognise it. */
+  learn_pet: { present: [] },
 } as const;
 
 export type KnownProcedureKey = keyof typeof KNOWN_PROCEDURES;
@@ -236,6 +242,29 @@ const FoodValueTypeSchema = Type.Object({
   ),
 });
 
+/**
+ * One identity a device can act for, in its provider's terms: a microchip,
+ * a collar tag, a face it was shown. `id` is opaque to everyone but the
+ * provider, `label` is the provider's own name for it, and `pet_id` is the
+ * app pet it is linked to, when it is.
+ */
+export const IdentityOptionSchema = Type.Object({
+  id: Type.String(),
+  label: Type.String(),
+  pet_id: Type.Union([Type.Number(), Type.Null()]),
+});
+export type IdentityOption = Static<typeof IdentityOptionSchema>;
+
+/**
+ * A set of identities out of the ones the provider knows. Holds their ids.
+ * `max` is a limit the device itself enforces.
+ */
+const IdentitiesValueTypeSchema = Type.Object({
+  kind: Type.Literal('identities'),
+  options: Type.Array(IdentityOptionSchema),
+  max: Type.Optional(Type.Number()),
+});
+
 const CompartmentFieldSchema = Type.Object({
   label: ControlLabelSchema,
   type: Type.Union([NumberValueTypeSchema, FoodValueTypeSchema]),
@@ -264,6 +293,7 @@ export const ControlValueTypeSchema = Type.Union([
     options: Type.Array(ControlOptionSchema),
   }),
   FoodValueTypeSchema,
+  IdentitiesValueTypeSchema,
   /**
    * A device divided into parts (a feeder's bowls, a dispenser's hoppers):
    * which layout it is in, and per part the fields that layout declares.
@@ -277,6 +307,7 @@ export const ControlValueTypeSchema = Type.Union([
 export type ControlValueType = Static<typeof ControlValueTypeSchema>;
 export type NumberValueType = Static<typeof NumberValueTypeSchema>;
 export type FoodValueType = Static<typeof FoodValueTypeSchema>;
+export type IdentitiesValueType = Static<typeof IdentitiesValueTypeSchema>;
 
 // --- Descriptors ---
 
