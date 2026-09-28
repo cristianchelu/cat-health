@@ -10,6 +10,7 @@ COPY package.json package-lock.json ./
 COPY packages/api/package.json packages/api/
 COPY packages/ui/package.json packages/ui/
 COPY packages/shared/package.json packages/shared/
+COPY patches ./patches
 RUN npm ci
 
 # ---- Development ----
@@ -33,6 +34,7 @@ COPY package.json package-lock.json ./
 COPY packages/api/package.json packages/api/
 COPY packages/ui/package.json packages/ui/
 COPY packages/shared/package.json packages/shared/
+COPY patches ./patches
 RUN npm ci --omit=dev
 
 # ---- Production ----
