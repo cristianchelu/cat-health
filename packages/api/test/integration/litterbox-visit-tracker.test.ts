@@ -260,6 +260,18 @@ describe('LitterboxVisitTracker', () => {
     assert.equal((await deviceEvents()).length, 1);
   });
 
+  it('dates a record by its end, not by an id that is not a timestamp', async () => {
+    // Firmware before the fix sent millis() since boot as the id.
+    runNativeSession(VISIT_ID * 1000 + 500);
+    const { bytes, frame } = frameFor(weights, { id: 516_995 });
+    assert.equal(await tracker.ingestFrame(frame, bytes), 'recorded_visit');
+    await sleep(FRAME_WAIT_MS * 3);
+
+    const events = await deviceEvents();
+    assert.equal(events.length, 1);
+    assert.equal(events[0].timestamp.getTime(), VISIT_ID * 1000);
+  });
+
   it('attaches a late record to the natively scored visit', async () => {
     runNativeSession(VISIT_ID * 1000 + 500);
     await sleep(FRAME_WAIT_MS * 3);

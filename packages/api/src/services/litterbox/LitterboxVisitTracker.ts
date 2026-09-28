@@ -193,7 +193,7 @@ export class LitterboxVisitTracker {
   ): boolean {
     const { trailer } = frame;
     if (!trailer.clock_valid) return true;
-    const frameStart = trailer.id * 1000;
+    const frameStart = frameStartMs(trailer);
     const frameEnd = trailer.ended * 1000;
     const sessionStart = session.startTime.getTime();
     const sessionEnd = session.endTime?.getTime() ?? Date.now();
@@ -232,7 +232,7 @@ export class LitterboxVisitTracker {
   ): Promise<FrameOutcome> {
     const { trailer } = frame;
     const startTime = trailer.clock_valid
-      ? new Date(trailer.id * 1000)
+      ? new Date(frameStartMs(trailer))
       : new Date(receivedAt.getTime() - trailer.duration * 1000);
     const log = (message: string) =>
       this.deps.logger.log(
@@ -597,6 +597,14 @@ export class LitterboxVisitTracker {
       defecationsSinceScoop,
     };
   }
+}
+
+/**
+ * When a record's visit began, from its wall-clock end and length. The id is
+ * only a name: firmware before the fix sent millis() since boot in it.
+ */
+function frameStartMs(trailer: DecodedLitterboxVisitFrame['trailer']): number {
+  return (trailer.ended - trailer.duration) * 1000;
 }
 
 /** Smallest configured cat, in grams; null when the device knows no cats. */
