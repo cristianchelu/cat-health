@@ -295,6 +295,26 @@ describe('LitterboxVisitTracker', () => {
     );
   });
 
+  it('attaches a late record to the nearest of two close visits', async () => {
+    runNativeSession(VISIT_ID * 1000 - 29_000);
+    await sleep(FRAME_WAIT_MS * 3);
+    runNativeSession(VISIT_ID * 1000 + 500);
+    await sleep(FRAME_WAIT_MS * 3);
+    const before = await deviceEvents();
+    assert.equal(before.length, 2);
+
+    const { bytes, frame } = frameFor(weights);
+    assert.equal(
+      await tracker.ingestFrame(frame, bytes),
+      'attached_to_existing',
+    );
+
+    const [earlier, later] = await deviceEvents();
+    assert.equal(earlier.raw_data?.[0], 2);
+    assert.equal(later.id, before[1].id);
+    assert.equal(later.raw_data?.[0], 3);
+  });
+
   it('a record arriving mid native scoring attaches instead of doubling', async () => {
     runNativeSession(VISIT_ID * 1000 + 500);
     await sleep(FRAME_WAIT_MS + 20);

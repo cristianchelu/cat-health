@@ -376,10 +376,11 @@ export class LitterboxVisitTracker {
     return 'patched_continued';
   }
 
+  /** The closest event to `at` in the slack window: visits can be seconds apart. */
   private async findEventNear(at: Date) {
-    return this.deps.db
+    const candidates = await this.deps.db
       .selectFrom('event')
-      .select(['id', 'data'])
+      .select(['id', 'data', 'timestamp'])
       .where('device_id', '=', this.deviceId)
       .where(sql`json_extract(data, '$.type')`, 'in', [
         'litterbox_use',
@@ -387,8 +388,14 @@ export class LitterboxVisitTracker {
       ])
       .where('timestamp', '>=', new Date(at.getTime() - CLOCK_SLACK_MS))
       .where('timestamp', '<=', new Date(at.getTime() + CLOCK_SLACK_MS))
-      .orderBy('timestamp', 'asc')
-      .executeTakeFirst();
+      .execute();
+    const distance = (event: { timestamp: Date }) =>
+      Math.abs(event.timestamp.getTime() - at.getTime());
+    return candidates.reduce<(typeof candidates)[number] | undefined>(
+      (best, event) =>
+        best === undefined || distance(event) < distance(best) ? event : best,
+      undefined,
+    );
   }
 
   private async recordNativeSession(session: NativeSession): Promise<void> {
