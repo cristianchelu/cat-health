@@ -24,12 +24,16 @@ const RESETTING_MAINTENANCE = ['scoop', 'deep_clean', 'litter_change'] as const;
  */
 const LOOKBACK_DAYS = 14;
 
-/** A visit with no elimination leaves no deposit. */
-const DEPOSIT_TYPES: Record<string, SignalPipTone> = {
-  urination: 'urination',
-  defecation: 'defecation',
-  both: 'both',
-  unknown: 'unknown',
+/**
+ * The deposits each visit leaves. A visit that did both leaves two, because
+ * the counter describes what is in the box rather than how many visits put it
+ * there; a visit with no elimination leaves none.
+ */
+const DEPOSIT_TYPES: Record<string, readonly SignalPipTone[]> = {
+  urination: ['urination'],
+  defecation: ['defecation'],
+  both: ['urination', 'defecation'],
+  unknown: ['unknown'],
 };
 
 export interface DepositsSinceScoop {
@@ -109,13 +113,13 @@ export async function getDepositsSinceScoop(
       continue;
     }
 
-    const pip = visit.elimination_type
+    const deposited = visit.elimination_type
       ? DEPOSIT_TYPES[visit.elimination_type]
       : undefined;
-    if (!pip) continue;
+    if (!deposited) continue;
 
     const entry = result.get(visit.device_id) ?? { pips: [], weight: 0 };
-    entry.pips.push(pip);
+    entry.pips.push(...deposited);
     entry.weight += visit.elimination_weight ?? 0;
     result.set(visit.device_id, entry);
   }

@@ -186,7 +186,7 @@ describe('device signals', () => {
     );
   });
 
-  it('counts every visit on a box that has never been scooped', async () => {
+  it('counts every deposit on a box that has never been scooped, two for a visit that did both', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/devices' });
     const device = res
       .json<GetDevicesResponseDTO>()
@@ -199,7 +199,7 @@ describe('device signals', () => {
     assert.ok(waste);
     assert.deepEqual(
       waste.display.kind === 'pips' ? waste.display.pips : null,
-      ['both'],
+      ['urination', 'defecation'],
     );
   });
 

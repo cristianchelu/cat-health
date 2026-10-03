@@ -125,7 +125,6 @@ export type SignalValue = Static<typeof SignalValueSchema>;
 export const SignalPipToneSchema = Type.Union([
   Type.Literal('urination'),
   Type.Literal('defecation'),
-  Type.Literal('both'),
   Type.Literal('unknown'),
 ]);
 export type SignalPipTone = Static<typeof SignalPipToneSchema>;

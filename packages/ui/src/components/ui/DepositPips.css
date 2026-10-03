@@ -20,10 +20,6 @@
       background-color: var(--color-litterbox-defecation);
     }
 
-    &.both {
-      background-color: var(--color-litterbox-both);
-    }
-
     &.unknown {
       background-color: var(--color-litterbox-unknown);
     }

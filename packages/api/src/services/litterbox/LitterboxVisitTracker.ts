@@ -589,10 +589,10 @@ export class LitterboxVisitTracker {
     ).get(this.deviceId);
     const pips = deposits?.pips ?? [];
     const urinationsSinceScoop = pips.filter(
-      (pip) => pip === 'urination' || pip === 'both',
+      (pip) => pip === 'urination',
     ).length;
     const defecationsSinceScoop = pips.filter(
-      (pip) => pip === 'defecation' || pip === 'both',
+      (pip) => pip === 'defecation',
     ).length;
 
     return {
