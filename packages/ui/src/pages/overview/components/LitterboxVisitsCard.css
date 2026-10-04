@@ -4,19 +4,6 @@
 
   &.litterbox-visits-card--interactive {
     cursor: pointer;
-    transition:
-      transform var(--transition-fast),
-      box-shadow var(--transition-fast);
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-md);
-    }
-
-    &:focus-visible {
-      outline: var(--border-primary);
-      outline-offset: var(--space-2xs);
-    }
   }
 
   .litterbox-stats {
