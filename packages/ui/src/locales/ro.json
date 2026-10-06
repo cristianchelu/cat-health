@@ -67,7 +67,8 @@
     "pet_presence_context_vet": "Veterinar",
     "pet_presence_context_travel": "Călătorie",
     "pet_presence_context_friend": "Prieten",
-    "pet_presence_context_manual": "Manual"
+    "pet_presence_context_manual": "Manual",
+    "device_connectivity_via_account": "odată cu contul"
   },
   "food_picker": {
     "kcal_per_kg": "{{value}} kcal/kg",
@@ -348,7 +349,16 @@
     "error_loading_devices": "Nu s-au putut încărca dispozitivele",
     "search_devices": "Caută dispozitive",
     "no_devices_yet": "Niciun dispozitiv încă.",
-    "no_matching_devices": "Niciun dispozitiv nu corespunde căutării."
+    "no_matching_devices": "Niciun dispozitiv nu corespunde căutării.",
+    "account_health": {
+      "starting": "Pornește",
+      "unavailable": "Inaccesibil",
+      "failed": "Necesită atenție",
+      "retry_now": "Reîncearcă acum",
+      "callout_starting": "Pornește…",
+      "callout_unavailable": "Inaccesibil: {{reason}}. Următoarea încercare {{when}}.",
+      "callout_failed": "Oprit: {{reason}}."
+    }
   },
   "common": {
     "avatar_label": "Avatar",
@@ -865,6 +875,12 @@
         }
       },
       "pets_help_aria": "Despre {{name}}"
+    },
+    "account_health": {
+      "starting": "Contul său pornește",
+      "unavailable": "Contul său este inaccesibil",
+      "failed": "Contul său necesită atenție",
+      "open_account": "Deschide contul"
     }
   },
   "annotation": {

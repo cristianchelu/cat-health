@@ -66,6 +66,13 @@ export async function updateProviderAccount(
   return data;
 }
 
+export async function reloadProviderAccount(id: number) {
+  const { data } = await apiClient.post<ProviderAccountDTO>(
+    `/devices/accounts/${id}/reload`,
+  );
+  return data;
+}
+
 export async function getRemotePets(accountId: number) {
   const { data } = await apiClient.get<GetProviderRemotePetsResponseDTO>(
     `/devices/accounts/${accountId}/remote-pets`,

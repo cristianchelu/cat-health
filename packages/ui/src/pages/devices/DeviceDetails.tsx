@@ -9,12 +9,14 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { useUnsavedBlocker } from '@/hooks/form';
 import { useBackNavigation } from '@/hooks/useBackNavigation';
 import { shouldBlockDeviceDetailsTabLeave } from '@/lib/deviceDetailsDirty';
+import { hasAccountProblem } from '@/lib/accountHealth';
 import {
   getDeviceDetailsTabs,
   type DeviceDetailsTabId,
 } from '@/lib/deviceDetailsTabs';
 import { DeviceHeader } from './components/DeviceHeader';
 import { ProviderDeviceView } from './components/ProviderDeviceView';
+import DeviceAccountHealthCallout from './components/DeviceAccountHealthCallout';
 import { DeviceTimeline } from './components/DeviceTimeline';
 import CameraTab from './components/CameraTab';
 import DeviceSettingsTab from './components/DeviceSettingsTab';
@@ -154,7 +156,13 @@ const DeviceDetails: React.FC = () => {
         {visibleTabs.includes('overview') && (
           <TabsContent value="overview">
             <div className="device-content">
-              <ProviderDeviceView device={device} />
+              {/* A device whose account is down has no controller, so there is
+                  no provider view to draw until the account is back. */}
+              {hasAccountProblem(device.account_health_state) ? (
+                <DeviceAccountHealthCallout device={device} />
+              ) : (
+                <ProviderDeviceView device={device} />
+              )}
             </div>
           </TabsContent>
         )}

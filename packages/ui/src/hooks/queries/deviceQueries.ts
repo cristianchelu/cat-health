@@ -9,6 +9,7 @@ import {
   getProviderAccount,
   createProviderAccount,
   updateProviderAccount,
+  reloadProviderAccount,
   discoverDevices,
   getRemotePets,
   addDevice,
@@ -46,6 +47,7 @@ import type {
   RunDeviceActionRequestDTO,
   RunProcedureStepRequestDTO,
 } from 'shared';
+import { accountHealthPollMs } from '@/lib/accountHealth';
 
 export function useDevices() {
   return useQuery({
@@ -289,6 +291,13 @@ export function useProviderAccounts() {
   return useQuery({
     queryKey: ['providerAccounts'],
     queryFn: () => getProviderAccounts(),
+    // The soonest any account will move on its own.
+    refetchInterval: (query) => {
+      const intervals = (query.state.data ?? [])
+        .map((account) => accountHealthPollMs(account.health))
+        .filter((ms) => ms !== false);
+      return intervals.length > 0 ? Math.min(...intervals) : false;
+    },
   });
 }
 
@@ -297,6 +306,22 @@ export function useProviderAccount(accountId: number, enabled: boolean) {
     queryKey: ['providerAccount', accountId],
     queryFn: () => getProviderAccount(accountId),
     enabled,
+    refetchInterval: (query) => accountHealthPollMs(query.state.data?.health),
+  });
+}
+
+/** Start the account again now, skipping any backoff it is waiting out. */
+export function useReloadProviderAccount(accountId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => reloadProviderAccount(accountId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providerAccounts'] });
+      queryClient.invalidateQueries({
+        queryKey: ['providerAccount', accountId],
+      });
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+    },
   });
 }
 

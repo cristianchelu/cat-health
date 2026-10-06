@@ -61,9 +61,13 @@ const DeviceConnectivityEventRow: React.FC<EventComponentProps> = (props) => {
       iconColor={CONNECTIVITY_COLOR[connectivity.state]}
       title={t(titleKey)}
       value={
-        connectivity.previous_state
-          ? t(`events.device_connectivity_from_${connectivity.previous_state}`)
-          : undefined
+        connectivity.cause === 'account'
+          ? t('events.device_connectivity_via_account')
+          : connectivity.previous_state
+            ? t(
+                `events.device_connectivity_from_${connectivity.previous_state}`,
+              )
+            : undefined
       }
       valueVariant="default"
       valueClassName="device-centric-event-value"

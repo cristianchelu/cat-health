@@ -10,6 +10,7 @@ import {
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MetaLine } from '@/components/ui/MetaLine';
 import { EmptyState, LoadingState } from '@/components/ui/PageState';
+import { accountHealthPresentation } from '@/lib/accountHealth';
 import {
   CardList,
   CardListContent,
@@ -40,6 +41,7 @@ const ProviderRow: React.FC<ProviderRowProps> = ({ account, deviceCount }) => {
    */
   const brandLabel =
     account.name.trim().toLowerCase() === label.toLowerCase() ? null : label;
+  const health = accountHealthPresentation(account.health?.state);
   const meta = [
     brandLabel,
     identity,
@@ -51,9 +53,11 @@ const ProviderRow: React.FC<ProviderRowProps> = ({ account, deviceCount }) => {
       icon={<ProviderBrandTile provider={account.provider} />}
       to={`/settings/providers/${account.id}`}
       trailing={
-        account.enabled ? null : (
+        !account.enabled ? (
           <StatusPill variant="off">{t('settings.disabled')}</StatusPill>
-        )
+        ) : health ? (
+          <StatusPill variant={health.pill}>{t(health.labelKey)}</StatusPill>
+        ) : null
       }
     >
       <CardListContent

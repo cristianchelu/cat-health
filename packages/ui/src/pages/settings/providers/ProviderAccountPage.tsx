@@ -43,6 +43,7 @@ import {
 } from '../provider-wizard/flows/accountConfigRegistry.ts';
 import type { ProviderAccountFormValues } from '../provider-wizard/flows/accountConfigTypes.ts';
 import { ProviderBrandTile } from './components/ProviderBrandTile';
+import ProviderAccountHealthCallout from './components/ProviderAccountHealthCallout';
 import { Callout } from '@/components/ui/Callout';
 import './ProviderAccountPage.css';
 
@@ -252,6 +253,11 @@ const ProviderAccountPage: React.FC = () => {
           />
 
           <FormCardBody>
+            <ProviderAccountHealthCallout
+              accountId={accountId}
+              health={account.health}
+            />
+
             <FormInput
               name="name"
               control={control}

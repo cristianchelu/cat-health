@@ -19,7 +19,10 @@ import { renderWithProviders } from '@/test/render.tsx';
    whether the whole account went with it. Held by visible text only. */
 
 function switchEvent(
-  data: Extract<GetEventListItemDTO['data'], { type: 'device_enablement' }>,
+  data: Extract<
+    GetEventListItemDTO['data'],
+    { type: 'device_enablement' | 'device_connectivity' }
+  >,
 ): GetEventListItemDTO {
   return {
     id: 1,
@@ -87,5 +90,39 @@ describe('DeviceCentricEvent: device switch', () => {
     const event = switchEvent({ type: 'device_enablement', enabled: false });
     assert.equal(isDeviceTimelineEvent(event), true);
     assert.equal(isPetOverviewActivityEvent(event), false);
+  });
+});
+
+describe('DeviceCentricEvent: device connectivity', () => {
+  afterEach(() => {
+    cleanup();
+    for (const client of queryClients.splice(0)) {
+      client.clear();
+    }
+  });
+
+  it('says where a device that dropped by itself came from', async () => {
+    await renderRow(
+      switchEvent({
+        type: 'device_connectivity',
+        state: 'offline',
+        previous_state: 'online',
+      }),
+    );
+    assert.ok(screen.getByText('Device offline'));
+    assert.ok(screen.getByText('from online'));
+  });
+
+  it('says when it went with its account', async () => {
+    await renderRow(
+      switchEvent({
+        type: 'device_connectivity',
+        state: 'offline',
+        previous_state: 'online',
+        cause: 'account',
+      }),
+    );
+    assert.ok(screen.getByText('Device offline'));
+    assert.ok(screen.getByText('with its account'));
   });
 });

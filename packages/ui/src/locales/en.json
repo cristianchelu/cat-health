@@ -67,7 +67,8 @@
     "pet_presence_context_vet": "Vet",
     "pet_presence_context_travel": "Travel",
     "pet_presence_context_friend": "Friend",
-    "pet_presence_context_manual": "Manual"
+    "pet_presence_context_manual": "Manual",
+    "device_connectivity_via_account": "with its account"
   },
   "food_picker": {
     "kcal_per_kg": "{{value}} kcal/kg",
@@ -400,7 +401,16 @@
     "no_matching_devices": "No devices match your search.",
     "camera_origin_label": "Camera address",
     "camera_origin_placeholder": "http://camera.local",
-    "webui_api_key_label": "WebUI API key"
+    "webui_api_key_label": "WebUI API key",
+    "account_health": {
+      "starting": "Starting",
+      "unavailable": "Unreachable",
+      "failed": "Needs attention",
+      "retry_now": "Retry now",
+      "callout_starting": "Starting…",
+      "callout_unavailable": "Unreachable: {{reason}}. Next attempt {{when}}.",
+      "callout_failed": "Stopped: {{reason}}."
+    }
   },
   "common": {
     "avatar_label": "Avatar",
@@ -938,6 +948,12 @@
       "signal_strength_summary": "{{quality}} ({{dbm}} dBm)",
       "storage": "Storage",
       "recording": "Recording"
+    },
+    "account_health": {
+      "starting": "Its account is starting",
+      "unavailable": "Its account is unreachable",
+      "failed": "Its account needs attention",
+      "open_account": "Open account"
     }
   },
   "annotation": {
