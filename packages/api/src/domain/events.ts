@@ -114,6 +114,11 @@ export interface LitterboxMaintenanceEventData {
 }
 
 export type DeviceConnectivityState = 'online' | 'offline' | 'error';
+/**
+ * Which side moved a device-status event (`isDeviceStatusEventType`): the
+ * device itself, or its whole account. Unrelated to an event's `caused_by`.
+ */
+export type DeviceStatusCause = 'device' | 'account';
 export type DeviceConnectivityPreviousState =
   | DeviceConnectivityState
   | 'unknown';
@@ -122,15 +127,15 @@ export interface DeviceConnectivityEventData {
   type: 'device_connectivity';
   state: DeviceConnectivityState;
   previous_state?: DeviceConnectivityPreviousState;
+  /** `account` when the device went with its account's connection. */
+  cause?: DeviceStatusCause;
 }
-
-export type DeviceEnablementCause = 'device' | 'account';
 
 export interface DeviceEnablementEventData {
   type: 'device_enablement';
   enabled: boolean;
   /** Which switch moved: the device's own, or its whole account's. */
-  cause?: DeviceEnablementCause;
+  cause?: DeviceStatusCause;
 }
 
 /**

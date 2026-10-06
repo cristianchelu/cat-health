@@ -3,10 +3,11 @@ import type { ProviderCapabilities } from 'shared';
 import type {
   DeviceProvider,
   ProviderAccount,
-  ProviderDeps,
+  AccountDeps,
   AccountManager,
 } from '../../types.ts';
 import { SurePetAccountManager } from './SurePetAccountManager.ts';
+import { SUREPET_RETRY_POLICY } from './constants.ts';
 
 export class SurePetProvider implements DeviceProvider {
   readonly name = 'surepet';
@@ -16,10 +17,11 @@ export class SurePetProvider implements DeviceProvider {
     supports_pet_linking: true,
     supported_device_types: ['feeder'],
   };
+  readonly retryPolicy = SUREPET_RETRY_POLICY;
 
   createAccountManager(
     account: ProviderAccount,
-    deps: ProviderDeps,
+    deps: AccountDeps,
   ): AccountManager {
     return new SurePetAccountManager(account, deps);
   }

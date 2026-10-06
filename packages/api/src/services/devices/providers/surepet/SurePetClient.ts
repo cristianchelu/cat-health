@@ -2,6 +2,7 @@ import {
   buildSurePetHeaders,
   SUREPET_API_BASE,
   SUREPET_API_V2_BASE,
+  SUREPET_LOGIN_REJECTED_STATUSES,
   SUREPET_LOGIN_URL,
   SUREPET_ME_START_URL,
   SUREPET_RATE_LIMIT_BASE_DELAY_MS,
@@ -27,6 +28,7 @@ import type {
   SurePetMeStartData,
   SurePetTimelineEntry,
 } from './types.ts';
+import { ProviderPermanentError } from '../../providerFailure.ts';
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -138,10 +140,19 @@ export class SurePetClient {
     );
 
     if (!response.ok) {
-      throw new SurePetClientError(
+      const error = new SurePetClientError(
         `SurePet login failed (${response.status})`,
         response.status,
       );
+      // Repeating a rejected login cannot succeed and risks locking the
+      // account; only the user can fix the credentials.
+      if (SUREPET_LOGIN_REJECTED_STATUSES.has(response.status)) {
+        throw new ProviderPermanentError(
+          `SurePet rejected the login (${response.status})`,
+          { cause: error },
+        );
+      }
+      throw error;
     }
 
     const body = await this.parseJson(response);

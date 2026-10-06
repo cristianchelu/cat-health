@@ -1,6 +1,6 @@
 import { sql } from 'kysely';
 import type {
-  DeviceEnablementCause,
+  DeviceStatusCause,
   DeviceEnablementEventData,
 } from '../../domain/events.ts';
 import {
@@ -33,7 +33,7 @@ export async function recordEnablementTransition(
   deps: RecordDeviceEventDeps,
   deviceId: number,
   switches: DeviceSwitches,
-  movedBy: DeviceEnablementCause,
+  movedBy: DeviceStatusCause,
 ): Promise<void> {
   const reachable = isDeviceReachable(switches);
   if (reachable === (await isRecordedAsEnabled(deps, deviceId))) {

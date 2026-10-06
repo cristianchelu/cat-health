@@ -171,6 +171,9 @@ const StoredDeviceConnectivitySchema = Type.Object({
       Type.Literal('unknown'),
     ]),
   ),
+  cause: Type.Optional(
+    Type.Union([Type.Literal('device'), Type.Literal('account')]),
+  ),
 });
 
 const StoredDeviceEnablementSchema = Type.Object({

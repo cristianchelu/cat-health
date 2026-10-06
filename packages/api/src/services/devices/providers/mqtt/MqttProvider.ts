@@ -3,7 +3,7 @@ import type {
   AccountManager,
   DeviceProvider,
   ProviderAccount,
-  ProviderDeps,
+  AccountDeps,
 } from '../../types.ts';
 import { MqttAccountManager } from './MqttAccountManager.ts';
 import { parseMqttAccountConfig, probeMqttBroker } from './mqttConnection.ts';
@@ -20,10 +20,12 @@ export class MqttProvider implements DeviceProvider {
   readonly capabilities: ProviderCapabilities = {
     supported_device_types: [],
   };
+  /** A broker on the LAN: come back quickly, and nobody upstream to spare. */
+  readonly retryPolicy = { baseMs: 5_000, maxMs: 60_000 };
 
   createAccountManager(
     account: ProviderAccount,
-    deps: ProviderDeps,
+    deps: AccountDeps,
   ): AccountManager {
     return new MqttAccountManager(account, deps);
   }

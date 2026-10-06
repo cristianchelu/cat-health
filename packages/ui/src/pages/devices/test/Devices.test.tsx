@@ -30,6 +30,7 @@ function device(overrides: Partial<DeviceListItemDTO>): DeviceListItemDTO {
     config: null,
     enabled: true,
     account_enabled: true,
+    account_health_state: null,
     last_seen: null,
     status: 'online',
     signals: [],

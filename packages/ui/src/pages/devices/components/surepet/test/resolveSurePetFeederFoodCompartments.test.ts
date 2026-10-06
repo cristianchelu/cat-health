@@ -17,6 +17,7 @@ function feeder(state: unknown): GetDeviceResponseDTO {
     config: null,
     enabled: true,
     account_enabled: true,
+    account_health_state: null,
     last_seen: '2026-08-20T10:00:00.000Z',
     status: 'online',
     created_at: '2026-01-01T00:00:00.000Z',

@@ -266,6 +266,9 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       config: parseJsonValue(device.config),
       enabled: Boolean(device.enabled),
       account_enabled: Boolean(device.account_enabled),
+      account_health_state:
+        integrationManager.getAccountHealth(device.provider_account_id)
+          ?.state ?? null,
       /* No link unless a caller joined one and says otherwise. Stated here so
          every route answers the question rather than skipping it. */
       camera_link: null,
@@ -465,6 +468,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     created_at: new Date(account.created_at).toISOString(),
     updated_at: new Date(account.updated_at).toISOString(),
     config: parseJsonValue(account.config),
+    health: integrationManager.getAccountHealth(account.id),
   });
 
   // --- Providers ---
@@ -687,6 +691,45 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       }
       await integrationManager.initializeAccount(id);
       return mapAccount(result);
+    },
+  );
+
+  /** Start the account again now, skipping any backoff it is waiting out. */
+  fastify.post(
+    '/accounts/:id/reload',
+    {
+      schema: {
+        params: GetProviderAccountParamsSchema,
+        response: {
+          '200': ProviderAccountSchema,
+          '400': Http400ResponseSchema,
+          '404': Http404ResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const account = await db
+        .selectFrom('provider_account')
+        .selectAll()
+        .where('id', '=', id)
+        .executeTakeFirst();
+      if (!account) {
+        return reply.code(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: `Account ${id} not found`,
+        });
+      }
+      if (!account.enabled) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: `Account ${id} is disabled`,
+        });
+      }
+      await integrationManager.initializeAccount(id);
+      return mapAccount(account);
     },
   );
 

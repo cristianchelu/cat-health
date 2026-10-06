@@ -5,6 +5,7 @@ import type {
   DeviceType,
   EventType,
   GetProviderRemotePetsResponseDTO,
+  ProviderAccountHealthDTO,
   ProviderCapabilities,
 } from 'shared';
 import type { Database } from '../../database/index.ts';
@@ -14,6 +15,7 @@ import type { MediaManager, PendingMedia } from '../media/MediaManager.ts';
 import type { DevicePresence } from './DevicePresence.ts';
 import type { ControlSurface } from './control/types.ts';
 import type { EventBus } from './EventBus.ts';
+import type { RetryPolicy } from './providerFailure.ts';
 
 export type { Device, ProviderAccount };
 
@@ -55,6 +57,15 @@ export interface DeviceDirectory {
   getLinkedCamera(deviceId: number): Promise<Camera | undefined>;
 }
 
+/**
+ * How a running account manager says its remote is gone. The integration
+ * manager then tears the account down and owns bringing it back, so a provider
+ * never backs off its own pollers.
+ */
+export interface AccountHealthReporter {
+  fail(error: unknown): void;
+}
+
 export interface ProviderDeps {
   db: Kysely<Database>;
   eventBus: EventBus;
@@ -68,6 +79,12 @@ export interface ProviderDeps {
    * getSnapshotBuffer itself always hits the camera.
    */
   onSnapshotBuffer?: (deviceId: number, buffer: Buffer) => void;
+}
+
+/** What one account manager is built with: the shared deps, plus its own line back. */
+export interface AccountDeps extends ProviderDeps {
+  /** Bound to this manager; inert once it has been replaced. */
+  health: AccountHealthReporter;
 }
 
 export interface DeviceController {
@@ -138,10 +155,12 @@ export interface DeviceProvider {
   readonly name: string;
   readonly internal?: boolean;
   readonly capabilities: ProviderCapabilities;
+  /** Backoff for this provider's accounts; `DEFAULT_RETRY_POLICY` when absent. */
+  readonly retryPolicy?: RetryPolicy;
 
   createAccountManager(
     account: ProviderAccount,
-    deps: ProviderDeps,
+    deps: AccountDeps,
   ): AccountManager;
   validateAccountConfig(config: unknown): boolean;
   /**
@@ -218,6 +237,8 @@ export interface DeviceIntegrationContext {
     args: { previousConfig: unknown; nextConfig: unknown },
   ): Promise<string | null>;
   initializeAccount(accountId: number): Promise<void>;
+  /** `null` for an account that is not running. See IntegrationManager. */
+  getAccountHealth(accountId: number): ProviderAccountHealthDTO | null;
   getAccountManager(accountId: number): AccountManager | undefined;
   instantiateDeviceController(device: Device): DeviceController | undefined;
   invalidateDeviceController(deviceId: number): Promise<void>;

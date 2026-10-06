@@ -1,8 +1,9 @@
 import type { Kysely } from 'kysely';
-import { isRecord } from 'shared';
+import { isRecord, type ProviderAccountHealthDTO } from 'shared';
 import { MediaManager } from '../media/MediaManager.ts';
 import type { Database } from '../../database/index.ts';
 import type { Device } from '../../database/types/DeviceTable.ts';
+import type { ProviderAccount } from '../../database/types/ProviderAccountTable.ts';
 import type { EventBus } from './EventBus.ts';
 import type {
   AccountManager,
@@ -20,18 +21,23 @@ import { isDeviceReachable } from './deviceEnablement.ts';
 import { DevicePresence } from './DevicePresence.ts';
 import { recordDeviceEvent } from '../events/recordDeviceEvent.ts';
 import { recordEnablementTransition } from './deviceEnablementEvents.ts';
+import {
+  DEFAULT_RETRY_POLICY,
+  ProviderPermanentError,
+} from './providerFailure.ts';
+import { AccountEntry } from './AccountEntry.ts';
 
 export class IntegrationManager
   implements DeviceDirectory, DeviceIntegrationContext
 {
   private providers = new Map<string, DeviceProvider>();
-  private accountManagers = new Map<number, AccountManager>();
+  /** One per account started this run; a switched-off account's is stopped. */
+  private readonly accounts = new Map<number, AccountEntry>();
   private deps: ProviderDeps;
   private mediaManager: MediaManager;
   private readonly presence: DevicePresence;
   private onSnapshotBuffer?: (deviceId: number, buffer: Buffer) => void;
   private readonly retiredListeners = new Set<(deviceId: number) => void>();
-
   constructor(db: Kysely<Database>, eventBus: EventBus) {
     this.mediaManager = new MediaManager(db);
     this.presence = new DevicePresence({
@@ -163,26 +169,11 @@ export class IntegrationManager
       .where('enabled', '=', 1) // Assuming 1 is true in SQLite/Kysely mapping
       .execute();
 
-    for (const account of accounts) {
-      const provider = this.providers.get(account.provider);
-      if (!provider) {
-        console.warn(
-          `Provider ${account.provider} not found for account ${account.id}`,
-        );
-        continue;
-      }
-
-      try {
-        const manager = provider.createAccountManager(account, this.deps);
-        this.accountManagers.set(account.id, manager);
-        await manager.initialize();
-        console.log(
-          `Initialized account ${account.name} (${account.provider})`,
-        );
-      } catch (err) {
-        console.error(`Failed to initialize account ${account.id}:`, err);
-      }
-    }
+    // Side by side: a start never throws, and one account waiting out a slow
+    // remote must not hold up the others or the server's listen.
+    await Promise.all(
+      accounts.map((account) => this.entryFor(account)?.start()),
+    );
   }
 
   async initializeAccount(accountId: number) {
@@ -214,10 +205,10 @@ export class IntegrationManager
       this.retireController(device.id);
     }
 
-    const existingManager = this.accountManagers.get(accountId);
-    if (existingManager) {
-      await existingManager.shutdown();
-    }
+    // Stopping also voids whatever retry was pending: what follows is either
+    // off or a fresh start.
+    const entry = this.entryFor(account);
+    await entry?.stop();
 
     // After the shutdown so no suppressed teardown can trail it, and before
     // the manager below reconnects so an `enabled` always precedes its
@@ -234,10 +225,7 @@ export class IntegrationManager
     // Quiet rather than throwing: callers want the runtime to match the row,
     // not to start this account. `initialize()` skips disabled accounts the
     // same way at startup.
-    if (!account.enabled) {
-      this.accountManagers.delete(accountId);
-      return;
-    }
+    if (!account.enabled) return;
 
     // Before the manager reconnects, so the `online` that follows is heard.
     // Devices switched off individually stay suppressed.
@@ -245,19 +233,81 @@ export class IntegrationManager
       if (device.enabled) await this.presence.resume(device.id);
     }
 
-    const manager = provider.createAccountManager(account, this.deps);
-    this.accountManagers.set(account.id, manager);
-    await manager.initialize();
-    console.log(`Initialized account ${account.name} (${account.provider})`);
+    await entry?.start();
+  }
+
+  /** The account's entry, made on first use; `undefined` for an unknown provider. */
+  private entryFor(account: ProviderAccount): AccountEntry | undefined {
+    if (!this.providers.has(account.provider)) {
+      console.warn(
+        `Provider ${account.provider} not found for account ${account.id}`,
+      );
+      return undefined;
+    }
+    return this.accounts.get(account.id) ?? this.createEntry(account.id);
+  }
+
+  /** The provider is looked up per start, from the row that start loaded. */
+  private createEntry(accountId: number): AccountEntry {
+    const entry = new AccountEntry({
+      accountId,
+      createManager: (account, health) => {
+        const provider = this.providers.get(account.provider);
+        if (!provider) {
+          throw new ProviderPermanentError(
+            `Provider ${account.provider} not found`,
+          );
+        }
+        return provider.createAccountManager(account, { ...this.deps, health });
+      },
+      retryPolicy: (account) =>
+        this.providers.get(account.provider)?.retryPolicy ??
+        DEFAULT_RETRY_POLICY,
+      loadAccount: () =>
+        this.deps.db
+          .selectFrom('provider_account')
+          .selectAll()
+          .where('id', '=', accountId)
+          .executeTakeFirst(),
+      onDown: () => this.takeAccountDevicesDown(accountId),
+      logger: console,
+    });
+    this.accounts.set(accountId, entry);
+    return entry;
+  }
+
+  /**
+   * An account that lost its remote takes its devices with it: offline, with
+   * the account as the cause, and their controllers retired.
+   */
+  private async takeAccountDevicesDown(accountId: number): Promise<void> {
+    const devices = await this.deps.db
+      .selectFrom('device')
+      .select(['id', 'enabled'])
+      .where('provider_account_id', '=', accountId)
+      .execute();
+    for (const device of devices) {
+      if (device.enabled) {
+        this.presence.reportOffline(device.id, { cause: 'account' });
+      }
+      this.retireController(device.id);
+    }
+  }
+
+  /** `null` for an account that is not running: switched off, or unknown. */
+  getAccountHealth(accountId: number): ProviderAccountHealthDTO | null {
+    return this.accounts.get(accountId)?.getHealth() ?? null;
   }
 
   getAccountManager(accountId: number): AccountManager | undefined {
-    return this.accountManagers.get(accountId);
+    return this.accounts.get(accountId)?.manager;
   }
 
   /** Inject a pre-built account manager without provider initialization (test seam). */
   registerAccountManager(accountId: number, manager: AccountManager): void {
-    this.accountManagers.set(accountId, manager);
+    (this.accounts.get(accountId) ?? this.createEntry(accountId)).adopt(
+      manager,
+    );
   }
 
   /** Teardown cached controller for a device so next use gets fresh config (e.g. after PATCH device). */
@@ -269,7 +319,7 @@ export class IntegrationManager
       .where('id', '=', deviceId)
       .executeTakeFirst();
     if (!device) return;
-    const manager = this.accountManagers.get(device.provider_account_id);
+    const manager = this.getAccountManager(device.provider_account_id);
     if (manager?.invalidateDeviceController) {
       await manager.invalidateDeviceController(deviceId);
     }
@@ -325,14 +375,14 @@ export class IntegrationManager
    * The gate that makes "disabled" mean disabled: for a provider like ESPHome
    * instantiating *is* connecting, and `mapDevice` instantiates for every row
    * it maps, so evicting a controller is never enough. A disabled account
-   * needs no check here — it never reaches `accountManagers`.
+   * needs no check here — its entry has no manager mounted.
    */
   instantiateDeviceController(device: Device): DeviceController | undefined {
     if (!device.enabled) {
       return undefined;
     }
 
-    const manager = this.accountManagers.get(device.provider_account_id);
+    const manager = this.getAccountManager(device.provider_account_id);
     if (!manager) {
       return undefined;
     }
@@ -411,12 +461,7 @@ export class IntegrationManager
   }
 
   async shutdown() {
-    for (const manager of this.accountManagers.values()) {
-      try {
-        await manager.shutdown();
-      } catch (err) {
-        console.error(`Error shutting down manager ${manager.accountId}:`, err);
-      }
-    }
+    // `stop` never throws: a manager's own shutdown error is logged inside.
+    await Promise.all([...this.accounts.values()].map((entry) => entry.stop()));
   }
 }

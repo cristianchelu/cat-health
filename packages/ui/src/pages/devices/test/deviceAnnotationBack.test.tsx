@@ -36,6 +36,7 @@ function device(
     config: { visit_annotation_enabled: true },
     enabled: true,
     account_enabled: true,
+    account_health_state: null,
     last_seen: null,
     status: 'online',
     created_at: '2026-01-01T00:00:00.000Z',

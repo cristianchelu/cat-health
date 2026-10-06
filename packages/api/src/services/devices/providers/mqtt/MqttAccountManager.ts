@@ -11,20 +11,19 @@ import type {
   DeviceController,
   DiscoveredDevice,
   ProviderAccount,
-  ProviderDeps,
+  AccountDeps,
 } from '../../types.ts';
 import {
   buildMqttClientOptions,
   describeMqttConnectError,
   endClient,
+  isMqttCredentialsRefusal,
   mintMqttClientId,
   parseMqttAccountConfig,
   topicPrefixOf,
 } from './mqttConnection.ts';
 import type { MqttMessageEvent } from '../../EventBus.ts';
-
-/** How long MQTT.js waits between reconnect attempts once the broker drops us. */
-const RECONNECT_PERIOD_MS = 5_000;
+import { ProviderPermanentError } from '../../providerFailure.ts';
 
 /**
  * Owns the one connection to a broker. Ingest, Home Assistant publishing and
@@ -37,11 +36,12 @@ export class MqttAccountManager implements AccountManager {
   readonly accountId: number;
   private readonly config: MqttAccountConfig;
   private readonly runtime: MqttRuntimeState;
-  private readonly deps: ProviderDeps;
+  private readonly deps: AccountDeps;
   private client: MqttClient | null = null;
-  private lastError: string | null = null;
+  /** What the broker or the socket last said, for the close that follows it. */
+  private lastFailure: unknown = null;
 
-  constructor(account: ProviderAccount, deps: ProviderDeps) {
+  constructor(account: ProviderAccount, deps: AccountDeps) {
     this.accountId = account.id;
     this.deps = deps;
     const config = parseMqttAccountConfig(account.config);
@@ -57,31 +57,36 @@ export class MqttAccountManager implements AccountManager {
   /**
    * Resolves once the connection is set up, not once the broker answers:
    * a broker that is down at startup must not hold every other account's
-   * initialization hostage. MQTT.js keeps retrying on its own.
+   * initialization hostage. Reconnects are off; a closed connection is
+   * reported through `deps.health`, whose backoff is the only retry.
    */
   async initialize(): Promise<void> {
     const client = mqtt.connect(
       this.config.url,
       buildMqttClientOptions(this.config, await this.ensureClientId(), {
-        reconnectPeriod: RECONNECT_PERIOD_MS,
+        reconnectPeriod: 0,
       }),
     );
     client.on('connect', () => {
-      this.lastError = null;
+      this.lastFailure = null;
       this.deps.logger.log(
         `MQTT account ${this.accountId} connected to ${this.config.url}`,
       );
     });
-    // Every failed retry emits an error, so a wrong password would otherwise
-    // repeat itself in the log every reconnect period.
     client.on('error', (error) => {
-      const reason = describeMqttConnectError(error);
-      if (reason === this.lastError) return;
-      this.lastError = reason;
-      this.deps.logger.warn(`MQTT account ${this.accountId}: ${reason}`);
+      this.lastFailure = error;
     });
-    client.on('offline', () => {
-      this.deps.logger.warn(`MQTT account ${this.accountId} lost the broker`);
+    client.on('close', () => {
+      if (this.client !== client) return;
+      const cause = this.lastFailure;
+      const reason = cause
+        ? describeMqttConnectError(cause)
+        : 'Broker closed the connection';
+      this.deps.health.fail(
+        isMqttCredentialsRefusal(cause)
+          ? new ProviderPermanentError(reason, { cause })
+          : new Error(reason, { cause }),
+      );
     });
     client.on('message', (topic, payload, packet) => {
       const event: MqttMessageEvent = {

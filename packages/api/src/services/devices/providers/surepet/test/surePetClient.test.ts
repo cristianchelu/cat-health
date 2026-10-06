@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { after, describe, it, mock } from 'node:test';
 
 import { SurePetClient, SurePetClientError } from '../SurePetClient.ts';
+import { ProviderPermanentError } from '../../../providerFailure.ts';
 import { SUREPET_LOGIN_URL } from '../constants.ts';
 
 describe('SurePetClient', () => {
@@ -70,7 +71,7 @@ describe('SurePetClient', () => {
     assert.equal(client.getToken(), 'token-3');
   });
 
-  it('surfaces HTTP failures from the login endpoint', async () => {
+  it('treats a refused login as permanent', async () => {
     mock.method(globalThis, 'fetch', async () => {
       return new Response(JSON.stringify({ error: 'nope' }), { status: 401 });
     });
@@ -84,10 +85,41 @@ describe('SurePetClient', () => {
     await assert.rejects(
       () => client.login(),
       (error: unknown) => {
-        assert.ok(error instanceof SurePetClientError);
-        assert.equal(error.status, 401);
+        assert.ok(error instanceof ProviderPermanentError);
+        assert.ok(error.cause instanceof SurePetClientError);
+        assert.equal(error.cause.status, 401);
         return true;
       },
+    );
+  });
+
+  it('treats a 422 login as refused credentials too', async () => {
+    mock.method(globalThis, 'fetch', async () => {
+      return new Response('{}', { status: 422 });
+    });
+    const client = new SurePetClient({
+      email: 'cat@example.com',
+      password: 'secret',
+      deviceId: 'device-1',
+    });
+
+    await assert.rejects(() => client.login(), ProviderPermanentError);
+  });
+
+  it('leaves a 403 login retryable', async () => {
+    mock.method(globalThis, 'fetch', async () => {
+      return new Response('{}', { status: 403 });
+    });
+    const client = new SurePetClient({
+      email: 'cat@example.com',
+      password: 'secret',
+      deviceId: 'device-1',
+    });
+
+    await assert.rejects(
+      () => client.login(),
+      (error: unknown) =>
+        error instanceof SurePetClientError && error.status === 403,
     );
   });
 

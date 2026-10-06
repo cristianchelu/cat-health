@@ -17,7 +17,7 @@ import type {
   AccountManager,
   DeviceController,
   DiscoveredDevice,
-  ProviderDeps,
+  AccountDeps,
   Device,
   ProviderAccount,
 } from '../../types.ts';
@@ -34,10 +34,12 @@ import {
   SurePetClient,
   SurePetClientError,
 } from './SurePetClient.ts';
+import { ProviderPermanentError } from '../../providerFailure.ts';
 import { FeederController } from './FeederController.ts';
 import {
   SUREPET_DEVICE_STATE_POLL_INTERVAL_MS,
   SUREPET_TIMELINE_POLL_INTERVAL_MS,
+  SUREPET_UNAVAILABLE_AFTER_FAILURES,
   WeightContext,
 } from './constants.ts';
 import {
@@ -122,7 +124,7 @@ function parseRuntimeState(runtimeState: unknown): SurePetRuntimeState {
 export class SurePetAccountManager implements AccountManager {
   readonly accountId: number;
   private account: ProviderAccount;
-  private deps: ProviderDeps;
+  private deps: AccountDeps;
   private config: SurePetAccountConfig;
   private householdPets: SurePetCloudPet[] = [];
   private runtime: SurePetRuntimeState;
@@ -131,6 +133,7 @@ export class SurePetAccountManager implements AccountManager {
   private timelinePollTimer: ReturnType<typeof setInterval> | null = null;
   private statePollTimer: ReturnType<typeof setInterval> | null = null;
   private syncInProgress = false;
+  private consecutiveStateFailures = 0;
   /** A feeder registered while the walk was running; run it again after. */
   private backfillRestartRequested = false;
   /**
@@ -144,7 +147,7 @@ export class SurePetAccountManager implements AccountManager {
    */
   private retired = false;
 
-  constructor(account: ProviderAccount, deps: ProviderDeps) {
+  constructor(account: ProviderAccount, deps: AccountDeps) {
     this.account = account;
     this.deps = deps;
     this.accountId = account.id;
@@ -201,9 +204,7 @@ export class SurePetAccountManager implements AccountManager {
     }, SUREPET_TIMELINE_POLL_INTERVAL_MS);
 
     this.statePollTimer = setInterval(() => {
-      void this.refreshFeederStates().catch((error) => {
-        this.deps.logger.error('SurePet feeder state refresh failed:', error);
-      });
+      void this.pollFeederStates();
     }, SUREPET_DEVICE_STATE_POLL_INTERVAL_MS);
   }
 
@@ -448,7 +449,12 @@ export class SurePetAccountManager implements AccountManager {
         const client = await this.ensureClient();
         const [payload] = await Promise.all([
           fetchFeederPayload(client, controller.getSurePetDeviceId()),
-          this.refreshHouseholdPets(client),
+          this.refreshHouseholdPets(client).catch((error) => {
+            this.deps.logger.error(
+              'Failed to refresh SurePet household pets:',
+              error,
+            );
+          }),
         ]);
         controller.updateFromCloudPayload(payload);
       },
@@ -487,18 +493,39 @@ export class SurePetAccountManager implements AccountManager {
 
   /** The household's pets, kept for naming what a feeder is assigned. */
   private async refreshHouseholdPets(client: SurePetClient): Promise<void> {
+    this.householdPets = await client.getPets(
+      this.runtime.household_id ?? undefined,
+    );
+  }
+
+  /**
+   * The state poll is the account's heartbeat, and the only poller that
+   * reports an outage: after enough failed ticks in a row the account is
+   * handed to the integration manager, which tears it down and owns the retry.
+   */
+  private async pollFeederStates(): Promise<void> {
     try {
-      this.householdPets = await client.getPets(
-        this.runtime.household_id ?? undefined,
-      );
+      await this.refreshFeederStates();
+      this.consecutiveStateFailures = 0;
     } catch (error) {
-      this.deps.logger.error(
-        'Failed to refresh SurePet household pets:',
-        error,
-      );
+      if (this.retired) return;
+      this.consecutiveStateFailures += 1;
+      if (
+        error instanceof ProviderPermanentError ||
+        this.consecutiveStateFailures >= SUREPET_UNAVAILABLE_AFTER_FAILURES
+      ) {
+        this.deps.health.fail(error);
+        return;
+      }
+      this.deps.logger.warn('SurePet feeder state refresh failed:', error);
     }
   }
 
+  /**
+   * Throws when the account cannot reach the cloud: the login or the
+   * household's pets fail. A feeder that fails on its own is only logged, so
+   * one missing device never takes the account down.
+   */
   private async refreshFeederStates(): Promise<void> {
     if (this.retired) return;
     const client = await this.ensureClient();

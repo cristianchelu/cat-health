@@ -237,10 +237,22 @@ export type DeviceConnectivityPreviousStateDTO = Static<
   typeof DeviceConnectivityPreviousStateSchema
 >;
 
+/**
+ * Which side moved a device-status event (`isDeviceStatusEventType`): the
+ * device itself, or its whole account. Unrelated to an event's `caused_by`.
+ */
+export const DeviceStatusCauseSchema = Type.Union([
+  Type.Literal('device'),
+  Type.Literal('account'),
+]);
+export type DeviceStatusCauseDTO = Static<typeof DeviceStatusCauseSchema>;
+
 export const DeviceConnectivityEventDataSchema = Type.Object({
   type: Type.Literal('device_connectivity'),
   state: DeviceConnectivityStateSchema,
   previous_state: Type.Optional(DeviceConnectivityPreviousStateSchema),
+  /** `account` when the device went with its account's connection. */
+  cause: Type.Optional(DeviceStatusCauseSchema),
 });
 export type DeviceConnectivityEventDataDTO = Static<
   typeof DeviceConnectivityEventDataSchema
@@ -250,19 +262,11 @@ export type DeviceConnectivityEventDataDTO = Static<
  * The user's own switch, as opposed to what the device reported: a disabled
  * device leaves the household from this moment and an enabled one rejoins it.
  */
-export const DeviceEnablementCauseSchema = Type.Union([
-  Type.Literal('device'),
-  Type.Literal('account'),
-]);
-export type DeviceEnablementCauseDTO = Static<
-  typeof DeviceEnablementCauseSchema
->;
-
 export const DeviceEnablementEventDataSchema = Type.Object({
   type: Type.Literal('device_enablement'),
   enabled: Type.Boolean(),
   /** Which switch moved: the device's own, or its whole account's. */
-  cause: Type.Optional(DeviceEnablementCauseSchema),
+  cause: Type.Optional(DeviceStatusCauseSchema),
 });
 export type DeviceEnablementEventDataDTO = Static<
   typeof DeviceEnablementEventDataSchema

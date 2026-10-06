@@ -11,7 +11,7 @@ import {
   SUREPET_LOGIN_URL,
   SUREPET_ME_START_URL,
 } from '../../src/services/devices/providers/surepet/constants.ts';
-import type { ProviderDeps } from '../../src/services/devices/types.ts';
+import type { AccountDeps } from '../../src/services/devices/types.ts';
 import { insertProviderAccount } from '../helpers/fixtures.ts';
 import {
   createTestDb,
@@ -58,7 +58,7 @@ function mockSurePetCloud(): FetchLog {
   return log;
 }
 
-function buildDeps(ctx: TestDbContext): ProviderDeps {
+function buildDeps(ctx: TestDbContext): AccountDeps {
   const eventBus = new EventBus();
   const db = ctx.db;
   return {
@@ -69,6 +69,7 @@ function buildDeps(ctx: TestDbContext): ProviderDeps {
       instantiateController: async () => undefined,
       getLinkedCamera: async () => undefined,
     },
+    health: { fail: () => {} },
     presence: new DevicePresence({
       db,
       eventBus,

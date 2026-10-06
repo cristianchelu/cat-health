@@ -11,7 +11,7 @@ import type {
   NormalizedFeedingDatapoint,
   NormalizedServedDatapoint,
 } from '../../src/services/devices/providers/surepet/types.ts';
-import type { ProviderDeps } from '../../src/services/devices/types.ts';
+import type { AccountDeps } from '../../src/services/devices/types.ts';
 import {
   insertDevice,
   insertPet,
@@ -27,7 +27,7 @@ const CLOUD_DEVICE_ID = 916520;
 const TAG_ID = 3662632;
 const TOKEN = `stored.${'x'.repeat(340)}`;
 
-function buildDeps(ctx: TestDbContext): ProviderDeps {
+function buildDeps(ctx: TestDbContext): AccountDeps {
   const eventBus = new EventBus();
   const db = ctx.db;
   return {
@@ -38,6 +38,7 @@ function buildDeps(ctx: TestDbContext): ProviderDeps {
       instantiateController: async () => undefined,
       getLinkedCamera: async () => undefined,
     },
+    health: { fail: () => {} },
     presence: new DevicePresence({
       db,
       eventBus,

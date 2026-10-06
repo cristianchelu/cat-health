@@ -264,6 +264,29 @@ export const SUREPET_RETRYABLE_STATUSES = new Set([429, 502, 503, 504]);
 
 export const SUREPET_REQUEST_TIMEOUT_MS = 45_000;
 
+/**
+ * Login answers that mean the credentials themselves were refused, as their
+ * own app reads them (RB:539323). It has no 403 case; a 403 there is "lost
+ * internet", which is also what a CDN block looks like.
+ */
+export const SUREPET_LOGIN_REJECTED_STATUSES = new Set([401, 422]);
+
+/**
+ * Consecutive failed state polls before the account is handed to the
+ * integration manager's backoff. Two, so one dropped request is not an outage.
+ */
+export const SUREPET_UNAVAILABLE_AFTER_FAILURES = 2;
+
+/**
+ * The default policy, stated here because it is the number that protects
+ * SurePet: their outages have lasted a day or two, and at the cap a retry is
+ * one household request an hour on the stored token, not a fresh login.
+ */
+export const SUREPET_RETRY_POLICY = {
+  baseMs: 30_000,
+  maxMs: 60 * 60_000,
+};
+
 export function buildSurePetHeaders(options: {
   token?: string;
   deviceId: string;

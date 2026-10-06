@@ -1,7 +1,10 @@
 import type { Kysely } from 'kysely';
 import type { DeviceStatus } from 'shared';
 import type { Database } from '../../database/index.ts';
-import type { DeviceConnectivityEventData } from '../../domain/events.ts';
+import type {
+  DeviceConnectivityEventData,
+  DeviceStatusCause,
+} from '../../domain/events.ts';
 import type {
   RecordDeviceEventInput,
   RecordDeviceEventDeps,
@@ -142,7 +145,7 @@ export class DevicePresence {
 
   reportOffline(
     deviceId: number,
-    opts?: { lastActivityMs?: number | null },
+    opts?: { lastActivityMs?: number | null; cause?: DeviceStatusCause },
   ): void {
     const prev = this.entries.get(deviceId);
     const previousStatus = prev?.status ?? 'unknown';
@@ -163,6 +166,7 @@ export class DevicePresence {
         deviceId,
         previousStatus,
         Date.now(),
+        opts?.cause,
       );
     }
   }
@@ -258,6 +262,7 @@ export class DevicePresence {
     deviceId: number,
     previousStatus: DeviceStatus,
     at: number,
+    cause: DeviceStatusCause | undefined,
   ): void {
     if (!this.hydrateComplete || this.suppressed.has(deviceId)) {
       return;
@@ -267,20 +272,25 @@ export class DevicePresence {
 
     const previous_state = toConnectivityPreviousState(previousStatus);
 
-    this.pendingOfflineTimers.set(
-      deviceId,
-      setTimeout(() => {
-        this.pendingOfflineTimers.delete(deviceId);
-        // Re-checked at fire time: a minute is long enough for the device to
-        // have been switched off since.
-        if (this.suppressed.has(deviceId)) return;
-        void this.emitConnectivityEvent(
-          deviceId,
-          { type: 'device_connectivity', state: 'offline', previous_state },
-          at,
-        );
-      }, OFFLINE_EVENT_DELAY_MS),
-    );
+    const timer = setTimeout(() => {
+      this.pendingOfflineTimers.delete(deviceId);
+      // Re-checked at fire time: a minute is long enough for the device to
+      // have been switched off since.
+      if (this.suppressed.has(deviceId)) return;
+      void this.emitConnectivityEvent(
+        deviceId,
+        {
+          type: 'device_connectivity',
+          state: 'offline',
+          previous_state,
+          ...(cause ? { cause } : {}),
+        },
+        at,
+      );
+    }, OFFLINE_EVENT_DELAY_MS);
+    // A pending event is no reason to keep a stopping process alive.
+    timer.unref?.();
+    this.pendingOfflineTimers.set(deviceId, timer);
   }
 
   private emitConnectivityTransition(

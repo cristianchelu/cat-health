@@ -116,6 +116,19 @@ export function describeMqttConnectError(error: unknown): string {
 }
 
 /**
+ * CONNACK codes that refuse the credentials themselves: 4 and 5 in MQTT 3.1.1,
+ * 0x86 and 0x87 in MQTT 5. Reconnecting with them again cannot succeed.
+ */
+const MQTT_CREDENTIALS_REFUSED_CODES = new Set([4, 5, 0x86, 0x87]);
+
+export function isMqttCredentialsRefusal(error: unknown): boolean {
+  return (
+    error instanceof ErrorWithReasonCode &&
+    MQTT_CREDENTIALS_REFUSED_CODES.has(error.code)
+  );
+}
+
+/**
  * Connect once and hang up. Resolves when the broker acknowledges the CONNECT
  * with this config, rejects with a user-facing reason otherwise. No reconnect:
  * the point is to hear the first answer, not to keep trying.

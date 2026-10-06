@@ -103,10 +103,8 @@ export class FeederController implements DeviceController {
     );
   }
 
-  async connect(): Promise<void> {
-    this.status = 'online';
-    this.deps.presence.reportOnline(this.deviceId);
-  }
+  /** Reachability is the cloud's to say, in `updateFromCloudPayload`. */
+  async connect(): Promise<void> {}
 
   async disconnect(): Promise<void> {
     this.status = 'offline';

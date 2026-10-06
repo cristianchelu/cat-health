@@ -70,6 +70,34 @@ export type GetProvidersResponseDTO = Static<typeof GetProvidersResponseSchema>;
 
 // --- Provider Accounts ---
 
+/**
+ * Where a running account stands with its remote. `unavailable` is retried by
+ * the server on its own; `failed` waits for the user to edit or retry it.
+ */
+export const ProviderAccountHealthStateSchema = Type.Union([
+  Type.Literal('starting'),
+  Type.Literal('ok'),
+  Type.Literal('unavailable'),
+  Type.Literal('failed'),
+]);
+export type ProviderAccountHealthState = Static<
+  typeof ProviderAccountHealthStateSchema
+>;
+
+export const ProviderAccountHealthSchema = Type.Object({
+  state: ProviderAccountHealthStateSchema,
+  reason: Type.Optional(Type.String()),
+  /** When the account entered this state. */
+  since: Type.String(),
+  /** Set while `unavailable`: when the next attempt runs. */
+  next_retry_at: Type.Optional(Type.String()),
+  /** Consecutive failed attempts. */
+  attempts: Type.Optional(Type.Number()),
+});
+export type ProviderAccountHealthDTO = Static<
+  typeof ProviderAccountHealthSchema
+>;
+
 export const ProviderAccountSchema = Type.Object({
   id: Type.Number(),
   provider: Type.String(),
@@ -79,6 +107,8 @@ export const ProviderAccountSchema = Type.Object({
   internal: Type.Boolean(),
   created_at: Type.String(),
   updated_at: Type.String(),
+  /** `null` while the account is switched off. */
+  health: Type.Union([ProviderAccountHealthSchema, Type.Null()]),
 });
 export type ProviderAccountDTO = Static<typeof ProviderAccountSchema>;
 
@@ -192,6 +222,11 @@ export const GetDeviceResponseSchema = Type.Object({
    * is off without joining the account list.
    */
   account_enabled: Type.Boolean(),
+  /** Its account's health state, so an offline device can say why. */
+  account_health_state: Type.Union([
+    ProviderAccountHealthStateSchema,
+    Type.Null(),
+  ]),
   last_seen: Type.Union([Type.String(), Type.Null()]),
   status: Type.Union([DeviceStatusSchema, Type.Null()]),
   state: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
