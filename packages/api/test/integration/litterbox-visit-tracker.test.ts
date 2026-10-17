@@ -333,6 +333,72 @@ describe('LitterboxVisitTracker', () => {
     assert.equal((await deviceEvents()).length, 1);
   });
 
+  it('records a visit that starts within the slack of one already recorded', async () => {
+    const first = frameFor(weights.slice(0, 110), {
+      visit: { ...trailerFor(weights).visit!, type: 'no_elimination' },
+    });
+    assert.equal(
+      await tracker.ingestFrame(first.frame, first.bytes),
+      'recorded_visit',
+    );
+
+    const secondId = VISIT_ID + 27;
+    runNativeSession(secondId * 1000 + 500);
+    const second = frameFor(weights, {
+      id: secondId,
+      ended: secondId + Math.round(weights.length / 10),
+    });
+    assert.equal(
+      await tracker.ingestFrame(second.frame, second.bytes),
+      'recorded_visit',
+    );
+    await sleep(FRAME_WAIT_MS * 3);
+
+    const events = await deviceEvents();
+    assert.deepEqual(
+      events.map(
+        (event) =>
+          event.data.type === 'litterbox_use' &&
+          event.data.device_verdict?.visit_id,
+      ),
+      [VISIT_ID, secondId],
+    );
+  });
+
+  it('records maintenance that follows a recorded visit within the slack', async () => {
+    const visit = frameFor(weights);
+    await tracker.ingestFrame(visit.frame, visit.bytes);
+
+    const scoopId = VISIT_ID + 20;
+    const scoop = frameFor(
+      weights.map((w) => w - 100),
+      {
+        id: scoopId,
+        ended: scoopId + Math.round(weights.length / 10),
+        visit: null,
+        box: {
+          ...trailerFor(weights).box,
+          kind: 'scoop',
+          level: 3000,
+          box: 1500,
+          scooped: true,
+        },
+      },
+    );
+    assert.equal(
+      await tracker.ingestFrame(scoop.frame, scoop.bytes),
+      'recorded_maintenance',
+    );
+    assert.equal((await deviceEvents()).length, 2);
+  });
+
+  it('a record from a device without a clock still matches by time', async () => {
+    const { bytes, frame } = frameFor(weights, { id: 0 });
+    await tracker.ingestFrame(frame, bytes);
+    assert.equal(await tracker.ingestFrame(frame, bytes), 'duplicate');
+    assert.equal((await deviceEvents()).length, 1);
+  });
+
   it('records box maintenance from the device box verdict', async () => {
     const scoop = frameFor(
       weights.map((w) => w - 100),

@@ -1,5 +1,6 @@
 import { sql, type Kysely } from 'kysely';
 import {
+  decodeLitterboxRawData,
   deriveLitterboxSampleRateHz,
   encodeLitterboxRawData,
   parseLitterboxUseEliminationType,
@@ -248,7 +249,7 @@ export class LitterboxVisitTracker {
       return this.patchContinuedVisit(frame, startTime, log);
     }
 
-    const existing = await this.findEventNear(startTime);
+    const existing = await this.findEventNear(startTime, trailer.id);
     const lastWeightG = frame.weights[frame.weights.length - 1];
     const rawData = async () =>
       Buffer.from(
@@ -376,11 +377,15 @@ export class LitterboxVisitTracker {
     return 'patched_continued';
   }
 
-  /** The closest event to `at` in the slack window: visits can be seconds apart. */
-  private async findEventNear(at: Date) {
-    const candidates = await this.deps.db
+  /**
+   * The closest event to `at` in the slack window that could be record
+   * `recordId`'s: visits can be seconds apart, so one that already holds a
+   * different record is another visit (see `holdsOtherRecord`).
+   */
+  private async findEventNear(at: Date, recordId: number) {
+    const inWindow = await this.deps.db
       .selectFrom('event')
-      .select(['id', 'data', 'timestamp'])
+      .select(['id', 'data', 'timestamp', 'raw_data'])
       .where('device_id', '=', this.deviceId)
       .where(sql`json_extract(data, '$.type')`, 'in', [
         'litterbox_use',
@@ -389,6 +394,9 @@ export class LitterboxVisitTracker {
       .where('timestamp', '>=', new Date(at.getTime() - CLOCK_SLACK_MS))
       .where('timestamp', '<=', new Date(at.getTime() + CLOCK_SLACK_MS))
       .execute();
+    const candidates = inWindow.filter(
+      (event) => !holdsOtherRecord(event.raw_data, recordId),
+    );
     const distance = (event: { timestamp: Date }) =>
       Math.abs(event.timestamp.getTime() - at.getTime());
     return candidates.reduce<(typeof candidates)[number] | undefined>(
@@ -612,6 +620,17 @@ export class LitterboxVisitTracker {
  */
 function frameStartMs(trailer: DecodedLitterboxVisitFrame['trailer']): number {
   return (trailer.ended - trailer.duration) * 1000;
+}
+
+/**
+ * Whether an event stores a device record named other than `recordId`.
+ * Retained redelivery repeats a record's id and two visits never share one;
+ * 0 is what a device without a clock sends, and names nothing.
+ */
+function holdsOtherRecord(rawData: Buffer | null, recordId: number): boolean {
+  if (recordId === 0 || rawData?.[0] !== 3) return false;
+  const storedId = decodeLitterboxRawData(rawData)?.deviceVisit?.trailer.id;
+  return storedId !== undefined && storedId !== 0 && storedId !== recordId;
 }
 
 /** Smallest configured cat, in grams; null when the device knows no cats. */
