@@ -2,94 +2,47 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  buildToggledPresenceData,
-  deriveIsAway,
-  isAwayFromPresenceState,
+  isAttributionCandidate,
+  isProfileClosed,
   toPreviousState,
 } from '../petPresence.ts';
+import type { PetPresenceEventData } from '../../../domain/events.ts';
+
+const presence = (
+  state: PetPresenceEventData['state'],
+  context?: PetPresenceEventData['context'],
+): PetPresenceEventData => ({
+  type: 'pet_presence',
+  state,
+  ...(context ? { context } : {}),
+});
 
 describe('petPresence helpers', () => {
-  it('treats away and outside as away states', () => {
-    assert.equal(isAwayFromPresenceState('away'), true);
-    assert.equal(isAwayFromPresenceState('outside'), true);
-    assert.equal(isAwayFromPresenceState('home'), false);
-    assert.equal(isAwayFromPresenceState('unknown'), false);
+  it('reads a profile as closed only after a close', () => {
+    assert.equal(isProfileClosed(null), false);
+    assert.equal(isProfileClosed(presence('away', 'vet')), false);
+    assert.equal(isProfileClosed(presence('home', 'profile_reopened')), false);
+    assert.equal(isProfileClosed(presence('away', 'profile_closed')), true);
   });
 
-  it('derives is_away from the latest presence payload', () => {
-    assert.equal(deriveIsAway(null), false);
+  it('drops away pets from attribution and keeps outside and home ones', () => {
+    assert.equal(isAttributionCandidate(null), true);
+    assert.equal(isAttributionCandidate(presence('home')), true);
+    assert.equal(isAttributionCandidate(presence('outside')), true);
+    assert.equal(isAttributionCandidate(presence('away', 'vet')), false);
+    assert.equal(isAttributionCandidate(presence('away', 'friend')), false);
     assert.equal(
-      deriveIsAway({
-        type: 'pet_presence',
-        state: 'outside',
-        previous_state: 'home',
-      }),
-      true,
+      isAttributionCandidate(presence('away', 'profile_closed')),
+      false,
     );
     assert.equal(
-      deriveIsAway({
-        type: 'pet_presence',
-        state: 'home',
-        previous_state: 'away',
-      }),
-      false,
+      isAttributionCandidate(presence('home', 'profile_reopened')),
+      true,
     );
   });
 
   it('maps missing presence to unknown previous state', () => {
     assert.equal(toPreviousState(null), 'unknown');
-    assert.equal(
-      toPreviousState({
-        type: 'pet_presence',
-        state: 'home',
-        previous_state: 'away',
-      }),
-      'home',
-    );
-  });
-
-  it('toggles away/outside back to home and home to away', () => {
-    assert.deepEqual(
-      buildToggledPresenceData({
-        type: 'pet_presence',
-        state: 'away',
-        previous_state: 'home',
-      }),
-      {
-        type: 'pet_presence',
-        state: 'home',
-        previous_state: 'away',
-      },
-    );
-
-    assert.deepEqual(
-      buildToggledPresenceData({
-        type: 'pet_presence',
-        state: 'home',
-        previous_state: 'unknown',
-      }),
-      {
-        type: 'pet_presence',
-        state: 'away',
-        previous_state: 'home',
-      },
-    );
-  });
-
-  it('preserves vet/travel/friend context when returning home', () => {
-    assert.deepEqual(
-      buildToggledPresenceData({
-        type: 'pet_presence',
-        state: 'outside',
-        previous_state: 'home',
-        context: 'vet',
-      }),
-      {
-        type: 'pet_presence',
-        state: 'home',
-        previous_state: 'outside',
-        context: 'vet',
-      },
-    );
+    assert.equal(toPreviousState(presence('home')), 'home');
   });
 });

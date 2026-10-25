@@ -197,6 +197,8 @@ const StoredPetPresenceSchema = Type.Object({
       Type.Literal('travel'),
       Type.Literal('friend'),
       Type.Literal('manual'),
+      Type.Literal('profile_closed'),
+      Type.Literal('profile_reopened'),
     ]),
   ),
   previous_state: Type.Optional(

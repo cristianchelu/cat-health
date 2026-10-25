@@ -39,7 +39,8 @@ describe('pets API', () => {
     assert.equal(created.name, 'Mochi');
     assert.equal(created.breed, 'Domestic Shorthair');
     assert.equal(created.birth_date, '2020-01-01');
-    assert.equal(created.is_away, false);
+    assert.equal(created.presence, null);
+    assert.equal(created.closed_at, null);
     assert.ok(created.id);
 
     const list = await app.inject({ method: 'GET', url: '/api/pets' });

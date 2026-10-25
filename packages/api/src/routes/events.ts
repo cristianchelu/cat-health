@@ -1,4 +1,4 @@
-import { sql } from 'kysely';
+import { sql, type ExpressionBuilder } from 'kysely';
 import { subDays } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 
@@ -27,10 +27,7 @@ import {
   LitterboxTrendsResponseSchema,
 } from 'shared';
 
-import {
-  Type,
-  type FastifyPluginAsyncTypebox,
-} from '@fastify/type-provider-typebox';
+import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import { MediaManager } from '../services/media/MediaManager.ts';
 import { reconcileFoodIntakeDerived } from '../services/food/enrichFoodIntake.ts';
 import { computeLitterboxAnalysisData } from '../services/devices/providers/esphome/analyzeLitterboxUse.ts';
@@ -57,19 +54,17 @@ import {
   attributionColumns,
   attributionColumnsFromRequest,
 } from '../domain/eventAttribution.ts';
+import type { Database } from '../database/index.ts';
 import type { EventData } from '../domain/events.ts';
-
-const Http404ResponseSchema = Type.Object({
-  statusCode: Type.Literal(404),
-  error: Type.Literal('Not Found'),
-  message: Type.String(),
-});
-
-const Http400BadRequestSchema = Type.Object({
-  statusCode: Type.Literal(400),
-  error: Type.Literal('Bad Request'),
-  message: Type.String(),
-});
+import {
+  assertPresenceWriteAllowed,
+  fetchClosedPetIds,
+} from '../services/events/petPresence.ts';
+import {
+  Http400BadRequestSchema,
+  Http404NotFoundSchema,
+  Http409ConflictSchema,
+} from './httpErrorSchemas.ts';
 
 const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   const { db } = fastify;
@@ -343,6 +338,19 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       if (pet_id !== undefined) {
         query = query.where('pet_id', '=', pet_id);
         countQuery = countQuery.where('pet_id', '=', pet_id);
+      } else {
+        // A closed profile's history stays out of shared timelines; asking for
+        // the pet by id still returns it. See `isProfileClosed`.
+        const closedPetIds = await fetchClosedPetIds(db);
+        if (closedPetIds.length > 0) {
+          const openPetsOnly = (eb: ExpressionBuilder<Database, 'event'>) =>
+            eb.or([
+              eb('pet_id', 'is', null),
+              eb('pet_id', 'not in', closedPetIds),
+            ]);
+          query = query.where(openPetsOnly);
+          countQuery = countQuery.where(openPetsOnly);
+        }
       }
 
       // `caused_by=unknown` is the review queue: everything nothing has decided.
@@ -430,7 +438,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         params: PatchEventParamsSchema,
         response: {
           '200': GetEventWithChildrenSchema,
-          '404': Http404ResponseSchema,
+          '404': Http404NotFoundSchema,
         },
       },
     },
@@ -485,6 +493,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         response: {
           '200': GetEventSchema,
           '400': Http400BadRequestSchema,
+          '409': Http409ConflictSchema,
         },
       },
     },
@@ -531,6 +540,11 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       // `pet_id` is required on POST, so the body always states a decision.
       const columns = attribution ?? attributionColumns('unknown', null, null);
+
+      await assertPresenceWriteAllowed(db, {
+        incoming: { petId: columns.pet_id, data: storedEventData },
+        existing: null,
+      });
 
       // One transaction: the meal, its nutrients and its moisture child land
       // together or not at all — a failed enrichment must not leave a bare
@@ -589,7 +603,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         response: {
           '200': GetEventSchema,
           '400': Http400BadRequestSchema,
-          '404': Http404ResponseSchema,
+          '404': Http404NotFoundSchema,
         },
       },
     },
@@ -657,7 +671,8 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         response: {
           '200': GetEventSchema,
           '400': Http400BadRequestSchema,
-          '404': Http404ResponseSchema,
+          '404': Http404NotFoundSchema,
+          '409': Http409ConflictSchema,
         },
       },
     },
@@ -759,6 +774,21 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         });
       }
 
+      // A note or verification flag leaves who and what alone, so only a
+      // change to the data or the pet goes through the presence guard.
+      if (body.data !== undefined || attribution !== undefined) {
+        await assertPresenceWriteAllowed(db, {
+          incoming: {
+            petId: attribution ? attribution.pet_id : existing.pet_id,
+            data:
+              body.data !== undefined
+                ? eventDataFromDto(body.data)
+                : existing.data,
+          },
+          existing: { petId: existing.pet_id, data: existing.data },
+        });
+      }
+
       const {
         data: patchEventData,
         human_verified,
@@ -850,12 +880,25 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         params: DeleteEventParamsSchema,
         response: {
           '200': DeleteEventResponseSchema,
+          '409': Http409ConflictSchema,
         },
       },
     },
     async (request) => {
       const { eventId } = request.params;
       const eventIdStr = String(eventId);
+
+      const target = await db
+        .selectFrom('event')
+        .select(['pet_id', 'data'])
+        .where('id', '=', eventId)
+        .executeTakeFirst();
+      if (target) {
+        await assertPresenceWriteAllowed(db, {
+          incoming: null,
+          existing: { petId: target.pet_id, data: target.data },
+        });
+      }
 
       const filesToUnlink: string[] = [];
 

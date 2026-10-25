@@ -147,7 +147,13 @@ export function isDeviceStatusEventType(type: string): boolean {
 }
 
 export type PetPresenceState = 'away' | 'home' | 'outside';
-export type PetPresenceContext = 'vet' | 'travel' | 'friend' | 'manual';
+export type PetPresenceContext =
+  | 'vet'
+  | 'travel'
+  | 'friend'
+  | 'manual'
+  | 'profile_closed'
+  | 'profile_reopened';
 export type PetPresencePreviousState = PetPresenceState | 'unknown';
 
 export interface PetPresenceEventData {
