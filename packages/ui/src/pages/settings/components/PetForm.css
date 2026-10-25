@@ -1,0 +1,7 @@
+.pet-form {
+  .pet-form-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: var(--space-md);
+  }
+}

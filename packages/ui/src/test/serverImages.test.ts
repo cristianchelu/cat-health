@@ -9,13 +9,10 @@ const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 /**
  * The only files allowed to render a bare `<img>`.
  *
- * `FallbackImage` is the primitive itself. `AvatarUpload` previews a File the
- * user just picked through an object URL — there is no server, no request to
- * fail, and the element is replaced the moment the upload resolves.
+ * `FallbackImage` is the primitive itself.
  */
 const IMG_OWNERS = new Set([
   path.join('components', 'ui', 'FallbackImage.tsx'),
-  path.join('components', 'pet', 'AvatarUpload.tsx'),
 ]);
 
 /** `<img`, `<img>`, `<img src=…` — a literal element, not a computed tag. */

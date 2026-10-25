@@ -114,6 +114,16 @@ const EXTRA_KEYS: Record<string, Set<string>> = {
 };
 
 /**
+ * Plural categories differ by language: Romanian has `_few` where English has
+ * only `_one`/`_other`. Such a form is reachable whenever `en` pluralizes the
+ * same key, so it is not an orphan.
+ */
+function isOwnPluralForm(key: string, base: Set<string>): boolean {
+  const match = /^(.*)_(zero|two|few|many)$/.exec(key);
+  return match != null && base.has(`${match[1]}_other`);
+}
+
+/**
  * Every source file outside the tests. Whether a key exists is the compiler's
  * job (`src/i18next.d.ts`); this only feeds the unreferenced-key report.
  */
@@ -193,7 +203,11 @@ describe('i18n keys', () => {
       if (locale === BASE_LOCALE) continue;
       const allowed = EXTRA_KEYS[locale] ?? new Set<string>();
       for (const key of [...loadLocale(locale)].sort()) {
-        if (!base.has(key) && !allowed.has(key)) {
+        if (
+          !base.has(key) &&
+          !allowed.has(key) &&
+          !isOwnPluralForm(key, base)
+        ) {
           orphans.push(`${locale}: ${key}`);
         }
       }

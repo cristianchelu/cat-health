@@ -1,17 +1,23 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import PetForm from './components/PetForm';
+import PetForm, {
+  type PetFormSubmit,
+  type PhotoDraft,
+} from './components/PetForm';
 import {
   usePet,
   useCreatePet,
   useUpdatePet,
   useDeletePet,
-  useTogglePetPresence,
+  useSetPetPresence,
+  useCloseProfile,
+  useReopenProfile,
   useUploadPetAvatar,
+  useDeletePetAvatar,
 } from '@/hooks/queries/petQueries';
+import { SettingsFormPage } from '@/components/ui/SettingsFormPage';
 import { useBackNavigation } from '@/hooks/useBackNavigation';
-import type { PostPetRequestDTO } from 'shared';
 import './AddEditPetPage.css';
 
 const AddEditPetPage: React.FC = () => {
@@ -29,37 +35,43 @@ const AddEditPetPage: React.FC = () => {
   const createPetMutation = useCreatePet();
   const updatePetMutation = useUpdatePet(petId);
   const deletePetMutation = useDeletePet(petId);
-  const togglePresenceMutation = useTogglePetPresence(petId);
+  const setPresenceMutation = useSetPetPresence(petId);
+  const closeProfileMutation = useCloseProfile(petId);
+  const reopenProfileMutation = useReopenProfile(petId);
+  const uploadAvatarMutation = useUploadPetAvatar();
+  const deleteAvatarMutation = useDeletePetAvatar(petId);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
-  const uploadAvatarMutation = useUploadPetAvatar(petId);
+  /** The draft photo's write, if it has one. Removal only exists when editing. */
+  const savePhoto = (targetPetId: number, photo: PhotoDraft) => {
+    if (photo.kind === 'replace') {
+      return uploadAvatarMutation.mutateAsync({
+        petId: targetPetId,
+        file: photo.file,
+      });
+    }
+    if (photo.kind === 'remove') return deleteAvatarMutation.mutateAsync();
+    return undefined;
+  };
 
-  const handleSubmit = async (
-    data: PostPetRequestDTO,
-    avatarFile: File | null,
-    awayFromHome: boolean,
-  ): Promise<boolean> => {
+  const handleSubmit = async ({
+    pet: values,
+    photo,
+    presence,
+  }: PetFormSubmit): Promise<boolean> => {
     setSubmitError(null);
     try {
       if (isEditing) {
-        await updatePetMutation.mutateAsync(data);
-        if (avatarFile) {
-          await uploadAvatarMutation.mutateAsync(avatarFile);
-        }
-        if (pet && awayFromHome !== pet.is_away) {
-          await togglePresenceMutation.mutateAsync();
-        }
+        const savingPet = updatePetMutation.mutateAsync(values);
+        const savingPhoto = savePhoto(petId, photo);
+        const savingPresence = presence
+          ? setPresenceMutation.mutateAsync(presence)
+          : undefined;
+        await Promise.all([savingPet, savingPhoto, savingPresence]);
       } else {
-        const newPet = await createPetMutation.mutateAsync(data);
-        if (avatarFile) {
-          const form = new FormData();
-          form.append('avatar', avatarFile);
-          const response = await fetch(`api/pets/${newPet.id}/avatar`, {
-            method: 'POST',
-            body: form,
-          });
-          if (!response.ok) throw new Error('Failed to upload avatar');
-        }
+        // The photo needs the new pet's id, so it waits for the create.
+        const created = await createPetMutation.mutateAsync(values);
+        await savePhoto(created.id, photo);
       }
       return true;
     } catch {
@@ -68,8 +80,13 @@ const AddEditPetPage: React.FC = () => {
     }
   };
 
-  const handleCancel = () => {
-    back.go();
+  const changeProfile = async (action: () => Promise<unknown>) => {
+    setSubmitError(null);
+    try {
+      await action();
+    } catch {
+      setSubmitError(t('settings.pet_form.lifecycle_error'));
+    }
   };
 
   const handleDelete = () => {
@@ -79,45 +96,46 @@ const AddEditPetPage: React.FC = () => {
     });
   };
 
-  if (isEditing && isLoading) {
-    return (
-      <div className="page-loading">
-        <div>{t('settings.loading_pet_data')}</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="page-add-edit-pet">
-      {/*
-        Keyed per pet: PetForm seeds react-hook-form from `defaultValues`, which
-        RHF reads once per mount, and holds the avatar/away-from-home state in
-        its own `useState`. A param-only route change (/settings/pets/1 →
-        /settings/pets/2) reuses this component, so without the key the form
-        would keep the previous pet's values while the page reads as the new
-        one — and `isDirty` would be false, so the unsaved-changes guard would
-        not catch it either.
-      */}
+    <SettingsFormPage
+      className="page-add-edit-pet"
+      title={isEditing ? t('settings.edit_pet') : t('settings.add_pet_title')}
+      back={{ to: back.to, label: back.label, onNavigate: back.go }}
+      isLoading={isEditing && isLoading}
+      loadingMessage={t('settings.loading_pet_data')}
+    >
+      {/* Keyed per pet: the form seeds its fields once per mount, so moving
+          between two pets on this route must remount it. */}
       <PetForm
         key={isEditing ? petId : 'new'}
-        title={isEditing ? t('settings.edit_pet') : t('settings.add_pet_title')}
-        petId={isEditing ? petId : undefined}
-        isAway={pet?.is_away ?? false}
-        initialData={pet || undefined}
-        existingAvatarUrl={pet?.avatar_url ?? null}
+        pet={pet}
         onSubmit={handleSubmit}
-        onCancel={handleCancel}
+        onCancel={back.go}
+        onCloseProfile={
+          isEditing
+            ? () => changeProfile(() => closeProfileMutation.mutateAsync())
+            : undefined
+        }
+        onReopenProfile={
+          isEditing
+            ? () => changeProfile(() => reopenProfileMutation.mutateAsync())
+            : undefined
+        }
         onDelete={isEditing ? handleDelete : undefined}
         error={submitError}
         isSubmitting={
           createPetMutation.isPending ||
           updatePetMutation.isPending ||
           uploadAvatarMutation.isPending ||
-          togglePresenceMutation.isPending
+          deleteAvatarMutation.isPending ||
+          setPresenceMutation.isPending
         }
         isDeleting={deletePetMutation.isPending}
+        isChangingProfile={
+          closeProfileMutation.isPending || reopenProfileMutation.isPending
+        }
       />
-    </div>
+    </SettingsFormPage>
   );
 };
 

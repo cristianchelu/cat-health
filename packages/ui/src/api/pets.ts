@@ -7,7 +7,8 @@ import type {
   PatchEventRequestDTO,
   GetPetsResponseDTO,
   GetPetResponseDTO,
-  TogglePetPresenceResponseDTO,
+  PutPetPresenceRequestDTO,
+  PutPetPresenceResponseDTO,
   WeightTrendsResponseDTO,
   WeightTrendQueryDTO,
   WaterTrendsResponseDTO,
@@ -58,11 +59,39 @@ export async function deletePet(id: number) {
   return data;
 }
 
-export async function togglePetPresence(id: number) {
-  const { data } = await apiClient.post<TogglePetPresenceResponseDTO>(
-    `/pets/${id}/presence/toggle`,
+export async function setPetPresence(
+  id: number,
+  input: PutPetPresenceRequestDTO,
+) {
+  const { data } = await apiClient.put<PutPetPresenceResponseDTO>(
+    `/pets/${id}/presence`,
+    input,
   );
   return data;
+}
+
+export async function closePetProfile(id: number) {
+  const { data } = await apiClient.post<GetPetResponseDTO>(
+    `/pets/${id}/close-profile`,
+  );
+  return data;
+}
+
+export async function reopenPetProfile(id: number) {
+  const { data } = await apiClient.post<GetPetResponseDTO>(
+    `/pets/${id}/reopen-profile`,
+  );
+  return data;
+}
+
+export async function uploadPetAvatar(id: number, file: File) {
+  const form = new FormData();
+  form.append('avatar', file);
+  await apiClient.post(`/pets/${id}/avatar`, form);
+}
+
+export async function deletePetAvatar(id: number) {
+  await apiClient.delete(`/pets/${id}/avatar`);
 }
 
 export async function getPetEvents(

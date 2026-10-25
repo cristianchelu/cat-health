@@ -19,13 +19,18 @@ import {
   createPet,
   updatePet,
   deletePet,
-  togglePetPresence,
+  setPetPresence,
+  closePetProfile,
+  reopenPetProfile,
+  uploadPetAvatar,
+  deletePetAvatar,
 } from '@/api/pets';
 import type {
   PostPetRequestDTO,
   PatchPetRequestDTO,
   PatchEventRequestDTO,
   LitterboxTrendQueryDTO,
+  PutPetPresenceRequestDTO,
   GetPetResponseDTO,
 } from 'shared';
 import { dateRangeToTimeRange, type DateRange } from '@/lib/utils';
@@ -180,26 +185,24 @@ export function useUpdatePet(petId: number) {
   });
 }
 
-// Upload avatar for a pet
-export function useUploadPetAvatar(petId: number) {
+export function useUploadPetAvatar() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (file: File) => {
-      const form = new FormData();
-      form.append('avatar', file);
-      const res = await fetch(`api/pets/${petId}/avatar`, {
-        method: 'POST',
-        body: form,
-      });
-      if (!res.ok) {
-        throw new Error('Failed to upload avatar');
-      }
-      return (await res.json()) as {
-        success: boolean;
-        avatar?: { url: string; width: number; height: number };
-      };
+    mutationFn: ({ petId, file }: { petId: number; file: File }) =>
+      uploadPetAvatar(petId, file),
+    onSuccess: (_result, { petId }) => {
+      queryClient.invalidateQueries({ queryKey: ['pets'] });
+      queryClient.invalidateQueries({ queryKey: ['pet', petId] });
     },
+  });
+}
+
+export function useDeletePetAvatar(petId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => deletePetAvatar(petId),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pets'] });
       queryClient.invalidateQueries({ queryKey: ['pet', petId] });
     },
   });
@@ -216,26 +219,64 @@ export function useDeletePet(petId: number) {
   });
 }
 
-export function useTogglePetPresence(petId: number) {
+const TREND_KEYS = [
+  'weightTrends',
+  'waterTrends',
+  'foodTrends',
+  'litterboxTrends',
+];
+
+/** A presence change opens or closes an untracked interval in that pet's trends. */
+function invalidatePetHistory(
+  queryClient: ReturnType<typeof useQueryClient>,
+  petId: number,
+) {
+  queryClient.invalidateQueries({ queryKey: ['pets'] });
+  queryClient.invalidateQueries({ queryKey: ['pet', petId] });
+  queryClient.invalidateQueries({ queryKey: ['petEvents', petId] });
+  for (const trendKey of TREND_KEYS) {
+    queryClient.invalidateQueries({ queryKey: [trendKey, petId] });
+  }
+}
+
+export function useSetPetPresence(petId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => togglePetPresence(petId),
-    onSuccess: (result) => {
-      queryClient.setQueryData(
-        ['pet', petId],
-        (current: GetPetResponseDTO | undefined) =>
-          current ? { ...current, is_away: result.is_away } : current,
-      );
-      queryClient.invalidateQueries({ queryKey: ['pets'] });
-      queryClient.invalidateQueries({ queryKey: ['petEvents', petId] });
-      for (const trendKey of [
-        'weightTrends',
-        'waterTrends',
-        'foodTrends',
-        'litterboxTrends',
-      ] as const) {
-        queryClient.invalidateQueries({ queryKey: [trendKey, petId] });
+    mutationFn: (input: PutPetPresenceRequestDTO) =>
+      setPetPresence(petId, input),
+    onSuccess: () => invalidatePetHistory(queryClient, petId),
+  });
+}
+
+/**
+ * Closing or reopening also adds or removes the pet's events from every shared
+ * timeline, so those lists refetch along with the pet's own history.
+ */
+function useProfileLifecycle(
+  petId: number,
+  action: (id: number) => Promise<GetPetResponseDTO>,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => action(petId),
+    onSuccess: (pet) => {
+      queryClient.setQueryData(['pet', petId], pet);
+      invalidatePetHistory(queryClient, petId);
+      for (const listKey of [
+        'events',
+        'deviceEvents',
+        'deviceAnnotationEvents',
+      ]) {
+        queryClient.invalidateQueries({ queryKey: [listKey] });
       }
     },
   });
+}
+
+export function useCloseProfile(petId: number) {
+  return useProfileLifecycle(petId, closePetProfile);
+}
+
+export function useReopenProfile(petId: number) {
+  return useProfileLifecycle(petId, reopenPetProfile);
 }
