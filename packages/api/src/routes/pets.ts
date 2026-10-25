@@ -13,6 +13,10 @@ import {
   PatchPetRequestSchema,
   PutPetPresenceRequestSchema,
   PutPetPresenceResponseSchema,
+  PostPetAvatarResponseSchema,
+  PET_AVATAR_MAX_BYTES,
+  PET_AVATAR_MIME_TYPES,
+  GetPetAvatarResponseSchema,
   type GetPetResponseDTO,
 } from 'shared';
 import { requireSerializedEventRow } from './mappers/events.ts';
@@ -36,12 +40,20 @@ import {
   Http400BadRequestSchema,
   Http404NotFoundSchema,
   Http409ConflictSchema,
+  Http413PayloadTooLargeSchema,
+  Http415UnsupportedMediaTypeSchema,
 } from './httpErrorSchemas.ts';
 
 const PET_NOT_FOUND: Static<typeof Http404NotFoundSchema> = {
   statusCode: 404,
   error: 'Not Found',
   message: 'Pet not found',
+};
+
+const AVATAR_NOT_FOUND: Static<typeof Http404NotFoundSchema> = {
+  statusCode: 404,
+  error: 'Not Found',
+  message: 'Avatar not found',
 };
 
 function formatBirthDate(value: Date | string | null): string | null {
@@ -399,25 +411,35 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     {
       schema: {
         params: GetPetParamsSchema,
+        response: {
+          '200': PostPetAvatarResponseSchema,
+          '400': Http400BadRequestSchema,
+          '404': Http404NotFoundSchema,
+          '413': Http413PayloadTooLargeSchema,
+          '415': Http415UnsupportedMediaTypeSchema,
+        },
       },
     },
     async (request, reply) => {
       const { id } = request.params;
-      // Ensure pet exists
       const pet = await db
         .selectFrom('pet')
         .selectAll()
         .where('id', '=', id)
         .executeTakeFirst();
-      if (!pet) return reply.status(404).send({ error: 'Pet not found' });
+      if (!pet) return reply.code(404).send(PET_NOT_FOUND);
 
       const isMultipart = request.isMultipart();
       if (!isMultipart) {
-        return reply
-          .status(400)
-          .send({ error: 'Expected multipart/form-data' });
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Expected multipart/form-data',
+        });
       }
-      const partsIter = request.parts();
+      const partsIter = request.parts({
+        limits: { fileSize: PET_AVATAR_MAX_BYTES },
+      });
       let filePart: MultipartFile | undefined;
       for await (const part of partsIter) {
         if (part.type === 'file' && part.fieldname === 'avatar') {
@@ -426,25 +448,33 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         }
       }
       if (!filePart) {
-        return reply.status(400).send({ error: 'Missing avatar file' });
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Missing avatar file',
+        });
       }
-      const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-      if (!allowed.includes(filePart.mimetype)) {
-        return reply.status(415).send({ error: 'Unsupported file type' });
+      if (!PET_AVATAR_MIME_TYPES.includes(filePart.mimetype)) {
+        return reply.code(415).send({
+          statusCode: 415,
+          error: 'Unsupported Media Type',
+          message: 'Unsupported file type',
+        });
       }
 
-      // Read file into buffer (enforced size via multipart limits)
-      const chunks: Buffer[] = [];
-      for await (const chunk of filePart.file) {
-        chunks.push(Buffer.from(chunk));
-      }
-      const fileBuffer = Buffer.concat(chunks);
+      // `toBuffer` is where the multipart size limit throws its 413; reading
+      // the raw stream would hand a silently truncated file to sharp instead.
+      const fileBuffer = await filePart.toBuffer();
 
       // Process image via sharp: square crop + resize to 256px + webp
       const img = sharp(fileBuffer, { failOnError: true });
       const metadata = await img.metadata();
       if (!metadata.width || !metadata.height) {
-        return reply.status(400).send({ error: 'Invalid image' });
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Invalid image',
+        });
       }
       const size = Math.min(metadata.width, metadata.height);
       const processed = await img
@@ -463,9 +493,8 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       await fs.mkdir(petDir, { recursive: true });
       const avatarFilename = 'avatar_256.webp';
       const avatarPath = path.join(petDir, avatarFilename);
-      // Remove existing avatar BEFORE writing new file to avoid deleting the freshly written one.
-      // Previously we wrote the new file and then deleted the old avatar (same path), which resulted
-      // in unlinking the just-written file. Reordering fixes the issue.
+      // The old and new avatar share a path, so the old one is removed before
+      // the new file is written; the other order would unlink the new file.
       const existingAvatar = await db
         .selectFrom('media_link')
         .innerJoin('media', 'media.id', 'media_link.media_id')
@@ -519,7 +548,7 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       await db
         .insertInto('media_link')
         .values({
-          media_id: mediaRow.id as number,
+          media_id: mediaRow.id,
           entity_type: 'pet',
           entity_id: String(id),
           relation: 'avatar',
@@ -539,52 +568,71 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   );
 
   // Delete avatar
-  fastify.delete('/:id/avatar', async (request, reply) => {
-    const { id } = request.params as { id: number };
-    const link = await db
-      .selectFrom('media_link')
-      .innerJoin('media', 'media.id', 'media_link.media_id')
-      .select([
-        'media_link.id as link_id',
-        'media.id as media_id',
-        'media.file_path',
-      ])
-      .where('media_link.entity_type', '=', 'pet')
-      .where('media_link.entity_id', '=', String(id))
-      .where('media_link.relation', '=', 'avatar')
-      .executeTakeFirst();
-    if (!link) return reply.send({ success: true }); // idempotent
-    await db.deleteFrom('media_link').where('id', '=', link.link_id).execute();
-    await db.deleteFrom('media').where('id', '=', link.media_id).execute();
-    try {
-      if (link.file_path) {
-        await fs.unlink(path.join(getMediaPath(), link.file_path));
+  fastify.delete(
+    '/:id/avatar',
+    { schema: { params: GetPetParamsSchema } },
+    async (request, reply) => {
+      const { id } = request.params;
+      const link = await db
+        .selectFrom('media_link')
+        .innerJoin('media', 'media.id', 'media_link.media_id')
+        .select([
+          'media_link.id as link_id',
+          'media.id as media_id',
+          'media.file_path',
+        ])
+        .where('media_link.entity_type', '=', 'pet')
+        .where('media_link.entity_id', '=', String(id))
+        .where('media_link.relation', '=', 'avatar')
+        .executeTakeFirst();
+      if (!link) return reply.send({ success: true }); // idempotent
+      await db
+        .deleteFrom('media_link')
+        .where('id', '=', link.link_id)
+        .execute();
+      await db.deleteFrom('media').where('id', '=', link.media_id).execute();
+      try {
+        if (link.file_path) {
+          await fs.unlink(path.join(getMediaPath(), link.file_path));
+        }
+      } catch (error: unknown) {
+        // ignore unlink errors
+        void error;
       }
-    } catch (error: unknown) {
-      // ignore unlink errors
-      void error;
-    }
-    return reply.send({ success: true });
-  });
+      return reply.send({ success: true });
+    },
+  );
 
   // Get avatar metadata (lightweight)
-  fastify.get('/:id/avatar', async (request, reply) => {
-    const { id } = request.params as { id: number };
-    const avatar = await db
-      .selectFrom('media_link')
-      .innerJoin('media', 'media.id', 'media_link.media_id')
-      .select(['media.file_path', 'media.metadata'])
-      .where('media_link.entity_type', '=', 'pet')
-      .where('media_link.entity_id', '=', String(id))
-      .where('media_link.relation', '=', 'avatar')
-      .executeTakeFirst();
-    if (!avatar) return reply.status(404).send({ error: 'Avatar not found' });
-    const url = await avatarUrlForFilePath(avatar.file_path);
-    if (!url) return reply.status(404).send({ error: 'Avatar not found' });
-    return reply.send({
-      url,
-      metadata: avatar.metadata,
-    });
-  });
+  fastify.get(
+    '/:id/avatar',
+    {
+      schema: {
+        params: GetPetParamsSchema,
+        response: {
+          '200': GetPetAvatarResponseSchema,
+          '404': Http404NotFoundSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const avatar = await db
+        .selectFrom('media_link')
+        .innerJoin('media', 'media.id', 'media_link.media_id')
+        .select(['media.file_path', 'media.metadata'])
+        .where('media_link.entity_type', '=', 'pet')
+        .where('media_link.entity_id', '=', String(id))
+        .where('media_link.relation', '=', 'avatar')
+        .executeTakeFirst();
+      if (!avatar) return reply.code(404).send(AVATAR_NOT_FOUND);
+      const url = await avatarUrlForFilePath(avatar.file_path);
+      if (!url) return reply.code(404).send(AVATAR_NOT_FOUND);
+      return reply.send({
+        url,
+        metadata: avatar.metadata,
+      });
+    },
+  );
 };
 export default petRoutes;

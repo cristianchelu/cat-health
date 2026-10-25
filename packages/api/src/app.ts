@@ -122,7 +122,6 @@ export async function buildApp({
 
   await fastify.register(multipart, {
     limits: {
-      fileSize: 2_000_000,
       files: 1,
     },
   });

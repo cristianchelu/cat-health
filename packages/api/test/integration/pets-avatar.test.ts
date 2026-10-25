@@ -3,6 +3,9 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
+import sharp from 'sharp';
+
+import { PET_AVATAR_MAX_BYTES } from 'shared';
 
 import { getMediaPath } from '../../src/mediaPaths.ts';
 import { insertPet } from '../helpers/fixtures.ts';
@@ -110,5 +113,64 @@ describe('pets API avatar_url', () => {
     });
     assert.equal(detail.statusCode, 200);
     assert.equal(detail.json().avatar_url, `api/media/${relPath}`);
+  });
+
+  /** A one-file multipart body, built by hand because `inject` takes bytes. */
+  function avatarUpload(file: Buffer, contentType: string) {
+    const boundary = 'avatar-test-boundary';
+    const head = Buffer.from(
+      `--${boundary}\r\n` +
+        'Content-Disposition: form-data; name="avatar"; filename="avatar"\r\n' +
+        `Content-Type: ${contentType}\r\n\r\n`,
+    );
+    const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+    return {
+      payload: Buffer.concat([head, file, tail]),
+      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+    };
+  }
+
+  it('stores an uploaded avatar as a 256px webp', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Photo Cat' });
+    cleanupDirs.push(join(getMediaPath(), 'pets', String(pet.id)));
+    const png = await sharp({
+      create: { width: 8, height: 4, channels: 3, background: '#808080' },
+    })
+      .png()
+      .toBuffer();
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/pets/${pet.id}/avatar`,
+      ...avatarUpload(png, 'image/png'),
+    });
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json().avatar, {
+      url: `api/media/pets/${pet.id}/avatar_256.webp`,
+      width: 256,
+      height: 256,
+    });
+  });
+
+  it('refuses an avatar over the size limit', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Heavy Cat' });
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/pets/${pet.id}/avatar`,
+      ...avatarUpload(Buffer.alloc(PET_AVATAR_MAX_BYTES + 1), 'image/png'),
+    });
+    assert.equal(res.statusCode, 413);
+    assert.equal(res.json().error, 'Payload Too Large');
+  });
+
+  it('refuses an avatar of an unsupported type', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Gif Cat' });
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/pets/${pet.id}/avatar`,
+      ...avatarUpload(Buffer.from('GIF89a'), 'image/gif'),
+    });
+    assert.equal(res.statusCode, 415);
+    assert.equal(res.json().error, 'Unsupported Media Type');
   });
 });

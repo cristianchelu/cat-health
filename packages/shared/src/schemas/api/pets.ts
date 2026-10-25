@@ -94,5 +94,36 @@ export const PatchPetRequestSchema = Type.Partial(
 );
 export type PatchPetRequestDTO = Static<typeof PatchPetRequestSchema>;
 
+/** Largest avatar upload the API accepts, in bytes. */
+export const PET_AVATAR_MAX_BYTES = 2_000_000;
+
+/** Image types the avatar upload accepts. */
+export const PET_AVATAR_MIME_TYPES: readonly string[] = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+];
+
+export const PostPetAvatarResponseSchema = Type.Object({
+  success: Type.Boolean(),
+  avatar: Type.Object({
+    url: Type.String(),
+    width: Type.Number(),
+    height: Type.Number(),
+  }),
+});
+export type PostPetAvatarResponseDTO = Static<
+  typeof PostPetAvatarResponseSchema
+>;
+
+export const GetPetAvatarResponseSchema = Type.Object({
+  url: Type.String(),
+  metadata: Type.Union([
+    Type.Record(Type.String(), Type.Unknown()),
+    Type.Null(),
+  ]),
+});
+export type GetPetAvatarResponseDTO = Static<typeof GetPetAvatarResponseSchema>;
+
 export const DeletePetResponseSchema = Type.Object({ success: Type.Boolean() });
 export type DeletePetResponseDTO = Static<typeof DeletePetResponseSchema>;
