@@ -15,6 +15,8 @@ export {
   type FormCardBodyProps,
 } from './FormCard';
 export { FormActions, type FormActionsProps } from './FormActions';
+export { FormSection, type FormSectionProps } from './FormSection';
+export { FormSections, type FormSectionsProps } from './FormSections';
 export {
   FormInlineDiscard,
   type FormInlineDiscardProps,

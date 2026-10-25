@@ -64,7 +64,9 @@
   }
 
   &.section-header--compact {
-    margin: var(--space-md) 0 var(--space-xs);
+    /* A container that already spaces its header, such as FormSection, sets
+       --section-header-margin to 0 instead of overriding this rule. */
+    margin: var(--section-header-margin, var(--space-md) 0 var(--space-xs));
 
     &.first,
     &:first-child {

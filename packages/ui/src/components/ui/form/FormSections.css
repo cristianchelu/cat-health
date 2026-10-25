@@ -1,0 +1,6 @@
+.form-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  min-width: 0;
+}

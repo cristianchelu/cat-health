@@ -1,0 +1,10 @@
+.form-section {
+  --section-header-margin: 0;
+
+  display: flex;
+  flex-direction: column;
+  /* The compact header's own bottom margin, so a header sits as far from its
+     card here as it does on the device tabs. */
+  gap: var(--space-xs);
+  min-width: 0;
+}
