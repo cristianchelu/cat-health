@@ -15,9 +15,10 @@ interface PickerSheetProps {
   subtitle?: React.ReactNode;
   /**
    * Walks up one level, or closes at the top — which of the two is the
-   * caller's business, since only it knows how deep the stack is.
+   * caller's business, since only it knows how deep the stack is. A top-level
+   * picker with nowhere to go back to leaves it out and shows no back button.
    */
-  onBack: () => void;
+  onBack?: () => void;
   /** One action opposite the title, such as scan-to-log. */
   action?: React.ReactNode;
   /**
@@ -33,8 +34,8 @@ interface PickerSheetProps {
 }
 
 /**
- * A sheet you choose something in: back, what you are looking at, and one
- * scroller under a header that stays put.
+ * A sheet you choose something in: back (when there is somewhere to go back
+ * to), what you are looking at, and one scroller under a header that stays put.
  *
  * Shared so that two pickers cannot drift into two different headers, two
  * type scales and two ideas of where a list's edges are. There is no close
@@ -63,14 +64,16 @@ const PickerSheet: React.FC<PickerSheetProps> = ({
       className={cn('picker-sheet', className)}
     >
       <div className="picker-sheet-header">
-        <Button
-          variant="ghost"
-          icon
-          onClick={onBack}
-          aria-label={t('common.back')}
-        >
-          <ChevronLeft aria-hidden="true" />
-        </Button>
+        {onBack && (
+          <Button
+            variant="ghost"
+            icon
+            onClick={onBack}
+            aria-label={t('common.back')}
+          >
+            <ChevronLeft aria-hidden="true" />
+          </Button>
+        )}
         {/* Keyed, so the incoming level's text simply replaces the old and
             fades in. A true crossfade would need two headings mounted at once
             for one line of text; at 150ms the eye cannot tell. */}
