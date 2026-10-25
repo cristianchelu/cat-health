@@ -84,6 +84,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    /* Keeps a long description off whatever trails it: chevron, field or button. */
+    gap: var(--space-md);
     padding: var(--space-lg);
     cursor: pointer;
     transition: var(--transition-normal);
