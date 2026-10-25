@@ -182,6 +182,33 @@ describe('RecognitionService', () => {
     });
   });
 
+  it('hands the model the event time so away pets can be left out', async () => {
+    await insertDeviceRecognition(ctx.db, device.id, account.id);
+    const seen: Array<Date | undefined> = [];
+    const service = new RecognitionService(
+      ctx.db,
+      new EventBus(),
+      async (_db, _config, _accountConfig, _mediaId, capturedAt) => {
+        seen.push(capturedAt);
+        return verdict(petId, 'Mochi');
+      },
+    );
+    const { eventId } = await eventWithSnapshot();
+    const event = await ctx.db
+      .selectFrom('event')
+      .select('timestamp')
+      .where('id', '=', eventId)
+      .executeTakeFirstOrThrow();
+
+    await service.handleMediaReady(mediaReady(eventId));
+
+    assert.equal(seen.length, 1);
+    assert.equal(
+      seen[0]?.toISOString(),
+      new Date(event.timestamp).toISOString(),
+    );
+  });
+
   it('runs off the subscription once initialized, and stops after shutdown', async () => {
     await insertDeviceRecognition(ctx.db, device.id, account.id);
     const bus = new EventBus();

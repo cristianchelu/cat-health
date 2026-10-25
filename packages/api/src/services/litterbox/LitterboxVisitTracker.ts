@@ -15,7 +15,7 @@ import { attributionColumns } from '../../domain/eventAttribution.ts';
 import type { LitterboxUseEventData } from '../../domain/events.ts';
 import type { EventBus } from '../devices/EventBus.ts';
 import {
-  getLatestPetWeightsGrams,
+  getLitterboxCandidateWeights,
   isStraining,
   mergeAnalyzerIntoLitterboxData,
 } from '../devices/providers/esphome/analyzeLitterboxUse.ts';
@@ -485,7 +485,7 @@ export class LitterboxVisitTracker {
     rawData: Buffer;
     deviceVerdict?: LitterboxDeviceVerdict;
   }): Promise<number> {
-    const latestPetWeights = await getLatestPetWeightsGrams(
+    const latestPetWeights = await getLitterboxCandidateWeights(
       this.deps.db,
       visit.startTime,
     );

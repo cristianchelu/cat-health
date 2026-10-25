@@ -10,7 +10,7 @@ import type {
   WeightMeasurementEventData,
 } from '../../domain/events.ts';
 import {
-  getLatestPetWeightsGrams,
+  getLitterboxCandidateWeights,
   mergeAnalyzerIntoLitterboxData,
 } from '../devices/providers/esphome/analyzeLitterboxUse.ts';
 import { StateAnalyzer } from '../devices/providers/esphome/StateAnalyzer.ts';
@@ -67,7 +67,10 @@ async function reidentifyOneVisit(
     return 'skipped';
   }
 
-  const latestPetWeights = await getLatestPetWeightsGrams(db, row.timestamp);
+  const latestPetWeights = await getLitterboxCandidateWeights(
+    db,
+    row.timestamp,
+  );
   const knownWeights = Array.from(latestPetWeights.values()).sort(
     (a, b) => a - b,
   );

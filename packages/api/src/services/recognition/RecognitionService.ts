@@ -21,6 +21,8 @@ export type IdentifyFn = (
   config: DeviceRecognitionConfigDTO,
   accountConfig: InferenceAccountConfig,
   mediaId: number,
+  /** When the media was captured; narrows candidates by presence. */
+  capturedAt?: Date,
 ) => Promise<PetIdentificationResult>;
 
 export interface RecognitionLink {
@@ -141,15 +143,22 @@ export class RecognitionService {
     console.log(`Running pet identification for event ${eventId}`);
 
     try {
-      const eventMedia = await this.db
-        .selectFrom('media_link')
-        .innerJoin('media', 'media.id', 'media_link.media_id')
-        .where('media_link.entity_type', '=', 'event')
-        .where('media_link.entity_id', '=', eventId.toString())
-        .select(['media.id', 'media_link.relation'])
-        .orderBy('media.created_at', 'asc')
-        .orderBy('media.id', 'asc')
-        .execute();
+      const [event, eventMedia] = await Promise.all([
+        this.db
+          .selectFrom('event')
+          .select('timestamp')
+          .where('id', '=', eventId)
+          .executeTakeFirst(),
+        this.db
+          .selectFrom('media_link')
+          .innerJoin('media', 'media.id', 'media_link.media_id')
+          .where('media_link.entity_type', '=', 'event')
+          .where('media_link.entity_id', '=', eventId.toString())
+          .select(['media.id', 'media_link.relation'])
+          .orderBy('media.created_at', 'asc')
+          .orderBy('media.id', 'asc')
+          .execute(),
+      ]);
 
       if (eventMedia.length === 0) {
         console.warn(
@@ -170,6 +179,7 @@ export class RecognitionService {
         link.config,
         link.accountConfig,
         mediaId,
+        event ? new Date(event.timestamp) : undefined,
       );
 
       const outcome = await recordIdentification(this.db, eventId, result);

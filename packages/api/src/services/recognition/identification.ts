@@ -9,6 +9,7 @@ import {
 import type { Kysely } from 'kysely';
 import type { Database } from '../../database/index.ts';
 import { DEFAULT_RECOGNIZER_MODEL, NON_PET_CAUSES } from 'shared';
+import { attributionCandidatesAt } from '../events/petPresence.ts';
 import type {
   DeviceRecognitionConfigDTO,
   InferenceAccountConfig,
@@ -217,6 +218,7 @@ export async function identifyPetFromMedia(
   config: DeviceRecognitionConfigDTO,
   accountConfig: InferenceAccountConfig,
   mediaId: number,
+  capturedAt?: Date,
 ): Promise<PetIdentificationResult> {
   console.log(`Running pet identification for media ${mediaId}`);
 
@@ -238,7 +240,19 @@ export async function identifyPetFromMedia(
     const targetImageDataUrl = await resizeImageToBase64(targetImageBuffer);
 
     // 2. Load reference images for the pets this camera watches
-    const pets = await db.selectFrom('pet').selectAll().execute();
+    // Pets away at capture time are left out, as `isAttributionCandidate`
+    // decides; a capture with no time (a diagnostic) offers every pet.
+    const allPets = await db.selectFrom('pet').selectAll().execute();
+    const present = capturedAt
+      ? await attributionCandidatesAt(
+          db,
+          allPets.map((pet) => pet.id),
+          capturedAt,
+        )
+      : null;
+    const pets = present
+      ? allPets.filter((pet) => present.has(pet.id))
+      : allPets;
     const watched = watchedPets(pets, config);
 
     // Collect all media IDs across those pets in one pass

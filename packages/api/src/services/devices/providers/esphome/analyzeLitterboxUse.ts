@@ -9,6 +9,7 @@ import {
   deriveLitterboxSampleRateHz,
   type LitterboxUseEliminationType,
 } from 'shared';
+import { attributionCandidatesAt } from '../../../events/petPresence.ts';
 import { persistedLitterboxSegments } from './persistedLitterboxSegments.ts';
 import {
   StateAnalyzer,
@@ -48,53 +49,74 @@ export function mergeAnalyzerIntoLitterboxData(
   };
 }
 
+/**
+ * Each pet's latest weight strictly before `beforeTimestamp`. One seek per pet
+ * on `idx_event_pet_weight`, which the `json_extract` term must match.
+ */
+/**
+ * One pet's latest weight event before `before`: a single seek on
+ * `idx_event_pet_weight`, which the `json_extract` term must match to be used.
+ */
+export function latestWeightQuery(
+  db: Kysely<Database>,
+  petId: number,
+  before: Date,
+) {
+  return db
+    .selectFrom('event')
+    .select(['pet_id', 'data'])
+    .where('pet_id', '=', petId)
+    .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+    .where('timestamp', '<', before)
+    .orderBy('timestamp', 'desc')
+    .orderBy('id', 'desc')
+    .limit(1);
+}
+
 export async function getLatestPetWeightsGrams(
   db: Kysely<Database>,
   beforeTimestamp: Date,
+  petIds?: readonly number[],
 ): Promise<Map<number, number>> {
+  const ids =
+    petIds ??
+    (await db.selectFrom('pet').select('id').execute()).map((pet) => pet.id);
+
+  const rows = await Promise.all(
+    ids.map((petId) =>
+      latestWeightQuery(db, petId, beforeTimestamp).executeTakeFirst(),
+    ),
+  );
+
   const latestWeights = new Map<number, number>();
-
-  const weightEvents = await db
-    .selectFrom('event')
-    .select(['pet_id', 'data', 'timestamp'])
-    .where('timestamp', '<', beforeTimestamp)
-    .where('pet_id', 'is not', null)
-    .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
-    .orderBy('timestamp', 'desc')
-    .execute();
-
-  const petLatestWeights = new Map<
-    number,
-    { weight: number; timestamp: Date }
-  >();
-
-  for (const event of weightEvents) {
-    if (event.pet_id !== null) {
-      const petId = event.pet_id;
-      const eventData = event.data;
-
-      if (
-        eventData.type === 'weight_measurement' &&
-        typeof eventData.weight === 'number'
-      ) {
-        if (
-          !petLatestWeights.has(petId) ||
-          event.timestamp > petLatestWeights.get(petId)!.timestamp
-        ) {
-          petLatestWeights.set(petId, {
-            weight: eventData.weight,
-            timestamp: event.timestamp,
-          });
-        }
-      }
+  for (const row of rows) {
+    if (
+      row?.pet_id != null &&
+      row.data.type === 'weight_measurement' &&
+      typeof row.data.weight === 'number'
+    ) {
+      latestWeights.set(row.pet_id, row.data.weight);
     }
   }
-
-  for (const [petId, data] of petLatestWeights) {
-    latestWeights.set(petId, data.weight);
-  }
-
   return latestWeights;
+}
+
+/**
+ * The litterbox's candidate roster for a visit at `at`: latest weights of the
+ * pets `isAttributionCandidate` allows at that moment.
+ */
+export async function getLitterboxCandidateWeights(
+  db: Kysely<Database>,
+  at: Date,
+): Promise<Map<number, number>> {
+  const petIds = (await db.selectFrom('pet').select('id').execute()).map(
+    (pet) => pet.id,
+  );
+  const [weights, candidates] = await Promise.all([
+    getLatestPetWeightsGrams(db, at, petIds),
+    attributionCandidatesAt(db, petIds, at),
+  ]);
+  return new Map([...weights].filter(([petId]) => candidates.has(petId)));
 }
 
 /**
@@ -128,7 +150,7 @@ export async function computeLitterboxAnalysisData(
   }
 
   const knownWeights = Array.from(
-    (await getLatestPetWeightsGrams(db, params.timestamp)).values(),
+    (await getLitterboxCandidateWeights(db, params.timestamp)).values(),
   );
   const sampleRateHz = deriveLitterboxSampleRateHz(
     decoded,
