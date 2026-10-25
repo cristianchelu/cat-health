@@ -13,8 +13,28 @@ afterEach(() => {
 });
 
 const PETS: GetPetResponseDTO[] = [
-  { id: 1, name: 'Jazz', breed: '', birth_date: null, is_away: false },
-  { id: 2, name: 'Luna', breed: '', birth_date: null, is_away: false },
+  {
+    id: 1,
+    name: 'Jazz',
+    breed: '',
+    birth_date: null,
+    microchip: null,
+    sex: 'unknown',
+    altered: 'unknown',
+    presence: null,
+    closed_at: null,
+  },
+  {
+    id: 2,
+    name: 'Luna',
+    breed: '',
+    birth_date: null,
+    microchip: null,
+    sex: 'unknown',
+    altered: 'unknown',
+    presence: null,
+    closed_at: null,
+  },
 ];
 
 // Jazz is linked to tag 11; tag 99 is the household's test tag, linked to

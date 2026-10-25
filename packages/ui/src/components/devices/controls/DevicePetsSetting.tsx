@@ -6,6 +6,7 @@ import type { ControlValueType, SettingControl } from 'shared';
 import { Button } from '@/components/ui/Button';
 import { usePets } from '@/hooks/queries/petQueries';
 import { identitiesDraft } from '@/lib/deviceControlDraft';
+import { isPetActive } from '@/lib/pets';
 import {
   PetToggleGrid,
   type PetToggleHelp,
@@ -84,7 +85,7 @@ const DevicePetsSetting: React.FC<DevicePetsSettingProps> = ({
     setting.type.options.map((option) => option.pet_id),
   );
   const unseen = pets
-    .filter((pet) => !represented.has(pet.id))
+    .filter((pet) => isPetActive(pet) && !represented.has(pet.id))
     .map(
       (pet): PetToggleTile => ({
         id: `pet:${pet.id}`,

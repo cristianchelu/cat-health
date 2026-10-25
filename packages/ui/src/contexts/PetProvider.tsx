@@ -1,17 +1,22 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GetPetResponseDTO } from 'shared';
 import { usePets } from '@/hooks/queries/petQueries';
+import { isPetActive } from '@/lib/pets';
 import { PetContext } from './PetContext';
 
+const NO_PETS: GetPetResponseDTO[] = [];
+
 export function PetProvider({ children }: { children: ReactNode }) {
-  const { data: pets = [], isLoading, error } = usePets();
+  const { data: allPets = NO_PETS, isLoading, error } = usePets();
+  const pets = useMemo(() => allPets.filter(isPetActive), [allPets]);
   const [selectedPet, setSelectedPet] = useState<GetPetResponseDTO | null>(
     null,
   );
 
-  // Derive effective selection: user's choice if it still exists in the list,
-  // otherwise first pet (or null). No effect needed—we only setState on user action.
+  // Derive effective selection: user's choice if it is still offered (not
+  // deleted or closed), otherwise first pet (or null). No effect needed—we
+  // only setState on user action.
   const selectedStillExists =
     selectedPet && pets.some((p) => p.id === selectedPet.id);
   const effectiveSelectedPet = selectedStillExists
@@ -30,6 +35,7 @@ export function PetProvider({ children }: { children: ReactNode }) {
         selectedPet: effectiveSelectedPet,
         setSelectedPet,
         pets,
+        allPets,
         isLoading,
         error,
       }}

@@ -5,6 +5,7 @@ import type { ProviderPetLink } from 'shared';
 import { FormField, Select } from '@/components/ui/form';
 import { usePets } from '@/hooks/queries/petQueries';
 import { useRemotePets } from '@/hooks/queries/deviceQueries';
+import { offerablePets } from '@/lib/pets';
 import {
   buildPetLinksFromCloud,
   getTagIdFromLink,
@@ -76,7 +77,10 @@ const ProviderPetLinksEditor: React.FC<ProviderPetLinksEditorProps> = ({
 
   const localPetOptions = [
     { value: UNLINKED_VALUE, label: t('settings.pet_linking_unlinked') },
-    ...localPets.map((pet) => ({
+    ...offerablePets(
+      localPets,
+      displayLinks.map((link) => link.pet_id),
+    ).map((pet) => ({
       value: String(pet.id),
       label: pet.name,
     })),

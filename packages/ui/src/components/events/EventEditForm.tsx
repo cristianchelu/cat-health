@@ -53,6 +53,7 @@ import {
 } from '@/components/food-picker/foodLadder';
 import { ELIMINATION_LABEL_KEYS } from '@/lib/eventLabels';
 import type { TranslationKey } from '@/lib/translationKey';
+import { offerablePets } from '@/lib/pets';
 import {
   gramsToKgInput,
   MAX_WEIGHT_G,
@@ -279,7 +280,7 @@ const EventEditForm: React.FC<EventEditFormProps> = ({
    * heading is enough to say they are a different kind of answer.
    */
   const attributionOptions: PickerOption[] = [
-    ...(pets ?? []).map((pet) => ({
+    ...offerablePets(pets ?? [], [event.pet_id]).map((pet) => ({
       value: `pet:${pet.id}`,
       label: pet.name,
       leading: (

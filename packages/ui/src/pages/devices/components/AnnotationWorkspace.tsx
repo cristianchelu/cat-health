@@ -48,6 +48,7 @@ import {
 } from 'shared';
 import type { LitterboxBoutAnnotation } from '@/types/litterbox';
 import { ELIMINATION_LABEL_KEYS } from '@/lib/eventLabels';
+import { offerablePets } from '@/lib/pets';
 import './AnnotationWorkspace.css';
 
 /** Stable fallback so `periods` stays referentially equal when there are no analyzer segments. */
@@ -497,10 +498,13 @@ const AnnotationWorkspaceBody: React.FC<AnnotationWorkspaceBodyProps> = ({
     [handleBoutsChange, localBouts, selectedBoutIndex],
   );
 
-  const petOptions = attributionSelectOptions(pets, {
-    unknown: t('common.unknown'),
-    cause: (cause) => t(causeLabelKey(cause)),
-  });
+  const petOptions = attributionSelectOptions(
+    offerablePets(pets ?? [], [event.pet_id]),
+    {
+      unknown: t('common.unknown'),
+      cause: (cause) => t(causeLabelKey(cause)),
+    },
+  );
 
   const eliminationOptions = ELIMINATION_TYPES.map((value) => ({
     value,

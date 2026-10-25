@@ -32,12 +32,13 @@ import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/form';
 import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useDraftForm, useUnsavedBlocker } from '@/hooks/form';
+import { isPetActive } from '@/lib/pets';
 
 import './Settings.css';
 
 const Settings: React.FC = () => {
   const { t } = useTranslation();
-  const { pets } = usePetContext();
+  const { allPets } = usePetContext();
   const devicesQuery = useDevices();
   const accountsQuery = useProviderAccounts();
   const { data: foods = [] } = useFoods();
@@ -100,7 +101,7 @@ const Settings: React.FC = () => {
             {t('settings.pets')}
           </SectionHeader>
           <CardList>
-            {pets.map((pet) => (
+            {allPets.map((pet) => (
               <CardListItem
                 key={pet.id}
                 icon={
@@ -112,7 +113,12 @@ const Settings: React.FC = () => {
                 }
                 to={`/settings/pets/${pet.id}`}
               >
-                <CardListContent title={pet.name} description={pet.breed} />
+                <CardListContent
+                  title={pet.name}
+                  description={
+                    isPetActive(pet) ? pet.breed : t('settings.profile_closed')
+                  }
+                />
               </CardListItem>
             ))}
             <CardListItem

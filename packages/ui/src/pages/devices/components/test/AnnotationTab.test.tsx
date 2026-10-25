@@ -55,7 +55,17 @@ interface EventsParams {
 }
 
 const PETS: GetPetResponseDTO[] = [
-  { id: 1, name: 'Luna', breed: 'Ragdoll', birth_date: null, is_away: false },
+  {
+    id: 1,
+    name: 'Luna',
+    breed: 'Ragdoll',
+    birth_date: null,
+    microchip: null,
+    sex: 'unknown',
+    altered: 'unknown',
+    presence: null,
+    closed_at: null,
+  },
 ];
 
 function visit(

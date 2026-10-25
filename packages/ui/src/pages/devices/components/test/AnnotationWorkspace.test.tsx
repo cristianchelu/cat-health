@@ -55,8 +55,28 @@ afterEach(() => {
 });
 
 const PETS: GetPetResponseDTO[] = [
-  { id: 1, name: 'Luna', breed: 'Ragdoll', birth_date: null, is_away: false },
-  { id: 2, name: 'Jazz', breed: 'Bengal', birth_date: null, is_away: false },
+  {
+    id: 1,
+    name: 'Luna',
+    breed: 'Ragdoll',
+    birth_date: null,
+    microchip: null,
+    sex: 'unknown',
+    altered: 'unknown',
+    presence: null,
+    closed_at: null,
+  },
+  {
+    id: 2,
+    name: 'Jazz',
+    breed: 'Bengal',
+    birth_date: null,
+    microchip: null,
+    sex: 'unknown',
+    altered: 'unknown',
+    presence: null,
+    closed_at: null,
+  },
 ];
 
 const VISIT: GetEventListItemDTO = {

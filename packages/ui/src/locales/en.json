@@ -68,6 +68,8 @@
     "pet_presence_context_travel": "Travel",
     "pet_presence_context_friend": "Friend",
     "pet_presence_context_manual": "Manual",
+    "pet_presence_profile_closed": "Profile closed",
+    "pet_presence_profile_reopened": "Profile reopened",
     "device_connectivity_via_account": "with its account"
   },
   "food_picker": {
@@ -410,7 +412,8 @@
       "callout_starting": "Starting…",
       "callout_unavailable": "Unreachable: {{reason}}. Next attempt {{when}}.",
       "callout_failed": "Stopped: {{reason}}."
-    }
+    },
+    "profile_closed": "Profile closed"
   },
   "common": {
     "avatar_label": "Avatar",

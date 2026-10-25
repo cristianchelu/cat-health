@@ -68,6 +68,8 @@
     "pet_presence_context_travel": "Călătorie",
     "pet_presence_context_friend": "Prieten",
     "pet_presence_context_manual": "Manual",
+    "pet_presence_profile_closed": "Profil închis",
+    "pet_presence_profile_reopened": "Profil redeschis",
     "device_connectivity_via_account": "odată cu contul"
   },
   "food_picker": {
@@ -358,7 +360,8 @@
       "callout_starting": "Pornește…",
       "callout_unavailable": "Inaccesibil: {{reason}}. Următoarea încercare {{when}}.",
       "callout_failed": "Oprit: {{reason}}."
-    }
+    },
+    "profile_closed": "Profil închis"
   },
   "common": {
     "avatar_label": "Avatar",
