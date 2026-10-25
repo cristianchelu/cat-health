@@ -13,6 +13,8 @@ interface FormSwitchProps<TFieldValues extends FieldValues> {
   control: Control<TFieldValues>;
   label?: string;
   description?: string;
+  /** Derived or live information under the control; hidden while an error shows. */
+  hint?: string;
   rules?: RegisterOptions<TFieldValues, FieldPath<TFieldValues>>;
   required?: boolean;
   enabledLabel?: string;
@@ -27,6 +29,7 @@ function FormSwitch<TFieldValues extends FieldValues>({
   control,
   label,
   description,
+  hint,
   rules,
   required,
   enabledLabel,
@@ -35,7 +38,7 @@ function FormSwitch<TFieldValues extends FieldValues>({
   className,
   id,
 }: FormSwitchProps<TFieldValues>) {
-  const a11y = useFormFieldA11y(id, Boolean(description));
+  const a11y = useFormFieldA11y(id, Boolean(description), Boolean(hint));
 
   return (
     <Controller
@@ -45,7 +48,9 @@ function FormSwitch<TFieldValues extends FieldValues>({
       render={({ field, fieldState }) => {
         const errorId = fieldState.error ? `${a11y.inputId}-error` : undefined;
         const describedBy =
-          [a11y.descriptionId, errorId].filter(Boolean).join(' ') || undefined;
+          [a11y.descriptionId, errorId ?? a11y.hintId]
+            .filter(Boolean)
+            .join(' ') || undefined;
         return (
           <FormField
             label={label}
@@ -55,6 +60,8 @@ function FormSwitch<TFieldValues extends FieldValues>({
             className={className}
             htmlFor={a11y.inputId}
             descriptionId={a11y.descriptionId}
+            hint={hint}
+            hintId={a11y.hintId}
             errorId={errorId}
           >
             <LabeledSwitchField

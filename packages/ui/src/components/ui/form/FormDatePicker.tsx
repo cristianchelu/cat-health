@@ -16,6 +16,8 @@ interface FormDatePickerProps<TFieldValues extends FieldValues> extends Omit<
   control: Control<TFieldValues>;
   label?: string;
   description?: string;
+  /** Derived or live information under the control; hidden while an error shows. */
+  hint?: string;
   rules?: RegisterOptions<TFieldValues, FieldPath<TFieldValues>>;
   required?: boolean;
 }
@@ -25,11 +27,16 @@ function FormDatePicker<TFieldValues extends FieldValues>({
   control,
   label,
   description,
+  hint,
   rules,
   required,
   ...datePickerProps
 }: FormDatePickerProps<TFieldValues>) {
-  const a11y = useFormFieldA11y(datePickerProps.id, Boolean(description));
+  const a11y = useFormFieldA11y(
+    datePickerProps.id,
+    Boolean(description),
+    Boolean(hint),
+  );
 
   return (
     <Controller
@@ -39,7 +46,9 @@ function FormDatePicker<TFieldValues extends FieldValues>({
       render={({ field, fieldState }) => {
         const errorId = fieldState.error ? `${a11y.inputId}-error` : undefined;
         const describedBy =
-          [a11y.descriptionId, errorId].filter(Boolean).join(' ') || undefined;
+          [a11y.descriptionId, errorId ?? a11y.hintId]
+            .filter(Boolean)
+            .join(' ') || undefined;
         return (
           <FormField
             label={label}
@@ -48,6 +57,8 @@ function FormDatePicker<TFieldValues extends FieldValues>({
             error={fieldState.error?.message}
             htmlFor={a11y.inputId}
             descriptionId={a11y.descriptionId}
+            hint={hint}
+            hintId={a11y.hintId}
             errorId={errorId}
           >
             <DatePicker

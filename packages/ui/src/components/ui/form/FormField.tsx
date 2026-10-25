@@ -8,8 +8,11 @@ interface FormFieldProps {
   error?: string;
   required?: boolean;
   description?: string;
+  /** Derived or live information under the control; hidden while an error shows. */
+  hint?: string;
   htmlFor?: string;
   descriptionId?: string;
+  hintId?: string;
   errorId?: string;
   children: React.ReactNode;
   className?: string;
@@ -18,16 +21,19 @@ interface FormFieldProps {
 function useFormFieldA11y(
   providedId: string | undefined,
   hasDescription: boolean,
+  hasHint = false,
 ) {
   const generatedId = React.useId();
   const inputId = providedId ?? `${generatedId}-control`;
   const descriptionId = hasDescription
     ? `${generatedId}-description`
     : undefined;
+  const hintId = hasHint ? `${generatedId}-hint` : undefined;
 
   return {
     inputId,
     descriptionId,
+    hintId,
   };
 }
 
@@ -36,8 +42,10 @@ const FormField: React.FC<FormFieldProps> = ({
   error,
   required = false,
   description,
+  hint,
   htmlFor,
   descriptionId,
+  hintId,
   errorId,
   children,
   className,
@@ -56,6 +64,11 @@ const FormField: React.FC<FormFieldProps> = ({
         </p>
       )}
       <div className="form-field__input-wrapper">{children}</div>
+      {hint && !error && (
+        <p className="form-field__hint" id={hintId}>
+          {hint}
+        </p>
+      )}
       {error && (
         <p className="form-field__error" id={errorId}>
           {error}

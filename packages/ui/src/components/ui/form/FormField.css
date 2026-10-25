@@ -22,6 +22,12 @@
     margin: 0;
   }
 
+  .form-field__hint {
+    font-size: var(--text-xs);
+    color: var(--color-text-light);
+    margin: 0;
+  }
+
   .form-field__input-wrapper {
     position: relative;
   }
