@@ -50,6 +50,11 @@ import type { ControlResult } from '../services/devices/control/DeviceControl.ts
 import { isCamera } from '../services/devices/types.ts';
 import { isDeviceReachable } from '../services/devices/deviceEnablement.ts';
 import { EMPTY_ATLAS_LAYOUT } from '../services/devices/cameraPreview/composeAtlas.ts';
+import {
+  Http400BadRequestSchema,
+  Http404NotFoundSchema,
+  Http503ServiceUnavailableSchema,
+} from './httpErrorSchemas.ts';
 
 /** Deposit track length on a device card. */
 const DEPOSIT_PIP_SLOTS = 8;
@@ -77,33 +82,15 @@ function parseJsonValue(
   return config;
 }
 
-const Http404ResponseSchema = Type.Object({
-  statusCode: Type.Literal(404),
-  error: Type.Literal('Not Found'),
-  message: Type.String(),
-});
-
-const Http400ResponseSchema = Type.Object({
-  statusCode: Type.Literal(400),
-  error: Type.Literal('Bad Request'),
-  message: Type.String(),
-});
-
-const Http503ResponseSchema = Type.Object({
-  statusCode: Type.Literal(503),
-  error: Type.Literal('Service Unavailable'),
-  message: Type.String(),
-});
-
 /* A control route's 400 and 503 are either refused up front or a write that
    failed at the device, which also names its reason. */
 const WriteFailureOrBadRequestSchema = Type.Union([
   WriteFailureSchema,
-  Http400ResponseSchema,
+  Http400BadRequestSchema,
 ]);
 const WriteFailureOrUnavailableSchema = Type.Union([
   WriteFailureSchema,
-  Http503ResponseSchema,
+  Http503ServiceUnavailableSchema,
 ]);
 
 /**
@@ -514,7 +501,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PostProviderAccountRequestSchema,
         response: {
           '200': ProviderAccountSchema,
-          '400': Http400ResponseSchema,
+          '400': Http400BadRequestSchema,
         },
       },
     },
@@ -563,7 +550,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         params: GetProviderAccountParamsSchema,
         response: {
           '200': ProviderAccountSchema,
-          '404': Http404ResponseSchema,
+          '404': Http404NotFoundSchema,
         },
       },
     },
@@ -593,8 +580,8 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PatchProviderAccountRequestSchema,
         response: {
           '200': ProviderAccountSchema,
-          '400': Http400ResponseSchema,
-          '404': Http404ResponseSchema,
+          '400': Http400BadRequestSchema,
+          '404': Http404NotFoundSchema,
         },
       },
     },
@@ -702,8 +689,8 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         params: GetProviderAccountParamsSchema,
         response: {
           '200': ProviderAccountSchema,
-          '400': Http400ResponseSchema,
-          '404': Http404ResponseSchema,
+          '400': Http400BadRequestSchema,
+          '404': Http404NotFoundSchema,
         },
       },
     },
@@ -847,7 +834,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PostDeviceRequestSchema,
         response: {
           '200': GetDeviceResponseSchema,
-          '400': Http400ResponseSchema,
+          '400': Http400BadRequestSchema,
         },
       },
     },
@@ -1034,8 +1021,8 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PatchDeviceRequestSchema,
         response: {
           '200': GetDeviceResponseSchema,
-          '400': Http400ResponseSchema,
-          '404': Http404ResponseSchema,
+          '400': Http400BadRequestSchema,
+          '404': Http404NotFoundSchema,
         },
       },
     },
@@ -1136,7 +1123,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   const controlResponses = {
     '200': DeviceWriteAppliedSchema,
     '400': WriteFailureOrBadRequestSchema,
-    '404': Http404ResponseSchema,
+    '404': Http404NotFoundSchema,
     '409': WriteFailureSchema,
     '502': WriteFailureSchema,
     '503': WriteFailureOrUnavailableSchema,
@@ -1242,8 +1229,8 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PostDeviceTestIdentifyRequestSchema,
         response: {
           '200': PostDeviceTestIdentifyResponseSchema,
-          '400': Http400ResponseSchema,
-          '404': Http404ResponseSchema,
+          '400': Http400BadRequestSchema,
+          '404': Http404NotFoundSchema,
         },
       },
     },
@@ -1410,7 +1397,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PatchDeviceCameraRequestSchema,
         response: {
           '200': GetDeviceResponseSchema,
-          '404': Http404ResponseSchema,
+          '404': Http404NotFoundSchema,
         },
       },
     },
@@ -1475,8 +1462,8 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PutDeviceRecognitionRequestSchema,
         response: {
           '200': GetDeviceResponseSchema,
-          '400': Http400ResponseSchema,
-          '404': Http404ResponseSchema,
+          '400': Http400BadRequestSchema,
+          '404': Http404NotFoundSchema,
         },
       },
     },
@@ -1550,7 +1537,7 @@ const deviceRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         body: PatchDeviceRecognitionRequestSchema,
         response: {
           '200': GetDeviceResponseSchema,
-          '404': Http404ResponseSchema,
+          '404': Http404NotFoundSchema,
         },
       },
     },

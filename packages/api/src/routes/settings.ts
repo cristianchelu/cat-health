@@ -1,18 +1,10 @@
 import { GetSettingsResponseSchema, PatchSettingsRequestSchema } from 'shared';
-import {
-  Type,
-  type FastifyPluginAsyncTypebox,
-} from '@fastify/type-provider-typebox';
+import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import {
   applySettingsPatch,
   getAllSettings,
 } from '../services/settings/appSettings.ts';
-
-const Http400BadRequestSchema = Type.Object({
-  statusCode: Type.Literal(400),
-  error: Type.Literal('Bad Request'),
-  message: Type.String(),
-});
+import { Http400BadRequestSchema } from './httpErrorSchemas.ts';
 
 const settingsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   const { db } = fastify;
