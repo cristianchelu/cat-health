@@ -284,6 +284,9 @@ export const PetPresenceContextSchema = Type.Union([
   Type.Literal('travel'),
   Type.Literal('friend'),
   Type.Literal('manual'),
+  /** Written only by the pet's close-profile / reopen-profile actions. */
+  Type.Literal('profile_closed'),
+  Type.Literal('profile_reopened'),
 ]);
 export type PetPresenceContextDTO = Static<typeof PetPresenceContextSchema>;
 
