@@ -84,6 +84,37 @@ A test's `describe` / `it` names carry the behavior; a comment adds only what th
 
 Not: why the behavior is desirable, what the production code does instead, or what a reviewer might object to.
 
+### Code quality
+
+The bar a senior reviewer holds every change to.
+
+**Types, not assertions.**
+
+- **NEVER** use `as` to make a value fit a type, or `!` to drop `null`. Annotate the variable, parameter or return type instead and let inference carry the literal (`const NOT_FOUND: Static<typeof Http404NotFoundSchema> = {…}`), or narrow with a check.
+- `as const` is fine where it _derives_ something the code uses (a tuple whose element type becomes a union). It is not a patch for an object literal that lost its literal types because it had no declared type to be checked against.
+- In tests, use the typed accessor (`res.json<T>()`), not `res.json() as T`.
+
+**Control flow reads top to bottom.**
+
+- Error and missing-record paths are **early returns**: `if (!pet) return reply.code(404).send(PET_NOT_FOUND);` then `return pet;`. Not `return pet ?? reply…`, not a ternary that hides a branch inside an expression.
+- **One level of ternary at most.** A second level becomes a small named function with early returns, or a lookup table. A choice between operations (which write to run, which promise to wait on) is a named `const` or function first, never an expression inside `Promise.all([…])` or an argument list.
+
+**One owner per value, not just per comment.**
+
+- A rule both sides of the wire enforce (a pattern, a size limit, an accepted-types list, an enum) is **exported from `shared`** and imported by both, user-facing copy included: the message takes the value as a parameter rather than repeating "2MB". A comment saying "same rule as the API's X" or "the API's limit" is the smell: it means there are two copies.
+- **NEVER** add a function that only renames another (`currentPresence = (db, ids) => presenceAt(db, ids)`). Call the real one.
+- Within one request, **never read the same row twice**: pass what you already loaded (`pet.presence`) instead of querying it again, and fetch independent reads with `Promise.all`.
+
+**React renders are pure.**
+
+- Anything that allocates or subscribes — `URL.createObjectURL`, timers, listeners — is created and released in an **effect**, never in render or `useMemo` (both can run more than once).
+- A derived array or object handed to context or to memoized children is memoized at its source, so consumers do not see a new value every render.
+- The page container owns page chrome (`SettingsFormPage`, title, back, loading); a form component owns only the form.
+
+**Names say what a thing is.** i18n keys and identifiers carry their role. Field labels are `*_label_*` and select options are `*_option_*`; never two keys under one prefix where some are labels and some are options.
+
+**Tests.** One behaviour per `it`; never `cleanup()` and re-render to test a second case inside the same test. A test about a query (its plan, its SQL) runs the **real query builder**, exported for it, not a hand-copied string that keeps passing after the code changes.
+
 ### CSS Architecture
 
 **IMPORTANT**: We prioritize native, semantic CSS with minimal inline styles. NO FUCKING TAILWIND.
@@ -204,6 +235,15 @@ These are the rules that keep chrome from drifting between routes. Each one exis
 
 ### Component Architecture
 
+#### Use the kit — flag gaps, never hand-roll
+
+**Screens are built from the components that already exist, as they are.** Before writing markup or CSS for anything that looks like a list, row, card, header, field, button group or sheet, find the component that already draws it (`components/ui/`, `components/ui/form/`, `CardList`, `FormSection`, `PickerList`, …) and use it.
+
+- **NEVER** swap a kit component for your own markup because it renders slightly wrong — a missing gap, a column that does not line up, a header that sits too close. A hand-rolled copy forks the look: the next screen uses the real component and the two drift apart.
+- **Fix it at the owner, or stop and ask.** A defect that is plainly the component's own (a missing `gap`) is fixed in that component's stylesheet so every caller gets it, and the summary says so. Anything that changes the component for its other callers, or that the kit simply cannot do, is **flagged to the user before** any workaround: which component, what is wrong, and the options. Asking first is always cheaper than custom markup that has to be torn out later.
+- **A design file is not a licence for custom markup.** When an accepted design needs something the kit lacks, it goes to the user and to the design system's `Design System Gaps.md`; a local one-off ships only with explicit approval.
+- A page or feature stylesheet **lays out** kit components (a grid, a measure, a gap between them). It never restyles them or re-creates their parts.
+
 #### Composition over extension
 
 **Strong preference: compose. Do not extend, and never duplicate.** When something needs to do more, the answer is another part composed alongside the existing ones — not a prop that switches what the component _is_, and not a second component that copies the first one's machinery in order to add one mark to it.
@@ -298,6 +338,7 @@ export default ComponentName;
 - Mobile stacks the same row full width in flow. **Nothing is sticky, fixed or floating** — `MobileNav` is the app's only fixed bottom surface.
 - Modals own their footer: desktop dialog gets the pair, a mobile sheet gets one primary (handle and scrim already dismiss). `DialogFooter` and `ConfirmDialog` follow the same grammar as the row — `Cancel` is `neutral` there too, and only the confirm is filled.
 - **Destructives sit in `leading`** — `danger`, opening a `ConfirmDialog`, as far from the commit as the row is wide. `FormShell.css` buys that distance back in vertical space once the row stacks.
+- **An entity with a lifecycle** (close/reopen as well as delete) moves those out of the row into a trailing `CardList` below it, one row per action with a `sm` button; `PetLifecycleSection` is the reference. `leading` stays for pages with only a delete.
 
 **Kit** (`packages/ui/src/components/ui/form/`):
 
@@ -344,6 +385,12 @@ export default ComponentName;
 - Always search for existing types before creating new ones.
 - Avoid typecasting unless absolutely necessary.
 - Avoid `any` unless absolutely necessary.
+
+#### Errors
+
+- HTTP error bodies are `{ statusCode, error, message }`, declared with the schemas in `src/routes/httpErrorSchemas.ts`. **NEVER** redeclare them per route file or hand-build one inline.
+- A missing record is a **404 with that schema**, never `throw new Error('… not found')`, which Fastify answers with a 500.
+- A guard in a service throws an `Error` subclass carrying `statusCode` (`PresenceWriteRefused`). The route lets it propagate and Fastify's default handler writes the body; routes do not translate refusal objects into replies.
 
 #### Persistence vs API schemas
 
