@@ -52,7 +52,7 @@ async function insertFoods(
         name: food.name,
         brand: food.brand,
         food_type: food.food_type,
-        barcode_ean13: null,
+        barcode: null,
         moisture_percent: food.moisture_percent,
         calories_per_100g: food.calories_per_100g,
         nutrients: null,

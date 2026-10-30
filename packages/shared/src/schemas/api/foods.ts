@@ -11,11 +11,34 @@ export const FoodTypeSchema = Type.Union([
 ]);
 export type FoodTypeDTO = Static<typeof FoodTypeSchema>;
 
-export const BarcodeEan13Schema = Type.Union([
-  Type.Null(),
-  Type.String({ minLength: 13, maxLength: 13, pattern: '^[0-9]{13}$' }),
-]);
-export type BarcodeEan13DTO = Static<typeof BarcodeEan13Schema>;
+/**
+ * Digit counts of the GTIN family printed on retail packs: EAN-8 and UPC-E,
+ * UPC-A, EAN-13 and GTIN-14. Check digits are not verified, because a UPC-E's
+ * is computed over its expanded UPC-A form rather than the printed digits.
+ */
+const BARCODE_LENGTHS = [8, 12, 13, 14];
+
+const BARCODE_PATTERN = `^(?:${BARCODE_LENGTHS.map((n) => `[0-9]{${n}}`).join('|')})$`;
+const BARCODE_REGEX = new RegExp(BARCODE_PATTERN);
+
+export const BarcodeSchema = Type.String({ pattern: BARCODE_PATTERN });
+
+/**
+ * The digits of a barcode as typed or scanned, with the spaces and hyphens a
+ * pack prints between groups dropped, or null when it is not a barcode.
+ */
+export function parseBarcode(raw: string): string | null {
+  const digits = raw.replace(/[\s-]/g, '');
+  return BARCODE_REGEX.test(digits) ? digits : null;
+}
+
+/**
+ * Whether two barcodes name the same product. They are compared as GTIN-14,
+ * so a stored UPC-A matches the zero-led EAN-13 a scanner may read for it.
+ */
+export function isSameBarcode(a: string, b: string): boolean {
+  return a.padStart(14, '0') === b.padStart(14, '0');
+}
 
 export const NutrientNameSchema = Type.Union([
   Type.Literal('protein'),
@@ -77,7 +100,7 @@ export const GetFoodSchema = Type.Object({
   name: Type.String(),
   brand: Type.Union([Type.String(), Type.Null()]),
   food_type: FoodTypeSchema,
-  barcode_ean13: Type.Union([Type.String(), Type.Null()]),
+  barcode: Type.Union([Type.String(), Type.Null()]),
   moisture_percent: NullableNumberSchema,
   calories_per_100g: NullableNumberSchema,
   nutrients: Type.Union([FoodNutrientsSchema, Type.Null()]),
@@ -95,12 +118,7 @@ export const PostFoodRequestSchema = Type.Object({
   name: Type.String(),
   brand: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   food_type: FoodTypeSchema,
-  barcode_ean13: Type.Optional(
-    Type.Union([
-      Type.Null(),
-      Type.String({ minLength: 13, maxLength: 13, pattern: '^[0-9]{13}$' }),
-    ]),
-  ),
+  barcode: Type.Optional(Type.Union([Type.Null(), BarcodeSchema])),
   moisture_percent: Type.Optional(NullableNumberSchema),
   calories_per_100g: Type.Optional(NullableNumberSchema),
   nutrients: Type.Optional(Type.Union([FoodNutrientsSchema, Type.Null()])),

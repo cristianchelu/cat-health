@@ -14,7 +14,7 @@ export interface FoodTable {
   name: string;
   brand: string | null;
   food_type: FoodType;
-  barcode_ean13: string | null;
+  barcode: string | null;
   moisture_percent: number | null;
   calories_per_100g: number | null;
   nutrients: Array<{

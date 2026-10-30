@@ -1,17 +1,17 @@
-import type { GetFoodDTO } from 'shared';
+import { isSameBarcode, parseBarcode, type GetFoodDTO } from 'shared';
 
 /**
  * The slice of `BarcodeDetector` this app uses. Named as an interface so the
  * scanner can be driven by a stub in tests, where no such API exists.
  */
-export interface Ean13Detector {
+export interface PackBarcodeDetector {
   detect(
     source: CanvasImageSource,
   ): Promise<ReadonlyArray<{ rawValue: string }>>;
 }
 
 interface BarcodeDetectorConstructor {
-  new (options?: { formats: string[] }): Ean13Detector;
+  new (options?: { formats: string[] }): PackBarcodeDetector;
 }
 
 function detectorConstructor(): BarcodeDetectorConstructor | null {
@@ -36,23 +36,25 @@ export function isBarcodeScanSupported(): boolean {
   );
 }
 
-export function createEan13Detector(): Ean13Detector {
+/** The retail symbologies whose digits `parseBarcode` accepts. */
+const PACK_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
+
+export function createPackBarcodeDetector(): PackBarcodeDetector {
   const Detector = detectorConstructor();
   if (!Detector) throw new Error('BarcodeDetector is unavailable');
-  return new Detector({ formats: ['ean_13'] });
+  return new Detector({ formats: PACK_FORMATS });
 }
 
-const EAN13 = /^[0-9]{13}$/;
-
-/**
- * The food carrying this barcode, or null. Anything that is not a 13-digit
- * code is not something this library stores, so it never matches.
- */
+/** The food carrying this barcode, or null when none does or it is not one. */
 export function matchFoodByBarcode(
   foods: readonly GetFoodDTO[],
   rawValue: string,
 ): GetFoodDTO | null {
-  const code = rawValue.trim();
-  if (!EAN13.test(code)) return null;
-  return foods.find((food) => food.barcode_ean13 === code) ?? null;
+  const code = parseBarcode(rawValue);
+  if (code === null) return null;
+  return (
+    foods.find(
+      (food) => food.barcode !== null && isSameBarcode(food.barcode, code),
+    ) ?? null
+  );
 }

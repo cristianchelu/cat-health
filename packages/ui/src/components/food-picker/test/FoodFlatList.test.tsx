@@ -17,7 +17,7 @@ function food(overrides: Partial<GetFoodDTO> & { id: number }): GetFoodDTO {
     name: 'Tuna in Gravy',
     brand: 'Royal Canin',
     food_type: 'complete_wet',
-    barcode_ean13: null,
+    barcode: null,
     moisture_percent: null,
     calories_per_100g: 90,
     nutrients: null,

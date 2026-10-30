@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
+import type { GetFoodDTO } from 'shared';
 
 import {
   createTestApp,
@@ -101,5 +102,38 @@ describe('foods API', () => {
     assert.equal(get.statusCode, 200);
     assert.equal(get.json().moisture_percent, 0);
     assert.equal(get.json().serving_size_g, null);
+  });
+
+  it('stores a UPC-A barcode as entered', async () => {
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/foods',
+      payload: {
+        name: 'Imported Pate',
+        food_type: 'complete_wet',
+        barcode: '036000291452',
+      },
+    });
+
+    assert.equal(create.statusCode, 200);
+    const get = await app.inject({
+      method: 'GET',
+      url: `/api/foods/${create.json<GetFoodDTO>().id}`,
+    });
+    assert.equal(get.json<GetFoodDTO>().barcode, '036000291452');
+  });
+
+  it('refuses a barcode of no GTIN length', async () => {
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/foods',
+      payload: {
+        name: 'Typo Pate',
+        food_type: 'complete_wet',
+        barcode: '59012341234',
+      },
+    });
+
+    assert.equal(create.statusCode, 400);
   });
 });

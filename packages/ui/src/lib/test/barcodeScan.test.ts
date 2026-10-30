@@ -10,7 +10,7 @@ function food(id: number, barcode: string | null): GetFoodDTO {
     name: `Food ${id}`,
     brand: null,
     food_type: 'complete_wet',
-    barcode_ean13: barcode,
+    barcode: barcode,
     moisture_percent: null,
     calories_per_100g: null,
     nutrients: null,
@@ -40,13 +40,19 @@ describe('matchFoodByBarcode', () => {
     assert.equal(matchFoodByBarcode(FOODS, '1111111111116'), null);
   });
 
-  it('refuses anything that is not a 13-digit code', () => {
-    for (const code of [
-      '',
-      '400205200345',
-      '40020520034567',
-      'abcdefghijklm',
-    ]) {
+  it('finds a UPC-A food from the EAN-13 a scanner reads for it', () => {
+    assert.equal(
+      matchFoodByBarcode([food(4, '036000291452')], '0036000291452')?.id,
+      4,
+    );
+  });
+
+  it('finds a food by its EAN-8', () => {
+    assert.equal(matchFoodByBarcode([food(5, '96385074')], '96385074')?.id, 5);
+  });
+
+  it('refuses anything that is not a barcode', () => {
+    for (const code of ['', '40020520034', 'abcdefghijklm']) {
       assert.equal(matchFoodByBarcode(FOODS, code), null);
     }
   });

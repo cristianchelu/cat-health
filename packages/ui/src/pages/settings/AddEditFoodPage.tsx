@@ -8,6 +8,7 @@ import {
 } from '@/hooks/queries/foodQueries';
 import {
   FormField,
+  FormInput,
   FormShell,
   Input,
   Select,
@@ -18,6 +19,7 @@ import { DiscardUnsavedDialog } from '@/components/ui/DiscardUnsavedDialog';
 import { useAppForm, useUnsavedBlocker } from '@/hooks/form';
 import { useBackNavigation } from '@/hooks/useBackNavigation';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
+import { parseBarcode } from 'shared';
 import type { FoodTypeDTO, NutrientNameDTO, NutrientUnitDTO } from 'shared';
 import type { GetFoodDTO } from 'shared';
 
@@ -64,7 +66,7 @@ interface FoodFormValues {
   name: string;
   brand: string;
   food_type: FoodTypeDTO;
-  barcode_ean13: string;
+  barcode: string;
   moisture_percent: string;
   calories_per_100g: string;
   serving_size_g: string;
@@ -76,7 +78,7 @@ const DEFAULT_FORM_VALUES: FoodFormValues = {
   name: '',
   brand: '',
   food_type: 'complete_wet',
-  barcode_ean13: '',
+  barcode: '',
   moisture_percent: '',
   calories_per_100g: '',
   serving_size_g: '',
@@ -90,7 +92,7 @@ function foodToFormValues(food: GetFoodDTO): FoodFormValues {
     name: food.name,
     brand: food.brand ?? '',
     food_type: food.food_type,
-    barcode_ean13: food.barcode_ean13 ?? '',
+    barcode: food.barcode ?? '',
     moisture_percent:
       food.moisture_percent != null ? String(food.moisture_percent) : '',
     calories_per_100g:
@@ -111,6 +113,11 @@ function foodToFormValues(food: GetFoodDTO): FoodFormValues {
   };
 }
 
+function isBlankOrBarcode(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  return value.trim() === '' || parseBarcode(value) !== null;
+}
+
 const AddEditFoodPage: React.FC = () => {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
@@ -127,11 +134,12 @@ const AddEditFoodPage: React.FC = () => {
 
   const {
     register,
+    control,
     handleSubmit,
     watch,
-    setValue,
     formState: { isDirty },
   } = useAppForm<FoodFormValues>({
+    mode: 'onTouched',
     defaultValues: DEFAULT_FORM_VALUES,
     values: food ? foodToFormValues(food) : undefined,
   });
@@ -141,21 +149,15 @@ const AddEditFoodPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const nutrients = watch('nutrients');
-  const barcodeEan13 = watch('barcode_ean13');
-  const barcodeRegistration = register('barcode_ean13');
 
   const onFormSubmit = async (data: FoodFormValues) => {
     setError(null);
     try {
-      const barcode =
-        data.barcode_ean13.replace(/\D/g, '').length === 13
-          ? data.barcode_ean13.replace(/\D/g, '')
-          : null;
       const payload = {
         name: data.name,
         brand: data.brand || null,
         food_type: data.food_type,
-        barcode_ean13: barcode,
+        barcode: parseBarcode(data.barcode),
         moisture_percent:
           data.moisture_percent !== ''
             ? parseFloat(data.moisture_percent)
@@ -258,22 +260,17 @@ const AddEditFoodPage: React.FC = () => {
               />
             </FormField>
 
-            <FormField label={t('settings.food_barcode_label')}>
-              <Input
-                {...barcodeRegistration}
-                value={barcodeEan13}
-                onChange={(e) => {
-                  const next = e.target.value.replace(/\D/g, '').slice(0, 13);
-                  setValue('barcode_ean13', next, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  });
-                }}
-                placeholder={t('settings.food_barcode_placeholder')}
-                inputMode="numeric"
-                maxLength={13}
-              />
-            </FormField>
+            <FormInput
+              name="barcode"
+              control={control}
+              label={t('settings.food_barcode_label')}
+              rules={{
+                validate: (value) =>
+                  isBlankOrBarcode(value) || t('settings.food_barcode_invalid'),
+              }}
+              placeholder={t('settings.food_barcode_placeholder')}
+              inputMode="numeric"
+            />
 
             <FormField label={t('settings.food_moisture_label')}>
               <Input

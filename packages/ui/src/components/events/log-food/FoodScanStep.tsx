@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next';
 import type { GetFoodDTO } from 'shared';
 import { Button } from '@/components/ui/Button';
 import {
-  createEan13Detector,
+  createPackBarcodeDetector,
   matchFoodByBarcode,
-  type Ean13Detector,
+  type PackBarcodeDetector,
 } from '@/lib/barcodeScan';
 import './FoodScanStep.css';
 
@@ -13,7 +13,7 @@ interface FoodScanStepProps {
   foods: readonly GetFoodDTO[];
   onMatch: (food: GetFoodDTO) => void;
   /** Seams for tests; production defaults hit the real APIs. */
-  createDetector?: () => Ean13Detector;
+  createDetector?: () => PackBarcodeDetector;
   requestCamera?: () => Promise<MediaStream>;
 }
 
@@ -38,7 +38,7 @@ const requestRearCamera = (): Promise<MediaStream> =>
 const FoodScanStep: React.FC<FoodScanStepProps> = ({
   foods,
   onMatch,
-  createDetector = createEan13Detector,
+  createDetector = createPackBarcodeDetector,
   requestCamera = requestRearCamera,
 }) => {
   const { t } = useTranslation();
@@ -76,7 +76,7 @@ const FoodScanStep: React.FC<FoodScanStepProps> = ({
     };
 
     const start = async () => {
-      let detector: Ean13Detector;
+      let detector: PackBarcodeDetector;
       try {
         detector = createDetectorRef.current();
         stream = await requestCameraRef.current();

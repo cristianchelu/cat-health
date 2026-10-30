@@ -51,6 +51,7 @@ const UNTRANSLATED_RO = new Set([
   'settings.edit_food_title',
   'settings.food_barcode_label',
   'settings.food_barcode_placeholder',
+  'settings.food_barcode_invalid',
   'settings.food_brand_label',
   'settings.food_brand_placeholder',
   'settings.food_calories_label',

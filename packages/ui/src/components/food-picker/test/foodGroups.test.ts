@@ -16,7 +16,7 @@ function food(overrides: Partial<GetFoodDTO>): GetFoodDTO {
     name: 'Test food',
     brand: null,
     food_type: 'complete_wet',
-    barcode_ean13: null,
+    barcode: null,
     moisture_percent: null,
     calories_per_100g: null,
     nutrients: null,

@@ -23,7 +23,7 @@ function food(
     name,
     brand,
     food_type: foodType,
-    barcode_ean13: null,
+    barcode: null,
     moisture_percent: null,
     calories_per_100g: 90,
     nutrients: null,

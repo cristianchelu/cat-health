@@ -34,7 +34,7 @@ function food(id: number, name: string, barcode: string | null): GetFoodDTO {
     name,
     brand: 'Royal Canin',
     food_type: 'complete_wet',
-    barcode_ean13: barcode,
+    barcode: barcode,
     moisture_percent: null,
     calories_per_100g: 90,
     nutrients: null,

@@ -13,7 +13,7 @@ const sampleFood: Food = {
   name: 'Test Kibble',
   brand: 'Brand',
   food_type: 'complete_dry',
-  barcode_ean13: null,
+  barcode: null,
   moisture_percent: 10,
   calories_per_100g: 400,
   nutrients: [{ nutrient: 'protein', unit: 'percent', value: 30 }],

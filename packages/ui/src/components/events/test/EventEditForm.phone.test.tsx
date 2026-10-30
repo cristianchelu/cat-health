@@ -99,7 +99,7 @@ const FOODS: GetFoodDTO[] = [
     name: 'Salmon pouch',
     brand: 'Felix',
     food_type: 'complete_wet',
-    barcode_ean13: null,
+    barcode: null,
     moisture_percent: 80,
     calories_per_100g: 90,
     nutrients: null,

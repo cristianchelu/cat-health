@@ -248,7 +248,7 @@ export async function insertFood(
       name: seed.name ?? 'Test kibble',
       brand: seed.brand ?? null,
       food_type: seed.food_type ?? 'complete_dry',
-      barcode_ean13: null,
+      barcode: null,
       moisture_percent: seed.moisture_percent ?? 10,
       calories_per_100g: seed.calories_per_100g ?? 380,
       nutrients: seed.nutrients ?? null,
