@@ -16,13 +16,7 @@ import {
   type PresetOrigin,
   type Range,
 } from './band.ts';
-import {
-  ADULT_STAGES,
-  lifeStageOf,
-  type Altered,
-  type IntakePet,
-  type LifeStage,
-} from './pet.ts';
+import type { Altered, IntakePet } from './pet.ts';
 import type { NutritionModel, NutritionModelRow } from './sources.ts';
 
 /**
@@ -32,17 +26,23 @@ import type { NutritionModel, NutritionModelRow } from './sources.ts';
 export const FOOD_PRESETS = ['maintain', 'lose'] as const;
 export type FoodPreset = (typeof FOOD_PRESETS)[number];
 
+/** Months of age, from inclusive to below. */
+export type AgeRange = readonly [from: number, below: number];
+
+/** A kitten until her first birthday, an adult from then on: `aaha-aafp-life-stage-2021`, Table 1. */
+const KITTEN: AgeRange = [0, 12];
+const ADULT: AgeRange = [12, Infinity];
+
 /**
  * One row of a source's energy table. What the row covers is data, so a model
  * can be read against its document.
  */
 export interface EnergyRow extends NutritionModelRow {
   preset: FoodPreset;
-  lifeStages: readonly LifeStage[];
+  /** The ages the row is for; `coversAge` says how a cat of unknown age is matched. */
+  age: AgeRange;
   /** Whether the row is for altered or intact cats, or `any` when the source doesn't split on it. */
   altered: Altered | 'any';
-  /** Months of age covered, from inclusive to below; any age when absent. */
-  ageMonths?: readonly [from: number, below: number];
   /** The weight the formula takes: hers, or her target weight where the source asks for ideal weight. */
   weight: 'current' | 'target';
   /** kcal a day at `kg`, the weight `weight` selects. */
@@ -63,7 +63,7 @@ const fediaf2025: EnergyModel = {
   rows: [
     {
       preset: 'maintain',
-      lifeStages: ADULT_STAGES,
+      age: ADULT,
       altered: 'altered',
       weight: 'current',
       ref: 'Table VII-9, neutered and/or indoor',
@@ -71,27 +71,24 @@ const fediaf2025: EnergyModel = {
     },
     {
       preset: 'maintain',
-      lifeStages: ['kitten'],
+      age: [0, 4],
       altered: 'any',
-      ageMonths: [0, 4],
       weight: 'current',
       ref: 'Table VII-10, up to 4 months',
       kcalPerDay: (kg) => times(range(2.0, 2.5), fediafMer(kg)),
     },
     {
       preset: 'maintain',
-      lifeStages: ['kitten'],
+      age: [4, 9],
       altered: 'any',
-      ageMonths: [4, 9],
       weight: 'current',
       ref: 'Table VII-10, 4 to 9 months',
       kcalPerDay: (kg) => times(range(1.75, 2.0), fediafMer(kg)),
     },
     {
       preset: 'maintain',
-      lifeStages: ['kitten'],
+      age: [9, 12],
       altered: 'any',
-      ageMonths: [9, 12],
       weight: 'current',
       ref: 'Table VII-10, 9 to 12 months',
       kcalPerDay: (kg) => times(point(1.5), fediafMer(kg)),
@@ -107,7 +104,7 @@ const aaha2021: EnergyModel = {
   rows: [
     {
       preset: 'maintain',
-      lifeStages: ADULT_STAGES,
+      age: ADULT,
       altered: 'altered',
       weight: 'current',
       ref: 'Box 1, neutered adults',
@@ -115,7 +112,7 @@ const aaha2021: EnergyModel = {
     },
     {
       preset: 'maintain',
-      lifeStages: ADULT_STAGES,
+      age: ADULT,
       altered: 'intact',
       weight: 'current',
       ref: 'Box 1, intact adult',
@@ -123,7 +120,7 @@ const aaha2021: EnergyModel = {
     },
     {
       preset: 'maintain',
-      lifeStages: ['kitten'],
+      age: KITTEN,
       altered: 'any',
       weight: 'current',
       ref: 'Box 1, growth',
@@ -131,7 +128,7 @@ const aaha2021: EnergyModel = {
     },
     {
       preset: 'lose',
-      lifeStages: ADULT_STAGES,
+      age: ADULT,
       altered: 'any',
       weight: 'target',
       ref: 'Box 1, weight loss; p. 9, on ideal weight',
@@ -225,7 +222,7 @@ export function answerEnergy(
   return { gap: 'not_in_source' };
 }
 
-/** Whether `row` answers this preset for a cat of her life stage, age, and altered or intact. */
+/** Whether `row` answers this preset for her age and for altered or intact as she is. */
 function rowCovers(
   row: EnergyRow,
   preset: FoodPreset,
@@ -233,21 +230,12 @@ function rowCovers(
 ): boolean {
   if (row.preset !== preset) return false;
   if (row.altered !== 'any' && row.altered !== pet.altered) return false;
-  const lifeStage = lifeStageOf(pet.ageMonths);
-  return coversStage(row, lifeStage) && coversAge(row, pet.ageMonths);
+  return coversAge(row.age, pet.ageMonths);
 }
 
-/** A cat of unknown age is an adult of unknown stage, so only a row for every adult stage covers her. */
-function coversStage(row: EnergyRow, lifeStage: LifeStage | null): boolean {
-  if (lifeStage) return row.lifeStages.includes(lifeStage);
-  return ADULT_STAGES.every((stage) => row.lifeStages.includes(stage));
-}
-
-/** A row with an age range covers only a known age inside it. */
-function coversAge(row: EnergyRow, ageMonths: number | null): boolean {
-  if (!row.ageMonths) return true;
-  if (ageMonths === null) return false;
-  const [from, below] = row.ageMonths;
+/** A cat of unknown age is an adult of unknown age, so only a row for every adult age covers her. */
+function coversAge([from, below]: AgeRange, ageMonths: number | null): boolean {
+  if (ageMonths === null) return from <= ADULT[0] && below >= ADULT[1];
   return ageMonths >= from && ageMonths < below;
 }
 

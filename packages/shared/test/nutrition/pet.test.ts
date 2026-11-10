@@ -5,7 +5,6 @@ import {
   ageInMonths,
   alteredOf,
   intakePetOf,
-  lifeStageOf,
   type IntakePetInput,
 } from '../../src/nutrition/pet.ts';
 
@@ -16,32 +15,6 @@ describe('ageInMonths', () => {
 
   it('does not count a month that has not finished', () => {
     assert.equal(ageInMonths('2026-01-15', '2026-04-14'), 2);
-  });
-});
-
-describe('lifeStageOf', () => {
-  it('keeps a cat under a year a kitten', () => {
-    assert.equal(lifeStageOf(11), 'kitten');
-  });
-
-  it('makes her a young adult on her first birthday', () => {
-    assert.equal(lifeStageOf(12), 'young_adult');
-  });
-
-  it('makes her a mature adult at 7', () => {
-    assert.equal(lifeStageOf(7 * 12), 'mature_adult');
-  });
-
-  it('keeps her a mature adult through 10', () => {
-    assert.equal(lifeStageOf(11 * 12 - 1), 'mature_adult');
-  });
-
-  it('makes her a senior at 11', () => {
-    assert.equal(lifeStageOf(11 * 12), 'senior');
-  });
-
-  it('gives no stage when her age is unknown', () => {
-    assert.equal(lifeStageOf(null), null);
   });
 });
 

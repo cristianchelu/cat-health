@@ -1,21 +1,5 @@
 import type { PetAlteredDTO } from '../schemas/api/pets.ts';
 
-/** The age stages of `aaha-aafp-life-stage-2021`, Table 1, in order. */
-export const LIFE_STAGES = [
-  'kitten',
-  'young_adult',
-  'mature_adult',
-  'senior',
-] as const;
-export type LifeStage = (typeof LIFE_STAGES)[number];
-
-/** Every stage after kitten; a row for all of them is a row for any adult. */
-export const ADULT_STAGES: readonly LifeStage[] = [
-  'young_adult',
-  'mature_adult',
-  'senior',
-];
-
 /** Altered or intact, as the models see it; the record's `unknown` is settled by `alteredOf`. */
 export type Altered = Exclude<PetAlteredDTO, 'unknown'>;
 
@@ -66,19 +50,6 @@ export function ageInMonths(birthDate: string, on: string): number {
   const [oy, om, od] = on.split('-').map(Number);
   const months = (oy - by) * 12 + (om - bm);
   return od < bd ? months - 1 : months;
-}
-
-/**
- * Her life stage at this age, or null when her age is unknown. Table 1's
- * "7 to 10" and "over 10" are read in whole years, so a senior starts at 11.
- */
-export function lifeStageOf(ageMonths: number | null): LifeStage | null {
-  if (ageMonths === null) return null;
-  const years = Math.floor(ageMonths / 12);
-  if (years >= 11) return 'senior';
-  if (years >= 7) return 'mature_adult';
-  if (years >= 1) return 'young_adult';
-  return 'kitten';
 }
 
 /** A cat not known to be intact is treated as altered. */

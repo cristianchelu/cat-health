@@ -70,11 +70,10 @@ Quimby J et al. _2021 AAHA/AAFP Feline Life Stage Guidelines._ J Am Anim Hosp
 Assoc 2021;57:51–72. DOI 10.5326/JAAHA-MS-7189. Also J Feline Med Surg
 2021;23(3):211–233.
 
-- p. 53, Table 1: kitten from birth up to 1 year; young adult 1 through 6;
-  mature adult 7 to 10; senior over 10. These are read in whole years, so a
-  senior starts at 11. The press release says "10 years and older" instead.
-  The 2010 version's geriatric stage is gone.
-- The life stages come from here, and nothing else does.
+- p. 53, Table 1: kitten from birth up to 1 year. That is the line between
+  `KITTEN` and `ADULT` in `food.ts`, and the only thing taken from here.
+- The later stages (young adult 1 through 6, mature adult 7 to 10, senior over 10) are not used: no source in a plan gives separate figures for them. A row
+  for one would carry its own age range.
 - Not a model: p. 63 gives RER = 30 × kg + 70, young healthy adults × 1,
   mature adults "may be equivalent to RER", and seniors RER "multiplied by a
   factor of 10–20%". The wording is advice to adjust case by case, the senior
