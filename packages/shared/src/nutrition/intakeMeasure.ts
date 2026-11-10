@@ -1,3 +1,11 @@
+import type { CustomBandSetting } from '../schemas/api/dietaryNeeds.ts';
+import {
+  bandAsSet,
+  customOrigin,
+  type Band,
+  type CustomOrigin,
+} from './band.ts';
+
 /** `amount` is kcal for food and ml for water; `duration` is seconds spent eating or drinking. */
 export const INTAKE_MEASURES = ['amount', 'duration'] as const;
 export type IntakeMeasure = (typeof INTAKE_MEASURES)[number];
@@ -19,4 +27,15 @@ export function intakeMeasureOf(
     reports.includes('amount'),
   );
   return allReportAmount ? 'amount' : 'duration';
+}
+
+/** A day's band in seconds spent eating or drinking. */
+export interface DurationBand extends Band {
+  unit: 's';
+  origin: CustomOrigin;
+}
+
+/** No source gives seconds a day, so a duration band is custom only. */
+export function resolveDurationBand(setting: CustomBandSetting): DurationBand {
+  return { ...bandAsSet(setting), unit: 's', origin: customOrigin(setting) };
 }

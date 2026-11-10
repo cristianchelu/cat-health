@@ -1,17 +1,17 @@
 import { type Static, Type } from '@fastify/type-provider-typebox';
 
 import {
-  ENERGY_GOALS,
+  FOOD_PRESETS,
   ENERGY_MODEL_IDS,
-  type EnergyGoal,
+  type FoodPreset,
   type EnergyModelId,
-} from '../../nutrition/energyModels.ts';
+} from '../../nutrition/food.ts';
 import {
   WATER_MODEL_IDS,
   WATER_PRESETS,
   type WaterModelId,
   type WaterPreset,
-} from '../../nutrition/waterModels.ts';
+} from '../../nutrition/water.ts';
 
 export const EnergyModelIdSchema = Type.Unsafe<EnergyModelId>(
   Type.Union(ENERGY_MODEL_IDS.map((id) => Type.Literal(id))),
@@ -19,30 +19,18 @@ export const EnergyModelIdSchema = Type.Unsafe<EnergyModelId>(
 export const WaterModelIdSchema = Type.Unsafe<WaterModelId>(
   Type.Union(WATER_MODEL_IDS.map((id) => Type.Literal(id))),
 );
-export const EnergyGoalSchema = Type.Unsafe<EnergyGoal>(
-  Type.Union(ENERGY_GOALS.map((goal) => Type.Literal(goal))),
+export const FoodPresetSchema = Type.Unsafe<FoodPreset>(
+  Type.Union(FOOD_PRESETS.map((preset) => Type.Literal(preset))),
 );
 export const WaterPresetSchema = Type.Unsafe<WaterPreset>(
   Type.Union(WATER_PRESETS.map((preset) => Type.Literal(preset))),
 );
 
-const EnergyPlanRowSchema = Type.Object({
-  maintain: Type.Optional(Type.Array(EnergyModelIdSchema)),
-  lose: Type.Optional(Type.Array(EnergyModelIdSchema)),
-});
-
-/** For each stage and goal, the models to ask in order; the first that answers wins. */
-export const EnergyPlanSchema = Type.Object({
-  growth: EnergyPlanRowSchema,
-  adult_neutered: EnergyPlanRowSchema,
-  adult_intact: EnergyPlanRowSchema,
-});
+/** The models to ask, most preferred first; the first with a row for her case answers. */
+export const EnergyPlanSchema = Type.Array(EnergyModelIdSchema);
 export type EnergyPlan = Static<typeof EnergyPlanSchema>;
 
-export const WaterPlanSchema = Type.Object({
-  normal: Type.Optional(Type.Array(WaterModelIdSchema)),
-  uti_prone: Type.Optional(Type.Array(WaterModelIdSchema)),
-});
+export const WaterPlanSchema = Type.Array(WaterModelIdSchema);
 export type WaterPlan = Static<typeof WaterPlanSchema>;
 
 /**
@@ -58,7 +46,7 @@ export const CustomBandSettingSchema = Type.Object({
 export type CustomBandSetting = Static<typeof CustomBandSettingSchema>;
 
 export const FoodBandSettingSchema = Type.Union([
-  Type.Object({ preset: EnergyGoalSchema }),
+  Type.Object({ preset: FoodPresetSchema }),
   CustomBandSettingSchema,
 ]);
 export type FoodBandSetting = Static<typeof FoodBandSettingSchema>;

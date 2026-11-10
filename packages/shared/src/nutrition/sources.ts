@@ -1,13 +1,3 @@
-/**
- * Where a source stands in the literature. It never changes what a model
- * computes; it only decides how the app presents that model's bands.
- */
-export type NutritionSourceStatus =
-  | { kind: 'current' }
-  | { kind: 'superseded'; by: string }
-  | { kind: 'retracted'; note: string }
-  | { kind: 'errata'; note: string };
-
 export interface NutritionSource {
   title: string;
   authors: string;
@@ -17,7 +7,6 @@ export interface NutritionSource {
   url: string;
   /** When the numbers below were last checked against the document. */
   checkedAt: string;
-  status: NutritionSourceStatus;
 }
 
 /** The reading notes, page by page, are in `docs/nutrition-sources.md`. */
@@ -31,7 +20,15 @@ export const NUTRITION_SOURCES = {
     doi: null,
     url: 'https://europeanpetfood.org/wp-content/uploads/2025/09/FEDIAF-Nutritional-Guidelines_2025-ONLINE.pdf',
     checkedAt: '2026-11-07',
-    status: { kind: 'current' },
+  },
+  'aaha-2014': {
+    title: '2014 AAHA Weight Management Guidelines for Dogs and Cats',
+    authors: 'Brooks D, Churchill J, Fein K, et al.',
+    published: 'J Am Anim Hosp Assoc 2014;50:1–11',
+    year: 2014,
+    doi: '10.5326/JAAHA-MS-6331',
+    url: 'https://doi.org/10.5326/JAAHA-MS-6331',
+    checkedAt: '2026-11-10',
   },
   'aaha-2021': {
     title:
@@ -43,7 +40,16 @@ export const NUTRITION_SOURCES = {
     doi: '10.5326/JAAHA-MS-7232',
     url: 'https://doi.org/10.5326/JAAHA-MS-7232',
     checkedAt: '2026-11-07',
-    status: { kind: 'current' },
+  },
+  'aaha-aafp-life-stage-2021': {
+    title: '2021 AAHA/AAFP Feline Life Stage Guidelines',
+    authors:
+      'Quimby J, Gowland S, Carney HC, DePorter T, Plummer P, Westropp J',
+    published: 'J Am Anim Hosp Assoc 2021;57:51–72',
+    year: 2021,
+    doi: '10.5326/JAAHA-MS-7189',
+    url: 'https://doi.org/10.5326/JAAHA-MS-7189',
+    checkedAt: '2026-11-09',
   },
   'kosmal-2025': {
     title:
@@ -54,7 +60,6 @@ export const NUTRITION_SOURCES = {
     doi: '10.1093/jas/skaf434',
     url: 'https://doi.org/10.1093/jas/skaf434',
     checkedAt: '2026-11-07',
-    status: { kind: 'current' },
   },
 } satisfies Record<string, NutritionSource>;
 
