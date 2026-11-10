@@ -4,21 +4,15 @@ import { subDays } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import type { Kysely } from 'kysely';
 import {
-  FOOD_PRESETS,
-  WATER_PRESETS,
-  aahaRer,
-  foodFloorKcal,
   intakePetOf,
   resolveFoodBand,
   resolveWaterBand,
   type FoodBand,
   type FoodBandSetting,
-  type FoodPreset,
   type IntakeGap,
   type IntakePet,
   type WaterBand,
   type WaterBandSetting,
-  type WaterPreset,
 } from 'shared';
 
 import type { Database } from '../../database/index.ts';
@@ -44,31 +38,14 @@ import {
 /** A band, or the reason a preset has none. */
 type Outcome<Band> = Band | { gap: IntakeGap };
 
-/** The food band as it resolves on one day, with what the page shows beside it. */
-export interface FoodResolution {
-  band: Outcome<FoodBand>;
-  /** Every notch, in slider order. */
-  presets: { preset: FoodPreset; outcome: Outcome<FoodBand> }[];
-  floorKcal: number;
-  /** Her resting energy need at her current weight, in whole kcal. */
-  restingKcal: number;
-}
-
-/** The water band as it resolves on one day. */
-export interface WaterResolution {
-  band: Outcome<WaterBand>;
-  /** Every notch, in slider order. */
-  presets: { preset: WaterPreset; outcome: Outcome<WaterBand> }[];
-}
-
 /** A pet's dietary needs on one day: what is set, and what it resolves to. */
 export interface DietaryNeeds {
   targets: TargetsInEffect;
   /** The weight the bands are worked out at; null when she has never been weighed. */
   weightG: number | null;
-  /** Null without a weight, since every band needs one. */
-  food: FoodResolution | null;
-  water: WaterResolution | null;
+  /** Each band, or why its preset has none. Null without a weight, since every band needs one. */
+  food: Outcome<FoodBand> | null;
+  water: Outcome<WaterBand> | null;
 }
 
 /** The pet fields a band depends on. */
@@ -386,22 +363,8 @@ export function resolveDietaryNeeds(
   return {
     targets,
     weightG,
-    food: {
-      band: resolveFoodBand(food.setting, food.plan, intakePet),
-      presets: FOOD_PRESETS.map((preset) => ({
-        preset,
-        outcome: resolveFoodBand({ preset }, food.plan, intakePet),
-      })),
-      floorKcal: foodFloorKcal(intakePet),
-      restingKcal: Math.round(aahaRer(intakePet.kg)),
-    },
-    water: {
-      band: resolveWaterBand(water.setting, water.plan, intakePet),
-      presets: WATER_PRESETS.map((preset) => ({
-        preset,
-        outcome: resolveWaterBand({ preset }, water.plan, intakePet),
-      })),
-    },
+    food: resolveFoodBand(food.setting, food.plan, intakePet),
+    water: resolveWaterBand(water.setting, water.plan, intakePet),
   };
 }
 

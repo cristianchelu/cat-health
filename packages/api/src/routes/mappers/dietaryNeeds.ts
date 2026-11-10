@@ -23,23 +23,13 @@ export function dietaryNeedsToDto(
       tracked: targets.food.tracked,
       setting: targets.food.setting,
       plan: targets.food.plan,
-      ...outcomeToDto(food?.band, bandToDto),
-      presets: (food?.presets ?? []).map(({ preset, outcome }) => ({
-        preset,
-        ...outcomeToDto(outcome, bandToDto),
-      })),
-      floor_kcal: food?.floorKcal ?? null,
-      resting_kcal: food?.restingKcal ?? null,
+      ...outcomeToDto(food ?? undefined, bandToDto),
     },
     water: {
       tracked: targets.water.tracked,
       setting: targets.water.setting,
       plan: targets.water.plan,
-      ...outcomeToDto(water?.band, bandToDto),
-      presets: (water?.presets ?? []).map(({ preset, outcome }) => ({
-        preset,
-        ...outcomeToDto(outcome, bandToDto),
-      })),
+      ...outcomeToDto(water ?? undefined, bandToDto),
     },
   };
 }

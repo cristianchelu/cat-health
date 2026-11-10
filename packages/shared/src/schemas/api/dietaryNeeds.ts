@@ -98,18 +98,6 @@ function resolvedBandSchema<Preset extends TSchema, ModelId extends TSchema>(
   });
 }
 
-/** What one notch gives her today: its band, or the reason it has none. */
-function presetOutcomeSchema<Preset extends TSchema, Band extends TSchema>(
-  preset: Preset,
-  band: Band,
-) {
-  return Type.Object({
-    preset,
-    band: nullable(band),
-    gap: nullable(IntakeGapSchema),
-  });
-}
-
 const FoodBandSchema = resolvedBandSchema(
   'kcal',
   FoodPresetSchema,
@@ -122,8 +110,10 @@ const WaterBandSchema = resolvedBandSchema(
 );
 
 /**
- * A pet's food and water bands as set, and as they resolve today. Everything
- * resolved is null while she has never been weighed.
+ * A pet's food and water bands as set, and as they resolve today. `band` and
+ * `gap` are both null while she has never been weighed. A client that needs
+ * more (every notch, the floor) resolves it with the shared nutrition module
+ * from `weight_kg`, `plan` and her profile.
  */
 export const GetDietaryNeedsResponseSchema = Type.Object({
   /** The weight her bands are worked out at, or null when she has never been weighed. */
@@ -135,12 +125,6 @@ export const GetDietaryNeedsResponseSchema = Type.Object({
     plan: EnergyPlanSchema,
     band: nullable(FoodBandSchema),
     gap: nullable(IntakeGapSchema),
-    /** Every notch, in slider order. */
-    presets: Type.Array(presetOutcomeSchema(FoodPresetSchema, FoodBandSchema)),
-    /** The lowest kcal a day her food band may reach. */
-    floor_kcal: nullable(Type.Number()),
-    /** Her resting energy need, which the page shows her band against. */
-    resting_kcal: nullable(Type.Number()),
   }),
   water: Type.Object({
     tracked: Type.Boolean(),
@@ -148,10 +132,6 @@ export const GetDietaryNeedsResponseSchema = Type.Object({
     plan: WaterPlanSchema,
     band: nullable(WaterBandSchema),
     gap: nullable(IntakeGapSchema),
-    /** Every notch, in slider order. */
-    presets: Type.Array(
-      presetOutcomeSchema(WaterPresetSchema, WaterBandSchema),
-    ),
   }),
 });
 export type GetDietaryNeedsResponse = Static<

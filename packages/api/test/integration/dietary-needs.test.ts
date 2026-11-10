@@ -137,36 +137,19 @@ describe('pet dietary needs', () => {
       });
     });
 
-    it('lists every food notch with its band or the reason it has none', async () => {
-      const { food } = await getNeeds(await weighedPet(4210));
-      assert.deepEqual(
-        food.presets.map((notch) => [
-          notch.preset,
-          notch.band?.lower,
-          notch.gap,
-        ]),
-        [
-          ['maintain', 136, null],
-          ['lose', undefined, 'needs_target_weight'],
-        ],
-      );
-    });
-
-    it('gives her resting need and the floor beside the food band', async () => {
-      const { food } = await getNeeds(await weighedPet(4210));
-      assert.deepEqual([food.resting_kcal, food.floor_kcal], [206, 124]);
+    it('says why a preset has no band', async () => {
+      const petId = await weighedPet(5020);
+      const { food } = await putNeeds(petId, {
+        food: { tracked: true, setting: { preset: 'lose' } },
+      });
+      assert.deepEqual([food.band, food.gap], [null, 'needs_target_weight']);
     });
 
     it('resolves nothing for a pet that has never been weighed', async () => {
       const needs = await getNeeds(await unweighedPet());
       assert.deepEqual(
-        [
-          needs.weight_kg,
-          needs.food.band,
-          needs.food.presets,
-          needs.water.band,
-        ],
-        [null, null, [], null],
+        [needs.weight_kg, needs.food.band, needs.food.gap, needs.water.band],
+        [null, null, null, null],
       );
     });
 
