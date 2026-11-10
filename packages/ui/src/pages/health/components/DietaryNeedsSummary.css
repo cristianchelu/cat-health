@@ -1,0 +1,66 @@
+.dietary-needs-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+
+  @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dietary-needs-card {
+    display: block;
+    border-radius: var(--radius-xl);
+    color: inherit;
+    text-decoration: none;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-border-focus);
+      outline-offset: 2px;
+    }
+
+    &.food {
+      --dietary-needs-card-hue: var(--color-food);
+    }
+
+    &.water {
+      --dietary-needs-card-hue: var(--color-water);
+    }
+  }
+
+  .dietary-needs-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .dietary-needs-card-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-weight: var(--font-semibold);
+    color: var(--color-text);
+  }
+
+  .dietary-needs-card-icon {
+    display: flex;
+    color: var(--dietary-needs-card-hue);
+  }
+
+  .dietary-needs-card-range {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+  }
+
+  .dietary-needs-card-numbers {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-semibold);
+    line-height: var(--line-height-tight);
+    color: var(--color-text);
+  }
+
+  .dietary-needs-card-unit {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+}
