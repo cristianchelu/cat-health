@@ -1039,7 +1039,12 @@
       "goal_lose_to": "Slăbire până la {{weight}} kg",
       "per_kg_value": "{{low}}–{{high}} ml",
       "edit_food_label": "Editează intervalul pentru mâncare",
-      "edit_water_label": "Editează intervalul pentru apă"
+      "edit_water_label": "Editează intervalul pentru apă",
+      "source_hint_label": "De unde vin aceste cifre",
+      "source_hint_body": "Conform {{source}}: {{ref}}.",
+      "source_hint_point_tolerance": "Sursa dă o singură valoare, așa că ± este al aplicației.",
+      "source_hint_floor": "Ridicat la minimul permis.",
+      "source_hint_link": "Citește sursa"
     }
   }
 }

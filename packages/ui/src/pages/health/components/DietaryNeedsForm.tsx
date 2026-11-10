@@ -2,13 +2,18 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Drumstick, GlassWater } from 'lucide-react';
 import {
+  ENERGY_MODELS,
+  NUTRITION_SOURCES,
+  WATER_MODELS,
   boundsOf,
   resolveFoodBand,
   resolveWaterBand,
   type FoodPreset,
   type GetDietaryNeedsResponse,
   type GetPetResponseDTO,
+  type BandAdjustment,
   type IntakeGap,
+  type NutritionSourceId,
   type PutDietaryNeedsRequest,
   type WaterPreset,
 } from 'shared';
@@ -41,6 +46,7 @@ import {
   type BandDraft,
   type BandScale,
 } from '../dietaryNeedsModel';
+import { BandSourceHint } from './BandSourceHint';
 import { IntakeBandSection } from './IntakeBandSection';
 import './DietaryNeedsForm.css';
 
@@ -60,6 +66,12 @@ const WATER_OPTION_KEYS: Record<WaterPreset, TranslationKey> = {
 const GAP_KEYS: Record<IntakeGap, TranslationKey> = {
   needs_target_weight: 'health.dietary_needs.gap_needs_target_weight',
   not_in_source: 'health.dietary_needs.gap_not_in_source',
+};
+
+/** What to add to a band's source when the app changed its numbers. */
+const ADJUSTMENT_KEYS: Record<BandAdjustment, TranslationKey> = {
+  point_tolerance: 'health.dietary_needs.source_hint_point_tolerance',
+  floor: 'health.dietary_needs.source_hint_floor',
 };
 
 /** A scale stretched to hold a band saved past its usual end, so the thumb is never off the track. */
@@ -118,6 +130,29 @@ const DietaryNeedsForm: React.FC<DietaryNeedsFormProps> = ({
     today,
   });
 
+  /** The mark that cites a preset band's source row, and says what the app changed. */
+  const sourceHint = (
+    sourceId: NutritionSourceId,
+    ref: string,
+    adjustments: readonly BandAdjustment[],
+  ) => {
+    const source = NUTRITION_SOURCES[sourceId];
+    return (
+      <BandSourceHint
+        label={t('health.dietary_needs.source_hint_label')}
+        sentences={[
+          t('health.dietary_needs.source_hint_body', {
+            source: source.label,
+            ref,
+          }),
+          ...adjustments.map((adjustment) => t(ADJUSTMENT_KEYS[adjustment])),
+        ]}
+        href={source.url}
+        linkLabel={t('health.dietary_needs.source_hint_link')}
+      />
+    );
+  };
+
   const weight = formatNumber(weightKg, { maximumFractionDigits: 2 });
   const whole = (value: number) =>
     formatNumber(value, { maximumFractionDigits: 0 });
@@ -132,6 +167,14 @@ const DietaryNeedsForm: React.FC<DietaryNeedsFormProps> = ({
   const resting = restingKcal(intakePet);
   const setFoodBand = (band: BandDraft) =>
     patchDraft({ food: foodSettingOf(band, foodStops) });
+  const foodHint =
+    !('gap' in foodResolved) && foodResolved.origin.kind === 'preset'
+      ? sourceHint(
+          ENERGY_MODELS[foodResolved.origin.modelId].sourceId,
+          foodResolved.origin.ref,
+          foodResolved.adjustments,
+        )
+      : undefined;
 
   const foodRows: LabelValueRow[] = [
     {
@@ -168,6 +211,14 @@ const DietaryNeedsForm: React.FC<DietaryNeedsFormProps> = ({
   const waterResolved = resolveWaterBand(draft.water, waterPlan, intakePet);
   const setWaterBand = (band: BandDraft) =>
     patchDraft({ water: waterSettingOf(band, waterStops) });
+  const waterHint =
+    !('gap' in waterResolved) && waterResolved.origin.kind === 'preset'
+      ? sourceHint(
+          WATER_MODELS[waterResolved.origin.modelId].sourceId,
+          waterResolved.origin.ref,
+          waterResolved.adjustments,
+        )
+      : undefined;
 
   const waterRows: LabelValueRow[] = [];
   if (!('gap' in waterResolved)) {
@@ -230,6 +281,7 @@ const DietaryNeedsForm: React.FC<DietaryNeedsFormProps> = ({
                   })
                 : ''
             }
+            hint={foodHint}
             scale={foodTrack}
             notches={foodStops.map((stop) => ({
               key: stop.preset,
@@ -304,6 +356,7 @@ const DietaryNeedsForm: React.FC<DietaryNeedsFormProps> = ({
                     amount: whole(waterResolved.target),
                   })
             }
+            hint={waterHint}
             scale={waterTrack}
             notches={waterStops.map((stop) => ({
               key: stop.preset,

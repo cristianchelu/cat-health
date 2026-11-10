@@ -1,0 +1,4 @@
+.band-source-hint {
+  /* It sits at the end of a line of text, so it lines up with the text. */
+  vertical-align: middle;
+}

@@ -1114,7 +1114,12 @@
       "goal_lose_to": "Lose to {{weight}} kg",
       "per_kg_value": "{{low}}–{{high}} ml",
       "edit_food_label": "Edit the food band",
-      "edit_water_label": "Edit the water band"
+      "edit_water_label": "Edit the water band",
+      "source_hint_label": "Where these numbers come from",
+      "source_hint_body": "According to {{source}}: {{ref}}.",
+      "source_hint_point_tolerance": "The source gives one number, so the ± is the app's.",
+      "source_hint_floor": "Raised to the lowest allowed.",
+      "source_hint_link": "Read the source"
     }
   }
 }

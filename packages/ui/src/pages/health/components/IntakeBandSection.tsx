@@ -32,6 +32,8 @@ interface IntakeBandSectionProps {
   unit: string;
   /** The line under the band, saying what it comes to. */
   note: string;
+  /** A mark after the note, such as where the band's numbers come from. */
+  hint?: React.ReactNode;
   scale: BandScale;
   notches: readonly ToleranceSliderNotch[];
   activeNotch: string | null;
@@ -63,6 +65,7 @@ const IntakeBandSection: React.FC<IntakeBandSectionProps> = ({
   noBandNotice,
   unit,
   note,
+  hint,
   scale,
   notches,
   activeNotch,
@@ -103,7 +106,11 @@ const IntakeBandSection: React.FC<IntakeBandSectionProps> = ({
                 onTargetCommit={onTargetChange}
                 onToleranceCommit={onToleranceChange}
                 unit={unit}
-                note={note}
+                note={
+                  <>
+                    {note} {hint}
+                  </>
+                }
                 targetLabel={targetLabel}
                 toleranceLabel={toleranceLabel}
               />
