@@ -1,7 +1,5 @@
 /** A published document the numbers come from, with enough to cite it and find it again. */
 export interface NutritionSource {
-  /** How the app names the source in a line of text. */
-  label: string;
   title: string;
   authors: string;
   /** The journal or publisher line of the citation. */
@@ -17,7 +15,6 @@ export interface NutritionSource {
 /** The reading notes, page by page, are in `docs/nutrition-sources.md`. */
 export const NUTRITION_SOURCES = {
   'fediaf-2025': {
-    label: 'FEDIAF 2025',
     title:
       'Nutritional Guidelines for Complete and Complementary Pet Food for Cats and Dogs',
     authors: 'FEDIAF',
@@ -28,7 +25,6 @@ export const NUTRITION_SOURCES = {
     checkedAt: '2026-11-07',
   },
   'aaha-2014': {
-    label: 'AAHA 2014',
     title: '2014 AAHA Weight Management Guidelines for Dogs and Cats',
     authors: 'Brooks D, Churchill J, Fein K, et al.',
     published: 'J Am Anim Hosp Assoc 2014;50:1–11',
@@ -38,7 +34,6 @@ export const NUTRITION_SOURCES = {
     checkedAt: '2026-11-10',
   },
   'aaha-2021': {
-    label: 'AAHA 2021',
     title:
       '2021 AAHA Nutrition and Weight Management Guidelines for Dogs and Cats',
     authors:
@@ -50,7 +45,6 @@ export const NUTRITION_SOURCES = {
     checkedAt: '2026-11-07',
   },
   'aaha-aafp-life-stage-2021': {
-    label: 'AAHA/AAFP 2021',
     title: '2021 AAHA/AAFP Feline Life Stage Guidelines',
     authors:
       'Quimby J, Gowland S, Carney HC, DePorter T, Plummer P, Westropp J',
@@ -61,7 +55,6 @@ export const NUTRITION_SOURCES = {
     checkedAt: '2026-11-09',
   },
   'kosmal-2025': {
-    label: 'Kosmal 2025',
     title:
       'Diet format, protein, amino acids, salt, and osmolytes, as well as water viscosity, affect water consumption in domestic cats: a scoping review of 32 publications (published from 1975 to 2025) on water intake, hydration status, and related health outcomes',
     authors: 'Kosmal PAL, Shoveller AK, Gillies G, Armstrong LE',

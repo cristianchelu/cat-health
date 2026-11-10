@@ -13,6 +13,7 @@ import {
   parseTargetWeight,
   presetAt,
   settingOf,
+  targetWeightProblem,
   waterNotches,
   withTarget,
   withTolerance,
@@ -178,5 +179,33 @@ describe('changeFromDraft', () => {
       water: { tracked: false, setting: { target: 40, tolerance: 5 } },
       target_weight_kg: 4.8,
     });
+  });
+});
+
+describe('targetWeightProblem', () => {
+  it('accepts a new target below her weight', () => {
+    assert.equal(targetWeightProblem('5.5', 6.28, null), null);
+  });
+
+  it('accepts an empty field', () => {
+    assert.equal(targetWeightProblem('', 6.28, 5.5), null);
+  });
+
+  it('refuses a new target at or above her weight', () => {
+    assert.deepEqual(
+      [
+        targetWeightProblem('6.8', 6.28, null),
+        targetWeightProblem('6.28', 6.28, null),
+      ],
+      ['not_below_weight', 'not_below_weight'],
+    );
+  });
+
+  it('lets the saved target stand once she has reached it', () => {
+    assert.equal(targetWeightProblem('5.5', 5.4, 5.5), null);
+  });
+
+  it('refuses text that is not a weight', () => {
+    assert.equal(targetWeightProblem('abc', 6.28, null), 'not_a_weight');
   });
 });

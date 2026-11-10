@@ -33,6 +33,7 @@ import {
   intakePetFor,
   parseTargetWeight,
   presetAt,
+  targetWeightProblem,
   restingKcal,
   waterNotches,
   waterSettingOf,
@@ -40,6 +41,7 @@ import {
   withTolerance,
   type BandDraft,
   type BandScale,
+  type TargetWeightProblem,
 } from '../dietaryNeedsModel';
 import { IntakeBandSection } from './IntakeBandSection';
 import './DietaryNeedsForm.css';
@@ -60,6 +62,12 @@ const WATER_OPTION_KEYS: Record<WaterPreset, TranslationKey> = {
 const GAP_KEYS: Record<IntakeGap, TranslationKey> = {
   needs_target_weight: 'health.dietary_needs.gap_needs_target_weight',
   not_in_source: 'health.dietary_needs.gap_not_in_source',
+};
+
+/** What to say about a target weight that cannot be saved. */
+const TARGET_WEIGHT_ERROR_KEYS: Record<TargetWeightProblem, TranslationKey> = {
+  not_a_weight: 'health.dietary_needs.target_weight_error',
+  not_below_weight: 'health.dietary_needs.target_weight_error_not_below',
 };
 
 /** A scale stretched to hold a band saved past its usual end, so the thumb is never off the track. */
@@ -108,13 +116,21 @@ const DietaryNeedsForm: React.FC<DietaryNeedsFormProps> = ({
     useUnsavedBlocker(isDirty);
   const targetWeightField = useFormFieldA11y(undefined, true);
 
+  // A target weight that cannot be saved counts as none, so its notch goes
+  // rather than sitting where the bad number would put it.
   const targetWeight = parseTargetWeight(draft.targetWeight);
-  const targetWeightInvalid = targetWeight === 'invalid';
+  const targetWeightIssue = targetWeightProblem(
+    draft.targetWeight,
+    weightKg,
+    needs.target_weight_kg,
+  );
+  const targetWeightInvalid = targetWeightIssue !== null;
   const intakePet = intakePetFor({
     birthDate: pet.birth_date,
     altered: pet.altered,
     weightKg,
-    targetWeightKg: targetWeightInvalid ? null : targetWeight,
+    targetWeightKg:
+      targetWeightInvalid || targetWeight === 'invalid' ? null : targetWeight,
     today,
   });
 
@@ -259,22 +275,28 @@ const DietaryNeedsForm: React.FC<DietaryNeedsFormProps> = ({
                 weight,
               })}
               error={
-                targetWeightInvalid
-                  ? t('health.dietary_needs.target_weight_error')
+                targetWeightIssue
+                  ? t(TARGET_WEIGHT_ERROR_KEYS[targetWeightIssue], { weight })
                   : undefined
               }
               htmlFor={targetWeightField.inputId}
               descriptionId={targetWeightField.descriptionId}
             >
-              <Input
-                id={targetWeightField.inputId}
-                inputMode="decimal"
-                variant={targetWeightInvalid ? 'error' : 'default'}
-                aria-describedby={targetWeightField.descriptionId}
-                aria-invalid={targetWeightInvalid || undefined}
-                value={draft.targetWeight}
-                onChange={(e) => patchDraft({ targetWeight: e.target.value })}
-              />
+              <div className="dietary-needs-target-weight">
+                <Input
+                  id={targetWeightField.inputId}
+                  className="dietary-needs-target-weight-input"
+                  inputMode="decimal"
+                  variant={targetWeightInvalid ? 'error' : 'default'}
+                  aria-describedby={targetWeightField.descriptionId}
+                  aria-invalid={targetWeightInvalid || undefined}
+                  value={draft.targetWeight}
+                  onChange={(e) => patchDraft({ targetWeight: e.target.value })}
+                />
+                <span className="dietary-needs-unit">
+                  {t('health.dietary_needs.unit_kg')}
+                </span>
+              </div>
             </FormField>
           </IntakeBandSection>
 

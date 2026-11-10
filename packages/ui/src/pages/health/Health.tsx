@@ -3,8 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { Drumstick, GlassWater, Target } from 'lucide-react';
 import {
-  ENERGY_MODELS,
-  NUTRITION_SOURCES,
   type FoodPreset,
   type GetDietaryNeedsResponse,
   type WaterPreset,
@@ -91,20 +89,11 @@ const Health: React.FC = () => {
       }
       return t(FOOD_GOAL_KEYS[food.setting.preset]);
     };
-    const model =
-      band?.origin.kind === 'preset'
-        ? NUTRITION_SOURCES[ENERGY_MODELS[band.origin.model_id].sourceId].label
-        : NO_VALUE;
     const readouts: Readout[] = [
       {
         key: 'goal',
         label: t('health.dietary_needs.readout_label_goal'),
         value: goal(),
-      },
-      {
-        key: 'model',
-        label: t('health.dietary_needs.readout_label_model'),
-        value: model,
       },
     ];
     return {
@@ -194,7 +183,7 @@ const Health: React.FC = () => {
                 icon={<Target />}
                 actions={
                   <Button
-                    variant="ghost"
+                    variant="neutral"
                     size="sm"
                     onClick={() =>
                       navigate(DIETARY_NEEDS_PATH, { state: wayBack })
