@@ -163,6 +163,12 @@ export interface PetPresenceEventData {
   previous_state?: PetPresencePreviousState;
 }
 
+/**
+ * How exact an event's `timestamp` is when it is not exact: a period known to
+ * have started "in 2023" stores the start of 2023 with `year`.
+ */
+export type EventTimestampPrecision = 'day' | 'month' | 'year' | 'unknown';
+
 export type EventData =
   | WeightMeasurementEventData
   | WaterIntakeEventData

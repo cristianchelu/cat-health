@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
-import { sql } from 'kysely';
 
 import type { Device } from '../../src/database/types/DeviceTable.ts';
 import type { IntegrationManager } from '../../src/services/devices/IntegrationManager.ts';
@@ -39,10 +38,7 @@ async function statusTimeline(
     .selectFrom('event')
     .select('data')
     .where('device_id', '=', deviceId)
-    .where(sql`json_extract(data, '$.type')`, 'in', [
-      'device_connectivity',
-      'device_enablement',
-    ])
+    .where('type', 'in', ['device_connectivity', 'device_enablement'])
     .orderBy('timestamp', 'asc')
     .orderBy('id', 'asc')
     .execute();

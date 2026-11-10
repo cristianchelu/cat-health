@@ -1,6 +1,5 @@
 import { subDays } from 'date-fns';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
-import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import type { Database } from '../../database/index.ts';
 import { parseStoredEventData } from '../../database/types/storedEventData.ts';
@@ -103,7 +102,7 @@ async function buildDailyMetricTrends(
       .selectFrom('event')
       .selectAll()
       .where('pet_id', '=', petId)
-      .where(sql`json_extract(data, '$.type')`, '=', eventType)
+      .where('type', '=', eventType)
       .where('timestamp', '>=', rangeStart)
       .orderBy('timestamp', 'asc')
       .execute(),
@@ -111,7 +110,7 @@ async function buildDailyMetricTrends(
       .selectFrom('event')
       .selectAll()
       .where('pet_id', '=', petId)
-      .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+      .where('type', '=', 'weight_measurement')
       .where('timestamp', '>=', rangeStart)
       .orderBy('timestamp', 'asc')
       .execute(),
@@ -119,7 +118,7 @@ async function buildDailyMetricTrends(
       .selectFrom('event')
       .selectAll()
       .where('pet_id', '=', petId)
-      .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+      .where('type', '=', 'weight_measurement')
       .where('timestamp', '<', rangeStart)
       .orderBy('timestamp', 'desc')
       .limit(1)
@@ -135,7 +134,7 @@ async function buildDailyMetricTrends(
       .selectFrom('event')
       .select('id')
       .where('pet_id', '=', petId)
-      .where(sql`json_extract(data, '$.type')`, '=', eventType)
+      .where('type', '=', eventType)
       .limit(1)
       .executeTakeFirst(),
   ]);

@@ -346,7 +346,7 @@ export class LitterboxVisitTracker {
       .selectFrom('event')
       .select(['id', 'data'])
       .where('device_id', '=', this.deviceId)
-      .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_use')
+      .where('type', '=', 'litterbox_use')
       .where(sql<boolean>`json_extract(data, '$.device_verdict') is not null`)
       .where(
         'timestamp',
@@ -387,10 +387,7 @@ export class LitterboxVisitTracker {
       .selectFrom('event')
       .select(['id', 'data', 'timestamp', 'raw_data'])
       .where('device_id', '=', this.deviceId)
-      .where(sql`json_extract(data, '$.type')`, 'in', [
-        'litterbox_use',
-        'litterbox_maintenance',
-      ])
+      .where('type', 'in', ['litterbox_use', 'litterbox_maintenance'])
       .where('timestamp', '>=', new Date(at.getTime() - CLOCK_SLACK_MS))
       .where('timestamp', '<=', new Date(at.getTime() + CLOCK_SLACK_MS))
       .execute();
@@ -572,7 +569,7 @@ export class LitterboxVisitTracker {
       .selectFrom('event')
       .select(({ fn }) => [fn.max('timestamp').as('last_deep_clean_at')])
       .where('device_id', '=', this.deviceId)
-      .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_maintenance')
+      .where('type', '=', 'litterbox_maintenance')
       .where(sql`json_extract(data, '$.maintenance_type')`, 'in', [
         'deep_clean',
         'litter_change',

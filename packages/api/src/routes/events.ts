@@ -1,4 +1,4 @@
-import { sql, type ExpressionBuilder } from 'kysely';
+import type { ExpressionBuilder } from 'kysely';
 import { subDays } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 
@@ -134,7 +134,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           .selectFrom('event')
           .selectAll()
           .where('pet_id', '=', petId)
-          .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_use')
+          .where('type', '=', 'litterbox_use')
           .where('timestamp', '>=', startDate)
           .where('timestamp', '<=', endDate)
           .orderBy('timestamp', 'asc')
@@ -199,7 +199,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         .selectFrom('event')
         .selectAll()
         .where('pet_id', '=', petId)
-        .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+        .where('type', '=', 'weight_measurement')
         .orderBy('timestamp', 'asc');
 
       if (days < 9999) {
@@ -375,12 +375,8 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       }
 
       if (eventType !== undefined) {
-        query = query.where(sql`json_extract(data, '$.type')`, '=', eventType);
-        countQuery = countQuery.where(
-          sql`json_extract(data, '$.type')`,
-          '=',
-          eventType,
-        );
+        query = query.where('type', '=', eventType);
+        countQuery = countQuery.where('type', '=', eventType);
       }
 
       if (startTime !== undefined) {

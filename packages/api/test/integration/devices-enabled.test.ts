@@ -460,7 +460,7 @@ describe('presence when a provider account is switched off', () => {
       .selectFrom('event')
       .select('id')
       .where('device_id', '=', deviceId)
-      .where(sql`json_extract(data, '$.type')`, '=', 'device_connectivity')
+      .where('type', '=', 'device_connectivity')
       .where(sql`json_extract(data, '$.state')`, '=', 'offline')
       .execute();
     return rows.length;

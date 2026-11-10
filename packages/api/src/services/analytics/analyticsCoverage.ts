@@ -299,7 +299,7 @@ async function loadTransitions(
       'timestamp',
     ])
     .where(scope.column, 'in', scope.ids)
-    .where(sql`json_extract(data, '$.type')`, 'in', source.eventTypes);
+    .where('type', 'in', source.eventTypes);
 
   // `id` breaks timestamp ties: an `enabled` and the `online` it triggers can
   // share a millisecond, and only in insertion order do they pair up.

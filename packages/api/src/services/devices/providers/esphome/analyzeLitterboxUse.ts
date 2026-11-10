@@ -1,5 +1,3 @@
-import { sql } from 'kysely';
-
 import type { Database } from '../../../../database/index.ts';
 import type { LitterboxUseEventData } from '../../../../domain/events.ts';
 import type { Kysely } from 'kysely';
@@ -51,11 +49,11 @@ export function mergeAnalyzerIntoLitterboxData(
 
 /**
  * Each pet's latest weight strictly before `beforeTimestamp`. One seek per pet
- * on `idx_event_pet_weight`, which the `json_extract` term must match.
+ * on `idx_event_pet_weight`, which the `type` term must match.
  */
 /**
  * One pet's latest weight event before `before`: a single seek on
- * `idx_event_pet_weight`, which the `json_extract` term must match to be used.
+ * `idx_event_pet_weight`, which the `type` term must match to be used.
  */
 export function latestWeightQuery(
   db: Kysely<Database>,
@@ -66,7 +64,7 @@ export function latestWeightQuery(
     .selectFrom('event')
     .select(['pet_id', 'data'])
     .where('pet_id', '=', petId)
-    .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+    .where('type', '=', 'weight_measurement')
     .where('timestamp', '<', before)
     .orderBy('timestamp', 'desc')
     .orderBy('id', 'desc')

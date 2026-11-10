@@ -81,7 +81,7 @@ async function getLatestPetWeightsGrams(
     .select(['pet_id', 'data', 'timestamp'])
     .where('timestamp', '<', before)
     .where('pet_id', 'is not', null)
-    .where(sql<string>`json_extract(data, '$.type')`, '=', 'weight_measurement')
+    .where('type', '=', 'weight_measurement')
     .orderBy('timestamp', 'desc')
     .execute();
 
@@ -154,7 +154,7 @@ async function exportFixtures(
   const base = db
     .selectFrom('event')
     .selectAll()
-    .where(sql<string>`json_extract(data, '$.type')`, '=', 'litterbox_use')
+    .where('type', '=', 'litterbox_use')
     .where('parent_event_id', 'is', null);
 
   const events =

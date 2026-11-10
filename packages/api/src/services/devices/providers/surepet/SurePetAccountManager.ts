@@ -1070,7 +1070,7 @@ export class SurePetAccountManager implements AccountManager {
       .select(['id', 'data'])
       .where('pet_id', 'is', null)
       .where('caused_by', 'in', ['pet', 'unknown'])
-      .where(sql<string>`json_extract(data, '$.type')`, '=', 'food_intake')
+      .where('type', '=', 'food_intake')
       .where(
         sql<string>`json_extract(data, '$.provider_data.provider')`,
         '=',

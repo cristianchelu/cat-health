@@ -1,4 +1,3 @@
-import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import type { Database } from '../../database/index.ts';
 import type {
@@ -46,7 +45,7 @@ export function toPreviousState(
 
 /**
  * One pet's latest presence event as of `at`: a single seek on
- * `idx_event_pet_presence`, which the `json_extract` term must match to be used.
+ * `idx_event_pet_presence`, which the `type` term must match to be used.
  */
 export function latestPresenceQuery(
   db: Kysely<Database>,
@@ -57,7 +56,7 @@ export function latestPresenceQuery(
     .selectFrom('event')
     .select(['pet_id', 'data', 'timestamp'])
     .where('pet_id', '=', petId)
-    .where(sql`json_extract(data, '$.type')`, '=', 'pet_presence');
+    .where('type', '=', 'pet_presence');
   if (at) query = query.where('timestamp', '<=', at);
   return query.orderBy('timestamp', 'desc').orderBy('id', 'desc').limit(1);
 }

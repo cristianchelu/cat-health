@@ -1,4 +1,3 @@
-import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 
 import { decodeLitterboxRawData, deriveLitterboxSampleRateHz } from 'shared';
@@ -131,7 +130,7 @@ async function reidentifyOneVisit(
     .selectFrom('event')
     .selectAll()
     .where('parent_event_id', '=', row.id)
-    .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+    .where('type', '=', 'weight_measurement')
     .executeTakeFirst();
 
   const newWeightGrams =
@@ -195,7 +194,7 @@ export async function reidentifyLitterboxVisits(
     .selectAll()
     .where('device_id', '=', deviceId)
     .where('parent_event_id', 'is', null)
-    .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_use')
+    .where('type', '=', 'litterbox_use')
     .where('timestamp', '>', after)
     .orderBy('timestamp', 'asc')
     .execute();

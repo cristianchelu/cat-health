@@ -1,4 +1,3 @@
-import { sql } from 'kysely';
 import type {
   DeviceStatusCause,
   DeviceEnablementEventData,
@@ -65,7 +64,7 @@ async function isRecordedAsEnabled(
     .selectFrom('event')
     .select('data')
     .where('device_id', '=', deviceId)
-    .where(sql`json_extract(data, '$.type')`, '=', 'device_enablement')
+    .where('type', '=', 'device_enablement')
     .orderBy('timestamp', 'desc')
     .orderBy('id', 'desc')
     .limit(1)

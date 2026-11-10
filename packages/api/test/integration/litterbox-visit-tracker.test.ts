@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, beforeEach, describe, it } from 'node:test';
 
-import { sql } from 'kysely';
 import {
   decodeLitterboxRawData,
   decodeLitterboxVisitFrame,
@@ -523,7 +522,7 @@ describe('LitterboxVisitTracker', () => {
       .select(['pet_id', 'data'])
       .where('device_id', '=', deviceId)
       .where('parent_event_id', 'is not', null)
-      .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+      .where('type', '=', 'weight_measurement')
       .execute();
     assert.equal(children.length, 1);
     assert.equal(children[0].pet_id, petId);

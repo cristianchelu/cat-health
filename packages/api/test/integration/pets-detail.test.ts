@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
-import { sql } from 'kysely';
 
 import { insertPet, insertPetPresenceEvent } from '../helpers/fixtures.ts';
 import {
@@ -40,7 +39,7 @@ describe('pets API detail', () => {
       .selectFrom('event')
       .select((eb) => eb.fn.countAll<number>().as('n'))
       .where('pet_id', '=', petId)
-      .where(sql`json_extract(data, '$.type')`, '=', 'pet_presence')
+      .where('type', '=', 'pet_presence')
       .executeTakeFirstOrThrow();
     return Number(row.n);
   }

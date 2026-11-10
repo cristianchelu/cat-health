@@ -5,7 +5,6 @@ import {
   LITTERBOX_RAW_DATA_VERSION_1,
   LITTERBOX_RAW_DATA_VERSION_2,
 } from 'shared';
-import { sql } from 'kysely';
 import type { FastifyInstance } from 'fastify';
 
 import { createDeviceFriendlyAccountManager } from '../helpers/accountManagerDoubles.ts';
@@ -33,7 +32,7 @@ async function clearDeviceLitterboxVisits(
     .selectFrom('event')
     .select('id')
     .where('device_id', '=', deviceId)
-    .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_use')
+    .where('type', '=', 'litterbox_use')
     .execute();
 
   const visitIds = visits.map((visit) => visit.id);
@@ -197,7 +196,7 @@ describe('devices API litterbox reidentify', () => {
       .selectFrom('event')
       .selectAll()
       .where('parent_event_id', '=', mislabeled.id)
-      .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+      .where('type', '=', 'weight_measurement')
       .executeTakeFirst();
     if (mislabeledWeight) {
       assert.equal(mislabeledWeight.pet_id, heavyPetId);
@@ -223,7 +222,7 @@ describe('devices API litterbox reidentify', () => {
       .selectFrom('event')
       .selectAll()
       .where('parent_event_id', '=', verified.id)
-      .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+      .where('type', '=', 'weight_measurement')
       .executeTakeFirst();
     if (verifiedWeight) {
       assert.equal(verifiedWeight.pet_id, heavyPetId);
@@ -323,7 +322,7 @@ describe('devices API litterbox reidentify', () => {
       .selectFrom('event')
       .selectAll()
       .where('parent_event_id', '=', visit.id)
-      .where(sql`json_extract(data, '$.type')`, '=', 'weight_measurement')
+      .where('type', '=', 'weight_measurement')
       .executeTakeFirst();
     assert.equal(weightChild, undefined);
   });

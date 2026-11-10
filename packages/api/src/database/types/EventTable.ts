@@ -1,13 +1,24 @@
-import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
+import type {
+  Generated,
+  GeneratedAlways,
+  Insertable,
+  Selectable,
+  Updateable,
+} from 'kysely';
 import type { EventAttributionSourceDTO, EventCauseDTO } from 'shared';
-import type { EventData } from '../../domain/events.ts';
+import type {
+  EventData,
+  EventTimestampPrecision,
+} from '../../domain/events.ts';
 
 export type EventTable<TData = EventData> = {
   id: Generated<number>;
   parent_event_id: number | null;
+  /** `data.type`, mirrored by a generated column so queries and partial indexes can name it. */
   // TODO: Migrate type to root once kysely gets discriminated union support
   //       https://github.com/kysely-org/kysely/issues/577
-  // type: string;
+  //       Until then `data.type` is the discriminant; this column narrows nothing.
+  type: GeneratedAlways<EventData['type']>;
   pet_id: number | null;
   /**
    * What caused the event: `unknown` until something decides, `pet` when an
@@ -22,7 +33,12 @@ export type EventTable<TData = EventData> = {
   /** How the cause was established; null while nothing has decided. */
   attributed_by: EventAttributionSourceDTO | null;
   device_id: number | null;
+  /** When the event took effect, which for a backdated entry is not when it was written. */
   timestamp: Date;
+  /** How exact `timestamp` is; null means exact. */
+  timestamp_precision: Generated<EventTimestampPrecision | null>;
+  /** When the row was written; null when nothing recorded it. */
+  recorded_at: Generated<Date | null>;
   data: TData;
   raw_data: Buffer | null;
   human_verified: boolean;

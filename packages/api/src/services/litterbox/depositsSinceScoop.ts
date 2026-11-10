@@ -73,7 +73,7 @@ export async function getDepositsSinceScoop(
       ])
       .where('device_id', 'in', ids)
       .where('timestamp', '>=', floor)
-      .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_maintenance')
+      .where('type', '=', 'litterbox_maintenance')
       .where(sql`json_extract(data, '$.maintenance_type')`, 'in', [
         ...RESETTING_MAINTENANCE,
       ])
@@ -94,7 +94,7 @@ export async function getDepositsSinceScoop(
       ])
       .where('device_id', 'in', ids)
       .where('timestamp', '>=', floor)
-      .where(sql`json_extract(data, '$.type')`, '=', 'litterbox_use')
+      .where('type', '=', 'litterbox_use')
       .orderBy('timestamp', 'asc')
       .execute(),
   ]);
