@@ -39,6 +39,23 @@ defers to it for the weight-loss protocol.
   up every 2 weeks until the rate settles, then monthly. The app does not check
   the rate yet.
 
+### Lose without a target weight (not built)
+
+Lose needs a target weight today. Falling back to her current weight does not
+work: 0.8 × RER at her own weight is about what FEDIAF gives for Maintain, so
+it is not a deficit. On 30 days of real data, Jazz (6.28 kg) eats 200 kcal a
+day against 222 for 0.8 × RER, and Luna (4.34 kg) 157 against 168.
+
+- Determine Daily Caloric Intake gives a second way: "Feed an amount to
+  provide 80% of the current caloric intake", for overweight patients "at a
+  stable weight with an accurate diet history". The app has that history. It
+  would give Jazz 160 kcal and Luna 126, before the floor.
+- Building it needs three things. The baseline has to be her intake from
+  before Lose was chosen, stored with the setting, or the band drops as she
+  eats less. "Current intake" needs a number of days to average over, which the
+  guideline does not give. And a model row would read her intake history, where
+  every row today reads only her weight.
+
 ### Target weight
 
 Why a target weight has no lower bound and is never dropped once set:

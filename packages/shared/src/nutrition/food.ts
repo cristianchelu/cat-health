@@ -126,6 +126,10 @@ const aaha2021: EnergyModel = {
       ref: 'Box 1, growth',
       kcalPerDay: (kg) => times(point(2.5), aahaRer(kg)),
     },
+    // TODO(design): Lose has no answer without a target weight, because this
+    // row works from ideal weight. `aaha-2014` also allows 80 % of her current
+    // intake, which needs no target weight; "Lose without a target weight" in
+    // `docs/nutrition-sources.md` says what building it takes.
     {
       preset: 'lose',
       age: ADULT,
