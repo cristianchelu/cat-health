@@ -32,11 +32,12 @@ describe('BandSourceHint', () => {
     assert.ok(
       screen.getByText(
         "According to FEDIAF 2025: Table VII-9. The source gives one number, so the ± is the app's.",
+        { exact: false },
       ),
     );
   });
 
-  it('links to the source in a new tab', async () => {
+  it('links to the source in a new tab, as an icon with a name', async () => {
     await openHint();
     const link = screen.getByRole('link', { name: 'Read the source' });
     assert.deepEqual(

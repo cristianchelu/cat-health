@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { ExternalLink } from 'lucide-react';
 
 import { TileNote } from '@/components/ui/TileNote';
 
@@ -11,10 +12,15 @@ interface BandSourceHintProps {
   sentences: readonly string[];
   /** The source document, opened in a new tab. */
   href: string;
+  /** Accessible name of the link, which is drawn as an icon. */
   linkLabel: string;
 }
 
-/** The mark beside a band that says which source its numbers come from, with a way to read it. */
+/**
+ * The mark beside a band that says which source its numbers come from. The
+ * way to the document is an icon at the end of the sentence, so the tip stays
+ * one short paragraph.
+ */
 const BandSourceHint: React.FC<BandSourceHintProps> = ({
   label,
   sentences,
@@ -25,11 +31,19 @@ const BandSourceHint: React.FC<BandSourceHintProps> = ({
     tone="help"
     className="band-source-hint"
     label={label}
-    body={sentences.join(' ')}
-    action={
-      <a href={href} target="_blank" rel="noreferrer">
-        {linkLabel}
-      </a>
+    body={
+      <>
+        {sentences.join(' ')}{' '}
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={linkLabel}
+          title={linkLabel}
+        >
+          <ExternalLink size={14} aria-hidden="true" />
+        </a>
+      </>
     }
   />
 );
