@@ -1,0 +1,5 @@
+.dietary-needs-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-section-gap);
+}

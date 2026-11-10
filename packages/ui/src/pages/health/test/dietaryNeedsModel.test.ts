@@ -5,10 +5,12 @@ import { DEFAULT_ENERGY_PLAN, DEFAULT_WATER_PLAN } from 'shared';
 
 import {
   WATER_SCALE,
+  changeFromDraft,
   draftOf,
   foodNotches,
   foodScale,
   intakePetFor,
+  parseTargetWeight,
   presetAt,
   settingOf,
   waterNotches,
@@ -138,5 +140,43 @@ describe('withTolerance', () => {
   it('never goes negative', () => {
     const draft = withTolerance({ target: 166, tolerance: 30 }, -5, 124);
     assert.equal(draft.tolerance, 0);
+  });
+});
+
+describe('parseTargetWeight', () => {
+  it('reads an empty field as no target weight', () => {
+    assert.equal(parseTargetWeight('  '), null);
+  });
+
+  it('reads a weight typed with a decimal comma', () => {
+    assert.equal(parseTargetWeight('4,8'), 4.8);
+  });
+
+  it('refuses text that is not a weight above zero', () => {
+    assert.deepEqual(
+      [
+        parseTargetWeight('abc'),
+        parseTargetWeight('0'),
+        parseTargetWeight('-2'),
+      ],
+      ['invalid', 'invalid', 'invalid'],
+    );
+  });
+});
+
+describe('changeFromDraft', () => {
+  it('sends each band as the setting it sits on, and the target weight in kg', () => {
+    const change = changeFromDraft({
+      foodTracked: true,
+      food: { preset: 'lose' },
+      waterTracked: false,
+      water: { target: 40, tolerance: 5 },
+      targetWeight: '4.8',
+    });
+    assert.deepEqual(change, {
+      food: { tracked: true, setting: { preset: 'lose' } },
+      water: { tracked: false, setting: { target: 40, tolerance: 5 } },
+      target_weight_kg: 4.8,
+    });
   });
 });

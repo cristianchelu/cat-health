@@ -9,8 +9,10 @@ import {
   type EnergyPlan,
   type FoodBandSetting,
   type FoodPreset,
+  type GetDietaryNeedsResponse,
   type IntakePet,
   type PetAlteredDTO,
+  type PutDietaryNeedsRequest,
   type WaterBandSetting,
   type WaterPlan,
   type WaterPreset,
@@ -216,5 +218,50 @@ export function withTolerance(
   return {
     target: Math.max(draft.target, floor + widened),
     tolerance: widened,
+  };
+}
+
+/**
+ * Everything the page edits before Save. Each band is kept as the setting it
+ * would save as, so one sitting on a notch follows that notch when a target
+ * weight being typed moves it.
+ */
+export interface NeedsDraft {
+  foodTracked: boolean;
+  food: FoodBandSetting;
+  waterTracked: boolean;
+  water: WaterBandSetting;
+  /** The target weight field's text, in kg; empty for none. */
+  targetWeight: string;
+}
+
+/** The draft a saved response starts from. */
+export function draftFromNeeds(needs: GetDietaryNeedsResponse): NeedsDraft {
+  return {
+    foodTracked: needs.food.tracked,
+    food: needs.food.setting,
+    waterTracked: needs.water.tracked,
+    water: needs.water.setting,
+    targetWeight:
+      needs.target_weight_kg === null ? '' : String(needs.target_weight_kg),
+  };
+}
+
+/** The target weight a field's text stands for: a weight, none, or text that is not a weight. */
+export function parseTargetWeight(text: string): number | null | 'invalid' {
+  const trimmed = text.trim();
+  if (trimmed === '') return null;
+  const kg = Number(trimmed.replace(',', '.'));
+  if (!Number.isFinite(kg) || kg <= 0) return 'invalid';
+  return kg;
+}
+
+/** What a draft asks the server to save. The field must already hold a weight or nothing. */
+export function changeFromDraft(draft: NeedsDraft): PutDietaryNeedsRequest {
+  const targetWeight = parseTargetWeight(draft.targetWeight);
+  return {
+    food: { tracked: draft.foodTracked, setting: draft.food },
+    water: { tracked: draft.waterTracked, setting: draft.water },
+    target_weight_kg: targetWeight === 'invalid' ? null : targetWeight,
   };
 }
