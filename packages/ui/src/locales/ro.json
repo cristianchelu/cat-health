@@ -1028,7 +1028,7 @@
       "kcal_value": "{{value}} kcal",
       "kcal_range_a_day": "{{low}}–{{high}} kcal pe zi",
       "ml_range_a_day": "{{low}}–{{high}} ml pe zi",
-      "no_band": "Fără interval",
+      "no_target": "Fără țintă",
       "kcal_a_day": "kcal pe zi",
       "ml_a_day": "ml pe zi",
       "readout_label_goal": "Obiectiv",

@@ -123,7 +123,7 @@ const Health: React.FC = () => {
       title: t('health.dietary_needs.food_title'),
       range: band
         ? range(band.lower, band.upper)
-        : t('health.dietary_needs.no_band'),
+        : t('health.dietary_needs.no_target'),
       unit: band ? t('health.dietary_needs.kcal_a_day') : null,
       readouts,
       openLabel: t('health.dietary_needs.edit_food_label'),
@@ -154,7 +154,7 @@ const Health: React.FC = () => {
       title: t('health.dietary_needs.water_title'),
       range: band
         ? range(band.lower, band.upper)
-        : t('health.dietary_needs.no_band'),
+        : t('health.dietary_needs.no_target'),
       unit: band ? t('health.dietary_needs.ml_a_day') : null,
       readouts,
       openLabel: t('health.dietary_needs.edit_water_label'),

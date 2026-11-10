@@ -1103,7 +1103,7 @@
       "kcal_value": "{{value}} kcal",
       "kcal_range_a_day": "{{low}}–{{high}} kcal a day",
       "ml_range_a_day": "{{low}}–{{high}} ml a day",
-      "no_band": "No band",
+      "no_target": "No target",
       "kcal_a_day": "kcal a day",
       "ml_a_day": "ml a day",
       "readout_label_goal": "Goal",
