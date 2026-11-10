@@ -9,8 +9,9 @@ import './FoodIntakeCard.css';
 export interface FoodIntakeSeriesPoint {
   value: number;
   tracked: boolean;
-  lowerBound: number;
-  upperBound: number;
+  /** Null on a day with no band. */
+  lowerBound: number | null;
+  upperBound: number | null;
 }
 
 export type FoodIntakeCardState =
@@ -68,7 +69,7 @@ const FoodIntakeCardView: React.FC<FoodIntakeCardViewProps> = ({
     const { todayValue, series } = state;
 
     const maxAmount = Math.max(...series.map((d) => d.value));
-    const maxUpperBound = Math.max(...series.map((d) => d.upperBound));
+    const maxUpperBound = Math.max(...series.map((d) => d.upperBound ?? 0));
     const chartMax = Math.max(maxUpperBound * 1.2, maxAmount * 1.1);
     chart = <MetricBarChart data={series} maxValue={chartMax} />;
 

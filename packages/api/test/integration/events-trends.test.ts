@@ -10,7 +10,6 @@ import {
   type TestDbContext,
 } from '../helpers/testDb.ts';
 import {
-  insertFood,
   insertFoodIntakeEvent,
   insertLitterboxEvent,
   insertPet,
@@ -191,51 +190,111 @@ describe('events API trends', () => {
     assert.equal(body.points[0].weight, 4100);
   });
 
-  it('aggregates food trends as calories with weight-based bounds', async () => {
-    const pet = await insertPet(ctx.db, { name: 'Calorie Cat' });
-    const anchor = new Date();
-    const food = await insertFood(ctx.db, {
-      name: 'Calorie pouch',
-      food_type: 'complete_wet',
-      moisture_percent: 80,
-      calories_per_100g: 100,
-    });
+  /** One day of a trend, as the API sends it. */
+  interface TrendDay {
+    date: string;
+    amount: number;
+    lowerBound: number | null;
+    upperBound: number | null;
+    averageWeight: number;
+  }
 
+  /** A pet with one 50 kcal meal just now, so her food series is not empty. */
+  async function fedPet(name: string): Promise<number> {
+    const pet = await insertPet(ctx.db, { name });
     await insertFoodIntakeEvent(ctx.db, {
       pet_id: pet.id,
-      timestamp: anchor,
+      timestamp: new Date(),
       food_type: 'wet',
       amount: 50,
-      food_id: food.id,
       nutrients: { calories: 50 },
     });
-    await insertWeightMeasurementEvent(ctx.db, {
-      pet_id: pet.id,
-      timestamp: anchor,
-      weight: 4000,
-    });
+    return pet.id;
+  }
 
+  async function foodTrend(petId: number, days: number): Promise<TrendDay[]> {
     const res = await app.inject({
       method: 'GET',
-      url: `/api/events/food-trends/${pet.id}?days=2&timezone=UTC`,
+      url: `/api/events/food-trends/${petId}?days=${days}&timezone=UTC`,
     });
-
     assert.equal(res.statusCode, 200);
-    const days = res.json() as Array<{
-      date: string;
-      amount: number;
-      lowerBound: number;
-      upperBound: number;
-      averageWeight: number;
-    }>;
-    const bucket = days.find((day) => day.amount === 50);
-    assert.ok(bucket);
-    assert.equal(bucket.amount, 50);
-    assert.equal(bucket.averageWeight, 4000);
+    return res.json<TrendDay[]>();
+  }
 
-    const fallbackLower = 220 * 0.8;
-    const fallbackUpper = 220 * 1.2;
-    assert.notEqual(bucket.lowerBound, fallbackLower);
-    assert.notEqual(bucket.upperBound, fallbackUpper);
+  const daysAgo = (n: number) => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+
+  it('adds a food day up in calories', async () => {
+    const petId = await fedPet('Calorie Cat');
+    const today = (await foodTrend(petId, 2)).at(-1);
+    assert.equal(today?.amount, 50);
+  });
+
+  it('judges a food day against her band at her weight', async () => {
+    const petId = await fedPet('Band Cat');
+    await insertWeightMeasurementEvent(ctx.db, { pet_id: petId, weight: 4000 });
+    const today = (await foodTrend(petId, 2)).at(-1);
+    assert.deepEqual(
+      [today?.lowerBound, today?.upperBound, today?.averageWeight],
+      [132, 190, 4000],
+    );
+  });
+
+  it('judges a water day against her water band', async () => {
+    const pet = await insertPet(ctx.db, { name: 'Water Band Cat' });
+    await insertWaterIntakeEvent(ctx.db, { pet_id: pet.id, amount: 30 });
+    await insertWeightMeasurementEvent(ctx.db, {
+      pet_id: pet.id,
+      weight: 4000,
+    });
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/events/water-trends/${pet.id}?days=1&timezone=UTC`,
+    });
+    const [today] = res.json<TrendDay[]>();
+    assert.deepEqual([today.lowerBound, today.upperBound], [92, 204]);
+  });
+
+  it('gives a day no band while she has never been weighed', async () => {
+    const petId = await fedPet('Unweighed Cat');
+    const today = (await foodTrend(petId, 1)).at(-1);
+    assert.deepEqual([today?.lowerBound, today?.upperBound], [null, null]);
+  });
+
+  it('gives a day no band while the band is not tracked', async () => {
+    const petId = await fedPet('Untracked Cat');
+    await insertWeightMeasurementEvent(ctx.db, { pet_id: petId, weight: 4000 });
+    await app.inject({
+      method: 'PUT',
+      url: `/api/pets/${petId}/dietary-needs`,
+      payload: { food: { tracked: false, setting: { preset: 'maintain' } } },
+    });
+    const today = (await foodTrend(petId, 1)).at(-1);
+    assert.deepEqual([today?.lowerBound, today?.upperBound], [null, null]);
+  });
+
+  it('keeps earlier days on the band that was in effect then', async () => {
+    const petId = await fedPet('Band History Cat');
+    await insertWeightMeasurementEvent(ctx.db, {
+      pet_id: petId,
+      weight: 4000,
+      timestamp: daysAgo(3),
+    });
+    await app.inject({
+      method: 'PUT',
+      url: `/api/pets/${petId}/dietary-needs`,
+      payload: {
+        food: { tracked: true, setting: { target: 200, tolerance: 10 } },
+      },
+    });
+    const [yesterday, today] = await foodTrend(petId, 2);
+    assert.deepEqual(
+      [
+        yesterday.lowerBound,
+        yesterday.upperBound,
+        today.lowerBound,
+        today.upperBound,
+      ],
+      [132, 190, 190, 210],
+    );
   });
 });

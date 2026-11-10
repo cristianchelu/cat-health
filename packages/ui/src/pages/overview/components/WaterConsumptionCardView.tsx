@@ -9,8 +9,9 @@ import './WaterConsumptionCard.css';
 export interface WaterConsumptionSeriesPoint {
   value: number;
   tracked: boolean;
-  lowerBound: number;
-  upperBound: number;
+  /** Null on a day with no band. */
+  lowerBound: number | null;
+  upperBound: number | null;
 }
 
 export type WaterConsumptionCardState =
@@ -68,7 +69,7 @@ const WaterConsumptionCardView: React.FC<WaterConsumptionCardViewProps> = ({
     const { todayValue, series } = state;
 
     const maxConsumption = Math.max(...series.map((d) => d.value));
-    const maxUpperBound = Math.max(...series.map((d) => d.upperBound));
+    const maxUpperBound = Math.max(...series.map((d) => d.upperBound ?? 0));
     const chartMax = Math.max(maxUpperBound * 1.2, maxConsumption * 1.1);
     chart = <MetricBarChart data={series} maxValue={chartMax} />;
 

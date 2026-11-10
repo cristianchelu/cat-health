@@ -19,6 +19,7 @@ import {
   type GetPetResponseDTO,
 } from 'shared';
 import { formatBirthDate } from '../helpers/birthDate.ts';
+import { pinDefaultTargets } from '../services/nutrition/dietaryNeeds.ts';
 import { requireSerializedEventRow } from './mappers/events.ts';
 import {
   Type,
@@ -211,18 +212,22 @@ export const petRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     async (request) => {
       const { name, breed, birth_date, microchip, sex, altered } = request.body;
 
-      const result = await db
-        .insertInto('pet')
-        .values({
-          name,
-          breed,
-          birth_date: parseBirthDate(birth_date ?? null),
-          microchip: normalizeMicrochip(microchip ?? null),
-          ...(sex ? { sex } : {}),
-          ...(altered ? { altered } : {}),
-        })
-        .returning('id')
-        .executeTakeFirstOrThrow();
+      const result = await db.transaction().execute(async (trx) => {
+        const created = await trx
+          .insertInto('pet')
+          .values({
+            name,
+            breed,
+            birth_date: parseBirthDate(birth_date ?? null),
+            microchip: normalizeMicrochip(microchip ?? null),
+            ...(sex ? { sex } : {}),
+            ...(altered ? { altered } : {}),
+          })
+          .returning('id')
+          .executeTakeFirstOrThrow();
+        await pinDefaultTargets(trx, created.id, new Date());
+        return created;
+      });
       const pet = await loadPet(db, result.id);
       if (!pet) throw new Error(`Pet ${result.id} vanished after insert`);
       return pet;

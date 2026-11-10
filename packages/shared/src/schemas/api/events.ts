@@ -264,8 +264,9 @@ const DailyMetricTrendDaySchema = Type.Object({
   date: Type.String(),
   amount: Type.Number(),
   tracked: Type.Boolean(),
-  lowerBound: Type.Number(),
-  upperBound: Type.Number(),
+  /** The day's band; null when none applies. */
+  lowerBound: Type.Union([Type.Number(), Type.Null()]),
+  upperBound: Type.Union([Type.Number(), Type.Null()]),
   averageWeight: Type.Number(),
 });
 export type DailyMetricTrendDayDTO = Static<typeof DailyMetricTrendDaySchema>;

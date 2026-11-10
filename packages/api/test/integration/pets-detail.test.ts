@@ -210,6 +210,7 @@ describe('pets API detail', () => {
       .selectFrom('event')
       .select('id')
       .where('pet_id', '=', id)
+      .where('type', '=', 'pet_presence')
       .executeTakeFirstOrThrow();
 
     const postProfile = await app.inject({

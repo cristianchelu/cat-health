@@ -42,6 +42,7 @@ import {
 } from '../services/analytics/trendCoverage.ts';
 import { isBucketTracked } from '../services/analytics/analyticsCoverage.ts';
 import { withoutDeclarations } from '../services/events/eventCategory.ts';
+import { checkTargetWrite } from '../services/nutrition/targetWriteGuard.ts';
 
 import type { EventCauseDTO, GetEventListItemDTO } from 'shared';
 import { parseStoredEventData } from '../database/types/storedEventData.ts';
@@ -542,6 +543,7 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       // `pet_id` is required on POST, so the body always states a decision.
       const columns = attribution ?? attributionColumns('unknown', null, null);
 
+      checkTargetWrite(storedEventData, null);
       await assertPresenceWriteAllowed(db, {
         incoming: { petId: columns.pet_id, data: storedEventData },
         existing: null,
@@ -778,6 +780,10 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       // A note or verification flag leaves who and what alone, so only a
       // change to the data or the pet goes through the presence guard.
       if (body.data !== undefined || attribution !== undefined) {
+        checkTargetWrite(
+          body.data !== undefined ? eventDataFromDto(body.data) : existing.data,
+          existing.data,
+        );
         await assertPresenceWriteAllowed(db, {
           incoming: {
             petId: attribution ? attribution.pet_id : existing.pet_id,

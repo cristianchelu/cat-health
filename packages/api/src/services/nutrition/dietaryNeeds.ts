@@ -15,6 +15,7 @@ import {
   type FoodBandSetting,
   type FoodPreset,
   type IntakeGap,
+  type IntakePet,
   type WaterBand,
   type WaterBandSetting,
   type WaterPreset,
@@ -32,6 +33,7 @@ import type {
 import { formatBirthDate } from '../../helpers/birthDate.ts';
 import {
   BAND_WEIGHT_WINDOW_DAYS,
+  DEFAULT_TARGETS,
   bandWeightG,
   targetsAt,
   type TargetEvent,
@@ -81,27 +83,110 @@ export interface ResolveAt {
   timezone: string;
 }
 
-/** A pet's dietary needs as of `at`, or undefined when there is no such pet. */
-export async function loadDietaryNeeds(
+/** Everything resolving a pet's bands over a span of time reads, loaded once. */
+export interface NeedsInputs {
+  pet: NeedsPet;
+  /** Oldest first. */
+  targetEvents: readonly TargetEvent[];
+  /** Oldest first, reaching far enough back for the first day's band weight. */
+  weighIns: readonly WeighIn[];
+}
+
+/** The inputs for any moment between `from` and `until`, or undefined when there is no such pet. */
+export async function loadNeedsInputs(
   db: Kysely<Database>,
   petId: number,
-  at: ResolveAt,
-): Promise<DietaryNeeds | undefined> {
+  from: Date,
+  until: Date,
+): Promise<NeedsInputs | undefined> {
   const [pet, targetEvents, weighIns] = await Promise.all([
     db
       .selectFrom('pet')
       .select(['birth_date', 'altered'])
       .where('id', '=', petId)
       .executeTakeFirst(),
-    loadTargetEvents(db, petId, at.now),
-    loadWeighIns(db, petId, at.now),
+    loadTargetEvents(db, petId, until),
+    loadWeighIns(db, petId, from, until),
   ]);
   if (!pet) return undefined;
+  return { pet, targetEvents, weighIns };
+}
 
-  const targets = targetsAt(targetEvents, at.now);
-  const weightG = bandWeightG(weighIns, at.now);
+/** A pet's dietary needs as of `at`, or undefined when there is no such pet. */
+export async function loadDietaryNeeds(
+  db: Kysely<Database>,
+  petId: number,
+  at: ResolveAt,
+): Promise<DietaryNeeds | undefined> {
+  const inputs = await loadNeedsInputs(db, petId, at.now, at.now);
+  if (!inputs) return undefined;
+
+  const targets = targetsAt(inputs.targetEvents, at.now);
+  const weightG = bandWeightG(inputs.weighIns, at.now);
   const on = formatInTimeZone(at.now, at.timezone, 'yyyy-MM-dd');
-  return resolveDietaryNeeds(pet, targets, weightG, on);
+  return resolveDietaryNeeds(inputs.pet, targets, weightG, on);
+}
+
+/**
+ * The bands a day's totals are judged against, as of `at` on the calendar day
+ * `on`. A band is null when it is not tracked, when its preset has no answer,
+ * or when she has never been weighed.
+ */
+export function trackedBandsAt(
+  inputs: NeedsInputs,
+  at: Date,
+  on: string,
+): { food: FoodBand | null; water: WaterBand | null } {
+  const targets = targetsAt(inputs.targetEvents, at);
+  const weightG = bandWeightG(inputs.weighIns, at);
+  if (weightG === null) return { food: null, water: null };
+
+  const intakePet = intakePetFor(inputs.pet, targets, weightG, on);
+  const { food, water } = targets;
+  return {
+    food: food.tracked
+      ? bandOrNull(resolveFoodBand(food.setting, food.plan, intakePet))
+      : null,
+    water: water.tracked
+      ? bandOrNull(resolveWaterBand(water.setting, water.plan, intakePet))
+      : null,
+  };
+}
+
+/** An outcome's band, or null when it is the reason there is none. */
+function bandOrNull<Band extends object>(outcome: Outcome<Band>): Band | null {
+  if ('gap' in outcome) return null;
+  return outcome;
+}
+
+/**
+ * Pins a pet to today's default plan: one food and one water target event at
+ * `now`, on the first notches. From then on she resolves against these
+ * snapshots, so a later change to the defaults does not reach her.
+ */
+export async function pinDefaultTargets(
+  db: Kysely<Database>,
+  petId: number,
+  now: Date,
+): Promise<void> {
+  const { food, water } = DEFAULT_TARGETS;
+  await db
+    .insertInto('event')
+    .values([
+      targetEvent(
+        petId,
+        { type: 'intake_target', kind: 'food', measure: 'amount', ...food },
+        now,
+        'app',
+      ),
+      targetEvent(
+        petId,
+        { type: 'intake_target', kind: 'water', measure: 'amount', ...water },
+        now,
+        'app',
+      ),
+    ])
+    .execute();
 }
 
 /** What the request to change a pet's dietary needs may carry; a part left out stays as it is. */
@@ -137,7 +222,7 @@ export async function saveDietaryNeeds(
 
     const current = targetsAt(targetEvents, at.now);
     const events = changedTargets(current, change).map((data) =>
-      targetEvent(petId, data, at.now),
+      targetEvent(petId, data, at.now, 'owner'),
     );
     if (events.length > 0) {
       await trx.insertInto('event').values(events).execute();
@@ -191,21 +276,26 @@ function sameBand(
   );
 }
 
-/** A target event about `petId`, taking effect and recorded at `now`. */
+/**
+ * A target event about `petId`, taking effect and recorded at `now`. One the
+ * owner set is theirs and verified; one the app wrote as a default is neither.
+ */
 function targetEvent(
   petId: number,
   data: IntakeTargetEventData | WeightTargetEventData,
   now: Date,
+  setBy: 'owner' | 'app',
 ): NewEvent {
+  const byOwner = setBy === 'owner';
   return {
-    ...attributionColumns('pet', petId, 'manual'),
+    ...attributionColumns('pet', petId, byOwner ? 'manual' : null),
     device_id: null,
     parent_event_id: null,
     timestamp: now,
     recorded_at: now,
     data,
     raw_data: null,
-    human_verified: true,
+    human_verified: byOwner,
   };
 }
 
@@ -240,15 +330,17 @@ async function loadTargetEvents(
 }
 
 /**
- * The weigh-ins `bandWeightG` needs as of `until`, oldest first: the window
- * before it, and the last one before the window in case the window is empty.
+ * The weigh-ins `bandWeightG` needs for any moment between `from` and `until`,
+ * oldest first: from one window before `from`, plus the last one before that
+ * in case the window is empty.
  */
 async function loadWeighIns(
   db: Kysely<Database>,
   petId: number,
+  from: Date,
   until: Date,
 ): Promise<WeighIn[]> {
-  const windowStart = subDays(until, BAND_WEIGHT_WINDOW_DAYS);
+  const windowStart = subDays(from, BAND_WEIGHT_WINDOW_DAYS);
   const weighIns = () =>
     db
       .selectFrom('event')
@@ -288,16 +380,7 @@ export function resolveDietaryNeeds(
     return { targets, weightG, food: null, water: null };
   }
 
-  const { targetWeightG } = targets;
-  const intakePet = intakePetOf(
-    {
-      birthDate: formatBirthDate(pet.birth_date),
-      altered: pet.altered,
-      kg: weightG / 1000,
-      targetKg: targetWeightG === null ? null : targetWeightG / 1000,
-    },
-    on,
-  );
+  const intakePet = intakePetFor(pet, targets, weightG, on);
   const { food, water } = targets;
 
   return {
@@ -320,4 +403,23 @@ export function resolveDietaryNeeds(
       })),
     },
   };
+}
+
+/** The cat as the models read her on `on`, at `weightG` and with the target weight in effect. */
+function intakePetFor(
+  pet: NeedsPet,
+  targets: TargetsInEffect,
+  weightG: number,
+  on: string,
+): IntakePet {
+  const { targetWeightG } = targets;
+  return intakePetOf(
+    {
+      birthDate: formatBirthDate(pet.birth_date),
+      altered: pet.altered,
+      kg: weightG / 1000,
+      targetKg: targetWeightG === null ? null : targetWeightG / 1000,
+    },
+    on,
+  );
 }

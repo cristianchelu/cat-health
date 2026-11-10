@@ -1,47 +1,22 @@
 import { subDays } from 'date-fns';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import type { Kysely } from 'kysely';
+import { boundsOf } from 'shared';
 import type { Database } from '../../database/index.ts';
 import { parseStoredEventData } from '../../database/types/storedEventData.ts';
+import { loadNeedsInputs, trackedBandsAt } from '../nutrition/dietaryNeeds.ts';
 import { isBucketTracked } from './analyticsCoverage.ts';
 import { computeUntrackedBuckets } from './trendCoverage.ts';
-
-const DEFAULT_DAILY_TARGET_KCAL = 220;
 
 export interface DailyMetricTrendDay {
   date: string;
   amount: number;
+  /** Whether a device covered the day. Not whether a band is set. */
   tracked: boolean;
-  lowerBound: number;
-  upperBound: number;
+  /** The day's band; null when the band is not tracked, its preset has no answer, or she has never been weighed. */
+  lowerBound: number | null;
+  upperBound: number | null;
   averageWeight: number;
-}
-
-export function calorieBoundsFromWeight(avgWeightGrams: number): {
-  lowerBound: number;
-  upperBound: number;
-} {
-  if (avgWeightGrams > 0) {
-    const weightKg = avgWeightGrams / 1000;
-    const target = 70 * weightKg ** 0.75;
-    return { lowerBound: target * 0.8, upperBound: target * 1.2 };
-  }
-
-  return {
-    lowerBound: DEFAULT_DAILY_TARGET_KCAL * 0.8,
-    upperBound: DEFAULT_DAILY_TARGET_KCAL * 1.2,
-  };
-}
-
-function waterBoundsFromWeight(avgWeightGrams: number): {
-  lowerBound: number;
-  upperBound: number;
-} {
-  const weightInKg = avgWeightGrams / 1000;
-  return {
-    lowerBound: weightInKg * 40,
-    upperBound: weightInKg * 50,
-  };
 }
 
 function createDayRange(
@@ -74,91 +49,54 @@ async function buildDailyMetricTrends(
     deviceClass: 'water_fountain' | 'feeder';
     eventType: 'water_intake' | 'food_intake';
     getAmount: (data: unknown) => number;
-    getBounds: (avgWeightGrams: number) => {
-      lowerBound: number;
-      upperBound: number;
-    };
+    /** Which of the pet's bands each day is judged against. */
+    kind: 'food' | 'water';
   },
 ): Promise<DailyMetricTrendDay[]> {
-  const {
-    petId,
-    days,
-    timezone,
-    deviceClass,
-    eventType,
-    getAmount,
-    getBounds,
-  } = options;
+  const { petId, days, timezone, deviceClass, eventType, getAmount, kind } =
+    options;
   const { rangeStart, rangeEnd, dayKeys } = createDayRange(days, timezone);
 
-  const [
-    metricEvents,
-    weightEvents,
-    lastWeightEvent,
-    untrackedBuckets,
-    anyMetricEvent,
-  ] = await Promise.all([
-    db
-      .selectFrom('event')
-      .selectAll()
-      .where('pet_id', '=', petId)
-      .where('type', '=', eventType)
-      .where('timestamp', '>=', rangeStart)
-      .orderBy('timestamp', 'asc')
-      .execute(),
-    db
-      .selectFrom('event')
-      .selectAll()
-      .where('pet_id', '=', petId)
-      .where('type', '=', 'weight_measurement')
-      .where('timestamp', '>=', rangeStart)
-      .orderBy('timestamp', 'asc')
-      .execute(),
-    db
-      .selectFrom('event')
-      .selectAll()
-      .where('pet_id', '=', petId)
-      .where('type', '=', 'weight_measurement')
-      .where('timestamp', '<', rangeStart)
-      .orderBy('timestamp', 'desc')
-      .limit(1)
-      .executeTakeFirst(),
-    computeUntrackedBuckets(db, {
-      petId,
-      deviceClass,
-      range: { start: rangeStart, end: rangeEnd },
-      resolution: 'day',
-      timezone,
-    }),
-    db
-      .selectFrom('event')
-      .select('id')
-      .where('pet_id', '=', petId)
-      .where('type', '=', eventType)
-      .limit(1)
-      .executeTakeFirst(),
-  ]);
+  const [metricEvents, needsInputs, untrackedBuckets, anyMetricEvent] =
+    await Promise.all([
+      db
+        .selectFrom('event')
+        .selectAll()
+        .where('pet_id', '=', petId)
+        .where('type', '=', eventType)
+        .where('timestamp', '>=', rangeStart)
+        .orderBy('timestamp', 'asc')
+        .execute(),
+      loadNeedsInputs(db, petId, rangeStart, rangeEnd),
+      computeUntrackedBuckets(db, {
+        petId,
+        deviceClass,
+        range: { start: rangeStart, end: rangeEnd },
+        resolution: 'day',
+        timezone,
+      }),
+      db
+        .selectFrom('event')
+        .select('id')
+        .where('pet_id', '=', petId)
+        .where('type', '=', eventType)
+        .limit(1)
+        .executeTakeFirst(),
+    ]);
 
   // Coverage (`tracked`) is household-device-based. Without any intake events for
   // this pet, a full series of tracked amount:0 reads as measured zeros — return
   // [] so Overview can show the empty state (unknown / never tracked).
-  if (anyMetricEvent == null) {
+  if (anyMetricEvent == null || !needsInputs) {
     return [];
   }
 
-  let currentWeight = 0;
-  const lastWeightData = lastWeightEvent
-    ? parseStoredEventData(lastWeightEvent.data)
-    : null;
-  if (lastWeightData?.type === 'weight_measurement') {
-    currentWeight = lastWeightData.weight;
-  }
-  if (currentWeight === 0 && weightEvents.length > 0) {
-    const firstWeightData = parseStoredEventData(weightEvents[0].data);
-    if (firstWeightData?.type === 'weight_measurement') {
-      currentWeight = firstWeightData.weight;
-    }
-  }
+  // The day's average weight carries the last known one over days without a
+  // weigh-in, starting from the last before the range or the first inside it.
+  const { weighIns } = needsInputs;
+  const lastBefore = weighIns.filter((w) => w.at < rangeStart).at(-1);
+  const weighInsInRange = weighIns.filter((w) => w.at >= rangeStart);
+  let currentWeight = lastBefore?.grams ?? weighInsInRange[0]?.grams ?? 0;
 
   const dailyAmounts = new Map<string, number>();
   for (const date of dayKeys) {
@@ -183,36 +121,27 @@ async function buildDailyMetricTrends(
     const dayEnd = fromZonedTime(`${dateStr}T23:59:59.999`, timezone);
 
     const dayWeights: number[] = [];
-    while (weightEventIndex < weightEvents.length) {
-      const we = weightEvents[weightEventIndex];
-      if (we.timestamp <= dayEnd) {
-        if (we.timestamp >= dayStart) {
-          const weightData = parseStoredEventData(we.data);
-          if (weightData?.type === 'weight_measurement') {
-            dayWeights.push(weightData.weight);
-          }
-        }
-        weightEventIndex++;
-      } else {
-        break;
-      }
+    while (weightEventIndex < weighInsInRange.length) {
+      const weighIn = weighInsInRange[weightEventIndex];
+      if (weighIn.at > dayEnd) break;
+      if (weighIn.at >= dayStart) dayWeights.push(weighIn.grams);
+      weightEventIndex++;
     }
-
-    let avgWeight = currentWeight;
     if (dayWeights.length > 0) {
-      avgWeight =
+      currentWeight =
         dayWeights.reduce((sum, weight) => sum + weight, 0) / dayWeights.length;
-      currentWeight = avgWeight;
     }
 
-    const bounds = getBounds(avgWeight);
+    // A change made during a day applies to the whole of that day.
+    const band = trackedBandsAt(needsInputs, dayEnd, dateStr)[kind];
+    const bounds = band ? boundsOf(band) : null;
     result.push({
       date: dateStr,
       amount: dailyAmounts.get(dateStr) ?? 0,
       tracked: isBucketTracked(dateStr, untrackedBuckets),
-      lowerBound: bounds.lowerBound,
-      upperBound: bounds.upperBound,
-      averageWeight: avgWeight,
+      lowerBound: bounds?.lower ?? null,
+      upperBound: bounds?.upper ?? null,
+      averageWeight: currentWeight,
     });
   }
 
@@ -235,7 +164,7 @@ export function buildWaterTrends(
       const parsed = parseStoredEventData(data);
       return parsed?.type === 'water_intake' ? parsed.amount : 0;
     },
-    getBounds: waterBoundsFromWeight,
+    kind: 'water',
   });
 }
 
@@ -257,6 +186,6 @@ export function buildFoodTrends(
         ? Math.round(parsed.nutrients?.calories ?? 0)
         : 0;
     },
-    getBounds: calorieBoundsFromWeight,
+    kind: 'food',
   });
 }

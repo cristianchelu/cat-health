@@ -322,6 +322,51 @@ describe('pet dietary needs', () => {
     });
   });
 
+  it('pins a pet created through the API to the default plan', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/pets',
+      payload: { name: 'Pinned at birth', breed: 'Unknown' },
+    });
+    const { id } = res.json<{ id: number }>();
+    assert.equal(await targetEventCount(id), 2);
+  });
+
+  describe('through the generic event routes', () => {
+    it('refuses to create a target event', async () => {
+      const petId = await weighedPet(5020);
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/events',
+        payload: {
+          pet_id: petId,
+          device_id: null,
+          parent_event_id: null,
+          human_verified: true,
+          data: { type: 'weight_target', target_g: 4800 },
+        },
+      });
+      assert.equal(res.statusCode, 400);
+    });
+
+    it('refuses to edit a target event', async () => {
+      const petId = await weighedPet(5020);
+      await putNeeds(petId, { target_weight_kg: 4.8 });
+      const event = await ctx.db
+        .selectFrom('event')
+        .select('id')
+        .where('pet_id', '=', petId)
+        .where('type', '=', 'weight_target')
+        .executeTakeFirstOrThrow();
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/events/${event.id}`,
+        payload: { data: { type: 'weight_target', target_g: 1000 } },
+      });
+      assert.equal(res.statusCode, 409);
+    });
+  });
+
   describe('in the event list', () => {
     async function listEvents(query: string): Promise<GetEventsResponseDTO> {
       const res = await app.inject({

@@ -7,8 +7,9 @@ interface MetricBarChartProps extends React.ComponentProps<'div'> {
   data: Array<{
     value: number;
     tracked: boolean;
-    lowerBound?: number;
-    upperBound?: number;
+    /** The day's own band; a day with none (null) draws no band lines. */
+    lowerBound?: number | null;
+    upperBound?: number | null;
   }>;
   maxValue: number;
   lowerBound?: number;
