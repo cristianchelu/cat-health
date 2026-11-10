@@ -55,6 +55,20 @@ describe('foodNotches', () => {
     );
   });
 
+  it('does not offer Lose when its band is not below the Maintain one', () => {
+    // At 6.28 kg with a 6.2 kg target, Lose is 220 kcal against Maintain's 217.
+    const nearTarget = intakePetFor({
+      ...luna,
+      weightKg: 6.275,
+      targetWeightKg: 6.2,
+    });
+    const notches = foodNotches(DEFAULT_ENERGY_PLAN, nearTarget, onMaintain);
+    assert.deepEqual(
+      notches.map((notch) => notch.preset),
+      ['maintain'],
+    );
+  });
+
   it('keeps the Lose notch for a band already on it, once she has reached her target', () => {
     const reached = intakePetFor({ ...jazz, weightKg: 4.7 });
     const notches = foodNotches(DEFAULT_ENERGY_PLAN, reached, {

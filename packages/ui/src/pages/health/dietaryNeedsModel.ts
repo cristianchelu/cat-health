@@ -65,27 +65,49 @@ export function intakePetFor(profile: NeedsProfile): IntakePet {
 }
 
 /**
- * Every food preset offered for her today, in kcal a day, in slider order.
- * Lose is offered only while her target weight is below her weight: a target
- * at or above it belongs to a cat being fed up, or one who has reached it, and
- * Lose would then feed her as much as Maintain or more. A band already on a
- * preset keeps its notch, so it can be seen and moved off.
+ * Every food preset offered for her today, in kcal a day, in slider order. A
+ * band already on a preset keeps its notch, so it can be seen and moved off.
  */
 export function foodNotches(
   plan: EnergyPlan,
   pet: IntakePet,
   current: FoodBandSetting,
 ): Notch<FoodPreset>[] {
-  const nothingToLose = pet.targetKg !== null && pet.targetKg >= pet.kg;
+  const notchOf = (preset: FoodPreset): Notch<FoodPreset> | null => {
+    const band = resolveFoodBand({ preset }, plan, pet);
+    if ('gap' in band) return null;
+    return { preset, target: band.target, tolerance: band.tolerance };
+  };
+  const maintain = notchOf('maintain');
+
   const notches: Notch<FoodPreset>[] = [];
   for (const preset of FOOD_PRESETS) {
+    const notch = notchOf(preset);
+    if (!notch) continue;
     const inUse = 'preset' in current && current.preset === preset;
-    if (preset === 'lose' && nothingToLose && !inUse) continue;
-    const band = resolveFoodBand({ preset }, plan, pet);
-    if ('gap' in band) continue;
-    notches.push({ preset, target: band.target, tolerance: band.tolerance });
+    if (preset === 'lose' && !inUse && !isDeficit(notch, maintain, pet)) {
+      continue;
+    }
+    notches.push(notch);
   }
   return byTarget(notches);
+}
+
+/**
+ * Whether Lose would feed her less than Maintain, which is all that makes it
+ * a way to lose weight: her target weight is below her weight, and the Lose
+ * band sits below the Maintain one. The two come from different sources, so a
+ * target close to her weight can put them level; a target above it belongs to
+ * a cat being fed up.
+ */
+function isDeficit(
+  lose: BandDraft,
+  maintain: BandDraft | null,
+  pet: IntakePet,
+): boolean {
+  if (pet.targetKg === null || pet.targetKg >= pet.kg) return false;
+  if (!maintain) return true;
+  return lose.target < maintain.target;
 }
 
 /**
