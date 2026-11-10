@@ -10,7 +10,6 @@ import App from './App.tsx';
 import Overview from './pages/overview/Overview.tsx';
 import LitterboxDetails from './pages/overview/LitterboxDetails.tsx';
 import Health from './pages/health/Health.tsx';
-import DietaryNeedsPage from './pages/health/DietaryNeedsPage.tsx';
 import Devices from './pages/devices/Devices.tsx';
 import DeviceDetails from './pages/devices/DeviceDetails.tsx';
 import DeviceAnnotationPage from './pages/devices/DeviceAnnotationPage.tsx';
@@ -45,7 +44,6 @@ const router = createBrowserRouter(
           element: <Health />,
           handle: petSelectorRouteHandle,
         },
-        { path: '/health/dietary-needs', element: <DietaryNeedsPage /> },
         { path: '/devices', element: <Devices /> },
         { path: '/devices/:id/annotate', element: <DeviceAnnotationPage /> },
         { path: '/devices/:id', element: <DeviceDetails /> },

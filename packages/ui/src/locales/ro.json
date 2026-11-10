@@ -997,8 +997,6 @@
     "title": "Sănătatea lui {{pet}}",
     "dietary_needs": {
       "section_title": "Nevoi alimentare",
-      "page_title": "Nevoile alimentare ale lui {{pet}}",
-      "loading": "Se încarcă nevoile alimentare…",
       "save_error": "Nevoile alimentare nu au putut fi salvate",
       "never_weighed": "{{pet}} nu a fost cântărit încă, așa că nu se poate calcula niciun interval.",
       "food_title": "Mâncare",
@@ -1041,7 +1039,6 @@
       "edit_food_label": "Editează intervalul pentru mâncare",
       "edit_water_label": "Editează intervalul pentru apă",
       "source_hint_label": "De unde vin aceste cifre",
-      "source_hint_body": "Conform {{source}}: {{ref}}.",
       "source_hint_point_tolerance": "Sursa dă o singură valoare, așa că ± este al aplicației.",
       "source_hint_floor": "Ridicat la minimul permis.",
       "source_hint_link": "Citește sursa"

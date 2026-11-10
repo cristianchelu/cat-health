@@ -7,11 +7,19 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* The card is a button, so what a button brings is taken back off:
+     `line-height` too, since a <button> keeps the UA's `normal`. */
   .dietary-needs-card {
     display: block;
+    width: 100%;
+    padding: 0;
+    border: none;
     border-radius: var(--radius-xl);
+    background: none;
     color: inherit;
-    text-decoration: none;
+    line-height: inherit;
+    text-align: left;
+    cursor: pointer;
 
     &:focus-visible {
       outline: 2px solid var(--color-border-focus);
@@ -46,10 +54,14 @@
     color: var(--dietary-needs-card-hue);
   }
 
+  /* The band never breaks inside itself; on a narrow card the unit drops
+     under it instead. */
   .dietary-needs-card-range {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: var(--space-xs);
+    column-gap: var(--space-xs);
+    white-space: nowrap;
   }
 
   .dietary-needs-card-numbers {

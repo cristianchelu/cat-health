@@ -8,8 +8,12 @@ import './BandSourceHint.css';
 interface BandSourceHintProps {
   /** Names the glyph and the tip it opens. */
   label: string;
-  /** What to say about where the band's numbers come from, a sentence each. */
-  sentences: readonly string[];
+  /** The source's name, the tip's first line. */
+  source: string;
+  /** Where in the source the numbers are, the second line. */
+  reference: string;
+  /** What the app changed after the source answered, a line each. */
+  notes: readonly string[];
   /** The source document, opened in a new tab. */
   href: string;
   /** Accessible name of the link, which is drawn as an icon. */
@@ -17,13 +21,14 @@ interface BandSourceHintProps {
 }
 
 /**
- * The mark beside a band that says which source its numbers come from. The
- * way to the document is an icon at the end of the sentence, so the tip stays
- * one short paragraph.
+ * The mark beside a band that says where its numbers come from: the source
+ * with a way to read it, then the place in it.
  */
 const BandSourceHint: React.FC<BandSourceHintProps> = ({
   label,
-  sentences,
+  source,
+  reference,
+  notes,
   href,
   linkLabel,
 }) => (
@@ -33,7 +38,7 @@ const BandSourceHint: React.FC<BandSourceHintProps> = ({
     label={label}
     body={
       <>
-        {sentences.join(' ')}{' '}
+        {source}{' '}
         <a
           href={href}
           target="_blank"
@@ -43,6 +48,14 @@ const BandSourceHint: React.FC<BandSourceHintProps> = ({
         >
           <ExternalLink size={14} aria-hidden="true" />
         </a>
+        <br />
+        {reference}
+        {notes.map((note) => (
+          <React.Fragment key={note}>
+            <br />
+            {note}
+          </React.Fragment>
+        ))}
       </>
     }
   />

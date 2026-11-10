@@ -1,11 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
 import { Drumstick, GlassWater, Target } from 'lucide-react';
-import {
-  type FoodPreset,
-  type GetDietaryNeedsResponse,
-  type WaterPreset,
+import type {
+  FoodPreset,
+  GetDietaryNeedsResponse,
+  PutDietaryNeedsRequest,
+  WaterPreset,
 } from 'shared';
 
 import {
@@ -13,7 +13,6 @@ import {
   AppHeaderBar,
   AppHeaderRow,
 } from '@/components/ui/AppHeader';
-import { Button } from '@/components/ui/Button';
 import type { Readout } from '@/components/ui/ReadoutGrid';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import PetSelector from '@/components/navigation/PetSelector';
@@ -22,8 +21,10 @@ import {
   useFormatters,
   useRegionalPreferences,
 } from '@/hooks/context/useRegionalPreferences';
-import { usePetDietaryNeeds } from '@/hooks/queries/petQueries';
-import { backState } from '@/lib/navigationBack';
+import {
+  usePetDietaryNeeds,
+  useSavePetDietaryNeeds,
+} from '@/hooks/queries/petQueries';
 import type { TranslationKey } from '@/lib/translationKey';
 import { formatCalendarDate } from '@/lib/utils';
 
@@ -31,10 +32,11 @@ import {
   DietaryNeedsSummary,
   type DietaryNeedsCard,
 } from './components/DietaryNeedsSummary';
+import { FoodBandSheet } from './components/FoodBandSheet';
+import { WaterBandSheet } from './components/WaterBandSheet';
 import { draftOf, intakePetFor, waterNotches } from './dietaryNeedsModel';
 import './Health.css';
 
-const DIETARY_NEEDS_PATH = '/health/dietary-needs';
 const NO_VALUE = '—';
 
 const FOOD_GOAL_KEYS: Record<FoodPreset, TranslationKey> = {
@@ -59,18 +61,37 @@ function shownBand<Band>(needs: {
 }
 
 /**
- * The Health hub. It shows what is set for the selected pet and leads to
- * where it is edited; what she ate and drank against it is Overview's.
+ * The Health hub. It shows what is set for the selected pet, and each band's
+ * card opens that band's editor; what she ate and drank against it is
+ * Overview's.
  */
 const Health: React.FC = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { selectedPet } = usePetContext();
   const { timezone } = useRegionalPreferences();
   const { formatNumber } = useFormatters();
-  const { data: needs } = usePetDietaryNeeds(selectedPet?.id ?? 0);
+  const petId = selectedPet?.id ?? 0;
+  const { data: needs } = usePetDietaryNeeds(petId);
+  const saveMutation = useSavePetDietaryNeeds(petId);
+  const [editing, setEditing] = React.useState<'food' | 'water' | null>(null);
+  const [saveError, setSaveError] = React.useState<string | null>(null);
+  const today = formatCalendarDate(new Date(), timezone);
 
-  const wayBack = backState('/health', t('navigation.health'));
+  const openEditor = (kind: 'food' | 'water') => {
+    setSaveError(null);
+    setEditing(kind);
+  };
+
+  const save = async (change: PutDietaryNeedsRequest) => {
+    setSaveError(null);
+    try {
+      await saveMutation.mutateAsync(change);
+      return true;
+    } catch {
+      setSaveError(t('health.dietary_needs.save_error'));
+      return false;
+    }
+  };
   const whole = (value: number) =>
     formatNumber(value, { maximumFractionDigits: 0 });
   const range = (low: number, high: number) => `${whole(low)}–${whole(high)}`;
@@ -148,7 +169,7 @@ const Health: React.FC = () => {
       altered: selectedPet.altered,
       weightKg: needs.weight_kg,
       targetWeightKg: needs.target_weight_kg,
-      today: formatCalendarDate(new Date(), timezone),
+      today,
     });
     const perKg = draftOf(water.setting, waterNotches(water.plan, intakePet));
     if (!perKg) return NO_VALUE;
@@ -179,30 +200,42 @@ const Health: React.FC = () => {
         <div className="health-columns">
           <div className="health-column">
             <section className="health-section">
-              <SectionHeader
-                icon={<Target />}
-                actions={
-                  <Button
-                    variant="neutral"
-                    size="sm"
-                    onClick={() =>
-                      navigate(DIETARY_NEEDS_PATH, { state: wayBack })
-                    }
-                  >
-                    {t('common.edit')}
-                  </Button>
-                }
-              >
+              <SectionHeader icon={<Target />}>
                 {t('health.dietary_needs.section_title')}
               </SectionHeader>
               <DietaryNeedsSummary
                 cards={[waterCard(needs.water), foodCard(needs.food)]}
-                to={DIETARY_NEEDS_PATH}
-                state={wayBack}
+                onOpen={openEditor}
               />
             </section>
           </div>
         </div>
+      )}
+
+      {/* Keyed per pet: each editor seeds its draft from that pet's needs. */}
+      {selectedPet && needs && (
+        <React.Fragment key={petId}>
+          <FoodBandSheet
+            open={editing === 'food'}
+            onClose={() => setEditing(null)}
+            pet={selectedPet}
+            needs={needs}
+            today={today}
+            onSave={save}
+            error={saveError}
+            isSaving={saveMutation.isPending}
+          />
+          <WaterBandSheet
+            open={editing === 'water'}
+            onClose={() => setEditing(null)}
+            pet={selectedPet}
+            needs={needs}
+            today={today}
+            onSave={save}
+            error={saveError}
+            isSaving={saveMutation.isPending}
+          />
+        </React.Fragment>
       )}
     </div>
   );

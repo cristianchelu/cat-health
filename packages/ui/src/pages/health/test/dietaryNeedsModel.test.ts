@@ -9,14 +9,15 @@ import {
 
 import {
   WATER_SCALE,
-  changeFromDraft,
   draftOf,
+  foodChange,
   foodNotches,
   foodScale,
   intakePetFor,
   parseTargetWeight,
   presetAt,
   settingOf,
+  waterChange,
   waterNotches,
   withTarget,
   withTolerance,
@@ -215,19 +216,37 @@ describe('parseTargetWeight', () => {
   });
 });
 
-describe('changeFromDraft', () => {
-  it('sends each band as the setting it sits on, and the target weight in kg', () => {
-    const change = changeFromDraft({
-      foodTracked: true,
-      food: { preset: 'lose' },
-      waterTracked: false,
-      water: { target: 40, tolerance: 5 },
+describe('foodChange', () => {
+  it('sends the food band as the setting it sits on, and the target weight in kg', () => {
+    const change = foodChange({
+      tracked: true,
+      setting: { preset: 'lose' },
       targetWeight: '4.8',
     });
     assert.deepEqual(change, {
       food: { tracked: true, setting: { preset: 'lose' } },
-      water: { tracked: false, setting: { target: 40, tolerance: 5 } },
       target_weight_kg: 4.8,
+    });
+  });
+
+  it('clears the target weight when the field is empty', () => {
+    const change = foodChange({
+      tracked: true,
+      setting: { preset: 'maintain' },
+      targetWeight: '',
+    });
+    assert.equal(change.target_weight_kg, null);
+  });
+});
+
+describe('waterChange', () => {
+  it('sends only the water band, so saving it leaves food alone', () => {
+    const change = waterChange({
+      tracked: false,
+      setting: { target: 40, tolerance: 5 },
+    });
+    assert.deepEqual(change, {
+      water: { tracked: false, setting: { target: 40, tolerance: 5 } },
     });
   });
 });

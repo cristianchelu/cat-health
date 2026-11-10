@@ -13,10 +13,9 @@ async function openHint() {
   await renderWithProviders(
     <BandSourceHint
       label="Where these numbers come from"
-      sentences={[
-        'According to FEDIAF 2025: Table VII-9.',
-        "The source gives one number, so the ± is the app's.",
-      ]}
+      source="FEDIAF 2025"
+      reference="Table VII-9, neutered and/or indoor"
+      notes={["The source gives one number, so the ± is the app's."]}
       href="https://example.org/fediaf.pdf"
       linkLabel="Read the source"
     />,
@@ -27,13 +26,12 @@ async function openHint() {
 }
 
 describe('BandSourceHint', () => {
-  it('says every sentence about the source once opened', async () => {
+  it('names the source, then the place in it, then what the app changed', async () => {
     await openHint();
-    assert.ok(
-      screen.getByText(
-        "According to FEDIAF 2025: Table VII-9. The source gives one number, so the ± is the app's.",
-        { exact: false },
-      ),
+    const tip = screen.getByRole('dialog');
+    assert.equal(
+      tip.textContent,
+      "FEDIAF 2025 Table VII-9, neutered and/or indoorThe source gives one number, so the ± is the app's.",
     );
   });
 

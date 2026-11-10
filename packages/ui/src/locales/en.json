@@ -1072,8 +1072,6 @@
     "title": "{{pet}}'s Health",
     "dietary_needs": {
       "section_title": "Dietary needs",
-      "page_title": "{{pet}}'s dietary needs",
-      "loading": "Loading dietary needs…",
       "save_error": "Could not save the dietary needs",
       "never_weighed": "{{pet}} has not been weighed yet, so no band can be worked out.",
       "food_title": "Food",
@@ -1116,7 +1114,6 @@
       "edit_food_label": "Edit the food band",
       "edit_water_label": "Edit the water band",
       "source_hint_label": "Where these numbers come from",
-      "source_hint_body": "According to {{source}}: {{ref}}.",
       "source_hint_point_tolerance": "The source gives one number, so the ± is the app's.",
       "source_hint_floor": "Raised to the lowest allowed.",
       "source_hint_link": "Read the source"

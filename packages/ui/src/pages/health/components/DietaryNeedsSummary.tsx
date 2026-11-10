@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { Link, type To } from 'react-router';
 
 import { Card, CardContent } from '@/components/ui/Card';
 import { ReadoutGrid, type Readout } from '@/components/ui/ReadoutGrid';
@@ -22,25 +21,23 @@ interface DietaryNeedsCard {
 
 interface DietaryNeedsSummaryProps {
   cards: readonly DietaryNeedsCard[];
-  /** Where a card leads, with the state that names the way back. */
-  to: To;
-  state?: unknown;
+  /** Opens the band's editor. */
+  onOpen: (kind: DietaryNeedsCard['kind']) => void;
 }
 
-/** A pet's bands on the Health hub: one card a band, each a link to the Dietary needs page. */
+/** A pet's bands on the Health hub: one card a band, each the button that opens its editor. */
 const DietaryNeedsSummary: React.FC<DietaryNeedsSummaryProps> = ({
   cards,
-  to,
-  state,
+  onOpen,
 }) => (
   <div className="dietary-needs-summary">
     {cards.map((card) => (
-      <Link
+      <button
         key={card.kind}
-        to={to}
-        state={state}
+        type="button"
         className={cn('dietary-needs-card', card.kind)}
         aria-label={card.openLabel}
+        onClick={() => onOpen(card.kind)}
       >
         <Card>
           <CardContent>
@@ -59,7 +56,7 @@ const DietaryNeedsSummary: React.FC<DietaryNeedsSummaryProps> = ({
             </div>
           </CardContent>
         </Card>
-      </Link>
+      </button>
     ))}
   </div>
 );

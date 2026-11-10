@@ -215,6 +215,12 @@ export function foodScale(pet: IntakePet): BandScale {
 /** The water slider, in ml per kg a day; every published range sits inside it. */
 export const WATER_SCALE: BandScale = { min: 10, max: 70, step: 1 };
 
+/** A scale stretched to hold a band saved past its usual end, so the thumb is never off the track. */
+export function holding(scale: BandScale, band: BandDraft | null): BandScale {
+  if (!band || band.target <= scale.max) return scale;
+  return { ...scale, max: band.target };
+}
+
 /** Her resting energy need at her current weight, in kcal a day. */
 export function restingKcal(pet: IntakePet): number {
   return aahaRer(pet.kg);
@@ -254,29 +260,38 @@ export function withTolerance(
 }
 
 /**
- * Everything the page edits before Save. Each band is kept as the setting it
+ * The food band while its editor is open. The band is kept as the setting it
  * would save as, so one sitting on a notch follows that notch when a target
  * weight being typed moves it.
  */
-export interface NeedsDraft {
-  foodTracked: boolean;
-  food: FoodBandSetting;
-  waterTracked: boolean;
-  water: WaterBandSetting;
+export interface FoodDraft {
+  tracked: boolean;
+  setting: FoodBandSetting;
   /** The target weight field's text, in kg; empty for none. */
   targetWeight: string;
 }
 
-/** The draft a saved response starts from. */
-export function draftFromNeeds(needs: GetDietaryNeedsResponse): NeedsDraft {
+/** The water band while its editor is open; see `FoodDraft`. */
+export interface WaterDraft {
+  tracked: boolean;
+  setting: WaterBandSetting;
+}
+
+/** The food draft a saved response starts from. */
+export function foodDraftFromNeeds(needs: GetDietaryNeedsResponse): FoodDraft {
   return {
-    foodTracked: needs.food.tracked,
-    food: needs.food.setting,
-    waterTracked: needs.water.tracked,
-    water: needs.water.setting,
+    tracked: needs.food.tracked,
+    setting: needs.food.setting,
     targetWeight:
       needs.target_weight_kg === null ? '' : String(needs.target_weight_kg),
   };
+}
+
+/** The water draft a saved response starts from. */
+export function waterDraftFromNeeds(
+  needs: GetDietaryNeedsResponse,
+): WaterDraft {
+  return { tracked: needs.water.tracked, setting: needs.water.setting };
 }
 
 /** The target weight a field's text stands for: a weight, none, or text that is not a weight. */
@@ -288,12 +303,16 @@ export function parseTargetWeight(text: string): number | null | 'invalid' {
   return kg;
 }
 
-/** What a draft asks the server to save. The field must already hold a weight or nothing. */
-export function changeFromDraft(draft: NeedsDraft): PutDietaryNeedsRequest {
+/** What the food editor asks the server to save. The field must already hold a weight or nothing. */
+export function foodChange(draft: FoodDraft): PutDietaryNeedsRequest {
   const targetWeight = parseTargetWeight(draft.targetWeight);
   return {
-    food: { tracked: draft.foodTracked, setting: draft.food },
-    water: { tracked: draft.waterTracked, setting: draft.water },
+    food: { tracked: draft.tracked, setting: draft.setting },
     target_weight_kg: targetWeight === 'invalid' ? null : targetWeight,
   };
+}
+
+/** What the water editor asks the server to save. */
+export function waterChange(draft: WaterDraft): PutDietaryNeedsRequest {
+  return { water: { tracked: draft.tracked, setting: draft.setting } };
 }

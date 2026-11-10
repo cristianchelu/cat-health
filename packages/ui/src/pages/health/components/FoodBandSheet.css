@@ -1,22 +1,24 @@
-.dietary-needs-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--page-section-gap);
+.food-band-sheet {
+  .food-band-sheet-notice {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
+  }
 
   /* A weight is a few digits, so its input is a few digits wide, with the
      unit beside it. */
-  .dietary-needs-target-weight {
+  .food-band-sheet-target-weight {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
   }
 
-  .dietary-needs-target-weight-input {
+  .food-band-sheet-target-weight-input {
     width: 6rem;
     font-variant-numeric: tabular-nums;
   }
 
-  .dietary-needs-unit {
+  .food-band-sheet-unit {
     font-size: var(--text-sm);
     color: var(--color-text-light);
   }

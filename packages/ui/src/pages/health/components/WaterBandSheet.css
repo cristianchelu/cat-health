@@ -1,0 +1,7 @@
+.water-band-sheet {
+  .water-band-sheet-notice {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
+  }
+}
