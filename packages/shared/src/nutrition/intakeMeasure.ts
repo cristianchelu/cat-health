@@ -8,6 +8,7 @@ import {
 
 /** `amount` is kcal for food and ml for water; `duration` is seconds spent eating or drinking. */
 export const INTAKE_MEASURES = ['amount', 'duration'] as const;
+/** What a day's food or water total is counted in. */
 export type IntakeMeasure = (typeof INTAKE_MEASURES)[number];
 
 /**

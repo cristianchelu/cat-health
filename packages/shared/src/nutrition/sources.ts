@@ -1,8 +1,11 @@
+/** A published document the numbers come from, with enough to cite it and find it again. */
 export interface NutritionSource {
   title: string;
   authors: string;
+  /** The journal or publisher line of the citation. */
   published: string;
   year: number;
+  /** Null when the document has none. */
   doi: string | null;
   url: string;
   /** When the numbers below were last checked against the document. */
@@ -63,4 +66,21 @@ export const NUTRITION_SOURCES = {
   },
 } satisfies Record<string, NutritionSource>;
 
+/** A source's id, as models, comments and the reading notes name it. */
 export type NutritionSourceId = keyof typeof NUTRITION_SOURCES;
+
+/** One row of a source's table; only its formula is code. */
+export interface NutritionModelRow {
+  /** Where the numbers are in the source, for the band's citation. */
+  ref: string;
+}
+
+/**
+ * One source's table as the app reads it. Every row comes from `sourceId`,
+ * and a case with no row is not answered. Stored plans name model ids, so a
+ * shipped id is never removed, reused or changed: a correction is a new id.
+ */
+export interface NutritionModel<Row extends NutritionModelRow> {
+  sourceId: NutritionSourceId;
+  rows: readonly Row[];
+}

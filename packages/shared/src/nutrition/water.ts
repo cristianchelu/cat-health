@@ -15,25 +15,21 @@ import {
   type Range,
 } from './band.ts';
 import type { IntakePet } from './pet.ts';
-import type { NutritionSourceId } from './sources.ts';
+import type { NutritionModel, NutritionModelRow } from './sources.ts';
 
+/** The notches on the water band: `normal` for any healthy cat, `uti_prone` for one at urinary risk. */
 export const WATER_PRESETS = ['normal', 'uti_prone'] as const;
 export type WaterPreset = (typeof WATER_PRESETS)[number];
 
-/** One row of a source's table; only the formula is code. */
-export interface WaterRow {
+/** One row of a source's water table. */
+export interface WaterRow extends NutritionModelRow {
   preset: WaterPreset;
-  /** Where the numbers are in the source. */
-  ref: string;
-  /** ml of total water a day, food moisture included. */
+  /** ml of total water a day at `kg`, food moisture included. */
   mlPerDay(kg: number): Range;
 }
 
-/** Every row comes from `sourceId`, and a preset with no row is not answered. */
-export interface WaterModel {
-  sourceId: NutritionSourceId;
-  rows: readonly WaterRow[];
-}
+/** A source's water table: each row is ml a day for one preset. */
+export type WaterModel = NutritionModel<WaterRow>;
 
 const kosmal2025: WaterModel = {
   sourceId: 'kosmal-2025',
@@ -51,7 +47,7 @@ const kosmal2025: WaterModel = {
   ],
 };
 
-/** Append-only: stored plans name these ids, so none is ever removed or reused. */
+/** The ids a stored plan may name; `NutritionModel` has the rule for changing them. */
 export const WATER_MODEL_IDS = ['kosmal-2025'] as const;
 export type WaterModelId = (typeof WATER_MODEL_IDS)[number];
 
@@ -62,6 +58,7 @@ export const WATER_MODELS: Record<WaterModelId, WaterModel> = {
 /** What a new pin gets; see `DEFAULT_ENERGY_PLAN`. */
 export const DEFAULT_WATER_PLAN: WaterPlan = ['kosmal-2025'];
 
+/** Where a water band's numbers came from: a model row, or a custom setting. */
 export type WaterOrigin =
   | PresetOrigin<WaterPreset, WaterModelId>
   | CustomOrigin;
@@ -97,6 +94,7 @@ export function resolveWaterBand(
   return { ...band, unit: 'ml', origin: answer.origin };
 }
 
+/** What a plan says for one preset: the source's ml a day and the row it came from, or that no model has it. */
 export type WaterAnswer =
   | { mlPerDay: Range; origin: PresetOrigin<WaterPreset, WaterModelId> }
   | { gap: 'not_in_source' };

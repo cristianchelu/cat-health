@@ -23,7 +23,7 @@ import {
   type IntakePet,
   type LifeStage,
 } from './pet.ts';
-import type { NutritionSourceId } from './sources.ts';
+import type { NutritionModel, NutritionModelRow } from './sources.ts';
 
 /**
  * The notches on the food band. Sources publish energy needs, so what answers
@@ -33,10 +33,10 @@ export const FOOD_PRESETS = ['maintain', 'lose'] as const;
 export type FoodPreset = (typeof FOOD_PRESETS)[number];
 
 /**
- * One row of a source's table. What the row covers is data, so a model can be
- * read against its document; only the formula is code.
+ * One row of a source's energy table. What the row covers is data, so a model
+ * can be read against its document.
  */
-export interface EnergyRow {
+export interface EnergyRow extends NutritionModelRow {
   preset: FoodPreset;
   lifeStages: readonly LifeStage[];
   /** Whether the row is for altered or intact cats, or `any` when the source doesn't split on it. */
@@ -45,19 +45,12 @@ export interface EnergyRow {
   ageMonths?: readonly [from: number, below: number];
   /** The weight the formula takes: hers, or her target weight where the source asks for ideal weight. */
   weight: 'current' | 'target';
-  /** Where the numbers are in the source. */
-  ref: string;
+  /** kcal a day at `kg`, the weight `weight` selects. */
   kcalPerDay(kg: number): Range;
 }
 
-/**
- * Every row comes from `sourceId`, and a case with no row is not answered.
- * A shipped model never changes: a correction is a new id, held by the golden tests.
- */
-export interface EnergyModel {
-  sourceId: NutritionSourceId;
-  rows: readonly EnergyRow[];
-}
+/** A source's energy table: each row is kcal a day for one kind of cat. */
+export type EnergyModel = NutritionModel<EnergyRow>;
 
 /**
  * FEDIAF's MER, which Table VII-10's kitten factors multiply. Read as the
@@ -147,7 +140,7 @@ const aaha2021: EnergyModel = {
   ],
 };
 
-/** Append-only: stored plans name these ids, so none is ever removed or reused. */
+/** The ids a stored plan may name; `NutritionModel` has the rule for changing them. */
 export const ENERGY_MODEL_IDS = ['fediaf-2025', 'aaha-2021'] as const;
 export type EnergyModelId = (typeof ENERGY_MODEL_IDS)[number];
 
@@ -169,6 +162,7 @@ export const DEFAULT_ENERGY_PLAN: EnergyPlan = ['fediaf-2025', 'aaha-2021'];
  */
 const FLOOR_RER_FACTOR = 0.6;
 
+/** Where a food band's numbers came from: a model row, or a custom setting. */
 export type FoodOrigin = PresetOrigin<FoodPreset, EnergyModelId> | CustomOrigin;
 
 /** A day's food band in kcal. */
@@ -187,19 +181,21 @@ export function resolveFoodBand(
   plan: EnergyPlan,
   pet: IntakePet,
 ): FoodBand | { gap: IntakeGap } {
+  const floor = foodFloorKcal(pet);
+
   if (!('preset' in setting)) {
-    const band = liftAboveFloor(bandAsSet(setting), foodFloorKcal(pet));
+    const band = liftAboveFloor(bandAsSet(setting), floor);
     return { ...band, unit: 'kcal', origin: customOrigin(setting) };
   }
 
   const answer = answerEnergy(plan, setting.preset, pet);
   if ('gap' in answer) return answer;
 
-  const sourced = bandFromRange(answer.kcalPerDay);
-  const band = liftAboveFloor(sourced, foodFloorKcal(pet));
+  const band = liftAboveFloor(bandFromRange(answer.kcalPerDay), floor);
   return { ...band, unit: 'kcal', origin: answer.origin };
 }
 
+/** What a plan says for one preset and cat: the source's kcal a day and the row it came from, or why there is none. */
 export type EnergyAnswer =
   | { kcalPerDay: Range; origin: PresetOrigin<FoodPreset, EnergyModelId> }
   | { gap: IntakeGap };
@@ -256,11 +252,11 @@ function coversAge(row: EnergyRow, ageMonths: number | null): boolean {
 }
 
 /**
- * Lowest daily kcal any food band may reach, whichever model answered. Her
- * ideal weight is her target weight when one is set and her own weight
+ * Lowest whole kcal a day any food band may reach, whichever model answered.
+ * Her ideal weight is her target weight when one is set and her own weight
  * otherwise; `aaha-2014` measures restriction against ideal weight, never
  * current weight, so a heavier cat does not get a higher floor.
  */
 export function foodFloorKcal(pet: IntakePet): number {
-  return FLOOR_RER_FACTOR * aahaRer(pet.targetKg ?? pet.kg);
+  return Math.ceil(FLOOR_RER_FACTOR * aahaRer(pet.targetKg ?? pet.kg));
 }

@@ -9,12 +9,14 @@ export const LIFE_STAGES = [
 ] as const;
 export type LifeStage = (typeof LIFE_STAGES)[number];
 
+/** Every stage after kitten; a row for all of them is a row for any adult. */
 export const ADULT_STAGES: readonly LifeStage[] = [
   'young_adult',
   'mature_adult',
   'senior',
 ];
 
+/** Altered or intact, as the models see it; the record's `unknown` is settled by `alteredOf`. */
 export type Altered = Exclude<PetAlteredDTO, 'unknown'>;
 
 /**
@@ -29,6 +31,7 @@ export interface IntakePet {
   /** Whole months of age; null when her birth date is unknown. */
   ageMonths: number | null;
   altered: Altered;
+  /** Her weight that day. */
   kg: number;
   /**
    * Her ideal weight as set, or null when none is. It stands as her weight
@@ -38,6 +41,7 @@ export interface IntakePet {
   targetKg: number | null;
 }
 
+/** What `intakePetOf` reads: the pet record's own fields, with her weight and target weight for the day. */
 export interface IntakePetInput {
   birthDate: string | null;
   altered: PetAlteredDTO;

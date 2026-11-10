@@ -2,11 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
-import {
-  boundsOf,
-  type Band,
-  type IntakeGap,
-} from '../../src/nutrition/band.ts';
+import { boundsOf, type IntakeGap } from '../../src/nutrition/band.ts';
 import {
   DEFAULT_ENERGY_PLAN,
   ENERGY_MODEL_IDS,
@@ -30,23 +26,19 @@ const luna: IntakePet = {
 };
 const jazz: IntakePet = { ...luna, kg: 5.02, targetKg: 4.8 };
 
+/** A model's raw answer to two decimals, so a golden value reads as the source's arithmetic. */
 function twoDecimals(range: { low: number; high: number }) {
   const round = (value: number) => Math.round(value * 100) / 100;
   return { low: round(range.low), high: round(range.high) };
 }
 
+/** One model's answer on its own, with no plan to fall through. */
 function kcal(modelId: EnergyModelId, preset: FoodPreset, pet: IntakePet) {
   const answer = answerEnergy([modelId], preset, pet);
   return 'gap' in answer ? answer.gap : twoDecimals(answer.kcalPerDay);
 }
 
-/** A band's bounds to two decimals, so expectations read as the source's numbers. */
-function bounds(band: Band) {
-  const round = (value: number) => Math.round(value * 100) / 100;
-  const { lower, upper } = boundsOf(band);
-  return { lower: round(lower), upper: round(upper) };
-}
-
+/** The band of a result that is expected to have one. */
 function resolved(result: FoodBand | { gap: IntakeGap }): FoodBand {
   assert.ok(!('gap' in result), 'expected a band');
   return result;
@@ -159,11 +151,11 @@ describe('aaha-2021', () => {
 });
 
 describe('resolveFoodBand', () => {
-  it('maintains an altered adult on FEDIAF, exactly as the source gives it', () => {
+  it('maintains an altered adult on FEDIAF, in whole kcal', () => {
     const band = resolved(
       resolveFoodBand({ preset: 'maintain' }, DEFAULT_ENERGY_PLAN, luna),
     );
-    assert.deepEqual(bounds(band), { lower: 136.23, upper: 196.49 });
+    assert.deepEqual(boundsOf(band), { lower: 136, upper: 196 });
   });
 
   it('names the model and row that answered', () => {
@@ -182,7 +174,7 @@ describe('resolveFoodBand', () => {
     const band = resolved(
       resolveFoodBand({ preset: 'lose' }, DEFAULT_ENERGY_PLAN, jazz),
     );
-    assert.deepEqual(bounds(band), { lower: 172.52, upper: 190.68 });
+    assert.deepEqual(boundsOf(band), { lower: 173, upper: 191 });
   });
 
   it('keeps the Lose band once she is below her target weight', () => {
@@ -190,7 +182,7 @@ describe('resolveFoodBand', () => {
     const band = resolved(
       resolveFoodBand({ preset: 'lose' }, DEFAULT_ENERGY_PLAN, reached),
     );
-    assert.deepEqual(bounds(band), { lower: 172.52, upper: 190.68 });
+    assert.deepEqual(boundsOf(band), { lower: 173, upper: 191 });
   });
 
   it('measures Lose and its floor at a target weight far below her weight', () => {
@@ -198,7 +190,7 @@ describe('resolveFoodBand', () => {
     const band = resolved(
       resolveFoodBand({ preset: 'lose' }, DEFAULT_ENERGY_PLAN, obese),
     );
-    assert.deepEqual(bounds(band), { lower: 172.52, upper: 190.68 });
+    assert.deepEqual(boundsOf(band), { lower: 173, upper: 191 });
     assert.deepEqual(band.adjustments, ['point_tolerance']);
   });
 
@@ -247,7 +239,7 @@ describe('resolveFoodBand', () => {
     const band = resolved(
       resolveFoodBand({ preset: 'maintain' }, DEFAULT_ENERGY_PLAN, kitten),
     );
-    assert.deepEqual(bounds(band), { lower: 262.43, upper: 328.04 });
+    assert.deepEqual(boundsOf(band), { lower: 262, upper: 328 });
   });
 
   it('maintains a senior on the same FEDIAF row as any adult', () => {
@@ -255,7 +247,7 @@ describe('resolveFoodBand', () => {
     const band = resolved(
       resolveFoodBand({ preset: 'maintain' }, DEFAULT_ENERGY_PLAN, senior),
     );
-    assert.deepEqual(bounds(band), { lower: 136.23, upper: 196.49 });
+    assert.deepEqual(boundsOf(band), { lower: 136, upper: 196 });
   });
 
   it('keeps a custom band as set', () => {
@@ -280,7 +272,7 @@ describe('resolveFoodBand', () => {
         luna,
       ),
     );
-    assert.equal(bounds(band).lower, 123.44);
+    assert.equal(boundsOf(band).lower, 124);
     assert.deepEqual(band.adjustments, ['floor']);
   });
 });

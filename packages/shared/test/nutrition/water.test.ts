@@ -2,11 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
-import {
-  boundsOf,
-  type Band,
-  type IntakeGap,
-} from '../../src/nutrition/band.ts';
+import { boundsOf, type IntakeGap } from '../../src/nutrition/band.ts';
 import type { IntakePet } from '../../src/nutrition/pet.ts';
 import {
   DEFAULT_WATER_PLAN,
@@ -28,23 +24,19 @@ const luna: IntakePet = {
   targetKg: null,
 };
 
+/** A model's raw answer to two decimals, so a golden value reads as the source's arithmetic. */
 function twoDecimals(range: { low: number; high: number }) {
   const round = (value: number) => Math.round(value * 100) / 100;
   return { low: round(range.low), high: round(range.high) };
 }
 
+/** The one water model's answer at `kg`, with no plan to fall through. */
 function ml(preset: WaterPreset, kg: number) {
   const answer = answerWater(['kosmal-2025'], preset, { ...luna, kg });
   return 'gap' in answer ? answer.gap : twoDecimals(answer.mlPerDay);
 }
 
-/** A band's bounds to two decimals, so expectations read as the source's numbers. */
-function bounds(band: Band) {
-  const round = (value: number) => Math.round(value * 100) / 100;
-  const { lower, upper } = boundsOf(band);
-  return { lower: round(lower), upper: round(upper) };
-}
-
+/** The band of a result that is expected to have one. */
 function resolved(result: WaterBand | { gap: IntakeGap }): WaterBand {
   assert.ok(!('gap' in result), 'expected a band');
   return result;
@@ -70,14 +62,14 @@ describe('resolveWaterBand', () => {
     const band = resolved(
       resolveWaterBand({ preset: 'normal' }, DEFAULT_WATER_PLAN, luna),
     );
-    assert.deepEqual(bounds(band), { lower: 96.83, upper: 214.71 });
+    assert.deepEqual(boundsOf(band), { lower: 97, upper: 215 });
   });
 
   it('turns the UTI-prone preset into ml a day at her weight', () => {
     const band = resolved(
       resolveWaterBand({ preset: 'uti_prone' }, DEFAULT_WATER_PLAN, luna),
     );
-    assert.deepEqual(bounds(band), { lower: 176.82, upper: 214.71 });
+    assert.deepEqual(boundsOf(band), { lower: 177, upper: 215 });
   });
 
   it('scales a custom ml/kg band by her weight', () => {
