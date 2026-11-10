@@ -14,6 +14,8 @@ import {
   getPetWaterTrends,
   getPetFoodTrends,
   getPetLitterboxTrends,
+  getPetDietaryNeeds,
+  putPetDietaryNeeds,
   updateEvent,
   getPet,
   createPet,
@@ -32,6 +34,7 @@ import type {
   LitterboxTrendQueryDTO,
   PutPetPresenceRequestDTO,
   GetPetResponseDTO,
+  PutDietaryNeedsRequest,
 } from 'shared';
 import { dateRangeToTimeRange, type DateRange } from '@/lib/utils';
 import { useRegionalPreferences } from '@/hooks/context/useRegionalPreferences';
@@ -279,4 +282,29 @@ export function useCloseProfile(petId: number) {
 
 export function useReopenProfile(petId: number) {
   return useProfileLifecycle(petId, reopenPetProfile);
+}
+
+/** A pet's dietary needs, read in the user's timezone so "today" matches the rest of the app. */
+export function usePetDietaryNeeds(petId: number) {
+  const { timezone } = useRegionalPreferences();
+  return useQuery({
+    queryKey: ['dietaryNeeds', petId, timezone],
+    queryFn: () => getPetDietaryNeeds(petId, timezone),
+    enabled: petId > 0,
+  });
+}
+
+/** Saves a pet's dietary needs; the trends are judged against the bands, so they refetch too. */
+export function useSavePetDietaryNeeds(petId: number) {
+  const queryClient = useQueryClient();
+  const { timezone } = useRegionalPreferences();
+  return useMutation({
+    mutationFn: (change: PutDietaryNeedsRequest) =>
+      putPetDietaryNeeds(petId, change, timezone),
+    onSuccess: (needs) => {
+      queryClient.setQueryData(['dietaryNeeds', petId, timezone], needs);
+      queryClient.invalidateQueries({ queryKey: ['foodTrends', petId] });
+      queryClient.invalidateQueries({ queryKey: ['waterTrends', petId] });
+    },
+  });
 }

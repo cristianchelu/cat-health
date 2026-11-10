@@ -22,6 +22,8 @@ import type {
   DeletePetResponseDTO,
   GetEventMediaResponseDTO,
   EventType,
+  GetDietaryNeedsResponse,
+  PutDietaryNeedsRequest,
 } from 'shared';
 
 import apiClient from './apiClient';
@@ -256,4 +258,27 @@ export async function getVerifiedEventMedia(deviceId: number, petId: number) {
 
   console.log('Total media found:', allMedia.length);
   return allMedia;
+}
+
+/** A pet's food and water bands and target weight, as set and as they resolve today. */
+export async function getPetDietaryNeeds(petId: number, timezone: string) {
+  const { data } = await apiClient.get<GetDietaryNeedsResponse>(
+    `/pets/${petId}/dietary-needs`,
+    { params: { timezone } },
+  );
+  return data;
+}
+
+/** Saves the parts of a pet's dietary needs that changed, and returns them as they then resolve. */
+export async function putPetDietaryNeeds(
+  petId: number,
+  change: PutDietaryNeedsRequest,
+  timezone: string,
+) {
+  const { data } = await apiClient.put<GetDietaryNeedsResponse>(
+    `/pets/${petId}/dietary-needs`,
+    change,
+    { params: { timezone } },
+  );
+  return data;
 }
