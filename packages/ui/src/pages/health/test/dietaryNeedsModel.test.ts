@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { DEFAULT_ENERGY_PLAN, DEFAULT_WATER_PLAN } from 'shared';
+import {
+  DEFAULT_ENERGY_PLAN,
+  DEFAULT_WATER_PLAN,
+  type FoodBandSetting,
+} from 'shared';
 
 import {
   WATER_SCALE,
@@ -13,7 +17,6 @@ import {
   parseTargetWeight,
   presetAt,
   settingOf,
-  targetWeightProblem,
   waterNotches,
   withTarget,
   withTolerance,
@@ -30,15 +33,42 @@ const luna: NeedsProfile = {
 const jazz: NeedsProfile = { ...luna, weightKg: 5.02, targetWeightKg: 4.8 };
 
 describe('foodNotches', () => {
+  const onMaintain: FoodBandSetting = { preset: 'maintain' };
+
   it('has only Maintain while she has no target weight', () => {
-    const notches = foodNotches(DEFAULT_ENERGY_PLAN, intakePetFor(luna));
+    const notches = foodNotches(
+      DEFAULT_ENERGY_PLAN,
+      intakePetFor(luna),
+      onMaintain,
+    );
     assert.deepEqual(notches, [
       { preset: 'maintain', target: 166, tolerance: 30 },
     ]);
   });
 
+  it('does not offer Lose to a cat whose target weight is above her weight', () => {
+    const underweight = intakePetFor({ ...luna, targetWeightKg: 4.8 });
+    const notches = foodNotches(DEFAULT_ENERGY_PLAN, underweight, onMaintain);
+    assert.deepEqual(
+      notches.map((notch) => notch.preset),
+      ['maintain'],
+    );
+  });
+
+  it('keeps the Lose notch for a band already on it, once she has reached her target', () => {
+    const reached = intakePetFor({ ...jazz, weightKg: 4.7 });
+    const notches = foodNotches(DEFAULT_ENERGY_PLAN, reached, {
+      preset: 'lose',
+    });
+    assert.ok(notches.some((notch) => notch.preset === 'lose'));
+  });
+
   it('adds Lose below Maintain once she has a target weight', () => {
-    const notches = foodNotches(DEFAULT_ENERGY_PLAN, intakePetFor(jazz));
+    const notches = foodNotches(
+      DEFAULT_ENERGY_PLAN,
+      intakePetFor(jazz),
+      onMaintain,
+    );
     assert.deepEqual(
       notches.map((notch) => [notch.preset, notch.target, notch.tolerance]),
       [
@@ -60,7 +90,9 @@ describe('waterNotches', () => {
 });
 
 describe('draftOf', () => {
-  const notches = foodNotches(DEFAULT_ENERGY_PLAN, intakePetFor(jazz));
+  const notches = foodNotches(DEFAULT_ENERGY_PLAN, intakePetFor(jazz), {
+    preset: 'maintain',
+  });
 
   it('starts a preset on its notch', () => {
     assert.deepEqual(draftOf({ preset: 'lose' }, notches), {
@@ -77,13 +109,17 @@ describe('draftOf', () => {
   });
 
   it('has nothing to edit for a preset with no band today', () => {
-    const withoutLose = foodNotches(DEFAULT_ENERGY_PLAN, intakePetFor(luna));
+    const withoutLose = foodNotches(DEFAULT_ENERGY_PLAN, intakePetFor(luna), {
+      preset: 'maintain',
+    });
     assert.equal(draftOf({ preset: 'lose' }, withoutLose), null);
   });
 });
 
 describe('settingOf', () => {
-  const notches = foodNotches(DEFAULT_ENERGY_PLAN, intakePetFor(jazz));
+  const notches = foodNotches(DEFAULT_ENERGY_PLAN, intakePetFor(jazz), {
+    preset: 'maintain',
+  });
 
   it('saves a draft on a notch as its preset', () => {
     assert.deepEqual(settingOf({ target: 182, tolerance: 9 }, notches), {
@@ -179,33 +215,5 @@ describe('changeFromDraft', () => {
       water: { tracked: false, setting: { target: 40, tolerance: 5 } },
       target_weight_kg: 4.8,
     });
-  });
-});
-
-describe('targetWeightProblem', () => {
-  it('accepts a new target below her weight', () => {
-    assert.equal(targetWeightProblem('5.5', 6.28, null), null);
-  });
-
-  it('accepts an empty field', () => {
-    assert.equal(targetWeightProblem('', 6.28, 5.5), null);
-  });
-
-  it('refuses a new target at or above her weight', () => {
-    assert.deepEqual(
-      [
-        targetWeightProblem('6.8', 6.28, null),
-        targetWeightProblem('6.28', 6.28, null),
-      ],
-      ['not_below_weight', 'not_below_weight'],
-    );
-  });
-
-  it('lets the saved target stand once she has reached it', () => {
-    assert.equal(targetWeightProblem('5.5', 5.4, 5.5), null);
-  });
-
-  it('refuses text that is not a weight', () => {
-    assert.equal(targetWeightProblem('abc', 6.28, null), 'not_a_weight');
   });
 });

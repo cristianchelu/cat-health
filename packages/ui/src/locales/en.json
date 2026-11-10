@@ -1099,7 +1099,6 @@
       "target_weight_label": "Target weight",
       "target_weight_description": "Optional · now {{weight}} kg",
       "target_weight_error": "Enter a weight above 0 kg",
-      "target_weight_error_not_below": "Enter a weight below {{weight}} kg",
       "row_label_resting": "Resting need at {{weight}} kg",
       "row_label_band": "{{pet}} at {{weight}} kg",
       "row_label_floor": "Lowest allowed",

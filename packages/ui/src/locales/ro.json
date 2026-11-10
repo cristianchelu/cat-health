@@ -1024,7 +1024,6 @@
       "target_weight_label": "Greutate țintă",
       "target_weight_description": "Opțional · acum {{weight}} kg",
       "target_weight_error": "Introdu o greutate peste 0 kg",
-      "target_weight_error_not_below": "Introdu o greutate sub {{weight}} kg",
       "row_label_resting": "Necesar de repaus la {{weight}} kg",
       "row_label_band": "{{pet}} la {{weight}} kg",
       "row_label_floor": "Minimul permis",

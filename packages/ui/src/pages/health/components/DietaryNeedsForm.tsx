@@ -33,7 +33,6 @@ import {
   intakePetFor,
   parseTargetWeight,
   presetAt,
-  targetWeightProblem,
   restingKcal,
   waterNotches,
   waterSettingOf,
@@ -41,7 +40,6 @@ import {
   withTolerance,
   type BandDraft,
   type BandScale,
-  type TargetWeightProblem,
 } from '../dietaryNeedsModel';
 import { IntakeBandSection } from './IntakeBandSection';
 import './DietaryNeedsForm.css';
@@ -62,12 +60,6 @@ const WATER_OPTION_KEYS: Record<WaterPreset, TranslationKey> = {
 const GAP_KEYS: Record<IntakeGap, TranslationKey> = {
   needs_target_weight: 'health.dietary_needs.gap_needs_target_weight',
   not_in_source: 'health.dietary_needs.gap_not_in_source',
-};
-
-/** What to say about a target weight that cannot be saved. */
-const TARGET_WEIGHT_ERROR_KEYS: Record<TargetWeightProblem, TranslationKey> = {
-  not_a_weight: 'health.dietary_needs.target_weight_error',
-  not_below_weight: 'health.dietary_needs.target_weight_error_not_below',
 };
 
 /** A scale stretched to hold a band saved past its usual end, so the thumb is never off the track. */
@@ -116,21 +108,13 @@ const DietaryNeedsForm: React.FC<DietaryNeedsFormProps> = ({
     useUnsavedBlocker(isDirty);
   const targetWeightField = useFormFieldA11y(undefined, true);
 
-  // A target weight that cannot be saved counts as none, so its notch goes
-  // rather than sitting where the bad number would put it.
   const targetWeight = parseTargetWeight(draft.targetWeight);
-  const targetWeightIssue = targetWeightProblem(
-    draft.targetWeight,
-    weightKg,
-    needs.target_weight_kg,
-  );
-  const targetWeightInvalid = targetWeightIssue !== null;
+  const targetWeightInvalid = targetWeight === 'invalid';
   const intakePet = intakePetFor({
     birthDate: pet.birth_date,
     altered: pet.altered,
     weightKg,
-    targetWeightKg:
-      targetWeightInvalid || targetWeight === 'invalid' ? null : targetWeight,
+    targetWeightKg: targetWeightInvalid ? null : targetWeight,
     today,
   });
 
@@ -140,7 +124,7 @@ const DietaryNeedsForm: React.FC<DietaryNeedsFormProps> = ({
 
   // Food, in kcal a day.
   const foodPlan = needs.food.plan;
-  const foodStops = foodNotches(foodPlan, intakePet);
+  const foodStops = foodNotches(foodPlan, intakePet, draft.food);
   const foodBand = draftOf(draft.food, foodStops);
   const foodFloor = foodScale(intakePet).min;
   const foodTrack = holding(foodScale(intakePet), foodBand);
@@ -275,8 +259,8 @@ const DietaryNeedsForm: React.FC<DietaryNeedsFormProps> = ({
                 weight,
               })}
               error={
-                targetWeightIssue
-                  ? t(TARGET_WEIGHT_ERROR_KEYS[targetWeightIssue], { weight })
+                targetWeightInvalid
+                  ? t('health.dietary_needs.target_weight_error')
                   : undefined
               }
               htmlFor={targetWeightField.inputId}

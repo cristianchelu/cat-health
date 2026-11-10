@@ -64,13 +64,23 @@ export function intakePetFor(profile: NeedsProfile): IntakePet {
   );
 }
 
-/** Every food preset that has a band for her today, in kcal a day, in slider order. */
+/**
+ * Every food preset offered for her today, in kcal a day, in slider order.
+ * Lose is offered only while her target weight is below her weight: a target
+ * at or above it belongs to a cat being fed up, or one who has reached it, and
+ * Lose would then feed her as much as Maintain or more. A band already on a
+ * preset keeps its notch, so it can be seen and moved off.
+ */
 export function foodNotches(
   plan: EnergyPlan,
   pet: IntakePet,
+  current: FoodBandSetting,
 ): Notch<FoodPreset>[] {
+  const nothingToLose = pet.targetKg !== null && pet.targetKg >= pet.kg;
   const notches: Notch<FoodPreset>[] = [];
   for (const preset of FOOD_PRESETS) {
+    const inUse = 'preset' in current && current.preset === preset;
+    if (preset === 'lose' && nothingToLose && !inUse) continue;
     const band = resolveFoodBand({ preset }, plan, pet);
     if ('gap' in band) continue;
     notches.push({ preset, target: band.target, tolerance: band.tolerance });
@@ -264,25 +274,4 @@ export function changeFromDraft(draft: NeedsDraft): PutDietaryNeedsRequest {
     water: { tracked: draft.waterTracked, setting: draft.water },
     target_weight_kg: targetWeight === 'invalid' ? null : targetWeight,
   };
-}
-
-/** Why a typed target weight cannot be saved. */
-export type TargetWeightProblem = 'not_a_weight' | 'not_below_weight';
-
-/**
- * What is wrong with the target weight field, or null when it can be saved.
- * A new target has to be below her weight, or Lose would feed her more than
- * Maintain. The one already saved stands even after she has reached it, so
- * leaving it alone never blocks a save.
- */
-export function targetWeightProblem(
-  text: string,
-  weightKg: number,
-  savedKg: number | null,
-): TargetWeightProblem | null {
-  const targetKg = parseTargetWeight(text);
-  if (targetKg === 'invalid') return 'not_a_weight';
-  if (targetKg === null || targetKg === savedKg) return null;
-  if (targetKg >= weightKg) return 'not_below_weight';
-  return null;
 }
