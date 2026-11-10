@@ -1,4 +1,8 @@
-import type { Static, TSchema } from '@fastify/type-provider-typebox';
+import {
+  Type,
+  type Static,
+  type TSchema,
+} from '@fastify/type-provider-typebox';
 import Compile from 'typebox/compile';
 
 const validators = new WeakMap<TSchema, ReturnType<typeof Compile>>();
@@ -33,4 +37,11 @@ export function requireWithSchema<S extends TSchema>(
     );
   }
   return value as Static<S>;
+}
+
+/** A schema accepting exactly `values`, typed as their union, so a list owned elsewhere stays the only copy. */
+export function literalUnion<Value extends string>(values: readonly Value[]) {
+  return Type.Unsafe<Value>(
+    Type.Union(values.map((value) => Type.Literal(value))),
+  );
 }

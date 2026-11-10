@@ -1,5 +1,12 @@
 import { Type } from '@fastify/type-provider-typebox';
-import { parseWithSchema } from 'shared';
+import {
+  ENERGY_MODEL_IDS,
+  FOOD_PRESETS,
+  WATER_MODEL_IDS,
+  WATER_PRESETS,
+  literalUnion,
+  parseWithSchema,
+} from 'shared';
 
 import type { EventData } from '../../domain/events.ts';
 
@@ -211,6 +218,42 @@ const StoredPetPresenceSchema = Type.Object({
   ),
 });
 
+const StoredCustomBandSettingSchema = Type.Object({
+  target: Type.Number(),
+  tolerance: Type.Number(),
+  source_event_id: Type.Optional(Type.Integer()),
+});
+
+/** Model and preset ids are append-only in `shared`, so every id a row can hold is still in these lists. */
+const StoredFoodIntakeTargetSchema = Type.Object({
+  type: Type.Literal('intake_target'),
+  kind: Type.Literal('food'),
+  measure: Type.Literal('amount'),
+  tracked: Type.Boolean(),
+  plan: Type.Array(literalUnion(ENERGY_MODEL_IDS)),
+  setting: Type.Union([
+    Type.Object({ preset: literalUnion(FOOD_PRESETS) }),
+    StoredCustomBandSettingSchema,
+  ]),
+});
+
+const StoredWaterIntakeTargetSchema = Type.Object({
+  type: Type.Literal('intake_target'),
+  kind: Type.Literal('water'),
+  measure: Type.Literal('amount'),
+  tracked: Type.Boolean(),
+  plan: Type.Array(literalUnion(WATER_MODEL_IDS)),
+  setting: Type.Union([
+    Type.Object({ preset: literalUnion(WATER_PRESETS) }),
+    StoredCustomBandSettingSchema,
+  ]),
+});
+
+const StoredWeightTargetSchema = Type.Object({
+  type: Type.Literal('weight_target'),
+  target_g: Type.Union([Type.Number(), Type.Null()]),
+});
+
 export const StoredEventDataSchema = Type.Union([
   StoredWeightMeasurementSchema,
   StoredWaterIntakeSchema,
@@ -221,6 +264,9 @@ export const StoredEventDataSchema = Type.Union([
   StoredDeviceConnectivitySchema,
   StoredDeviceEnablementSchema,
   StoredPetPresenceSchema,
+  StoredFoodIntakeTargetSchema,
+  StoredWaterIntakeTargetSchema,
+  StoredWeightTargetSchema,
 ]);
 
 /**

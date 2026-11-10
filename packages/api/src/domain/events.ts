@@ -1,8 +1,12 @@
 import type {
+  EnergyPlan,
+  FoodBandSetting,
   LitterboxAnalysisStatePeriod,
   LitterboxDeviceVerdict,
   LitterboxUseEliminationType,
   EventProviderData,
+  WaterBandSetting,
+  WaterPlan,
 } from 'shared';
 
 /**
@@ -164,6 +168,34 @@ export interface PetPresenceEventData {
 }
 
 /**
+ * One kind's band from this moment on. A full snapshot, plan included, so each
+ * past day resolves under the setting and the plan it was set with.
+ */
+export type IntakeTargetEventData =
+  | {
+      type: 'intake_target';
+      kind: 'food';
+      measure: 'amount';
+      tracked: boolean;
+      plan: EnergyPlan;
+      setting: FoodBandSetting;
+    }
+  | {
+      type: 'intake_target';
+      kind: 'water';
+      measure: 'amount';
+      tracked: boolean;
+      plan: WaterPlan;
+      setting: WaterBandSetting;
+    };
+
+/** Her ideal weight from this moment on, in grams; null clears it. */
+export interface WeightTargetEventData {
+  type: 'weight_target';
+  target_g: number | null;
+}
+
+/**
  * How exact an event's `timestamp` is when it is not exact: a period known to
  * have started "in 2023" stores the start of 2023 with `year`.
  */
@@ -178,4 +210,6 @@ export type EventData =
   | LitterboxMaintenanceEventData
   | DeviceConnectivityEventData
   | DeviceEnablementEventData
-  | PetPresenceEventData;
+  | PetPresenceEventData
+  | IntakeTargetEventData
+  | WeightTargetEventData;

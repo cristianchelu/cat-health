@@ -1,5 +1,11 @@
 import { Type, type Static } from '@fastify/type-provider-typebox';
 import { parseWithSchema } from '../runtimeSchema.ts';
+import {
+  EnergyPlanSchema,
+  FoodBandSettingSchema,
+  WaterBandSettingSchema,
+  WaterPlanSchema,
+} from './dietaryNeeds.ts';
 
 export const EventTypeSchema = Type.Union([
   Type.Literal('weight_measurement'),
@@ -11,8 +17,37 @@ export const EventTypeSchema = Type.Union([
   Type.Literal('device_connectivity'),
   Type.Literal('device_enablement'),
   Type.Literal('pet_presence'),
+  Type.Literal('intake_target'),
+  Type.Literal('weight_target'),
 ]);
 export type EventType = Static<typeof EventTypeSchema>;
+
+export type EventCategory = 'observation' | 'declaration';
+
+/**
+ * Whether an event of each type is something that happened at an instant, or
+ * a declaration that changes what is in effect from then on. Lists and totals
+ * of what happened leave declarations out.
+ */
+export const EVENT_CATEGORY: Record<EventType, EventCategory> = {
+  weight_measurement: 'observation',
+  water_intake: 'observation',
+  litterbox_use: 'observation',
+  food_intake: 'observation',
+  food_served: 'observation',
+  litterbox_maintenance: 'observation',
+  device_connectivity: 'observation',
+  device_enablement: 'observation',
+  pet_presence: 'observation',
+  intake_target: 'declaration',
+  weight_target: 'declaration',
+};
+
+/** Every declaration type, read off `EVENT_CATEGORY`. */
+export const DECLARATION_EVENT_TYPES: readonly EventType[] =
+  EventTypeSchema.anyOf
+    .map((literal) => literal.const)
+    .filter((type) => EVENT_CATEGORY[type] === 'declaration');
 
 export const LitterboxUseEliminationTypeSchema = Type.Union([
   Type.Literal('urination'),
@@ -306,6 +341,42 @@ export const PetPresenceEventDataSchema = Type.Object({
 });
 export type PetPresenceEventDataDTO = Static<typeof PetPresenceEventDataSchema>;
 
+/**
+ * The band a pet's daily food or water is judged against, from this moment
+ * on. A full snapshot, plan included, so each past day resolves under the
+ * setting and the plan it was set with.
+ */
+export const IntakeTargetEventDataSchema = Type.Union([
+  Type.Object({
+    type: Type.Literal('intake_target'),
+    kind: Type.Literal('food'),
+    measure: Type.Literal('amount'),
+    tracked: Type.Boolean(),
+    plan: EnergyPlanSchema,
+    setting: FoodBandSettingSchema,
+  }),
+  Type.Object({
+    type: Type.Literal('intake_target'),
+    kind: Type.Literal('water'),
+    measure: Type.Literal('amount'),
+    tracked: Type.Boolean(),
+    plan: WaterPlanSchema,
+    setting: WaterBandSettingSchema,
+  }),
+]);
+export type IntakeTargetEventDataDTO = Static<
+  typeof IntakeTargetEventDataSchema
+>;
+
+/** Her ideal weight from this moment on, in grams; null clears it. */
+export const WeightTargetEventDataSchema = Type.Object({
+  type: Type.Literal('weight_target'),
+  target_g: Type.Union([Type.Number({ exclusiveMinimum: 0 }), Type.Null()]),
+});
+export type WeightTargetEventDataDTO = Static<
+  typeof WeightTargetEventDataSchema
+>;
+
 export const EventDataSchema = Type.Union([
   WeightMeasurementEventDataSchema,
   WaterIntakeEventDataSchema,
@@ -316,5 +387,7 @@ export const EventDataSchema = Type.Union([
   DeviceConnectivityEventDataSchema,
   DeviceEnablementEventDataSchema,
   PetPresenceEventDataSchema,
+  IntakeTargetEventDataSchema,
+  WeightTargetEventDataSchema,
 ]);
 export type EventDataDTO = Static<typeof EventDataSchema>;

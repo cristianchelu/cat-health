@@ -20,13 +20,12 @@ export function times(factors: Range, base: number): Range {
 
 /**
  * What the app changed after the source answered, so a band whose numbers are
- * not its source's own says so wherever it shows.
+ * not its source's own says so wherever it shows. `point_tolerance`: the source
+ * gave one number, so the ± is the app's. `floor`: the target was raised so
+ * the band clears `foodFloorKcal`.
  */
-export type BandAdjustment =
-  /** The source gave one number, so the ± is the app's point tolerance. */
-  | 'point_tolerance'
-  /** The target was raised so the band clears `foodFloorKcal`. */
-  | 'floor';
+export const BAND_ADJUSTMENTS = ['point_tolerance', 'floor'] as const;
+export type BandAdjustment = (typeof BAND_ADJUSTMENTS)[number];
 
 /**
  * A day's target ± tolerance, in whole units so the two add up to the bounds
@@ -55,7 +54,8 @@ export interface CustomOrigin {
 }
 
 /** Why a preset has no band, which leaves only a custom one. */
-export type IntakeGap = 'not_in_source' | 'needs_target_weight';
+export const INTAKE_GAPS = ['not_in_source', 'needs_target_weight'] as const;
+export type IntakeGap = (typeof INTAKE_GAPS)[number];
 
 /**
  * The ± around a source that gives one number, as a share of that number. No

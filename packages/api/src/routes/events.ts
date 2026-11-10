@@ -41,6 +41,7 @@ import {
   computeUntrackedBuckets,
 } from '../services/analytics/trendCoverage.ts';
 import { isBucketTracked } from '../services/analytics/analyticsCoverage.ts';
+import { withoutDeclarations } from '../services/events/eventCategory.ts';
 
 import type { EventCauseDTO, GetEventListItemDTO } from 'shared';
 import { parseStoredEventData } from '../database/types/storedEventData.ts';
@@ -374,9 +375,13 @@ const eventRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         countQuery = countQuery.where('human_verified', '=', human_verified);
       }
 
+      // Asking for a type gets that type; a plain list is of what happened.
       if (eventType !== undefined) {
         query = query.where('type', '=', eventType);
         countQuery = countQuery.where('type', '=', eventType);
+      } else {
+        query = query.where(withoutDeclarations);
+        countQuery = countQuery.where(withoutDeclarations);
       }
 
       if (startTime !== undefined) {

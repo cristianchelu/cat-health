@@ -11,6 +11,7 @@ import type { Kysely } from 'kysely';
 import type { Database } from './database/index.ts';
 import { getMediaPath } from './mediaPaths.ts';
 import petRoutes from './routes/pets.ts';
+import dietaryNeedsRoutes from './routes/dietaryNeeds.ts';
 import eventRoutes from './routes/events.ts';
 import deviceRoutes from './routes/devices.ts';
 import foodRoutes from './routes/foods.ts';
@@ -136,6 +137,7 @@ export async function buildApp({
   });
 
   await fastify.register(petRoutes, { prefix: '/api/pets' });
+  await fastify.register(dietaryNeedsRoutes, { prefix: '/api/pets' });
   await fastify.register(eventRoutes, { prefix: '/api/events' });
   await fastify.register(deviceRoutes, { prefix: '/api/devices' });
   await fastify.register(foodRoutes, { prefix: '/api/foods' });

@@ -4,7 +4,6 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import sharp from 'sharp';
 import type { MultipartFile } from '@fastify/multipart';
-import { format } from 'date-fns';
 import {
   GetPetParamsSchema,
   GetPetResponseSchema,
@@ -19,6 +18,7 @@ import {
   GetPetAvatarResponseSchema,
   type GetPetResponseDTO,
 } from 'shared';
+import { formatBirthDate } from '../helpers/birthDate.ts';
 import { requireSerializedEventRow } from './mappers/events.ts';
 import {
   Type,
@@ -44,7 +44,7 @@ import {
   Http415UnsupportedMediaTypeSchema,
 } from './httpErrorSchemas.ts';
 
-const PET_NOT_FOUND: Static<typeof Http404NotFoundSchema> = {
+export const PET_NOT_FOUND: Static<typeof Http404NotFoundSchema> = {
   statusCode: 404,
   error: 'Not Found',
   message: 'Pet not found',
@@ -55,11 +55,6 @@ const AVATAR_NOT_FOUND: Static<typeof Http404NotFoundSchema> = {
   error: 'Not Found',
   message: 'Avatar not found',
 };
-
-function formatBirthDate(value: Date | string | null): string | null {
-  if (value == null) return null;
-  return typeof value === 'string' ? value : format(value, 'yyyy-MM-dd');
-}
 
 /** Present wire value only — caller owns PATCH presence (`!== undefined`). */
 function parseBirthDate(value: string | null): Date | null {

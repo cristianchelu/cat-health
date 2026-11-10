@@ -16,6 +16,8 @@ export const EVENT_TITLE_KEYS: Record<EventType, TranslationKey> = {
   device_connectivity: 'event_details.title_device_connectivity',
   device_enablement: 'event_details.title_device_enablement',
   pet_presence: 'event_details.title_pet_presence',
+  intake_target: 'event_details.title_intake_target',
+  weight_target: 'event_details.title_weight_target',
 };
 
 /** What a litterbox visit left behind, as a label. */
