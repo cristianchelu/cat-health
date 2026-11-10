@@ -1,0 +1,25 @@
+.label-value-rows {
+  margin: 0;
+
+  .label-value-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-2xs);
+    font-size: var(--text-sm);
+    color: var(--color-text-light);
+  }
+
+  dt {
+    min-width: 0;
+  }
+
+  dd {
+    margin: 0;
+    font-weight: var(--font-semibold);
+    color: var(--color-text);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+}

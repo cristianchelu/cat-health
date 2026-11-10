@@ -174,6 +174,34 @@ describe('Slider', () => {
     );
   });
 
+  it('hugs an edge only with a label at a true end of the track', async () => {
+    const { container } = await renderWithProviders(
+      <Slider
+        value={40}
+        min={0}
+        max={170}
+        step={1}
+        detents={[43, 170]}
+        detentLabels={
+          new Map([
+            [43, '¼'],
+            [170, '1 pouch'],
+          ])
+        }
+        onValueChange={() => {}}
+        label="Amount in grams"
+      />,
+    );
+    const labels = [...container.querySelectorAll('.slider-label')];
+    assert.deepEqual(
+      labels.map((label) => [label.textContent, label.className]),
+      [
+        ['¼', 'slider-label'],
+        ['1 pouch', 'slider-label at-end'],
+      ],
+    );
+  });
+
   it('renders a tick per detent and a label only where one is given', async () => {
     const { container } = await renderWithProviders(
       <Slider

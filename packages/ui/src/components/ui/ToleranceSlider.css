@@ -1,0 +1,47 @@
+.tolerance-slider {
+  /* Above the edge cursors, so the target stays grabbable when the tolerance
+     is narrow enough for them to sit under it. */
+  .tolerance-slider-thumb {
+    z-index: 2;
+    cursor: grab;
+  }
+
+  .tolerance-slider-edge {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    width: var(--space-2xs);
+    height: var(--space-md);
+    transform: translate(-50%, -50%);
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    cursor: ew-resize;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  /* A notch label is a button wearing the Slider's label, so only what makes
+     it a button is set here. `line-height` is restated because a <button>
+     keeps the UA's `normal` where the Slider's <span> inherits. */
+  .tolerance-slider-notch {
+    padding: 0 var(--space-2xs);
+    border: none;
+    background: none;
+    line-height: inherit;
+    cursor: pointer;
+
+    &:hover,
+    &.active {
+      color: var(--color-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      border-radius: var(--radius-sm);
+    }
+  }
+}

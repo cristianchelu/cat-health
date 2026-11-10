@@ -198,13 +198,13 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
                 style={{ left: `${tickRatio(detent) * 100}%` }}
               />
             ))}
-            {labeledDetents.map((detent, index) => (
+            {labeledDetents.map((detent) => (
               <span
                 key={detent}
                 className={cn(
                   'slider-label',
-                  index === 0 && 'at-start',
-                  index === labeledDetents.length - 1 && 'at-end',
+                  detent === min && 'at-start',
+                  detent === max && 'at-end',
                 )}
                 style={{ left: `${tickRatio(detent) * 100}%` }}
               >

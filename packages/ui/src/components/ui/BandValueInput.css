@@ -1,0 +1,47 @@
+.band-value-input {
+  text-align: center;
+
+  .band-value-pair {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-2xs);
+
+    small {
+      font-size: var(--text-lg);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-light);
+    }
+  }
+
+  .band-value-number {
+    box-sizing: content-box;
+    padding: 0;
+    border: none;
+    border-bottom: 2px dotted var(--color-border-hover);
+    border-radius: 0;
+    background: transparent;
+    font-size: var(--text-4xl);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+
+    &:focus {
+      outline: none;
+      border-bottom: 2px solid var(--color-primary);
+    }
+  }
+
+  .band-value-sign {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-light);
+  }
+
+  .band-value-note {
+    margin: var(--space-2xs) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+}
