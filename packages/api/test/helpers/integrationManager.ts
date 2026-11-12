@@ -4,6 +4,7 @@ import type { Database } from '../../src/database/index.ts';
 import { EventBus } from '../../src/services/devices/EventBus.ts';
 import { IntegrationManager } from '../../src/services/devices/IntegrationManager.ts';
 import type { ProviderAccount } from '../../src/database/types/ProviderAccountTable.ts';
+import type { AccountOverrides } from '../../src/services/devices/accountOverrides.ts';
 import type {
   AccountManager,
   DeviceProvider,
@@ -19,6 +20,7 @@ export interface TestIntegrationManagerOptions {
   accountManagers?: ReadonlyMap<number, AccountManager>;
   /** Pass one to observe what account managers publish. */
   eventBus?: EventBus;
+  accountOverrides?: AccountOverrides;
   /**
    * Providers to replace with one whose account manager is the given stub.
    * Anything that rebuilds an account manager at runtime — switching an
@@ -53,7 +55,11 @@ export function createTestIntegrationManager(
   options: TestIntegrationManagerOptions = {},
 ): IntegrationManager {
   const eventBus = options.eventBus ?? new EventBus();
-  const integrationManager = new IntegrationManager(db, eventBus);
+  const integrationManager = new IntegrationManager(
+    db,
+    eventBus,
+    options.accountOverrides,
+  );
 
   integrationManager.registerProvider(new ESPHomeProvider());
   integrationManager.registerProvider(new CameraProvider());

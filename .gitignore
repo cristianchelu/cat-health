@@ -12,6 +12,7 @@ dist
 .env.*
 .env.local
 packages/api/.env
+packages/api/account-overrides.json
 
 # TypeScript incremental build info
 *.tsbuildinfo

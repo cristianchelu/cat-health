@@ -11,6 +11,7 @@ import { buildApp, registerProductionSpa } from './app.ts';
 
 import { EventBus } from './services/devices/EventBus.ts';
 import { IntegrationManager } from './services/devices/IntegrationManager.ts';
+import { loadAccountOverrides } from './services/devices/accountOverrides.ts';
 import { EventMediaCoordinator } from './services/media/EventMediaCoordinator.ts';
 import { RecognitionService } from './services/recognition/RecognitionService.ts';
 import { CameraPreviewService } from './services/devices/cameraPreview/CameraPreviewService.ts';
@@ -31,7 +32,17 @@ const db = createDb();
 await migrateToLatest(db);
 
 const eventBus = new EventBus();
-const integrationManager = new IntegrationManager(db, eventBus);
+const accountOverrides = loadAccountOverrides();
+for (const [accountId, override] of Object.entries(accountOverrides)) {
+  console.log(
+    `Account ${accountId} runs with overridden ${Object.keys(override.config).join(', ')}`,
+  );
+}
+const integrationManager = new IntegrationManager(
+  db,
+  eventBus,
+  accountOverrides,
+);
 
 integrationManager.registerProvider(new ESPHomeProvider());
 integrationManager.registerProvider(new CameraProvider());

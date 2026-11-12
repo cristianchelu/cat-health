@@ -26,6 +26,10 @@ import {
   ProviderPermanentError,
 } from './providerFailure.ts';
 import { AccountEntry } from './AccountEntry.ts';
+import {
+  applyAccountOverride,
+  type AccountOverrides,
+} from './accountOverrides.ts';
 
 export class IntegrationManager
   implements DeviceDirectory, DeviceIntegrationContext
@@ -38,7 +42,13 @@ export class IntegrationManager
   private readonly presence: DevicePresence;
   private onSnapshotBuffer?: (deviceId: number, buffer: Buffer) => void;
   private readonly retiredListeners = new Set<(deviceId: number) => void>();
-  constructor(db: Kysely<Database>, eventBus: EventBus) {
+  private readonly overrides: AccountOverrides;
+  constructor(
+    db: Kysely<Database>,
+    eventBus: EventBus,
+    overrides: AccountOverrides = {},
+  ) {
+    this.overrides = overrides;
     this.mediaManager = new MediaManager(db);
     this.presence = new DevicePresence({
       db,
@@ -258,7 +268,17 @@ export class IntegrationManager
             `Provider ${account.provider} not found`,
           );
         }
-        return provider.createAccountManager(account, { ...this.deps, health });
+        const deps = { ...this.deps, health };
+        const override = this.overrides[account.id];
+        if (!override) return provider.createAccountManager(account, deps);
+
+        const effective = applyAccountOverride(account, override);
+        if (!provider.validateAccountConfig(effective.config)) {
+          throw new ProviderPermanentError(
+            `Account override for ${account.id} leaves an invalid ${account.provider} config`,
+          );
+        }
+        return provider.createAccountManager(effective, deps);
       },
       retryPolicy: (account) =>
         this.providers.get(account.provider)?.retryPolicy ??
