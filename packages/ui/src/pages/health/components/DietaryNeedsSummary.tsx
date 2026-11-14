@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { IntakeKind } from 'shared';
 
 import { Card, CardContent } from '@/components/ui/Card';
 import { ReadoutGrid, type Readout } from '@/components/ui/ReadoutGrid';
@@ -7,7 +8,7 @@ import { cn } from '@/lib/utils';
 import './DietaryNeedsSummary.css';
 
 interface DietaryNeedsCard {
-  kind: 'food' | 'water';
+  kind: IntakeKind;
   icon: React.ReactNode;
   title: string;
   /** The band as text ("178–256"), or the words for having none. */

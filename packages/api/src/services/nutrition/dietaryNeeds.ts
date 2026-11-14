@@ -8,11 +8,9 @@ import {
   resolveFoodBand,
   resolveWaterBand,
   type FoodBand,
-  type FoodBandSetting,
   type IntakeGap,
   type IntakePet,
   type WaterBand,
-  type WaterBandSetting,
 } from 'shared';
 
 import type { Database } from '../../database/index.ts';
@@ -30,8 +28,10 @@ import {
   DEFAULT_TARGETS,
   bandWeightG,
   targetsAt,
+  type FoodTarget,
   type TargetEvent,
   type TargetsInEffect,
+  type WaterTarget,
   type WeighIn,
 } from './intakeTargets.ts';
 
@@ -168,8 +168,8 @@ export async function pinDefaultTargets(
 
 /** What the request to change a pet's dietary needs may carry; a part left out stays as it is. */
 export interface DietaryNeedsChange {
-  food?: { tracked: boolean; setting: FoodBandSetting };
-  water?: { tracked: boolean; setting: WaterBandSetting };
+  food?: Pick<FoodTarget, 'tracked' | 'setting'>;
+  water?: Pick<WaterTarget, 'tracked' | 'setting'>;
   /** Null clears the target weight. */
   targetWeightG?: number | null;
 }

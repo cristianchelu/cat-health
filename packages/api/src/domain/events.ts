@@ -1,91 +1,59 @@
+import type { Static } from '@fastify/type-provider-typebox';
+
 import type {
-  EnergyPlan,
-  FoodBandSetting,
-  LitterboxAnalysisStatePeriod,
-  LitterboxDeviceVerdict,
-  LitterboxUseEliminationType,
-  EventProviderData,
-  WaterBandSetting,
-  WaterPlan,
-} from 'shared';
+  StoredDeviceConnectivityPreviousStateSchema,
+  StoredDeviceConnectivitySchema,
+  StoredDeviceConnectivityStateSchema,
+  StoredDeviceEnablementSchema,
+  StoredDeviceStatusCauseSchema,
+  StoredEventDataSchema,
+  StoredFoodIntakeSchema,
+  StoredFoodIntakeTargetSchema,
+  StoredFoodServedSchema,
+  StoredLitterboxAnnotationSchema,
+  StoredLitterboxBoutAnnotationSchema,
+  StoredLitterboxMaintenanceSchema,
+  StoredLitterboxUseSchema,
+  StoredPetPresenceContextSchema,
+  StoredPetPresencePreviousStateSchema,
+  StoredPetPresenceSchema,
+  StoredPetPresenceStateSchema,
+  StoredWaterIntakeSchema,
+  StoredWaterIntakeTargetSchema,
+  StoredWeightMeasurementSchema,
+  StoredWeightTargetSchema,
+} from '../database/types/storedEventData.ts';
 
 /**
  * Domain model for event payloads — the shapes business logic works with.
  *
- * Adapters translate to and from this model at the edges:
- * - `database/types/storedEventData.ts` parses the persisted JSON column into it
- * - `routes/mappers/events.ts` maps it to/from the wire DTOs in `shared`
+ * They are what the `data` column holds, so each is the `Static` of its schema
+ * in `database/types/storedEventData.ts`, which also validates rows on read.
+ * `routes/mappers/events.ts` maps them to and from the wire DTOs in `shared`.
  */
 
-export interface WeightMeasurementEventData {
-  type: 'weight_measurement';
-  weight: number;
-}
+export type WeightMeasurementEventData = Static<
+  typeof StoredWeightMeasurementSchema
+>;
 
-export interface WaterIntakeEventData {
-  type: 'water_intake';
-  amount: number;
-  duration?: number;
-  source?: 'drinking' | 'food';
-  raw_amount?: number; // total weight drop before rate filtering (ml)
-  excluded_amount?: number; // amount removed by rate filter (spill/play, ml)
-  filtered?: boolean; // true when any segments were excluded
-}
+export type WaterIntakeEventData = Static<typeof StoredWaterIntakeSchema>;
 
-export interface LitterboxBoutAnnotation {
-  bout_index: number;
-  t_start_s: number;
-  t_end_s: number;
-  bout_type: 'urination' | 'defecation' | 'unknown';
-}
+export type LitterboxBoutAnnotation = Static<
+  typeof StoredLitterboxBoutAnnotationSchema
+>;
 
-export interface LitterboxAnnotation {
-  bouts: LitterboxBoutAnnotation[];
-  /** When true, omit from human-verified export / training fixtures (bad data). */
-  excluded?: boolean;
-}
+export type LitterboxAnnotation = Static<
+  typeof StoredLitterboxAnnotationSchema
+>;
 
-export interface LitterboxUseEventData {
-  type: 'litterbox_use';
-  elimination_type: LitterboxUseEliminationType;
-  elimination_weight: number;
-  duration: number;
-  /**
-   * True samples-per-second of this visit's raw_data weight trace; converts
-   * `segments` sample indices to seconds. Derived from v2 per-sample offsets
-   * (or count/duration for v1); absent on rows predating the backfill.
-   */
-  sample_rate_hz?: number;
-  straining?: boolean;
-  annotation?: LitterboxAnnotation;
-  /**
-   * Full server `StateAnalyzer` period list (sample indices). `null` = not analyzed / cleared;
-   * `[]` = analyzed, zero periods. Per-row `elimination_type` (urination/defecation) is set on ingest/analyze.
-   */
-  segments?: LitterboxAnalysisStatePeriod[] | null;
-  /** Owner: `LitterboxDeviceVerdictSchema` in shared. */
-  device_verdict?: LitterboxDeviceVerdict;
-}
+export type LitterboxUseEventData = Static<typeof StoredLitterboxUseSchema>;
 
-export type FoodIntakeFoodType = 'dry' | 'wet' | 'treat' | 'unknown';
+export type FoodIntakeEventData = Static<typeof StoredFoodIntakeSchema>;
 
-export interface FoodIntakeEventData {
-  type: 'food_intake';
-  food_type: FoodIntakeFoodType;
-  amount: number;
-  food_id?: number;
-  provider_data?: EventProviderData;
-  /**
-   * Computed nutrient totals for the intake, keyed by nutrient. Known keys:
-   * `calories`, `moisture_ml`, `protein_g`, `fat_g`, `fiber_g`, `ash_g`,
-   * `carbs_g`, `calcium_mg`, `phosphorus_mg`, `taurine_mg`, `sodium_mg`,
-   * `omega3_g`, `omega6_g`.
-   */
-  nutrients?: Record<string, number>;
-}
+export type FoodIntakeFoodType = FoodIntakeEventData['food_type'];
 
 /**
- * Food put into a bowl. Owner: `FoodServedEventDataSchema` in shared.
+ * Food put into a bowl.
  *
  * The counterpart to `food_intake`: that is the bowl emptying, this is it
  * filling. `caused_by` carries whether a person or the appliance did it, so a
@@ -93,54 +61,36 @@ export interface FoodIntakeEventData {
  * is deliberately NOT this event — nothing becomes edible when a hopper is
  * loaded, and hoppers report a state, not a weight.
  */
-export interface FoodServedEventData {
-  type: 'food_served';
-  food_type: FoodIntakeFoodType;
-  /** Grams added to the bowl by this serving. */
-  amount: number;
-  food_id?: number;
-  /** Bowl level in grams immediately before the serving, when weighed. */
-  level_before?: number;
-  /** Bowl level in grams immediately after the serving, when weighed. */
-  level_after?: number;
-  provider_data?: EventProviderData;
-}
+export type FoodServedEventData = Static<typeof StoredFoodServedSchema>;
+
+export type LitterboxMaintenanceEventData = Static<
+  typeof StoredLitterboxMaintenanceSchema
+>;
 
 export type LitterboxMaintenanceEventType =
-  | 'scoop'
-  | 'deep_clean'
-  | 'litter_change'
-  | 'litter_addition';
-export interface LitterboxMaintenanceEventData {
-  type: 'litterbox_maintenance';
-  maintenance_type: LitterboxMaintenanceEventType;
-  litter_amount?: number; // in grams, for litter_change/litter_addition
-}
+  LitterboxMaintenanceEventData['maintenance_type'];
 
-export type DeviceConnectivityState = 'online' | 'offline' | 'error';
+export type DeviceConnectivityState = Static<
+  typeof StoredDeviceConnectivityStateSchema
+>;
+
 /**
  * Which side moved a device-status event (`isDeviceStatusEventType`): the
  * device itself, or its whole account. Unrelated to an event's `caused_by`.
  */
-export type DeviceStatusCause = 'device' | 'account';
-export type DeviceConnectivityPreviousState =
-  | DeviceConnectivityState
-  | 'unknown';
+export type DeviceStatusCause = Static<typeof StoredDeviceStatusCauseSchema>;
 
-export interface DeviceConnectivityEventData {
-  type: 'device_connectivity';
-  state: DeviceConnectivityState;
-  previous_state?: DeviceConnectivityPreviousState;
-  /** `account` when the device went with its account's connection. */
-  cause?: DeviceStatusCause;
-}
+export type DeviceConnectivityPreviousState = Static<
+  typeof StoredDeviceConnectivityPreviousStateSchema
+>;
 
-export interface DeviceEnablementEventData {
-  type: 'device_enablement';
-  enabled: boolean;
-  /** Which switch moved: the device's own, or its whole account's. */
-  cause?: DeviceStatusCause;
-}
+export type DeviceConnectivityEventData = Static<
+  typeof StoredDeviceConnectivitySchema
+>;
+
+export type DeviceEnablementEventData = Static<
+  typeof StoredDeviceEnablementSchema
+>;
 
 /**
  * Events that describe the device itself rather than anything a pet did:
@@ -150,50 +100,24 @@ export function isDeviceStatusEventType(type: string): boolean {
   return type === 'device_connectivity' || type === 'device_enablement';
 }
 
-export type PetPresenceState = 'away' | 'home' | 'outside';
-export type PetPresenceContext =
-  | 'vet'
-  | 'travel'
-  | 'friend'
-  | 'manual'
-  | 'profile_closed'
-  | 'profile_reopened';
-export type PetPresencePreviousState = PetPresenceState | 'unknown';
+export type PetPresenceState = Static<typeof StoredPetPresenceStateSchema>;
+export type PetPresenceContext = Static<typeof StoredPetPresenceContextSchema>;
+export type PetPresencePreviousState = Static<
+  typeof StoredPetPresencePreviousStateSchema
+>;
 
-export interface PetPresenceEventData {
-  type: 'pet_presence';
-  state: PetPresenceState;
-  context?: PetPresenceContext;
-  previous_state?: PetPresencePreviousState;
-}
+export type PetPresenceEventData = Static<typeof StoredPetPresenceSchema>;
 
 /**
  * One kind's band from this moment on. A full snapshot, plan included, so each
  * past day resolves under the setting and the plan it was set with.
  */
 export type IntakeTargetEventData =
-  | {
-      type: 'intake_target';
-      kind: 'food';
-      measure: 'amount';
-      tracked: boolean;
-      plan: EnergyPlan;
-      setting: FoodBandSetting;
-    }
-  | {
-      type: 'intake_target';
-      kind: 'water';
-      measure: 'amount';
-      tracked: boolean;
-      plan: WaterPlan;
-      setting: WaterBandSetting;
-    };
+  | Static<typeof StoredFoodIntakeTargetSchema>
+  | Static<typeof StoredWaterIntakeTargetSchema>;
 
 /** Her ideal weight from this moment on, in grams; null clears it. */
-export interface WeightTargetEventData {
-  type: 'weight_target';
-  target_g: number | null;
-}
+export type WeightTargetEventData = Static<typeof StoredWeightTargetSchema>;
 
 /**
  * How exact an event's `timestamp` is when it is not exact: a period known to
@@ -201,15 +125,4 @@ export interface WeightTargetEventData {
  */
 export type EventTimestampPrecision = 'day' | 'month' | 'year' | 'unknown';
 
-export type EventData =
-  | WeightMeasurementEventData
-  | WaterIntakeEventData
-  | LitterboxUseEventData
-  | FoodIntakeEventData
-  | FoodServedEventData
-  | LitterboxMaintenanceEventData
-  | DeviceConnectivityEventData
-  | DeviceEnablementEventData
-  | PetPresenceEventData
-  | IntakeTargetEventData
-  | WeightTargetEventData;
+export type EventData = Static<typeof StoredEventDataSchema>;

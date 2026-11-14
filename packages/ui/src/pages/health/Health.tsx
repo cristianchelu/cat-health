@@ -4,6 +4,7 @@ import { Drumstick, GlassWater, Target } from 'lucide-react';
 import type {
   FoodPreset,
   GetDietaryNeedsResponse,
+  IntakeKind,
   PutDietaryNeedsRequest,
   WaterPreset,
 } from 'shared';
@@ -73,11 +74,11 @@ const Health: React.FC = () => {
   const petId = selectedPet?.id ?? 0;
   const { data: needs } = usePetDietaryNeeds(petId);
   const saveMutation = useSavePetDietaryNeeds(petId);
-  const [editing, setEditing] = React.useState<'food' | 'water' | null>(null);
+  const [editing, setEditing] = React.useState<IntakeKind | null>(null);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const today = formatCalendarDate(new Date(), timezone);
 
-  const openEditor = (kind: 'food' | 'water') => {
+  const openEditor = (kind: IntakeKind) => {
     setSaveError(null);
     setEditing(kind);
   };

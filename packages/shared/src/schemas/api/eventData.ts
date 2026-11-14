@@ -7,48 +7,6 @@ import {
   WaterPlanSchema,
 } from './dietaryNeeds.ts';
 
-export const EventTypeSchema = Type.Union([
-  Type.Literal('weight_measurement'),
-  Type.Literal('water_intake'),
-  Type.Literal('litterbox_use'),
-  Type.Literal('food_intake'),
-  Type.Literal('food_served'),
-  Type.Literal('litterbox_maintenance'),
-  Type.Literal('device_connectivity'),
-  Type.Literal('device_enablement'),
-  Type.Literal('pet_presence'),
-  Type.Literal('intake_target'),
-  Type.Literal('weight_target'),
-]);
-export type EventType = Static<typeof EventTypeSchema>;
-
-export type EventCategory = 'observation' | 'declaration';
-
-/**
- * Whether an event of each type is something that happened at an instant, or
- * a declaration that changes what is in effect from then on. Lists and totals
- * of what happened leave declarations out.
- */
-export const EVENT_CATEGORY: Record<EventType, EventCategory> = {
-  weight_measurement: 'observation',
-  water_intake: 'observation',
-  litterbox_use: 'observation',
-  food_intake: 'observation',
-  food_served: 'observation',
-  litterbox_maintenance: 'observation',
-  device_connectivity: 'observation',
-  device_enablement: 'observation',
-  pet_presence: 'observation',
-  intake_target: 'declaration',
-  weight_target: 'declaration',
-};
-
-/** Every declaration type, read off `EVENT_CATEGORY`. */
-export const DECLARATION_EVENT_TYPES: readonly EventType[] =
-  EventTypeSchema.anyOf
-    .map((literal) => literal.const)
-    .filter((type) => EVENT_CATEGORY[type] === 'declaration');
-
 export const LitterboxUseEliminationTypeSchema = Type.Union([
   Type.Literal('urination'),
   Type.Literal('defecation'),
@@ -391,3 +349,34 @@ export const EventDataSchema = Type.Union([
   WeightTargetEventDataSchema,
 ]);
 export type EventDataDTO = Static<typeof EventDataSchema>;
+
+/** Every event type, read off the `type` of each `EventDataSchema` member. */
+export const EventTypeSchema = Type.Index(EventDataSchema, ['type']);
+export type EventType = Static<typeof EventTypeSchema>;
+
+export type EventCategory = 'observation' | 'declaration';
+
+/**
+ * Whether an event of each type is something that happened at an instant, or
+ * a declaration that changes what is in effect from then on. Lists and totals
+ * of what happened leave declarations out.
+ */
+export const EVENT_CATEGORY: Record<EventType, EventCategory> = {
+  weight_measurement: 'observation',
+  water_intake: 'observation',
+  litterbox_use: 'observation',
+  food_intake: 'observation',
+  food_served: 'observation',
+  litterbox_maintenance: 'observation',
+  device_connectivity: 'observation',
+  device_enablement: 'observation',
+  pet_presence: 'observation',
+  intake_target: 'declaration',
+  weight_target: 'declaration',
+};
+
+/** Every declaration type, read off `EVENT_CATEGORY`. */
+export const DECLARATION_EVENT_TYPES: readonly EventType[] =
+  EventTypeSchema.anyOf
+    .map((literal) => literal.const)
+    .filter((type) => EVENT_CATEGORY[type] === 'declaration');

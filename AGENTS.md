@@ -105,6 +105,15 @@ The bar a senior reviewer holds every change to.
 - **NEVER** add a function that only renames another (`currentPresence = (db, ids) => presenceAt(db, ids)`). Call the real one.
 - Within one request, **never read the same row twice**: pass what you already loaded (`pet.presence`) instead of querying it again, and fetch independent reads with `Promise.all`.
 
+**Derive or map — decide which before writing a second type.** Two declarations that look alike are either the same thing or two things that agree today. Ask which before choosing.
+
+- **Same thing, same layer → derive.** They cannot legitimately disagree, so a second copy only buys the freedom to be wrong. The owner is whatever has to exist at runtime: a schema when something validates against it (`Static<typeof X>`), an `as const` list when something iterates it (`(typeof X)[number]`), otherwise a plain type in `shared`. Examples: the domain event payloads are `Static` of the stored schemas; `EventTypeSchema` is `Type.Index(EventDataSchema, ['type'])`; a request's "part of a target" is `Pick<FoodTarget, …>`.
+- **Different layers by policy → two declarations, and the mapping is the check.** The stored archive, the wire DTO, a service model and a form draft change for different reasons. Keep each declared on its own and join them with a function that builds one from the other field by field, with a declared return type and no cast (`withTarget`, `routes/mappers/events.ts`). Drift then fails to compile at the seam, which is also where a deliberate divergence gets written.
+- **NEVER** `Pick` / `Omit` / `Extract` across a layer boundary. It reintroduces the coupling the boundary exists to prevent, and hides it in a type expression.
+- **Within one layer, `Pick` / `Omit` only for "is part of"**, never for "happens to have the same fields".
+- A one-way assignability check (`const x: Domain = parse(...)`) is not a drift check: a field added only to the source, or an optional field added only to the target, still compiles. When two types must stay identical, derive one from the other.
+- Migrations are frozen history: they keep their own literal copies (CHECK lists, unions) and never import a live constant.
+
 **React renders are pure.**
 
 - Anything that allocates or subscribes — `URL.createObjectURL`, timers, listeners — is created and released in an **effect**, never in render or `useMemo` (both can run more than once).
@@ -394,7 +403,8 @@ export default ComponentName;
 
 #### Persistence vs API schemas
 
-- Kysely DB types (`packages/api/src/database/types/`) are declared **independently** of `packages/shared/src/schemas/api/` DTOs. Only genuinely representation-independent primitives may be shared across the boundary (e.g. `LitterboxUseEliminationType`, `EventProviderData`).
+- Kysely DB types (`packages/api/src/database/types/`) are declared **independently** of `packages/shared/src/schemas/api/` DTOs. Only genuinely representation-independent primitives may be shared across the boundary (id lists such as `ENERGY_MODEL_IDS`, enums such as `EventCauseDTO`).
+- The stored schemas in `storedEventData.ts` **own** the domain payload types: `domain/events.ts` is their `Static`, so the canary validates exactly what the code reads. When storage has to diverge from what the code works with, that is when a separate domain type and a real Stored→domain mapper appear — not before.
 - **Never** alias a JSON DB column type to an API DTO type (e.g. `export type EventData = EventDataDTO` in `EventTable.ts`).
 - Persisted-row validation uses a **DB-owned corruption canary** (`parseStoredEventData`), not the API response schema (`EventDataSchema` / `parseEventData`). The canary rejects out-of-band garbage; it is not a normalization or coercion layer.
 - `EventDataSchema` / `parseEventData` remain the Fastify wire contract for POST/PATCH bodies and API responses after serialization.

@@ -53,6 +53,9 @@ export interface CustomOrigin {
   sourceEventId: number | null;
 }
 
+/** Which daily intake a band judges. */
+export type IntakeKind = 'food' | 'water';
+
 /** Why a preset has no band, which leaves only a custom one. */
 export const INTAKE_GAPS = ['not_in_source', 'needs_target_weight'] as const;
 export type IntakeGap = (typeof INTAKE_GAPS)[number];

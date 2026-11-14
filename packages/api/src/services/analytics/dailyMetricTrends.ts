@@ -1,7 +1,7 @@
 import { subDays } from 'date-fns';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import type { Kysely } from 'kysely';
-import { boundsOf } from 'shared';
+import { boundsOf, type IntakeKind } from 'shared';
 import type { Database } from '../../database/index.ts';
 import { parseStoredEventData } from '../../database/types/storedEventData.ts';
 import { loadNeedsInputs, trackedBandsAt } from '../nutrition/dietaryNeeds.ts';
@@ -50,7 +50,7 @@ async function buildDailyMetricTrends(
     eventType: 'water_intake' | 'food_intake';
     getAmount: (data: unknown) => number;
     /** Which of the pet's bands each day is judged against. */
-    kind: 'food' | 'water';
+    kind: IntakeKind;
   },
 ): Promise<DailyMetricTrendDay[]> {
   const { petId, days, timezone, deviceClass, eventType, getAmount, kind } =
